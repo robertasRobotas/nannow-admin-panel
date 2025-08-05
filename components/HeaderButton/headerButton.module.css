@@ -11,6 +11,14 @@
   font-weight: 600;
 }
 
+.JUSTIFY-CENTER {
+  justify-content: center;
+}
+
+.JUSTIFY-START {
+  justify-content: flex-start;
+}
+
 .active {
   background: rgba(2, 2, 2, 0.08);
 }

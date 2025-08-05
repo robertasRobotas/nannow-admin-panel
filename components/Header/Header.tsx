@@ -3,57 +3,43 @@ import logoImg from "../../assets/images/logo-admin.svg";
 import Link from "next/link";
 import HeaderButton from "../HeaderButton/HeaderButton";
 import Button from "../Button/Button";
+import burgerBtn from "../../assets/images/burger-btn.svg";
+import { links } from "@/data/headerLinks";
+import { useState } from "react";
+import HeaderMenu from "./HeaderMenu/HeaderMenu";
 
 const Header = () => {
+  const [isMenuDisplayed, setMenuDisplayed] = useState(false);
+
   return (
-    <div className={styles.main}>
-      <img className={styles.logoImg} src={logoImg.src} alt="Logo" />
-      <nav className={styles.nav}>
-        <ul>
-          <li>
-            <Link href="#">
-              <HeaderButton title="Users" isActive={false} />
-            </Link>
-          </li>
-          <li>
-            <Link className={styles.listItem} href="#">
-              <HeaderButton title="Orders" isActive={false} />
-            </Link>
-          </li>
-          <li>
-            <Link className={styles.listItem} href="#">
-              <HeaderButton title="Kids" isActive={false} />
-            </Link>
-          </li>
-          <li>
-            <Link className={styles.listItem} href="#">
-              <HeaderButton title="Payments" isActive={false} />
-            </Link>
-          </li>
-          <li>
-            <Link className={styles.listItem} href="#">
-              <HeaderButton title="Bugs" isActive={false} />
-            </Link>
-          </li>
-          <li>
-            <Link className={styles.listItem} href="#">
-              <HeaderButton title="Feedback" isActive={false} />
-            </Link>
-          </li>
-          <li>
-            <Link className={styles.listItem} href="#">
-              <HeaderButton title="Reported" isActive={false} />
-            </Link>
-          </li>
-          <li>
-            <Link className={styles.listItem} href="#">
-              <HeaderButton title="Reviews" isActive={false} />
-            </Link>
-          </li>
-        </ul>
-      </nav>
-      <Button title="Logout" type="OUTLINED" isDisabled={false} />
-    </div>
+    <>
+      <div className={styles.main}>
+        <button
+          onClick={() => setMenuDisplayed(true)}
+          className={styles.burgerBtn}
+        >
+          <img src={burgerBtn.src} alt="Burger button" />
+        </button>
+        <img className={styles.logoImg} src={logoImg.src} alt="Logo" />
+        <nav className={styles.nav}>
+          <ul>
+            {links.map((l) => (
+              <li key={l.link}>
+                <Link href={l.link}>
+                  <HeaderButton title={l.title} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className={styles.logOutBtn}>
+          <Button title="Logout" type="OUTLINED" isDisabled={false} />
+        </div>
+      </div>
+      {isMenuDisplayed && (
+        <HeaderMenu links={links} onClose={() => setMenuDisplayed(false)} />
+      )}
+    </>
   );
 };
 

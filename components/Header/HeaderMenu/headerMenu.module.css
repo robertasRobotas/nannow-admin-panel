@@ -1,0 +1,72 @@
+.main {
+  width: 300px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: white;
+  box-shadow: 10px 0 34px 0 rgba(0, 0, 0, 0.1);
+  position: fixed;
+  top: 0px;
+}
+
+.logo {
+  padding: 16px 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.logoImg {
+  width: 103px;
+  height: 38px;
+}
+
+.closeBtn {
+  all: unset;
+  height: 24px;
+  cursor: pointer;
+}
+
+.nav ul {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0 20px;
+}
+
+.logOutBtn {
+  padding: 0 0 30px 20px;
+}
+
+.slideInRight {
+  animation-name: slide-in-right;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+  animation-duration: 0.5s;
+}
+
+.slideOutLeft {
+  animation-name: slide-out-left;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+  animation-duration: 0.5s;
+}
+
+@keyframes slide-in-right {
+  0% {
+    left: -300px;
+  }
+  100% {
+    left: 0px;
+  }
+}
+
+@keyframes slide-out-left {
+  0% {
+    left: 0px;
+  }
+  100% {
+    left: -300px;
+  }
+}
