@@ -10,7 +10,7 @@ const Heading = () => {
         <HeaderButton title="Providers" isActive={false} />
       </div>
       <div>
-        <SearchBar />
+        <SearchBar placeholder="Type user name or ID" />
       </div>
     </div>
   );

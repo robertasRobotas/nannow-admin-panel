@@ -1,7 +1,11 @@
 import { useState } from "react";
 import styles from "./searchBar.module.css";
 
-const SearchBar = () => {
+type SearchBarProps = {
+  placeholder: string;
+};
+
+const SearchBar = ({ placeholder }: SearchBarProps) => {
   const [text, setText] = useState("");
   const [isFocused, setFocused] = useState(false);
   return (
@@ -9,14 +13,11 @@ const SearchBar = () => {
       <input
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        placeholder="Search"
+        placeholder={placeholder}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <button
-        onClick={(e) => e.preventDefault()}
-        className={styles.searchBtn}
-      ></button>
+      <button className={styles.searchBtn}></button>
     </div>
   );
 };
