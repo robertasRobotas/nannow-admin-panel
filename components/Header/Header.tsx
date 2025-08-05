@@ -1,7 +1,7 @@
 import styles from "./header.module.css";
 import logoImg from "../../assets/images/logo-admin.svg";
 import Link from "next/link";
-import HeaderButton from "./HeaderButton/HeaderButton";
+import HeaderButton from "../HeaderButton/HeaderButton";
 import Button from "../Button/Button";
 
 const Header = () => {
