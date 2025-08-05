@@ -48,11 +48,17 @@
   background-color: white;
 }
 
-.main:focus-within {
+.focused {
   background-color: white;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .main input::placeholder {
   color: rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 936px) {
+  .main {
+    width: 100%;
+  }
 }

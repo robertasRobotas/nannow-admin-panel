@@ -7,3 +7,15 @@
 .headingLeftSide {
   display: flex;
 }
+
+@media (max-width: 936px) {
+  .headingLeftSide {
+    margin: auto;
+  }
+
+  .main {
+    flex-direction: column;
+    gap: 20px;
+    align-items: normal;
+  }
+}
