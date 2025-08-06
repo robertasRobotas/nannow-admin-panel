@@ -1,4 +1,4 @@
-import { HeaderLink } from "@/types/headerLink";
+import { HeaderLink } from "@/types/HeaderLink";
 import styles from "./headerMenu.module.css";
 import crossImg from "../../../assets/images/cross.svg";
 import logoImg from "../../../assets/images/logo-admin.svg";
@@ -44,7 +44,12 @@ const HeaderMenu = ({ links, onClose }: HeaderMenuProps) => {
         </ul>
       </nav>
       <div className={styles.logOutBtn}>
-        <Button title="Logout" type="OUTLINED" isDisabled={false} />
+        <Button
+          onClick={() => console.log("wip")}
+          title="Logout"
+          type="OUTLINED"
+          isDisabled={false}
+        />
       </div>
     </div>
   );

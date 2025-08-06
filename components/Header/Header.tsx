@@ -7,9 +7,11 @@ import burgerBtn from "../../assets/images/burger-btn.svg";
 import { links } from "@/data/headerLinks";
 import { useState } from "react";
 import HeaderMenu from "./HeaderMenu/HeaderMenu";
+import { useRouter } from "next/router";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
+  const { pathname } = useRouter();
 
   return (
     <>
@@ -26,14 +28,21 @@ const Header = () => {
             {links.map((l) => (
               <li key={l.link}>
                 <Link href={l.link}>
-                  <HeaderButton title={l.title} />
+                  <HeaderButton
+                    title={l.title}
+                    isActive={pathname === l.link}
+                  />
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
         <div className={styles.logOutBtn}>
-          <Button title="Logout" type="OUTLINED" />
+          <Button
+            onClick={() => console.log("wip")}
+            title="Logout"
+            type="OUTLINED"
+          />
         </div>
       </div>
       {isMenuDisplayed && (
