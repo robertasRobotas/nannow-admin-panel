@@ -2,8 +2,30 @@
   padding: 38px 86px;
 }
 
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 30px;
+}
+
+.headingLeftSide {
+  display: flex;
+}
+
 @media (max-width: 936px) {
   .main {
     padding: 20px;
+  }
+
+  .headingLeftSide {
+    margin: auto;
+  }
+
+  .heading {
+    flex-direction: column;
+    gap: 20px;
+    align-items: normal;
+    padding-bottom: 20px;
   }
 }

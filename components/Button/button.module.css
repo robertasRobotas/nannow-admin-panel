@@ -14,6 +14,14 @@
   white-space: nowrap;
 }
 
+.PLAIN:hover {
+  background: rgba(2, 2, 2, 0.05);
+}
+
+.PLAIN:active {
+  background: rgba(2, 2, 2, 0.12);
+}
+
 .OUTLINED {
   border: 1px solid rgba(0, 0, 0, 0.5);
 }
@@ -32,7 +40,7 @@
   color: white;
 }
 
-.BLACK:hover {
+.BLACK:hover:enabled {
   background-color: #313131;
 }
 
@@ -40,12 +48,16 @@
   background-color: white;
 }
 
-.WHITE:hover {
+.WHITE:hover:enabled {
   background-color: #8d8d8d;
 }
 
-.WHITE:active {
+.WHITE:active:enabled {
   background-color: #5c5c5c;
+}
+
+.selected {
+  background: rgba(2, 2, 2, 0.08);
 }
 
 .disabled {
