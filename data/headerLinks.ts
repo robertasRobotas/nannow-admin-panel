@@ -1,4 +1,4 @@
-import { HeaderLink } from "@/types/headerLink";
+import { HeaderLink } from "@/types/HeaderLink";
 
 export const links: HeaderLink[] = [
   { title: "Users", link: "/users" },

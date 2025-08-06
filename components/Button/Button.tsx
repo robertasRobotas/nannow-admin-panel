@@ -3,10 +3,10 @@ import styles from "./button.module.css";
 type ButtonProps = {
   title: string;
   type: string;
-  isDisabled: boolean;
+  isDisabled?: boolean;
 };
 
-const Button = ({ title, type, isDisabled }: ButtonProps) => {
+const Button = ({ title, type, isDisabled = false }: ButtonProps) => {
   return (
     <button
       disabled={isDisabled}

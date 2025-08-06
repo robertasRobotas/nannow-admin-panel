@@ -33,7 +33,7 @@ const Header = () => {
           </ul>
         </nav>
         <div className={styles.logOutBtn}>
-          <Button title="Logout" type="OUTLINED" isDisabled={false} />
+          <Button title="Logout" type="OUTLINED" />
         </div>
       </div>
       {isMenuDisplayed && (

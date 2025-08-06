@@ -2,13 +2,13 @@ import styles from "./headerButton.module.css";
 
 type HeaderButtonProps = {
   title: string;
-  isActive: boolean;
+  isActive?: boolean;
   justify?: string;
 };
 
 const HeaderButton = ({
   title,
-  isActive,
+  isActive = false,
   justify = "JUSTIFY-CENTER",
 }: HeaderButtonProps) => {
   return (
