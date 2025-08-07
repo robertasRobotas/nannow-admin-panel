@@ -4,6 +4,7 @@ import { nunito } from "@/helpers/fonts";
 import balanceImg from "../../../assets/images/wallet.svg";
 import Button from "@/components/Button/Button";
 import { getClientStats } from "@/data/clientStats";
+import { useRouter } from "next/router";
 
 type ClientCardProps = {
   client: Client;
@@ -11,6 +12,11 @@ type ClientCardProps = {
 
 const ClientCard = ({ client }: ClientCardProps) => {
   const stats = getClientStats(client);
+  const router = useRouter();
+
+  const onButtonClick = () => {
+    router.push(`/users/${client.id}`);
+  };
 
   return (
     <div className={styles.main}>
@@ -43,7 +49,7 @@ const ClientCard = ({ client }: ClientCardProps) => {
           </div>
         </div>
       </div>
-      <Button title="View profile" type="OUTLINED" />
+      <Button onClick={onButtonClick} title="View profile" type="OUTLINED" />
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { useState } from "react";
 import Link from "next/link";
 import HeaderButton from "@/components/HeaderButton/HeaderButton";
 import Button from "@/components/Button/Button";
+import { useRouter } from "next/router";
 
 type HeaderMenuProps = {
   links: HeaderLink[];
@@ -14,6 +15,7 @@ type HeaderMenuProps = {
 
 const HeaderMenu = ({ links, onClose }: HeaderMenuProps) => {
   const [isClosing, setClosing] = useState(false);
+  const { pathname } = useRouter();
   return (
     <div
       className={`${styles.main} ${styles.slideInRight} ${
@@ -37,7 +39,11 @@ const HeaderMenu = ({ links, onClose }: HeaderMenuProps) => {
           {links.map((l) => (
             <li key={l.link}>
               <Link href={l.link}>
-                <HeaderButton title={l.title} justify="JUSTIFY-START" />
+                <HeaderButton
+                  title={l.title}
+                  isActive={pathname === l.link}
+                  justify="JUSTIFY-START"
+                />
               </Link>
             </li>
           ))}

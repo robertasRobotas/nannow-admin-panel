@@ -12,6 +12,9 @@ export const clients: Client[] = [
     messages: 35,
     children: 2,
     reviews: 10,
+    addresses: 1,
+    badges: 3,
+    profile_completion: 3,
   },
   {
     id: "00000002",
@@ -24,6 +27,9 @@ export const clients: Client[] = [
     messages: 87,
     children: 0,
     reviews: 38,
+    addresses: 2,
+    badges: 5,
+    profile_completion: 4,
   },
   {
     id: "00000003",
@@ -36,6 +42,9 @@ export const clients: Client[] = [
     messages: 50,
     children: 1,
     reviews: 22,
+    addresses: 1,
+    badges: 4,
+    profile_completion: 3,
   },
   {
     id: "00000004",
@@ -48,6 +57,9 @@ export const clients: Client[] = [
     messages: 15,
     children: 3,
     reviews: 5,
+    addresses: 1,
+    badges: 2,
+    profile_completion: 2,
   },
   {
     id: "00000005",
@@ -60,6 +72,9 @@ export const clients: Client[] = [
     messages: 103,
     children: 0,
     reviews: 48,
+    addresses: 3,
+    badges: 7,
+    profile_completion: 4,
   },
   {
     id: "00000006",
@@ -72,6 +87,9 @@ export const clients: Client[] = [
     messages: 41,
     children: 2,
     reviews: 19,
+    addresses: 2,
+    badges: 4,
+    profile_completion: 3,
   },
   {
     id: "00000007",
@@ -84,6 +102,9 @@ export const clients: Client[] = [
     messages: 66,
     children: 4,
     reviews: 30,
+    addresses: 2,
+    badges: 6,
+    profile_completion: 4,
   },
   {
     id: "00000008",
@@ -96,5 +117,8 @@ export const clients: Client[] = [
     messages: 12,
     children: 1,
     reviews: 6,
+    addresses: 1,
+    badges: 2,
+    profile_completion: 2,
   },
 ];

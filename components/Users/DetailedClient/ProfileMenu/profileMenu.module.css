@@ -1,0 +1,17 @@
+.menuButton {
+  all: unset;
+  display: flex;
+  height: 44px;
+  padding: 0 16px;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  color: #000;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.menuButton img {
+  width: 24px;
+  height: 24px;
+}

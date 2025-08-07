@@ -9,4 +9,7 @@ export type Client = {
   messages: number;
   children: number;
   reviews: number;
+  addresses: number;
+  badges: number;
+  profile_completion: number;
 };
