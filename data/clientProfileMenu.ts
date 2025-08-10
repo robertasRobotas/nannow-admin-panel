@@ -1,42 +1,70 @@
 import { Client } from "@/types/Client";
-import circlesSquareImg from "../assets/images/circles-square.svg";
-import messagesImg from "../assets/images/messages.svg";
-import babyImg from "../assets/images/baby.svg";
-import houseImg from "../assets/images/house.svg";
-import reviewsImg from "../assets/images/doc-with-pencil.svg";
-import badgesImg from "../assets/images/badge.svg";
-import profilePlusImg from "../assets/images/id.svg";
-import docInProgressImg from "../assets/images/doc-in-progress.svg";
-import docWithCheckmarkImg from "../assets/images/doc-with-checkmark.svg";
-import docWithErrorImg from "../assets/images/doc-with-error.svg";
+import { CirclesSquareIcon } from "@/components/Icons/CirclesSquareIcon";
+import MessagesIcon from "@/components/Icons/MessagesIcon";
+import HouseIcon from "@/components/Icons/HouseIcon";
+import DocInProgressIcon from "@/components/Icons/DocInProgressIcon";
+import DocWithPencilIcon from "@/components/Icons/DocWithPencilIcon";
+import BadgeIcon from "@/components/Icons/BadgeIcon";
+import IdIcon from "@/components/Icons/IdIcon";
+import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
+import DocWithErrorIcon from "@/components/Icons/DocWithErrorIcon";
 
 export const getButtonsData = (client: Client) => {
   return [
-    { title: "General info", img: circlesSquareImg },
-    { title: "Messages", img: messagesImg, number: client.messages },
-    { title: "Children", img: babyImg, number: client.children },
-    { title: "Addresses", img: houseImg, number: client.addresses },
-    { title: "Reviews", img: reviewsImg, number: client.reviews },
-    { title: "Badges", img: badgesImg, number: client.badges },
+    { title: "General info", icon: CirclesSquareIcon, id: "general" },
+    {
+      title: "Messages",
+      icon: MessagesIcon,
+      number: client.messages,
+      id: "messages",
+    },
+    {
+      title: "Children",
+      icon: CirclesSquareIcon,
+      number: client.children,
+      id: "children",
+    },
+    {
+      title: "Addresses",
+      icon: HouseIcon,
+      number: client.addresses,
+      id: "addresses",
+    },
+    {
+      title: "Reviews",
+      icon: DocWithPencilIcon,
+      number: client.reviews,
+      id: "reviews",
+    },
+    {
+      title: "Badges",
+      icon: BadgeIcon,
+      number: client.badges,
+      id: "badges",
+    },
     {
       title: "Profile completion",
-      img: profilePlusImg,
+      icon: IdIcon,
       number: client.profile_completion,
+      id: "profile_comletion",
     },
     {
       title: "Completed orders",
-      img: docWithCheckmarkImg,
+      icon: DocWithCheckmarkIcon,
       number: client.completed_orders,
+      id: "completed_orders",
     },
     {
       title: "Active orders",
-      img: docInProgressImg,
+      icon: DocInProgressIcon,
       number: client.active_orders,
+      id: "active_orders",
     },
     {
       title: "Canceled orders",
-      img: docWithErrorImg,
+      icon: DocWithErrorIcon,
       number: client.cancelled_orders,
+      id: "canceled_orders",
     },
   ];
 };

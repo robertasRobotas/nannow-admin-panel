@@ -1,3 +1,7 @@
+.main {
+  align-self: stretch;
+}
+
 .menuButton {
   all: unset;
   display: flex;
@@ -9,9 +13,17 @@
   color: #000;
   font-size: 12px;
   font-weight: 600;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .menuButton img {
   width: 24px;
   height: 24px;
+}
+
+.active {
+  color: white;
+  border-radius: 10px;
+  background: #000;
 }

@@ -33,19 +33,17 @@ const ClientCard = ({ client }: ClientCardProps) => {
           <span className={styles.id}>{`ID: ${client.id}`}</span>
         </div>
         <div className={styles.statsWrapper}>
-          <div>
-            <div className={styles.balance}>
-              <img src={balanceImg.src} alt="Balance" />
-              <span>{`€ ${client.balance.toFixed(2)}`}</span>
-            </div>
-            <div className={styles.stats}>
-              {stats.map((s) => (
-                <div key={s.key} className={styles.stat}>
-                  <img src={s.icon} alt={`${s.alt}`} />
-                  <span>{s.value}</span>
-                </div>
-              ))}
-            </div>
+          <div className={styles.balance}>
+            <img src={balanceImg.src} alt="Balance" />
+            <span>{`€ ${client.balance.toFixed(2)}`}</span>
+          </div>
+          <div className={styles.stats}>
+            {stats.map((s) => (
+              <div key={s.key} className={styles.stat}>
+                <s.icon />
+                <span>{s.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
