@@ -3,3 +3,8 @@
   display: flex;
   flex-direction: column;
 }
+
+.contentWrapper {
+  flex: 1;
+  padding: 20px 86px 55px 86px;
+}

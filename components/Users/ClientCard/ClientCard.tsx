@@ -5,6 +5,7 @@ import balanceImg from "../../../assets/images/wallet.svg";
 import Button from "@/components/Button/Button";
 import { getClientStats } from "@/data/clientStats";
 import { useRouter } from "next/router";
+import ProfileInfo from "../ProfileInfo/ProfileInfo";
 
 type ClientCardProps = {
   client: Client;
@@ -21,32 +22,28 @@ const ClientCard = ({ client }: ClientCardProps) => {
   return (
     <div className={styles.main}>
       <div className={styles.profileWrapper}>
-        <div className={styles.infoWrapper}>
-          <img
-            className={styles.profileImg}
-            src={client.imgUrl}
-            alt="Profile Image"
-          />
-          <span className={`${styles.name} ${nunito.className}`}>
-            {client.firstName} {client.lastName}
-          </span>
-          <span className={styles.id}>{`ID: ${client.id}`}</span>
-        </div>
+        <ProfileInfo
+          name={`${client.firstName} ${client.lastName}`}
+          imgUrl={client.imgUrl}
+          id={client.id}
+        />
+        {/*
         <div className={styles.statsWrapper}>
           <div className={styles.balance}>
             <img src={balanceImg.src} alt="Balance" />
-            {/*<span>{`€ ${client.balance.toFixed(2)}`}</span>*/}
+            {/*<span>{`€ ${client.balance.toFixed(2)}`}</span>* /}
             <span>€ 0</span>
           </div>
           <div className={styles.stats}>
             {stats.map((s) => (
               <div key={s.key} className={styles.stat}>
                 <s.icon />
-                {/*<span>{s.value}</span>*/}0
+                {/*<span>{s.value}</span>* /}0
               </div>
             ))}
           </div>
         </div>
+            */}
       </div>
       <Button onClick={onButtonClick} title="View profile" type="OUTLINED" />
     </div>

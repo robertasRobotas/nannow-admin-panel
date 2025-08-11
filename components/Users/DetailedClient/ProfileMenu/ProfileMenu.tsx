@@ -29,8 +29,8 @@ const ProfileMenu = ({
         >
           <b.icon />
           <span>
-            {b.title}
-            {b.number && ` (${b.number})`}
+            {b.title}{" "}
+            {b.number !== undefined && ` (${b.number}${i === 6 ? "/4" : ""})`}
           </span>
         </button>
       ))}

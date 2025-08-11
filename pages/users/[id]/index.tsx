@@ -24,7 +24,9 @@ const DetailedProfilePage = () => {
   return (
     <div className={styles.wrapper}>
       <Header />
-      {client && <DetailedClient client={client} />}
+      <div className={styles.contentWrapper}>
+        {client && <DetailedClient client={client} />}
+      </div>
     </div>
   );
 };

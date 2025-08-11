@@ -1,4 +1,4 @@
-import { Client, ClientDetails } from "@/types/Client";
+import { ClientDetails } from "@/types/Client";
 import { CirclesSquareIcon } from "@/components/Icons/CirclesSquareIcon";
 import MessagesIcon from "@/components/Icons/MessagesIcon";
 import HouseIcon from "@/components/Icons/HouseIcon";
@@ -8,6 +8,7 @@ import BadgeIcon from "@/components/Icons/BadgeIcon";
 import IdIcon from "@/components/Icons/IdIcon";
 import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
 import DocWithErrorIcon from "@/components/Icons/DocWithErrorIcon";
+import ChildrenIcon from "@/components/Icons/ChildrenIcon";
 
 export const getButtonsData = (client: ClientDetails) => {
   return [
@@ -20,7 +21,7 @@ export const getButtonsData = (client: ClientDetails) => {
     },
     {
       title: "Children",
-      icon: CirclesSquareIcon,
+      icon: ChildrenIcon,
       number: client.children.length,
       id: "children",
     },

@@ -30,7 +30,7 @@ const Header = () => {
                 <Link href={l.link}>
                   <HeaderButton
                     title={l.title}
-                    isActive={pathname === l.link}
+                    isActive={`/${pathname.split("/")[1]}` === l.link}
                   />
                 </Link>
               </li>
