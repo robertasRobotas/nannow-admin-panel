@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { Client } from "@/types/Client";
+import { Client, ClientDetails } from "@/types/Client";
 import styles from "./detailedClient.module.css";
 import { nunito } from "@/helpers/fonts";
 import balanceImg from "../../../assets/images/wallet.svg";
@@ -9,7 +9,7 @@ import trashImg from "../../../assets/images/trash.svg";
 import { useState } from "react";
 
 type DetailedClientProps = {
-  client: Client;
+  client: ClientDetails;
 };
 
 const DetailedClient = ({ client }: DetailedClientProps) => {
@@ -22,17 +22,18 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
           <div className={styles.profileInfo}>
             <img
               className={styles.profileImg}
-              src={client.profileimg}
+              src={client.user.imgUrl}
               alt="Profile Image"
             />
             <span className={`${styles.name} ${nunito.className}`}>
-              {client.name}
+              {client.user.firstName} {client.user.lastName}
             </span>
-            <span className={styles.id}>{`ID: ${client.id}`}</span>
+            <span className={styles.id}>{`ID: ${client.client.id}`}</span>
           </div>
           <div className={styles.balance}>
             <img src={balanceImg.src} alt="Balance" />
-            <span>{`€ ${client.balance.toFixed(2)}`}</span>
+            {/*<span>{`€ ${client.balance.toFixed(2)}`}</span>*/}
+            <span>€ 0</span>
           </div>
         </div>
         <ProfileMenu

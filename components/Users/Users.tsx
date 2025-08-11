@@ -1,12 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "../Button/Button";
 import SearchBar from "../SearchBar/SearchBar";
 import Cards from "./Cards/Cards";
 import styles from "./users.module.css";
+import axios from "axios";
 
 const Users = () => {
-  const [isSelectedClients, setSelectedClients] = useState(false);
+  const [isSelectedClients, setSelectedClients] = useState(true);
   const [isSelectedProviders, setSelectedProviders] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [users, setUsers] = useState([]);
+
+  const fetchUsers = async () => {
+    try {
+      const url = isSelectedClients
+        ? `https://nannow-api.com/admin/users?type=client&startIndex=0&search=${searchText}`
+        : `https://nannow-api.com/admin/provider?type=client&startIndex=0&search=${searchText}`;
+      const response = await axios.get(url);
+      setUsers(response.data.users.items);
+      console.log(response);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [isSelectedClients]);
+
   return (
     <div className={styles.main}>
       <div className={styles.heading}>
@@ -31,10 +52,15 @@ const Users = () => {
           />
         </div>
         <div>
-          <SearchBar placeholder="Type user name or ID" />
+          <SearchBar
+            searchText={searchText}
+            setSearchText={setSearchText}
+            placeholder="Type user name or ID"
+            onButtonClick={() => fetchUsers()}
+          />
         </div>
       </div>
-      {isSelectedClients && <Cards />}
+      <Cards users={users} />
     </div>
   );
 };

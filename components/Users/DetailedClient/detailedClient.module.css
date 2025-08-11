@@ -47,10 +47,16 @@
   margin-bottom: 20px;
 }
 
+.profileWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
 .balance {
   display: flex;
   padding: 5px 15px;
   align-items: center;
+  align-self: center;
   justify-content: center;
   gap: 4px;
   border-radius: 30px;

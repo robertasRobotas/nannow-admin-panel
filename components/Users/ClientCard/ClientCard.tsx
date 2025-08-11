@@ -15,7 +15,7 @@ const ClientCard = ({ client }: ClientCardProps) => {
   const router = useRouter();
 
   const onButtonClick = () => {
-    router.push(`/users/${client.id}`);
+    router.push(`/users/${client.userId}`);
   };
 
   return (
@@ -24,24 +24,25 @@ const ClientCard = ({ client }: ClientCardProps) => {
         <div className={styles.infoWrapper}>
           <img
             className={styles.profileImg}
-            src={client.profileimg}
+            src={client.imgUrl}
             alt="Profile Image"
           />
           <span className={`${styles.name} ${nunito.className}`}>
-            {client.name}
+            {client.firstName} {client.lastName}
           </span>
           <span className={styles.id}>{`ID: ${client.id}`}</span>
         </div>
         <div className={styles.statsWrapper}>
           <div className={styles.balance}>
             <img src={balanceImg.src} alt="Balance" />
-            <span>{`€ ${client.balance.toFixed(2)}`}</span>
+            {/*<span>{`€ ${client.balance.toFixed(2)}`}</span>*/}
+            <span>€ 0</span>
           </div>
           <div className={styles.stats}>
             {stats.map((s) => (
               <div key={s.key} className={styles.stat}>
                 <s.icon />
-                <span>{s.value}</span>
+                {/*<span>{s.value}</span>*/}0
               </div>
             ))}
           </div>

@@ -3,15 +3,18 @@ import styles from "./detailedProfilePage.module.css";
 import { useEffect, useState } from "react";
 import DetailedClient from "@/components/Users/DetailedClient/DetailedClient";
 import Header from "@/components/Header/Header";
-import { clients } from "@/mocks/clients";
+import axios from "axios";
 
 const DetailedProfilePage = () => {
   const router = useRouter();
   const [client, setClient] = useState(null);
 
-  const getDetailedClient = (id: string) => {
-    const response = clients.find((c) => c.id === id);
-    setClient(response);
+  const getDetailedClient = async (id: string) => {
+    const response = await axios.get(
+      `https://nannow-api.com/admin/clients/${id}`
+    );
+    console.log(response);
+    setClient(response.data.clientDetails);
   };
 
   useEffect(() => {
