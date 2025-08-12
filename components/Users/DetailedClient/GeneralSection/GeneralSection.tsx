@@ -2,13 +2,17 @@ import { getInfoCards } from "@/data/generalInfoCards";
 import styles from "./generalSection.module.css";
 import { nunito } from "@/helpers/fonts";
 import { ClientDetails } from "@/types/Client";
+import Button from "@/components/Button/Button";
+import { useMediaQuery } from "react-responsive";
 
 type GeneralSectionProps = {
   client: ClientDetails;
+  onBackClick: () => void;
 };
 
-const GeneralSection = ({ client }: GeneralSectionProps) => {
+const GeneralSection = ({ client, onBackClick }: GeneralSectionProps) => {
   const cards = getInfoCards(client);
+  const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   return (
     <div className={styles.main}>
@@ -24,6 +28,9 @@ const GeneralSection = ({ client }: GeneralSectionProps) => {
           </div>
         ))}
       </div>
+      {isMobile && (
+        <Button title="Back" onClick={onBackClick} type="OUTLINED" />
+      )}
     </div>
   );
 };

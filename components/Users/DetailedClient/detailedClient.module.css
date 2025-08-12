@@ -6,40 +6,6 @@
   display: flex;
 }
 
-.aside {
-  display: flex;
-  width: 280px;
-  height: 100%;
-  padding: 30px 20px;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  border-right: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.profileWrapper {
-  display: flex;
-  flex-direction: column;
-}
-
-.balance {
-  display: flex;
-  padding: 5px 15px;
-  align-items: center;
-  align-self: center;
-  justify-content: center;
-  gap: 4px;
-  border-radius: 30px;
-  background: rgba(0, 0, 0, 0.08);
-  margin-top: 20px;
-}
-
-.balance span {
-  color: black;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .sectionWrapper {
   flex: 1;
 }

@@ -1,39 +1,51 @@
-/* eslint-disable @next/next/no-img-element */
-import { getButtonsData } from "@/data/clientProfileMenu";
+import Button from "@/components/Button/Button";
+import ProfileInfo from "../../ProfileInfo/ProfileInfo";
+import ProfileMenuButtons from "../ProfileMenuButtons/ProfileMenuButtons";
 import styles from "./profileMenu.module.css";
-import { Client, ClientDetails } from "@/types/Client";
+import trashImg from "../../../../assets/images/trash.svg";
+import balanceImg from "../../../../assets/images/wallet.svg";
+import { ClientDetails } from "@/types/Client";
 import { Dispatch, SetStateAction } from "react";
 
 type ProfileMenuProps = {
   client: ClientDetails;
   selectedSection: string;
+  setIsSelectedMenu: () => void;
   setSelectedSection: Dispatch<SetStateAction<string>>;
 };
 
 const ProfileMenu = ({
   client,
+  setIsSelectedMenu,
   selectedSection,
   setSelectedSection,
 }: ProfileMenuProps) => {
-  const buttonsData = getButtonsData(client);
-
   return (
-    <div className={styles.main}>
-      {buttonsData.map((b, i) => (
-        <button
-          onClick={() => setSelectedSection(b.id)}
-          key={i}
-          className={`${styles.menuButton} ${
-            selectedSection === b.id && styles.active
-          }`}
-        >
-          <b.icon />
-          <span>
-            {b.title}{" "}
-            {b.number !== undefined && ` (${b.number}${i === 6 ? "/4" : ""})`}
-          </span>
-        </button>
-      ))}
+    <div className={styles.aside}>
+      <div className={styles.profileWrapper}>
+        <ProfileInfo
+          name={`${client.user.firstName} ${client.user.lastName}`}
+          imgUrl={client.user.imgUrl}
+          id={client.client.id}
+        />
+        <div className={styles.balance}>
+          <img src={balanceImg.src} alt="Balance" />
+          {/*<span>{`€ ${client.balance.toFixed(2)}`}</span>*/}
+          <span>€ 0</span>
+        </div>
+      </div>
+      <ProfileMenuButtons
+        setIsSelectedMenu={setIsSelectedMenu}
+        client={client}
+        selectedSection={selectedSection}
+        setSelectedSection={setSelectedSection}
+      />
+      <Button
+        title="Delete profile"
+        imgUrl={trashImg.src}
+        type="OUTLINED"
+        onClick={() => console.log("wip")}
+      />
     </div>
   );
 };
