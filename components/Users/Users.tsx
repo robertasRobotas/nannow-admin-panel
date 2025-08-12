@@ -13,6 +13,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
+      setUsers([]);
       const url = isSelectedClients
         ? `https://nannow-api.com/admin/users?type=client&startIndex=0&search=${searchText}`
         : `https://nannow-api.com/admin/provider?type=client&startIndex=0&search=${searchText}`;

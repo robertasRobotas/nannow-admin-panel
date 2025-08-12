@@ -5,6 +5,7 @@ import { useState } from "react";
 import GeneralSection from "./GeneralSection/GeneralSection";
 import ProfileMenu from "./ProfileMenu/ProfileMenu";
 import { useMediaQuery } from "react-responsive";
+import MessagesSection from "./MessagesSection/MessagesSection";
 
 type DetailedClientProps = {
   client: ClientDetails;
@@ -28,6 +29,9 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
             }}
           />
         );
+      }
+      case "messages": {
+        return <MessagesSection />;
       }
     }
   };

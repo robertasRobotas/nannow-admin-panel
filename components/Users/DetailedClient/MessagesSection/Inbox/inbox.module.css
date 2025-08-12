@@ -1,0 +1,15 @@
+.main {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  display: flex;
+  padding: 24px 20px 10px 20px;
+  align-self: stretch;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.48px;
+  border-bottom: 1px solid #f0f0f0;
+}
