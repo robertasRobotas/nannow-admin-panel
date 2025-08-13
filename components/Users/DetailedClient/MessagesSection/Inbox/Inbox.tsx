@@ -1,15 +1,16 @@
-import { ChatMessage, ChatUser } from "@/types/MockChats";
+import { ChatUser } from "@/types/MockChats";
 import Chat from "./Chat/Chat";
 import styles from "./inbox.module.css";
 import { nunito } from "@/helpers/fonts";
 import { Dispatch, SetStateAction } from "react";
+import Button from "@/components/Button/Button";
 
 type InboxProps = {
   chats: ChatUser[];
-  setSelectedSection: Dispatch<SetStateAction<string>>;
+  setSelectedChatId: Dispatch<SetStateAction<string>>;
 };
 
-const Inbox = ({ chats, setSelectedSection }: InboxProps) => {
+const Inbox = ({ chats, setSelectedChatId }: InboxProps) => {
   return (
     <div className={styles.main}>
       <div className={`${styles.title} ${nunito.className}`}>Inbox</div>
@@ -22,9 +23,9 @@ const Inbox = ({ chats, setSelectedSection }: InboxProps) => {
           isVerified={c.isVerified}
           isCrown={c.isCrown}
           isVoicechat={c.isVoicechat}
-          message={c.messages[0].text}
+          message={c.messages[c.messages.length - 1].text}
           onClick={() => {
-            setSelectedSection("chat-messages");
+            setSelectedChatId(c.id);
           }}
         />
       ))}

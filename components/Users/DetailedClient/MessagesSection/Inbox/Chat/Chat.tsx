@@ -25,7 +25,7 @@ const Chat = ({
   onClick,
 }: ChatProps) => {
   return (
-    <div className={styles.main}>
+    <div onClick={onClick} className={styles.main}>
       <img className={styles.profileImg} src={imgUrl} alt="Icon" />
       <div className={styles.chatDetails}>
         <div className={styles.name}>

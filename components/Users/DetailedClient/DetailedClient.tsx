@@ -47,7 +47,7 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
             setSelectedSection={setSelectedSection}
           />
         ) : (
-          renderSelectedSection()
+          <div className={styles.sectionWrapper}>{renderSelectedSection()}</div>
         )
       ) : (
         <>

@@ -10,14 +10,22 @@ export const mockChatData: ChatUser[] = [
     isVoicechat: true,
     messages: [
       {
-        id: 101,
+        id: "101",
         text: "Hey everyone! How’s your day going?",
         timestamp: "Aug 12",
+        isSent: false,
       },
       {
-        id: 102,
+        id: "102",
+        text: "Pretty good, just got back from the park 🌳",
+        timestamp: "Aug 12",
+        isSent: true,
+      },
+      {
+        id: "103",
         text: "I’m just chilling with some coffee ☕",
         timestamp: "Aug 12",
+        isSent: false,
       },
     ],
   },
@@ -30,11 +38,23 @@ export const mockChatData: ChatUser[] = [
     isVoicechat: false,
     messages: [
       {
-        id: 201,
+        id: "201",
         text: "Yo Luna, just finished my workout 💪",
         timestamp: "Aug 12",
+        isSent: false,
       },
-      { id: 202, text: "Coffee sounds great though haha", timestamp: "Aug 12" },
+      {
+        id: "202",
+        text: "Nice! What routine did you do?",
+        timestamp: "Aug 12",
+        isSent: true,
+      },
+      {
+        id: "203",
+        text: "Coffee sounds great though haha",
+        timestamp: "Aug 12",
+        isSent: false,
+      },
     ],
   },
   {
@@ -45,8 +65,24 @@ export const mockChatData: ChatUser[] = [
     isCrown: false,
     isVoicechat: false,
     messages: [
-      { id: 301, text: "Good morning, crew 🌞", timestamp: "Aug 12" },
-      { id: 302, text: "Who’s up for some gaming later?", timestamp: "Aug 12" },
+      {
+        id: "301",
+        text: "Good morning, crew 🌞",
+        timestamp: "Aug 12",
+        isSent: false,
+      },
+      {
+        id: "302",
+        text: "Morning Nova! Any plans today?",
+        timestamp: "Aug 12",
+        isSent: true,
+      },
+      {
+        id: "303",
+        text: "Who’s up for some gaming later?",
+        timestamp: "Aug 12",
+        isSent: false,
+      },
     ],
   },
   {
@@ -56,6 +92,19 @@ export const mockChatData: ChatUser[] = [
     isVerified: false,
     isCrown: false,
     isVoicechat: true,
-    messages: [{ id: 401, text: "Count me in, Nova 🎮", timestamp: "Aug 12" }],
+    messages: [
+      {
+        id: "401",
+        text: "Count me in, Nova 🎮",
+        timestamp: "Aug 12",
+        isSent: false,
+      },
+      {
+        id: "402",
+        text: "Awesome, let’s squad up at 8!",
+        timestamp: "Aug 12",
+        isSent: true,
+      },
+    ],
   },
 ];
