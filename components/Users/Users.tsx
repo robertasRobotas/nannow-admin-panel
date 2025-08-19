@@ -11,6 +11,8 @@ const Users = () => {
   const [searchText, setSearchText] = useState("");
   const [users, setUsers] = useState([]);
 
+  console.log("test");
+
   const fetchUsers = async () => {
     try {
       setUsers([]);
