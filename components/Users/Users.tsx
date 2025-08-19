@@ -18,7 +18,7 @@ const Users = () => {
       setUsers([]);
       const url = isSelectedClients
         ? `https://nannow-api.com/admin/users?type=client&startIndex=0&search=${searchText}`
-        : `https://nannow-api.com/admin/provider?type=client&startIndex=0&search=${searchText}`;
+        : `https://nannow-api.com/admin/users?type=provider&startIndex=0&search=${searchText}`;
       const response = await axios.get(url);
       setUsers(response.data.users.items);
     } catch (err) {
