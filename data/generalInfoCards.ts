@@ -10,22 +10,24 @@ export const getInfoCards = (client: ClientDetails) => {
     {
       title: "Full name",
       icon: profileImg,
-      value: `${client.user.firstName} ${client.user.lastName}`,
+      value:
+        `${client?.user?.firstName ?? ""} ${client?.user?.lastName ?? ""}` ||
+        "—",
     },
     {
       title: "Phone number",
       icon: phoneImg,
-      value: client.user.phoneNumber,
+      value: client?.user?.phoneNumber ?? "—",
     },
     {
       title: "ID verification",
       icon: idImg,
-      value: client.user.isUserVerified ? "Verified" : "Not verified",
+      value: client?.user?.isUserVerified ? "Verified" : "Not verified",
     },
     {
       title: "City",
       icon: locationPinImg,
-      value: client.defaultAddress.city,
+      value: client?.defaultAddress?.city ?? "—",
     },
     {
       title: "Criminal record check",
