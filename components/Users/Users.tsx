@@ -19,7 +19,6 @@ const Users = () => {
         : `https://nannow-api.com/admin/provider?type=client&startIndex=0&search=${searchText}`;
       const response = await axios.get(url);
       setUsers(response.data.users.items);
-      console.log(response);
     } catch (err) {
       console.log(err);
     }
@@ -56,7 +55,7 @@ const Users = () => {
           <SearchBar
             searchText={searchText}
             setSearchText={setSearchText}
-            placeholder="Type user name or ID"
+            placeholder="Type user name or ID  here"
             onButtonClick={() => fetchUsers()}
           />
         </div>
