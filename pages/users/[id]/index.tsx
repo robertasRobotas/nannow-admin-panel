@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DetailedClient from "@/components/Users/DetailedClient/DetailedClient";
 import Header from "@/components/Header/Header";
 import axios from "axios";
+import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
 
 const DetailedProfilePage = () => {
   const router = useRouter();
@@ -22,12 +23,9 @@ const DetailedProfilePage = () => {
   }, [router.query.id]);
 
   return (
-    <div className={styles.wrapper}>
-      <Header />
-      <div className={styles.contentWrapper}>
-        {client && <DetailedClient client={client} />}
-      </div>
-    </div>
+    <ModalPageTemplate>
+      {client && <DetailedClient client={client} />}
+    </ModalPageTemplate>
   );
 };
 

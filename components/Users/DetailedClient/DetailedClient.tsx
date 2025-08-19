@@ -31,7 +31,14 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
         );
       }
       case "messages": {
-        return <MessagesSection />;
+        return (
+          <MessagesSection
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
       }
     }
   };
@@ -39,16 +46,25 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
   return (
     <div className={styles.main}>
       {isMobile ? (
-        isSelectedMenu ? (
-          <ProfileMenu
-            client={client}
-            setIsSelectedMenu={() => setIsSelectedMenu(false)}
-            selectedSection={selectedSection}
-            setSelectedSection={setSelectedSection}
-          />
-        ) : (
-          <div className={styles.sectionWrapper}>{renderSelectedSection()}</div>
-        )
+        <>
+          <div
+            className={styles.menuWrapper}
+            style={{ display: isSelectedMenu ? "block" : "none" }}
+          >
+            <ProfileMenu
+              client={client}
+              setIsSelectedMenu={() => setIsSelectedMenu(false)}
+              selectedSection={selectedSection}
+              setSelectedSection={setSelectedSection}
+            />
+          </div>
+          <div
+            className={styles.sectionWrapper}
+            style={{ display: !isSelectedMenu ? "block" : "none" }}
+          >
+            {renderSelectedSection()}
+          </div>
+        </>
       ) : (
         <>
           <ProfileMenu

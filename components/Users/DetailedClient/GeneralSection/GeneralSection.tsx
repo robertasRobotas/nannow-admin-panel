@@ -29,7 +29,9 @@ const GeneralSection = ({ client, onBackClick }: GeneralSectionProps) => {
         ))}
       </div>
       {isMobile && (
-        <Button title="Back" onClick={onBackClick} type="OUTLINED" />
+        <div className={styles.backBtnWrapper}>
+          <Button title="Back" onClick={onBackClick} type="OUTLINED" />
+        </div>
       )}
     </div>
   );
