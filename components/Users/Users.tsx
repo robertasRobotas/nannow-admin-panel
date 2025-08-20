@@ -4,6 +4,7 @@ import SearchBar from "../SearchBar/SearchBar";
 import Cards from "./Cards/Cards";
 import styles from "./users.module.css";
 import axios from "axios";
+import { getAllUsers } from "@/pages/api/fetch";
 
 const Users = () => {
   const [isSelectedClients, setSelectedClients] = useState(true);
@@ -15,9 +16,9 @@ const Users = () => {
     try {
       setUsers([]);
       const url = isSelectedClients
-        ? `https://nannow-api.com/admin/users?type=client&startIndex=0&search=${searchText}`
-        : `https://nannow-api.com/admin/users?type=provider&startIndex=0&search=${searchText}`;
-      const response = await axios.get(url);
+        ? `admin/users?type=client&startIndex=0&search=${searchText}`
+        : `admin/users?type=provider&startIndex=0&search=${searchText}`;
+      const response = await getAllUsers(url);
       setUsers(response.data.users.items);
     } catch (err) {
       console.log(err);

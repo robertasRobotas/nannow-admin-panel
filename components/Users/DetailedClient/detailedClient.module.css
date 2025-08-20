@@ -6,6 +6,10 @@
   display: flex;
 }
 
+.menuWrapper {
+  width: 100%;
+}
+
 .sectionWrapper {
   flex: 1;
 }
