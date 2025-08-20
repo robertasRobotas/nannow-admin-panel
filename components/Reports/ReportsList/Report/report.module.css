@@ -1,0 +1,55 @@
+.main {
+  display: flex;
+  padding: 20px 16px;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.reportDetails {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 0;
+}
+
+.reportDetails img {
+  width: 20px;
+  height: 20px;
+}
+
+.profile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile img {
+  width: 24px;
+  height: 24px;
+  object-fit: center;
+  border-radius: 50%;
+}
+
+.title {
+  display: block;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.name {
+  color: #000;
+  font-family: Inter;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.22px;
+}
+
+.date {
+  color: #999;
+  font-size: 11px;
+  font-weight: 500;
+}

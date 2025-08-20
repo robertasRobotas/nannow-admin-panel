@@ -1,0 +1,13 @@
+.main {
+  width: 320px;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  padding: 30px 20px 10px 20px;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.48px;
+  border-bottom: 1px solid #f0f0f0;
+}
