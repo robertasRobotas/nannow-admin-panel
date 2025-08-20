@@ -11,3 +11,10 @@
   letter-spacing: -0.48px;
   border-bottom: 1px solid #f0f0f0;
 }
+
+@media (max-width: 936px) {
+  .main {
+    width: 100%;
+    border: none;
+  }
+}

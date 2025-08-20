@@ -1,9 +1,25 @@
 .main {
+  padding: 30px 30px 50px 30px;
+  flex: 1;
+}
+
+.sectionTitle {
+  display: block;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.48px;
+  padding-bottom: 10px;
+}
+
+.heading {
   display: flex;
-  padding: 20px 16px;
+  width: 100%;
+  padding: 20px;
+  justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .reportDetails {
@@ -20,7 +36,6 @@
 
 .profile {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   gap: 8px;
 }
@@ -48,12 +63,7 @@
   letter-spacing: -0.22px;
 }
 
-.date {
-  color: #999;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.selected {
-  background: #f3f3f3;
+.btnsWrapper {
+  display: flex;
+  gap: 10px;
 }

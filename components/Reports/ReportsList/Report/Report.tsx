@@ -8,6 +8,8 @@ type ReportProps = {
   reportedName: string;
   reportedImg: string;
   date: string;
+  isSelected: boolean;
+  onClick: () => void;
 };
 
 const Report = ({
@@ -17,9 +19,14 @@ const Report = ({
   reportedName,
   reportedImg,
   date,
+  isSelected,
+  onClick,
 }: ReportProps) => {
   return (
-    <div className={styles.main}>
+    <div
+      onClick={onClick}
+      className={`${styles.main} ${isSelected && styles.selected}`}
+    >
       <img src={icon} alt="Icon" />
       <div className={styles.reportDetails}>
         <div className={styles.profile}>
@@ -29,7 +36,7 @@ const Report = ({
             <span className={styles.name}>{reportedByName}</span>
           </div>
         </div>
-        <img src={arrowImg.src} alt="Arror" />
+        <img src={arrowImg.src} alt="Arrow" />
         <div className={styles.profile}>
           <img src={reportedImg} alt="Profile" />
           <div>

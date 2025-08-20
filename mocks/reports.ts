@@ -1,5 +1,6 @@
 export const reports = [
   {
+    id: "rep_001",
     reported_by: {
       name: "Alice Johnson",
       imgUrl: "https://randomuser.me/api/portraits/women/12.jpg",
@@ -16,6 +17,7 @@ export const reports = [
       "The user repeatedly sent inappropriate messages in the group chat, despite multiple warnings. Several members complained about the content being offensive and disruptive. Screenshots were shared that clearly show repeated use of offensive language. The behavior escalated over time rather than improving. Moderators had to remove him temporarily to calm the chat down. Community members expressed concern that the harassment might continue if not addressed properly.",
   },
   {
+    id: "rep_002",
     reported_by: {
       name: "Carlos Vega",
       imgUrl: "https://randomuser.me/api/portraits/men/45.jpg",
@@ -32,6 +34,7 @@ export const reports = [
       "The account appeared to be using fraudulent information to pass verification checks. Multiple inconsistencies were found in the documents that were uploaded. The name provided did not match the ID card, and the photo appeared edited. When asked for clarification, the user did not respond to messages. This raised suspicion that the profile was fake and potentially harmful. After review, the account was suspended and the report marked as solved.",
   },
   {
+    id: "rep_003",
     reported_by: {
       name: "Evelyn Parker",
       imgUrl: "https://randomuser.me/api/portraits/women/65.jpg",
@@ -48,6 +51,7 @@ export const reports = [
       "The reported user sent harassing messages late at night to multiple members. Victims described the behavior as intimidating and persistent. Attempts to block the user were circumvented with new accounts. Several screenshots were attached for evidence. The behavior violates community rules around respect and safety. Immediate review is needed to prevent further escalation.",
   },
   {
+    id: "rep_004",
     reported_by: {
       name: "Grace Lee",
       imgUrl: "https://randomuser.me/api/portraits/women/23.jpg",
@@ -64,6 +68,7 @@ export const reports = [
       "Unusual login attempts were detected from multiple locations in a short period of time. The account displayed sudden changes in activity, such as sending large numbers of messages. Friends reported receiving strange links that appeared malicious. The user denied responsibility and claimed their account was compromised. Security logs suggest unauthorized access. An investigation is ongoing to confirm whether the account was hacked or misused intentionally.",
   },
   {
+    id: "rep_005",
     reported_by: {
       name: "Isabella Rossi",
       imgUrl: "https://randomuser.me/api/portraits/women/34.jpg",
