@@ -1,12 +1,12 @@
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
-import Reports from "@/components/Reports/Reports";
+import Reviews from "@/components/Reviews/Reviews";
 
-const ReportsPage = () => {
+const ReviewsPage = () => {
   return (
     <ModalPageTemplate>
-      <Reports />
+      <Reviews />
     </ModalPageTemplate>
   );
 };
 
-export default ReportsPage;
+export default ReviewsPage;

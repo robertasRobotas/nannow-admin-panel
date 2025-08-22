@@ -1,7 +1,7 @@
-import styles from "./report.module.css";
+import styles from "./Review.module.css";
 import arrowImg from "../../../../assets/images/arrow-right.svg";
 
-type ReportProps = {
+type ReviewProps = {
   icon: string;
   reportedByName: string;
   reportedByImg: string;
@@ -12,7 +12,7 @@ type ReportProps = {
   onClick: () => void;
 };
 
-const Report = ({
+const Review = ({
   icon,
   reportedByName,
   reportedByImg,
@@ -21,18 +21,18 @@ const Report = ({
   date,
   isSelected,
   onClick,
-}: ReportProps) => {
+}: ReviewProps) => {
   return (
     <div
       onClick={onClick}
       className={`${styles.main} ${isSelected && styles.selected}`}
     >
       <img src={icon} alt="Icon" />
-      <div className={styles.reportDetails}>
+      <div className={styles.reviewDetails}>
         <div className={styles.profile}>
           <img src={reportedByImg} alt="Profile" />
           <div>
-            <span className={styles.title}>Reported by</span>
+            <span className={styles.title}>Reviewed by</span>
             <span className={styles.name}>{reportedByName}</span>
           </div>
         </div>
@@ -40,7 +40,7 @@ const Report = ({
         <div className={styles.profile}>
           <img src={reportedImg} alt="Profile" />
           <div>
-            <span className={styles.title}>Has been reported</span>
+            <span className={styles.title}>Has been reviewed</span>
             <span className={styles.name}>{reportedName}</span>
           </div>
         </div>
@@ -50,4 +50,4 @@ const Report = ({
   );
 };
 
-export default Report;
+export default Review;

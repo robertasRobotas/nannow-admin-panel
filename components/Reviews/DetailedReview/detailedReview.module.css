@@ -24,14 +24,14 @@
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.reportDetails {
+.reviewDetails {
   display: flex;
   align-items: center;
   gap: 10px;
   flex: 1 0 0;
 }
 
-.reportDetails img {
+.reviewDetails img {
   width: 20px;
   height: 20px;
 }

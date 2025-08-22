@@ -1,34 +1,34 @@
-import Report from "./Report/Report";
-import styles from "./reportsList.module.css";
+import styles from "./reviewsList.module.css";
 import { nunito } from "@/helpers/fonts";
 import warningImg from "../../../assets/images/attention.svg";
 import flashImg from "../../../assets/images/flash-filled.svg";
 import checkMarkImg from "../../../assets/images/green-checkmark.svg";
 import { Dispatch, SetStateAction } from "react";
+import Review from "./Review/Review";
 
-type ReportsListProps = {
-  reports: any;
-  selectedReportId: string;
-  setSelectedReportId: Dispatch<SetStateAction<string>>;
+type ReviewsListProps = {
+  reviews: any;
+  selectedReviewId: string;
+  setSelectedReviewId: Dispatch<SetStateAction<string>>;
 };
 
-const ReportsList = ({
-  reports,
-  selectedReportId,
-  setSelectedReportId,
-}: ReportsListProps) => {
+const ReviewsList = ({
+  reviews,
+  selectedReviewId,
+  setSelectedReviewId,
+}: ReviewsListProps) => {
   return (
     <div className={styles.main}>
-      <div className={`${styles.title} ${nunito.className}`}>Reported</div>
+      <div className={`${styles.title} ${nunito.className}`}>Reviews</div>
       <div>
-        {reports.map((r) => {
+        {reviews.map((r) => {
           const icon = r.isSolved
             ? checkMarkImg.src
             : r.isInvestigating
             ? flashImg.src
             : warningImg.src;
           return (
-            <Report
+            <Review
               key={r.id}
               icon={icon}
               reportedByImg={r.reported_by.imgUrl}
@@ -36,8 +36,8 @@ const ReportsList = ({
               reportedImg={r.reported.imgUrl}
               reportedName={r.reported.name.split(" ")[0]}
               date={r.createdAt}
-              isSelected={selectedReportId === r.id}
-              onClick={() => setSelectedReportId(r.id)}
+              isSelected={selectedReviewId === r.id}
+              onClick={() => setSelectedReviewId(r.id)}
             />
           );
         })}
@@ -46,4 +46,4 @@ const ReportsList = ({
   );
 };
 
-export default ReportsList;
+export default ReviewsList;
