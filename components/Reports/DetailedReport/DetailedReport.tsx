@@ -4,6 +4,7 @@ import arrowImg from "../../../assets/images/arrow-right.svg";
 import flashImg from "../../../assets/images/flash-white.svg";
 import checkmarkImg from "../../../assets/images/checkmark-white.svg";
 import Button from "@/components/Button/Button";
+import { useMediaQuery } from "react-responsive";
 
 type DetailedReport = {
   report: any;
@@ -11,6 +12,8 @@ type DetailedReport = {
 };
 
 const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
+  const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+
   return (
     <div className={styles.main}>
       <span className={`${styles.sectionTitle} ${nunito.className}`}>
@@ -49,7 +52,14 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
             imgUrl={checkmarkImg.src}
             type="GREEN"
           />
+          {isMobile && (
+            <Button title="Back" type="OUTLINED" onClick={onBackClick} />
+          )}
         </div>
+      </div>
+      <div className={styles.review}>
+        <img src={report.reported_by.imgUrl} alt="Profile" />
+        <div className={styles.reviewBubble}>{report.report}</div>
       </div>
     </div>
   );

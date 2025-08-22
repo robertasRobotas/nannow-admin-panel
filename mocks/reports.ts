@@ -84,4 +84,55 @@ export const reports = [
     report:
       "The reported profile contained an inappropriate and offensive profile picture. Several users flagged the image as explicit and unsuitable for the platform. Upon review, moderators confirmed that it violated the guidelines. The image was removed immediately, and the user was contacted about the violation. The user acknowledged the mistake and agreed to comply in the future. The report has been resolved and the account remains under observation.",
   },
+  {
+    id: "rep_005",
+    reported_by: {
+      name: "Isabella Rossi",
+      imgUrl: "https://randomuser.me/api/portraits/women/34.jpg",
+    },
+    reported: {
+      name: "Jack Wilson",
+      imgUrl: "https://randomuser.me/api/portraits/men/56.jpg",
+    },
+    isInvestigating: false,
+    isSolved: true,
+    createdAt: "Jul 28",
+    resolvedAt: "Jul 29",
+    report:
+      "The reported profile contained an inappropriate and offensive profile picture. Several users flagged the image as explicit and unsuitable for the platform. Upon review, moderators confirmed that it violated the guidelines. The image was removed immediately, and the user was contacted about the violation. The user acknowledged the mistake and agreed to comply in the future. The report has been resolved and the account remains under observation.",
+  },
+  {
+    id: "rep_005",
+    reported_by: {
+      name: "Isabella Rossi",
+      imgUrl: "https://randomuser.me/api/portraits/women/34.jpg",
+    },
+    reported: {
+      name: "Jack Wilson",
+      imgUrl: "https://randomuser.me/api/portraits/men/56.jpg",
+    },
+    isInvestigating: false,
+    isSolved: true,
+    createdAt: "Jul 28",
+    resolvedAt: "Jul 29",
+    report:
+      "The reported profile contained an inappropriate and offensive profile picture. Several users flagged the image as explicit and unsuitable for the platform. Upon review, moderators confirmed that it violated the guidelines. The image was removed immediately, and the user was contacted about the violation. The user acknowledged the mistake and agreed to comply in the future. The report has been resolved and the account remains under observation.",
+  },
+  {
+    id: "rep_005",
+    reported_by: {
+      name: "Isabella Rossi",
+      imgUrl: "https://randomuser.me/api/portraits/women/34.jpg",
+    },
+    reported: {
+      name: "Jack Wilson",
+      imgUrl: "https://randomuser.me/api/portraits/men/56.jpg",
+    },
+    isInvestigating: false,
+    isSolved: true,
+    createdAt: "Jul 28",
+    resolvedAt: "Jul 29",
+    report:
+      "The reported profile contained an inappropriate and offensive profile picture. Several users flagged the image as explicit and unsuitable for the platform. Upon review, moderators confirmed that it violated the guidelines. The image was removed immediately, and the user was contacted about the violation. The user acknowledged the mistake and agreed to comply in the future. The report has been resolved and the account remains under observation.",
+  },
 ];
