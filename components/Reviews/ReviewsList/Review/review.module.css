@@ -6,6 +6,17 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
+.rating {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .reviewDetails {
   display: flex;
   align-items: center;

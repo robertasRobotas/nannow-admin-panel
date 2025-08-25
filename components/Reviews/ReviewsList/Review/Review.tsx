@@ -1,23 +1,24 @@
 import styles from "./Review.module.css";
 import arrowImg from "../../../../assets/images/arrow-right.svg";
+import starImg from "../../../../assets/images/star-filled.svg";
 
 type ReviewProps = {
-  icon: string;
-  reportedByName: string;
-  reportedByImg: string;
-  reportedName: string;
-  reportedImg: string;
+  rating: number;
+  reviewedByName: string;
+  reviewedByImg: string;
+  reviewedName: string;
+  reviewedImg: string;
   date: string;
   isSelected: boolean;
   onClick: () => void;
 };
 
 const Review = ({
-  icon,
-  reportedByName,
-  reportedByImg,
-  reportedName,
-  reportedImg,
+  rating,
+  reviewedByName,
+  reviewedByImg,
+  reviewedName,
+  reviewedImg,
   date,
   isSelected,
   onClick,
@@ -27,21 +28,24 @@ const Review = ({
       onClick={onClick}
       className={`${styles.main} ${isSelected && styles.selected}`}
     >
-      <img src={icon} alt="Icon" />
+      <div className={styles.rating}>
+        <img src={starImg.src} alt="Star" />
+        <span>{rating.toFixed(1)}</span>
+      </div>
       <div className={styles.reviewDetails}>
         <div className={styles.profile}>
-          <img src={reportedByImg} alt="Profile" />
+          <img src={reviewedByImg} alt="Profile" />
           <div>
             <span className={styles.title}>Reviewed by</span>
-            <span className={styles.name}>{reportedByName}</span>
+            <span className={styles.name}>{reviewedByName}</span>
           </div>
         </div>
         <img src={arrowImg.src} alt="Arrow" />
         <div className={styles.profile}>
-          <img src={reportedImg} alt="Profile" />
+          <img src={reviewedImg} alt="Profile" />
           <div>
             <span className={styles.title}>Has been reviewed</span>
-            <span className={styles.name}>{reportedName}</span>
+            <span className={styles.name}>{reviewedName}</span>
           </div>
         </div>
       </div>

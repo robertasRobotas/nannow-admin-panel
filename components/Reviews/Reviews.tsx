@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styles from "./reviews.module.css";
-import { reports } from "@/mocks/reports";
+import { reviews } from "@/mocks/reviews";
 import { useMediaQuery } from "react-responsive";
 import ReviewsList from "./ReviewsList/ReviewsList";
 import DetailedReview from "./DetailedReview/DetailedReview";
@@ -10,8 +10,8 @@ const Reviews = () => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   const findSelectedReview = (id: string) => {
-    const report = reports.find((c) => c.id === id) ?? {};
-    return report;
+    const review = reviews.find((c) => c.id === id) ?? {};
+    return review;
   };
 
   return (
@@ -24,7 +24,7 @@ const Reviews = () => {
           />
         ) : (
           <ReviewsList
-            reviews={reports}
+            reviews={reviews}
             selectedReviewId={selectedReviewId}
             setSelectedReviewId={setSelectedReviewId}
           />
@@ -32,7 +32,7 @@ const Reviews = () => {
       ) : (
         <>
           <ReviewsList
-            reviews={reports}
+            reviews={reviews}
             selectedReviewId={selectedReviewId}
             setSelectedReviewId={setSelectedReviewId}
           />

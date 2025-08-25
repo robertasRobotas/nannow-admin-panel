@@ -22,21 +22,21 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
       <div className={styles.heading}>
         <div className={styles.reviewDetails}>
           <div className={styles.profile}>
-            <img src={review.reported_by.imgUrl} alt="Profile" />
+            <img src={review.reviewed_by.imgUrl} alt="Profile" />
             <div>
               <span className={styles.title}>Has been reviewed</span>
               <span className={styles.name}>
-                {review.reported.name.split(" ")[0]}
+                {review.reviewed.name.split(" ")[0]}
               </span>
             </div>
           </div>
           <img src={arrowImg.src} alt="Arrow" />
           <div className={styles.profile}>
-            <img src={review.reported.imgUrl} alt="Profile" />
+            <img src={review.reviewed.imgUrl} alt="Profile" />
             <div>
               <span className={styles.title}>Reviewed by</span>
               <span className={styles.name}>
-                {review.reported_by.name.split(" ")[0]}
+                {review.reviewed_by.name.split(" ")[0]}
               </span>
             </div>
           </div>
@@ -54,8 +54,8 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
         </div>
       </div>
       <div className={styles.review}>
-        <img src={review.reported_by.imgUrl} alt="Profile" />
-        <div className={styles.reviewBubble}>{review.report}</div>
+        <img src={review.reviewed_by.imgUrl} alt="Profile" />
+        <div className={styles.reviewBubble}>{review.review}</div>
       </div>
     </div>
   );
