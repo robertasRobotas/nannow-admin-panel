@@ -13,3 +13,11 @@ export const getClientById = async (id: string) => {
   console.log(response);
   return response;
 };
+
+export const getUsersByCriminalRecordStatus = async (status: string) => {
+  const response = await axios.get(
+    `${BASE_URL}/admin/users-by-criminal-record-status?startIndex=&status=${status}`
+  );
+  console.log(response);
+  return response;
+};

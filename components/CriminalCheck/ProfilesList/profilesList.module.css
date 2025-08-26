@@ -1,0 +1,26 @@
+.main {
+  display: flex;
+  width: 320px;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: auto;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.main::-webkit-scrollbar-thumb {
+  background: #b3aeae;
+  border-radius: 8px;
+}
+
+.main::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

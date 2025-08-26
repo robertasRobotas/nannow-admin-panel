@@ -1,13 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./criminalCheck.module.css";
 import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
+import { getUsersByCriminalRecordStatus } from "@/pages/api/fetch";
+import ProfilesList from "./ProfilesList/ProfilesList";
 
 const CriminalCheck = () => {
   const [selected, setSelected] = useState<
-    "all" | "not-provided" | "pending" | "approved" | "rejected"
-  >("all");
+    "ALL" | "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED"
+  >("ALL");
   const [users, setUsers] = useState([]);
+
+  const fetchUsers = async (status: string) => {
+    const users = await getUsersByCriminalRecordStatus(status);
+    setUsers(users.data.users.items);
+  };
+
+  useEffect(() => {
+    fetchUsers(selected === "ALL" ? "" : selected);
+  }, [selected]);
 
   return (
     <div className={styles.main}>
@@ -16,37 +27,39 @@ const CriminalCheck = () => {
       </div>
       <div className={styles.categoryBtns}>
         <Button
-          onClick={() => setSelected("all")}
+          onClick={() => setSelected("ALL")}
           title="All"
           type="PLAIN"
-          isSelected={selected === "all"}
+          isSelected={selected === "ALL"}
         />
         <Button
-          onClick={() => setSelected("not-provided")}
+          onClick={() => setSelected("NOT_SUBMITTED")}
           title="Not Provided"
           type="PLAIN"
-          isSelected={selected === "not-provided"}
+          isSelected={selected === "NOT_SUBMITTED"}
         />
         <Button
-          onClick={() => setSelected("pending")}
+          onClick={() => setSelected("PENDING")}
           title="Pending"
           type="PLAIN"
-          isSelected={selected === "pending"}
+          isSelected={selected === "PENDING"}
         />
         <Button
-          onClick={() => setSelected("approved")}
+          onClick={() => setSelected("APPROVED")}
           title="Approved"
           type="PLAIN"
-          isSelected={selected === "approved"}
+          isSelected={selected === "APPROVED"}
         />
         <Button
-          onClick={() => setSelected("rejected")}
+          onClick={() => setSelected("REJECTED")}
           title="Rejected"
           type="PLAIN"
-          isSelected={selected === "rejected"}
+          isSelected={selected === "REJECTED"}
         />
       </div>
-      <div className={styles.profileList}></div>
+      <div className={styles.profilesWrapper}>
+        <ProfilesList users={users} />
+      </div>
     </div>
   );
 };
