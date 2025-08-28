@@ -24,11 +24,18 @@
   flex-direction: column;
 }
 
+.profileDetails img {
+  width: 16px;
+  height: 16px;
+}
+
 .name {
   color: #000;
   font-family: Inter;
   font-size: 13px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
 }
 
 .id {

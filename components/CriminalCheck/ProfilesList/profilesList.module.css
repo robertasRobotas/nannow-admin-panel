@@ -1,7 +1,7 @@
 .main {
   display: flex;
-  width: 320px;
   flex-direction: column;
+  width: 100%;
   flex-shrink: 0;
   overflow: auto;
   border-right: 1px solid rgba(0, 0, 0, 0.1);

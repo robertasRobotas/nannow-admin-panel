@@ -15,9 +15,14 @@
   white-space: nowrap;
 }
 
-.main img {
+.icon {
   height: 24px;
   width: 24px;
+}
+
+.arrowDown {
+  width: 16px;
+  height: 16 px;
 }
 
 .PLAIN:hover {
@@ -60,6 +65,36 @@
 
 .WHITE:active:enabled {
   background-color: #5c5c5c;
+}
+
+.GREEN {
+  background-color: #34c759;
+  color: white;
+}
+
+.GREEN:hover:enabled {
+  background-color: #19ad3e;
+  color: white;
+}
+
+.GREEN:active:enabled {
+  background-color: #19ad3e;
+  color: white;
+}
+
+.GRAY {
+  background-color: #e8e8e8;
+  color: black;
+}
+
+.GRAY:hover:enabled {
+  background-color: #e2e2e2;
+  color: black;
+}
+
+.GRAY:active:enabled {
+  background-color: #ededed;
+  color: black;
 }
 
 .selected {

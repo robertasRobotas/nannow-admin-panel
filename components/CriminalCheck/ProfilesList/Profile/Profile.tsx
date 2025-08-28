@@ -3,6 +3,8 @@ import crossImg from "../../../../assets/images/cross-circle.svg";
 import checkmarkImg from "../../../../assets/images/circle-checkmark.svg";
 import clockImg from "../../../../assets/images/clock.svg";
 import questionImg from "../../../../assets/images/question.svg";
+import arrowOutImg from "../../../../assets/images/arrow-out.svg";
+import { useRouter } from "next/router";
 
 type ProfileProps = {
   status: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
@@ -18,13 +20,25 @@ const Profile = ({ status, imgUrl, name, id }: ProfileProps) => {
     PENDING: clockImg.src,
     NOT_SUBMITTED: questionImg.src,
   };
+
+  const router = useRouter();
+
   return (
-    <div className={styles.main}>
+    <div
+      onClick={() => {
+        router.push(`/criminal-check/${id}`);
+      }}
+      className={styles.main}
+    >
       <img src={icons[status] ?? questionImg.src} />
       <div className={styles.profile}>
         <img src={imgUrl} />
         <div className={styles.profileDetails}>
-          <span className={styles.name}>{name}</span>
+          <div className={styles.name}>
+            <span>{name}</span>
+            <img src={arrowOutImg.src} />
+          </div>
+
           <span className={styles.id}>{id}</span>
         </div>
       </div>
