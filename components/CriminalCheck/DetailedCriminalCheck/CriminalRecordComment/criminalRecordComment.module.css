@@ -1,0 +1,24 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  grid-column: 1/7;
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.main img {
+  width: 30px;
+  height: 30px;
+}
+
+.title {
+  color: #000;
+  font-family: Inter;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px; /* 140% */
+  text-transform: uppercase;
+  display: block;
+}

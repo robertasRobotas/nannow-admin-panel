@@ -9,6 +9,10 @@ import questionImg from "../../../assets/images/question.svg";
 import { useState } from "react";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import { updateCriminalCheckStatus } from "@/pages/api/fetch";
+import VerifiedType from "./VerifiedType/VerifiedType";
+import RecordChangedAt from "./RecordChangedAt/RecordChangedAt";
+import CriminalRecordCode from "./CriminalRecordCode/CriminalRecordCode";
+import CriminalRecordComment from "./CriminalRecordComment/CriminalRecordComment";
 
 type DetailedCriminalCheckProps = {
   user: User;
@@ -61,7 +65,14 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
           />
         </div>
       </div>
-      <div className={styles.criminalCheckInfo}></div>
+      <div className={styles.criminalCheckInfo}>
+        <VerifiedType verifiedType={user.provider.criminalRecordVerifiedType} />
+        <RecordChangedAt changedAt={user.provider.criminalRecordVerifiedAt} />
+        {user.provider.criminalRecordCode && (
+          <CriminalRecordCode code={user.provider.criminalRecordCode} />
+        )}
+        <CriminalRecordComment />
+      </div>
     </div>
   );
 };
