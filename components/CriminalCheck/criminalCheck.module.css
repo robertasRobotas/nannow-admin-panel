@@ -26,3 +26,9 @@
   display: flex;
   min-height: 0;
 }
+
+@media (max-width: 936px) {
+  .categoryBtns {
+    flex-wrap: wrap;
+  }
+}
