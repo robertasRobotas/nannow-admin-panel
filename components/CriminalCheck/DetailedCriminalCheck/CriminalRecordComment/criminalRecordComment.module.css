@@ -22,3 +22,23 @@
   text-transform: uppercase;
   display: block;
 }
+
+.comment {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 18px; /* 128.571% */
+  letter-spacing: -0.28px;
+  cursor: pointer;
+}
+
+.commentInput {
+  all: unset;
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 18px; /* 128.571% */
+  letter-spacing: -0.28px;
+  border: 1px solid black;
+  border-radius: 5px;
+}
