@@ -37,6 +37,8 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
               setSelectedSection("");
               setIsSelectedMenu(true);
             }}
+            chats={client.chats}
+            userId={client.user.id}
           />
         );
       }

@@ -1,29 +1,33 @@
-import { ChatMessage } from "@/types/MockChats";
+import { ChatMessageType } from "@/types/Chats";
 import styles from "./chatMessages.module.css";
 
 type ChatMessagesProps = {
-  messages: ChatMessage[];
+  messages: ChatMessageType[];
+  userId: string;
 };
 
-const ChatMessages = ({ messages }: ChatMessagesProps) => {
+const ChatMessages = ({ messages, userId }: ChatMessagesProps) => {
   return (
     <div className={styles.main}>
-      {messages.map((m) => (
-        <div
-          key={m.id}
-          className={`${styles.messageWrapper} ${
-            m.isSent ? styles.alignRight : styles.alignLeft
-          }`}
-        >
+      {messages.map((m) => {
+        const isSender = m.senderId === userId;
+        return (
           <div
-            className={`${styles.chatBubble} ${
-              m.isSent ? styles.sent : styles.received
+            key={m.id}
+            className={`${styles.messageWrapper} ${
+              isSender ? styles.alignRight : styles.alignLeft
             }`}
           >
-            <span>{m.text}</span>
+            <div
+              className={`${styles.chatBubble} ${
+                isSender ? styles.sent : styles.received
+              }`}
+            >
+              <span>{m.content}</span>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

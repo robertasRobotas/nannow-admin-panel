@@ -4,6 +4,7 @@
   box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
     0 2px 10px 0 rgba(0, 0, 0, 0.04);
   display: flex;
+  height: 100%;
 }
 
 .menuWrapper {
@@ -12,4 +13,5 @@
 
 .sectionWrapper {
   flex: 1;
+  overflow: auto;
 }

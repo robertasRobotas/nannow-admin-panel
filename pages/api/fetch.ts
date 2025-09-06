@@ -13,3 +13,9 @@ export const getClientById = async (id: string) => {
   console.log(response);
   return response;
 };
+
+export const getChatById = async (id: string) => {
+  const response = await axios.get(`${BASE_URL}/admin/chats/${id}`);
+  console.log(response);
+  return response;
+};

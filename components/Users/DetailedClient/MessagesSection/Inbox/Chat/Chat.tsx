@@ -1,40 +1,42 @@
+import { getChatById } from "@/pages/api/fetch";
 import styles from "./chat.module.css";
-import verifiedBadgeImg from "../../../../../../assets/images/verified_badge.svg";
-import crownImg from "../../../../../../assets/images/crown.svg";
-import voiceChatImg from "../../../../../../assets/images/voice_chat.svg";
+import { useEffect, useState } from "react";
 
 type ChatProps = {
   id: string;
   name: string;
   imgUrl: string;
-  isVerified: boolean;
-  isCrown: boolean;
-  isVoicechat: boolean;
-  message: string;
   onClick: () => void;
 };
 
-const Chat = ({
-  id,
-  name,
-  imgUrl,
-  isVerified,
-  isCrown,
-  isVoicechat,
-  message,
-  onClick,
-}: ChatProps) => {
+const Chat = ({ id, name, imgUrl, onClick }: ChatProps) => {
+  const [lastMessage, setLastMessage] = useState("");
+
+  const fetchLastMessage = async (chatId: string) => {
+    try {
+      const response = await getChatById(chatId);
+      console.log(response.data.result.messages);
+      setLastMessage(
+        response.data.result.messages[response.data.result.messages.length - 1]
+          .content
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLastMessage(id);
+  }, []);
+
   return (
     <div onClick={onClick} className={styles.main}>
       <img className={styles.profileImg} src={imgUrl} alt="Icon" />
       <div className={styles.chatDetails}>
         <div className={styles.name}>
           <span>{name}</span>
-          {isVerified && <img src={verifiedBadgeImg.src} alt="Verified" />}
-          {isCrown && <img src={crownImg.src} alt="Crown" />}
-          {isVoicechat && <img src={voiceChatImg.src} alt="Voice chat" />}
         </div>
-        <div className={styles.lastMessage}>{message}</div>
+        <div className={styles.lastMessage}>{lastMessage}</div>
       </div>
     </div>
   );

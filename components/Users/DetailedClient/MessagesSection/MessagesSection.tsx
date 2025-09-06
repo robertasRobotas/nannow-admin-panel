@@ -1,31 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./messagesSection.module.css";
 import Inbox from "./Inbox/Inbox";
-import { mockChatData } from "@/mocks/chats";
 import ChatMessages from "./ChatMessages/ChatMessages";
 import Button from "@/components/Button/Button";
-import { useMediaQuery } from "react-responsive";
+import { ChatType } from "@/types/Chats";
+import { getChatById } from "@/pages/api/fetch";
 
 type MessagesSectionProps = {
   onBackClick: () => void;
+  chats: ChatType[];
+  userId: string;
 };
 
-const MessagesSection = ({ onBackClick }: MessagesSectionProps) => {
+const MessagesSection = ({
+  onBackClick,
+  chats,
+  userId,
+}: MessagesSectionProps) => {
   const [selectedChatId, setSelectedChatId] = useState("");
-  const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+  const [messages, setMessages] = useState([]);
 
-  const findSelectedMessages = (id: string) => {
-    const messages = mockChatData.find((c) => c.id === id)?.messages ?? [];
-    return messages;
+  const fetchSelectedMessages = async () => {
+    try {
+      const response = await getChatById(selectedChatId);
+      setMessages(response.data.result.messages);
+    } catch (err) {
+      console.log(err);
+    }
   };
+
+  useEffect(() => {
+    setMessages([]);
+    fetchSelectedMessages();
+  }, [selectedChatId]);
 
   return (
     <div className={styles.wrapper}>
       {selectedChatId ? (
-        <ChatMessages messages={findSelectedMessages(selectedChatId)} />
+        <ChatMessages messages={messages} userId={userId} />
       ) : (
-        <Inbox chats={mockChatData} setSelectedChatId={setSelectedChatId} />
-      )}{" "}
+        <Inbox chats={chats} setSelectedChatId={setSelectedChatId} />
+      )}
       <div className={styles.backBtnWrapper}>
         <Button
           title="Back"
