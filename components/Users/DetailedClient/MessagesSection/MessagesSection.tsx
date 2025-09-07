@@ -19,25 +19,44 @@ const MessagesSection = ({
 }: MessagesSectionProps) => {
   const [selectedChatId, setSelectedChatId] = useState("");
   const [messages, setMessages] = useState([]);
+  const [userImgUrl, setUserImgUrl] = useState("");
+  const [otherUserImgUrl, setOtherUserImgUrl] = useState("");
 
   const fetchSelectedMessages = async () => {
     try {
       const response = await getChatById(selectedChatId);
       setMessages(response.data.result.messages);
+      setUserImgUrl(
+        response.data.result.user1.id === userId
+          ? response.data.result.user1.imgUrl
+          : response.data.result.user2.imgUrl
+      );
+      setOtherUserImgUrl(
+        response.data.result.user1.id !== userId
+          ? response.data.result.user1.imgUrl
+          : response.data.result.user2.imgUrl
+      );
     } catch (err) {
       console.log(err);
     }
   };
 
   useEffect(() => {
-    setMessages([]);
-    fetchSelectedMessages();
+    if (selectedChatId) {
+      setMessages([]);
+      fetchSelectedMessages();
+    }
   }, [selectedChatId]);
 
   return (
     <div className={styles.wrapper}>
       {selectedChatId ? (
-        <ChatMessages messages={messages} userId={userId} />
+        <ChatMessages
+          messages={messages}
+          userId={userId}
+          userImgUrl={userImgUrl}
+          otherUserImgUrl={otherUserImgUrl}
+        />
       ) : (
         <Inbox chats={chats} setSelectedChatId={setSelectedChatId} />
       )}

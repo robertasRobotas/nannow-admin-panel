@@ -15,7 +15,6 @@ const Chat = ({ id, name, imgUrl, onClick }: ChatProps) => {
   const fetchLastMessage = async (chatId: string) => {
     try {
       const response = await getChatById(chatId);
-      console.log(response.data.result.messages);
       setLastMessage(
         response.data.result.messages[response.data.result.messages.length - 1]
           .content
