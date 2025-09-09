@@ -19,8 +19,8 @@ const Inbox = ({ chats, setSelectedChatId }: InboxProps) => {
           <Chat
             key={c.id}
             id={c.id}
-            imgUrl={c.otherUser.imgUrl}
-            name={`${c.otherUser.firstName} ${c.otherUser.lastName} `}
+            imgUrl={c?.otherUser?.imgUrl}
+            name={`${c?.otherUser?.firstName} ${c?.otherUser?.lastName} `}
             onClick={() => {
               setSelectedChatId(c.id);
             }}
