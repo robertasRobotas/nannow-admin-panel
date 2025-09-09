@@ -62,6 +62,21 @@
   background-color: #5c5c5c;
 }
 
+.GREEN {
+  background-color: #34c759;
+  color: white;
+}
+
+.GREEN:hover:enabled {
+  background-color: #19ad3e;
+  color: white;
+}
+
+.GREEN:active:enabled {
+  background-color: #19ad3e;
+  color: white;
+}
+
 .selected {
   background: rgba(2, 2, 2, 0.08);
 }
