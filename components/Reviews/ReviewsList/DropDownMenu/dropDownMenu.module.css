@@ -1,0 +1,52 @@
+.dropdown {
+  position: relative;
+  width: 103px;
+  color: var(--Greys-Pitch-Black, #000);
+  font-family: Inter;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dropdownToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 10px;
+  cursor: pointer;
+}
+
+.dropdownToggle img {
+  width: 16px;
+  height: 16px;
+  margin-right: 3px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+}
+
+.dropdownMenu {
+  width: 100%;
+  position: absolute;
+  top: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropDownItem {
+  display: flex;
+  align-items: center;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.dropDownItem img {
+  width: 16px;
+  height: 16px;
+  margin-right: 3px;
+}

@@ -6,14 +6,25 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-.reportDetails {
+.rating {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.reviewDetails {
   display: flex;
   align-items: center;
   gap: 10px;
   flex: 1 0 0;
 }
 
-.reportDetails img {
+.reviewDetails img {
   width: 20px;
   height: 20px;
 }

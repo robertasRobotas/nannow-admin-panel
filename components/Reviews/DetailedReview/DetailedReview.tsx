@@ -1,17 +1,17 @@
-import styles from "./detailedReport.module.css";
+import styles from "./detailedReview.module.css";
 import { nunito } from "@/helpers/fonts";
 import arrowImg from "../../../assets/images/arrow-right.svg";
-import flashImg from "../../../assets/images/flash-white.svg";
+import trashImg from "../../../assets/images/trash.svg";
 import checkmarkImg from "../../../assets/images/checkmark-white.svg";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 
-type DetailedReport = {
-  report: any;
+type DetailedReview = {
+  review: any;
   onBackClick: () => void;
 };
 
-const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
+const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   return (
@@ -20,35 +20,31 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
         Details
       </span>
       <div className={styles.heading}>
-        <div className={styles.reportDetails}>
+        <div className={styles.reviewDetails}>
           <div className={styles.profile}>
-            <img src={report.reported_by.imgUrl} alt="Profile" />
+            <img src={review.reviewed_by.imgUrl} alt="Profile" />
             <div>
-              <span className={styles.title}>Has been reported</span>
+              <span className={styles.title}>Has been reviewed</span>
               <span className={styles.name}>
-                {report.reported.name.split(" ")[0]}
+                {review.reviewed.name.split(" ")[0]}
               </span>
             </div>
           </div>
           <img src={arrowImg.src} alt="Arrow" />
           <div className={styles.profile}>
-            <img src={report.reported.imgUrl} alt="Profile" />
+            <img src={review.reviewed.imgUrl} alt="Profile" />
             <div>
-              <span className={styles.title}>Reported by</span>
+              <span className={styles.title}>Reviewed by</span>
               <span className={styles.name}>
-                {report.reported_by.name.split(" ")[0]}
+                {review.reviewed_by.name.split(" ")[0]}
               </span>
             </div>
           </div>
         </div>
         <div className={styles.btnsWrapper}>
+          <Button title="Delete review" imgUrl={trashImg.src} type="GRAY" />
           <Button
-            title="Start investigation"
-            imgUrl={flashImg.src}
-            type="BLACK"
-          />
-          <Button
-            title="Mark as solved"
+            title="Mark as Approved"
             imgUrl={checkmarkImg.src}
             type="GREEN"
           />
@@ -58,11 +54,11 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
         </div>
       </div>
       <div className={styles.review}>
-        <img src={report.reported_by.imgUrl} alt="Profile" />
-        <div className={styles.reviewBubble}>{report.report}</div>
+        <img src={review.reviewed_by.imgUrl} alt="Profile" />
+        <div className={styles.reviewBubble}>{review.review}</div>
       </div>
     </div>
   );
 };
 
-export default DetailedReport;
+export default DetailedReview;

@@ -77,6 +77,21 @@
   color: white;
 }
 
+.GRAY {
+  background-color: #e8e8e8;
+  color: black;
+}
+
+.GRAY:hover:enabled {
+  background-color: #e2e2e2;
+  color: black;
+}
+
+.GRAY:active:enabled {
+  background-color: #ededed;
+  color: black;
+}
+
 .selected {
   background: rgba(2, 2, 2, 0.08);
 }
