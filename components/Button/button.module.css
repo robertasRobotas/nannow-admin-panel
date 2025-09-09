@@ -15,9 +15,14 @@
   white-space: nowrap;
 }
 
-.main img {
+.icon {
   height: 24px;
   width: 24px;
+}
+
+.arrowDown {
+  width: 16px;
+  height: 16 px;
 }
 
 .PLAIN:hover {

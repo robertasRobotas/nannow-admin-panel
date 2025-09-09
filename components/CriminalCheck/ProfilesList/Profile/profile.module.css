@@ -1,0 +1,44 @@
+.main {
+  display: flex;
+  padding: 16px 20px;
+  align-items: center;
+  gap: 16px;
+  align-self: stretch;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.profile {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.profile img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.profileDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.profileDetails img {
+  width: 16px;
+  height: 16px;
+}
+
+.name {
+  color: #000;
+  font-family: Inter;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.id {
+  color: rgba(0, 0, 0, 0.5);
+  font-family: Inter;
+  font-size: 10px;
+  font-weight: 400;
+}

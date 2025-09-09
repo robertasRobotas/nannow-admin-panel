@@ -14,7 +14,29 @@ export const getClientById = async (id: string) => {
   return response;
 };
 
-export const getChatById = async (id: string) => {
+export const getUsersByCriminalRecordStatus = async (status: string) => {
+  const response = await axios.get(
+    `${BASE_URL}/admin/users-by-criminal-record-status?startIndex=&status=${status}`
+  );
+  console.log(response);
+  return response;
+};
+
+export const getCriminalCheckById = async (id: string) => {
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/${id}/criminal-record-info`
+  );
+  console.log(response);
+  return response;
+};
+
+export const updateCriminalCheckStatus = async (id: string, status: string) => {
+  const response = await axios.put(
+    `${BASE_URL}/admin/users/${id}/criminal-record-status`,
+    { status: status }
+  );
+
+  export const getChatById = async (id: string) => {
   const response = await axios.get(`${BASE_URL}/admin/chats/${id}`);
   console.log(response);
   return response;

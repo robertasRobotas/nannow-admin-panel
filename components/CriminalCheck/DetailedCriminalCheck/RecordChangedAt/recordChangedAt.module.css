@@ -1,0 +1,47 @@
+.verifiedType {
+  display: flex;
+  grid-column: 4/7;
+  padding: 20px;
+  align-items: center;
+  gap: 16px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.verifiedInfo .title {
+  color: #000;
+  font-family: Inter;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px; /* 140% */
+  text-transform: uppercase;
+  padding-bottom: 4px;
+}
+
+.docType {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.docIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.docTitle {
+  color: #000;
+  font-family: Nunito;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 18px; /* 128.571% */
+  letter-spacing: -0.28px;
+}
+
+@media (max-width: 936px) {
+  .verifiedType {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
