@@ -6,7 +6,7 @@
 
 .contentWrapper {
   flex: 1;
-  min-height: 0;
+  min-height: 800px;
   padding: 20px 86px 55px 86px;
 }
 
