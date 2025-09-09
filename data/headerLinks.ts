@@ -8,6 +8,6 @@ export const links: HeaderLink[] = [
   { title: "Payments", link: "/payments" },
   { title: "Bugs", link: "/bugs" },
   { title: "Feedback", link: "/feedback" },
-  { title: "Reported", link: "/reported" },
+  { title: "Reported", link: "/reports" },
   { title: "Reviews", link: "/reviews" },
 ];

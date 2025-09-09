@@ -1,29 +1,46 @@
-import { ChatMessage } from "@/types/MockChats";
+import { ChatMessageType } from "@/types/Chats";
 import styles from "./chatMessages.module.css";
 
 type ChatMessagesProps = {
-  messages: ChatMessage[];
+  messages: ChatMessageType[];
+  userId: string;
+  userImgUrl: string;
+  otherUserImgUrl: string;
 };
 
-const ChatMessages = ({ messages }: ChatMessagesProps) => {
+const ChatMessages = ({
+  messages,
+  userId,
+  userImgUrl,
+  otherUserImgUrl,
+}: ChatMessagesProps) => {
   return (
     <div className={styles.main}>
-      {messages.map((m) => (
-        <div
-          key={m.id}
-          className={`${styles.messageWrapper} ${
-            m.isSent ? styles.alignRight : styles.alignLeft
-          }`}
-        >
+      {messages.map((m) => {
+        const isFromUser = m.senderId === userId;
+        return (
           <div
-            className={`${styles.chatBubble} ${
-              m.isSent ? styles.sent : styles.received
+            key={m.id}
+            className={`${styles.messageWrapper} ${
+              isFromUser ? styles.alignRight : styles.alignLeft
             }`}
           >
-            <span>{m.text}</span>
+            {!isFromUser && (
+              <img className={styles.profileImg} src={otherUserImgUrl} />
+            )}
+            <div
+              className={`${styles.chatBubble} ${
+                isFromUser ? styles.sent : styles.received
+              }`}
+            >
+              <span>{m.content}</span>
+            </div>
+            {isFromUser && (
+              <img className={styles.profileImg} src={userImgUrl} />
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

@@ -1,0 +1,42 @@
+.main {
+  width: 320px;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: auto;
+}
+
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30px 20px 10px 20px;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.48px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+@media (max-width: 936px) {
+  .main {
+    width: 100%;
+    border: none;
+  }
+}
+
+.main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.main::-webkit-scrollbar-thumb {
+  background: #b3aeae;
+  border-radius: 8px;
+}
+
+.main::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
