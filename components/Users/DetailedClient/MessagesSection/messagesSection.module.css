@@ -1,3 +1,7 @@
+.wrapper {
+  overflow: auto;
+}
+
 .backBtnWrapper {
   padding: 30px;
 }
