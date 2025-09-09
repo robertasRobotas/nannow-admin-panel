@@ -32,9 +32,9 @@ const ReportsList = ({
               key={r.id}
               icon={icon}
               reportedByImg={r.reported_by.imgUrl}
-              reportedByName={r.reported_by.name.split(" ")[0]}
+              reportedByName={r.reported_by.name}
               reportedImg={r.reported.imgUrl}
-              reportedName={r.reported.name.split(" ")[0]}
+              reportedName={r.reported.name}
               date={r.createdAt}
               isSelected={selectedReportId === r.id}
               onClick={() => setSelectedReportId(r.id)}
