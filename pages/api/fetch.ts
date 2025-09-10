@@ -35,8 +35,10 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
     `${BASE_URL}/admin/users/${id}/criminal-record-status`,
     { status: status }
   );
+  return response;
+};
 
-  export const getChatById = async (id: string) => {
+export const getChatById = async (id: string) => {
   const response = await axios.get(`${BASE_URL}/admin/chats/${id}`);
   console.log(response);
   return response;
