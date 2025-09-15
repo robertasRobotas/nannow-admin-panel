@@ -26,6 +26,7 @@ export interface Provider {
   addressesIds: string[];
   operationCountry: string;
   isAvailableStatus: boolean;
+  criminalRecordStatusAdminNotes: string[];
   receivedReviewsIds: string[]; // note: appears twice in your data, kept once
   criminalRecordDocUrls: string[];
   createdAt: string; // ISO date

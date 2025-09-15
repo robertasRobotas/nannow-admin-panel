@@ -19,6 +19,8 @@ type DetailedCriminalCheckProps = {
 };
 
 const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
+  const [comment, setComment] = useState("");
+
   const options = [
     { title: "Approved", icon: checkmarkImg.src, value: "APPROVED" },
     { title: "Not submitted", icon: questionImg.src, value: "NOT_SUBMITTED" },
@@ -32,7 +34,7 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
     )
   );
 
-  const onUpdateStatus = async () => {
+  const onUpdateCriminalCheck = async () => {
     try {
       const response = await updateCriminalCheckStatus(
         user.id,
@@ -61,7 +63,7 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
           <Button
             title="Update"
             type="BLACK"
-            onClick={() => onUpdateStatus()}
+            onClick={() => onUpdateCriminalCheck()}
           />
         </div>
       </div>
@@ -71,7 +73,7 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
         {user.provider.criminalRecordCode && (
           <CriminalRecordCode code={user.provider.criminalRecordCode} />
         )}
-        <CriminalRecordComment />
+        <CriminalRecordComment comment={comment} setComment={setComment} />
       </div>
     </div>
   );

@@ -1,22 +1,49 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./reports.module.css";
-import { reports } from "@/mocks/reports";
 import { useMediaQuery } from "react-responsive";
 import ReportsList from "./ReportsList/ReportsList";
 import DetailedReport from "./DetailedReport/DetailedReport";
+import { getAllReports, getReportById } from "@/pages/api/fetch";
 
 const Reports = () => {
   const [selectedReportId, setSelectedReportId] = useState("");
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+  const [reports, setReports] = useState([]);
+  const [selectedReport, setReportById] = useState<ReportType>();
 
-  const findSelectedReport = (id: string) =>
-    reports.find((c) => c.id === id) ?? {};
+  const fetchReports = async () => {
+    try {
+      const response = await getAllReports();
+      setReports(response.data.result.items);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const fetchReportById = async (id: string) => {
+    try {
+      const response = await getReportById(id);
+      setReportById(response.data.result);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  useEffect(() => {
+    if (selectedReportId) {
+      fetchReportById(selectedReportId);
+    }
+  }, [selectedReportId]);
 
   const renderMobile = () => {
-    if (selectedReportId) {
+    if (selectedReportId && selectedReport) {
       return (
         <DetailedReport
-          report={findSelectedReport(selectedReportId)}
+          report={selectedReport}
           onBackClick={() => setSelectedReportId("")}
         />
       );
@@ -38,9 +65,9 @@ const Reports = () => {
         selectedReportId={selectedReportId}
         setSelectedReportId={setSelectedReportId}
       />
-      {selectedReportId && (
+      {selectedReportId && selectedReport && (
         <DetailedReport
-          report={findSelectedReport(selectedReportId)}
+          report={selectedReport}
           onBackClick={() => setSelectedReportId("")}
         />
       )}

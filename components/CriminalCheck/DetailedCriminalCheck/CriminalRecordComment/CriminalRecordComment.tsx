@@ -1,10 +1,17 @@
 import styles from "./criminalRecordComment.module.css";
 import warningImg from "../../../../assets/images/attention_outlined.svg";
-import { useEffect, useRef, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { nunito } from "@/helpers/fonts";
 
-const CriminalRecordComment = () => {
-  const [comment, setComment] = useState("-");
+type CriminalRecordCommentProps = {
+  comment: string;
+  setComment: Dispatch<SetStateAction<string>>;
+};
+
+const CriminalRecordComment = ({
+  comment,
+  setComment,
+}: CriminalRecordCommentProps) => {
   const [isEditingComment, setIsEditingComment] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 

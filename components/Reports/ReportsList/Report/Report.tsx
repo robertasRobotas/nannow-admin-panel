@@ -22,6 +22,18 @@ const Report = ({
   isSelected,
   onClick,
 }: ReportProps) => {
+  const dateFormatted = date
+    ? new Date(date).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "-";
+
   return (
     <div
       onClick={onClick}
@@ -45,7 +57,7 @@ const Report = ({
           </div>
         </div>
       </div>
-      <span className={styles.date}>{date}</span>
+      <span className={styles.date}>{dateFormatted}</span>
     </div>
   );
 };

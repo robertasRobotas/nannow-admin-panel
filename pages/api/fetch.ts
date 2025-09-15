@@ -38,8 +38,27 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
   return response;
 };
 
+export const updateReportStatus = async (id: string, isSolved: boolean) => {
+  const response = await axios.put(`${BASE_URL}/admin/reports/${id}`, {
+    isResolved: isSolved,
+  });
+  return response;
+};
+
 export const getChatById = async (id: string) => {
   const response = await axios.get(`${BASE_URL}/admin/chats/${id}`);
+  console.log(response);
+  return response;
+};
+
+export const getAllReports = async () => {
+  const response = await axios.get(`${BASE_URL}/admin/reports`);
+  console.log(response);
+  return response;
+};
+
+export const getReportById = async (id: string) => {
+  const response = await axios.get(`${BASE_URL}/admin/reports/${id}`);
   console.log(response);
   return response;
 };
