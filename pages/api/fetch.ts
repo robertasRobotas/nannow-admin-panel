@@ -38,6 +38,14 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
   return response;
 };
 
+export const addCriminalCheckComment = async (id: string, note: string) => {
+  const response = await axios.post(
+    `${BASE_URL}/admin/users/${id}/criminal-record-status/admin-notes`,
+    { note: note }
+  );
+  return response;
+};
+
 export const updateReportStatus = async (id: string, isSolved: boolean) => {
   const response = await axios.put(`${BASE_URL}/admin/reports/${id}`, {
     isResolved: isSolved,

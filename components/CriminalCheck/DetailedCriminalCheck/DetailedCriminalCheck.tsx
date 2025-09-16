@@ -19,7 +19,7 @@ type DetailedCriminalCheckProps = {
 };
 
 const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState("-");
 
   const options = [
     { title: "Approved", icon: checkmarkImg.src, value: "APPROVED" },
