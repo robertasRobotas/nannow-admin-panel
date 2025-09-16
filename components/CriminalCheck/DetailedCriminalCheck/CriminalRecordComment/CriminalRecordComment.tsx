@@ -19,25 +19,6 @@ const CriminalRecordComment = ({
 
   const [note, setNote] = useState("");
   const [isEditingNote, setIsEditingNote] = useState(false);
-  /*
-  {!isEditingComment && (
-        <div
-          onClick={() => setIsEditingComment(true)}
-          className={`${styles.comment} ${nunito.className}`}
-        >
-          {comment}
-        </div>
-      )}
-      {isEditingComment && (
-        <input
-          className={`${styles.commentInput} ${nunito.className}`}
-          ref={inputRef}
-          placeholder="Enter comment"
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-        />
-      )}
-  */
 
   const onAddNoteClick = async () => {
     try {
@@ -64,11 +45,17 @@ const CriminalRecordComment = ({
     <div className={styles.main}>
       <img src={warningImg.src} alt="Warning" />
       <span className={styles.title}>Criminal record status notes</span>
-      {notes.map((n) => (
-        <div key={n} className={`${styles.note} ${nunito.className}`}>
-          {n}
-        </div>
-      ))}
+      {notes.length > 0 ? (
+        notes.map((n) => (
+          <div key={n} className={`${styles.note} ${nunito.className}`}>
+            {n}
+          </div>
+        ))
+      ) : (
+        <span className={`${styles.note} ${nunito.className}`}>
+          No notes yet
+        </span>
+      )}
       <input
         className={`${styles.noteInput} ${nunito.className}`}
         ref={inputRef}

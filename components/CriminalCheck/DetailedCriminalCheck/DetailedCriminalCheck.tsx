@@ -72,7 +72,7 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
           <CriminalRecordCode code={user.provider.criminalRecordCode} />
         )}
         <CriminalRecordComment
-          notes={user.provider.criminalRecordStatusAdminNotes}
+          notes={user.provider.criminalRecordStatusAdminNotes ?? []}
           userId={user.id}
         />
       </div>
