@@ -38,11 +38,12 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
   return response;
 };
 
-export const addCriminalCheckComment = async (id: string, note: string) => {
+export const addCriminalCheckNote = async (id: string, note: string) => {
   const response = await axios.post(
     `${BASE_URL}/admin/users/${id}/criminal-record-status/admin-notes`,
     { note: note }
   );
+  console.log(response);
   return response;
 };
 

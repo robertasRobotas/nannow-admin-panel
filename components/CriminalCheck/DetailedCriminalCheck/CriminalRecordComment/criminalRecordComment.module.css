@@ -23,22 +23,24 @@
   display: block;
 }
 
-.comment {
+.note {
   color: #000;
   font-size: 14px;
   font-weight: 800;
   line-height: 18px; /* 128.571% */
   letter-spacing: -0.28px;
-  cursor: pointer;
 }
 
-.commentInput {
+.noteInput {
   all: unset;
   color: #000;
   font-size: 14px;
   font-weight: 800;
   line-height: 18px; /* 128.571% */
   letter-spacing: -0.28px;
+}
+
+.noteInput:focus {
   border: 1px solid black;
   border-radius: 5px;
 }

@@ -19,8 +19,6 @@ type DetailedCriminalCheckProps = {
 };
 
 const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
-  const [comment, setComment] = useState("-");
-
   const options = [
     { title: "Approved", icon: checkmarkImg.src, value: "APPROVED" },
     { title: "Not submitted", icon: questionImg.src, value: "NOT_SUBMITTED" },
@@ -73,7 +71,10 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
         {user.provider.criminalRecordCode && (
           <CriminalRecordCode code={user.provider.criminalRecordCode} />
         )}
-        <CriminalRecordComment comment={comment} setComment={setComment} />
+        <CriminalRecordComment
+          notes={user.provider.criminalRecordStatusAdminNotes}
+          userId={user.id}
+        />
       </div>
     </div>
   );
