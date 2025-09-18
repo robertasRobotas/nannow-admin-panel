@@ -13,12 +13,15 @@ import VerifiedType from "./VerifiedType/VerifiedType";
 import RecordChangedAt from "./RecordChangedAt/RecordChangedAt";
 import CriminalRecordCode from "./CriminalRecordCode/CriminalRecordCode";
 import CriminalRecordComment from "./CriminalRecordComment/CriminalRecordComment";
+import Document from "./Document/Document";
 
 type DetailedCriminalCheckProps = {
   user: User;
 };
 
 const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
+  const criminalRecordDocUrls = user?.provider?.criminalRecordDocUrls ?? [];
+
   const options = [
     { title: "Approved", icon: checkmarkImg.src, value: "APPROVED" },
     { title: "Not submitted", icon: questionImg.src, value: "NOT_SUBMITTED" },
@@ -28,7 +31,8 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
 
   const [selectedOption, setSelectedOption] = useState<number>(
     options.findIndex(
-      (o) => o.value === (user.provider.criminalRecordStatus ?? "NOT_SUBMITTED")
+      (o) =>
+        o.value === (user?.provider?.criminalRecordStatus ?? "NOT_SUBMITTED")
     )
   );
 
@@ -66,15 +70,24 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
         </div>
       </div>
       <div className={styles.criminalCheckInfo}>
-        <VerifiedType verifiedType={user.provider.criminalRecordVerifiedType} />
-        <RecordChangedAt changedAt={user.provider.criminalRecordVerifiedAt} />
-        {user.provider.criminalRecordCode && (
+        <VerifiedType
+          verifiedType={user?.provider?.criminalRecordVerifiedType}
+        />
+        <RecordChangedAt
+          changedAt={user?.provider?.criminalRecordChangedAt}
+          verifiedAt={user?.provider?.criminalRecordVerifiedAt}
+        />
+        {user?.provider?.criminalRecordCode && (
           <CriminalRecordCode code={user.provider.criminalRecordCode} />
         )}
         <CriminalRecordComment
-          notes={user.provider.criminalRecordStatusAdminNotes ?? []}
+          notes={user?.provider?.criminalRecordStatusAdminNotes ?? []}
           userId={user.id}
         />
+        {user?.provider?.criminalRecordVerifiedType === "DOCUMENT" &&
+          criminalRecordDocUrls.map((c) => (
+            <Document key={c} documentUrl={c} />
+          ))}
       </div>
     </div>
   );

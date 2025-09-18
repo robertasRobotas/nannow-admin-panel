@@ -40,6 +40,7 @@ export interface Provider {
   unavailablePeriods: string[];
   criminalRecordCode: string;
   criminalRecordVerifiedAt: string; // ISO date
+  criminalRecordChangedAt: string;
   criminalRecordVerifiedType: string; // e.g. "QR"
   criminalRecordStatus: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
 }

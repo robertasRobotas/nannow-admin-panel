@@ -16,7 +16,7 @@ export const getClientById = async (id: string) => {
 
 export const getUsersByCriminalRecordStatus = async (status: string) => {
   const response = await axios.get(
-    `${BASE_URL}/admin/users-by-criminal-record-status?startIndex=&status=${status}`
+    `${BASE_URL}/admin/criminal-record-status/users?startIndex=&status=${status}`
   );
   console.log(response);
   return response;
@@ -24,7 +24,7 @@ export const getUsersByCriminalRecordStatus = async (status: string) => {
 
 export const getCriminalCheckById = async (id: string) => {
   const response = await axios.get(
-    `${BASE_URL}/admin/users/${id}/criminal-record-info`
+    `${BASE_URL}/admin/criminal-record-status/users/${id}`
   );
   console.log(response);
   return response;
@@ -32,7 +32,7 @@ export const getCriminalCheckById = async (id: string) => {
 
 export const updateCriminalCheckStatus = async (id: string, status: string) => {
   const response = await axios.put(
-    `${BASE_URL}/admin/users/${id}/criminal-record-status`,
+    `${BASE_URL}/admin/criminal-record-status/users/${id}`,
     { status: status }
   );
   return response;
@@ -40,7 +40,7 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
 
 export const addCriminalCheckNote = async (id: string, note: string) => {
   const response = await axios.post(
-    `${BASE_URL}/admin/users/${id}/criminal-record-status/admin-notes`,
+    `${BASE_URL}/admin/criminal-record-status/users/${id}/admin-notes`,
     { note: note }
   );
   console.log(response);
@@ -68,6 +68,14 @@ export const getAllReports = async () => {
 
 export const getReportById = async (id: string) => {
   const response = await axios.get(`${BASE_URL}/admin/reports/${id}`);
+  console.log(response);
+  return response;
+};
+
+export const getCriminalRecordInfo = async (code: string) => {
+  const response = await axios.get(
+    `https://epaslaugos.ird.lt/vrmeport-api/rest/public/get-f200/${code}`
+  );
   console.log(response);
   return response;
 };

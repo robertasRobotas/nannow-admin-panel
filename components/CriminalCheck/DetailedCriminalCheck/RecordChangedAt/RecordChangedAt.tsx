@@ -4,20 +4,23 @@ import { nunito } from "@/helpers/fonts";
 
 type RecordChangedAtProps = {
   changedAt: string;
+  verifiedAt: string;
 };
 
-const RecordChangedAt = ({ changedAt }: RecordChangedAtProps) => {
-  const date = changedAt
-    ? new Date(changedAt).toLocaleString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        timeZoneName: "short",
-      })
-    : "-";
+const RecordChangedAt = ({ changedAt, verifiedAt }: RecordChangedAtProps) => {
+  const date = verifiedAt ? verifiedAt : changedAt ? changedAt : "-";
+  let formattedDate = "-";
+  if (date !== "-") {
+    formattedDate = new Date(date).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZoneName: "short",
+    });
+  }
 
   return (
     <div className={styles.verifiedType}>
@@ -26,7 +29,7 @@ const RecordChangedAt = ({ changedAt }: RecordChangedAtProps) => {
         <span className={styles.title}>CRIMINAL RECORD CHANGED AT</span>
         <div className={styles.docType}>
           <span className={`${styles.docTitle} ${nunito.className}`}>
-            {date}
+            {formattedDate}
           </span>
         </div>
       </div>
