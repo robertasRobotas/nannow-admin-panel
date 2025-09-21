@@ -14,6 +14,7 @@ import RecordChangedAt from "./RecordChangedAt/RecordChangedAt";
 import CriminalRecordCode from "./CriminalRecordCode/CriminalRecordCode";
 import CriminalRecordComment from "./CriminalRecordComment/CriminalRecordComment";
 import Document from "./Document/Document";
+import defaultUserImg from "../../../assets/images/default-avatar.png";
 
 type DetailedCriminalCheckProps = {
   user: User;
@@ -47,11 +48,16 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
     }
   };
 
+  console.log(user);
+
   return (
     <div className={styles.main}>
       <div className={styles.heading}>
         <div className={styles.profile}>
-          <img src={user.imgUrl} alt="Profile img" />
+          <img
+            src={user.imgUrl === "" ? defaultUserImg.src : user.imgUrl}
+            alt="Profile img"
+          />
           <span
             className={`${styles.name} ${nunito.className}`}
           >{`${user.firstName} ${user.lastName}`}</span>

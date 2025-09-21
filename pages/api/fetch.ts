@@ -14,9 +14,12 @@ export const getClientById = async (id: string) => {
   return response;
 };
 
-export const getUsersByCriminalRecordStatus = async (status: string) => {
+export const getUsersByCriminalRecordStatus = async (
+  status: string,
+  startIndex: number
+) => {
   const response = await axios.get(
-    `${BASE_URL}/admin/criminal-record-status/users?startIndex=&status=${status}`
+    `${BASE_URL}/admin/criminal-record-status/users?startIndex=${startIndex}&status=${status}`
   );
   console.log(response);
   return response;

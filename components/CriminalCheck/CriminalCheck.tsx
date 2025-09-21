@@ -4,21 +4,39 @@ import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
 import { getUsersByCriminalRecordStatus } from "@/pages/api/fetch";
 import ProfilesList from "./ProfilesList/ProfilesList";
+import ReactPaginate from "react-paginate";
+import paginateStyles from "../../styles/paginate.module.css";
 
 const CriminalCheck = () => {
   const [selected, setSelected] = useState<
     "ALL" | "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED"
   >("ALL");
   const [users, setUsers] = useState([]);
+  const [itemOffset, setItemOffset] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(null);
+  const [pageCount, setPageCount] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
 
-  const fetchUsers = async (status: string) => {
-    const users = await getUsersByCriminalRecordStatus(status);
-    setUsers(users.data.users.items);
+  const fetchUsers = async (status: string, startIndex: number) => {
+    const response = await getUsersByCriminalRecordStatus(status, startIndex);
+    setUsers(response.data.users.items);
+    setItemsPerPage(response.data.users.pageSize);
+    setPageCount(
+      Math.ceil(response.data.users.total / response.data.users.pageSize)
+    );
+    setTotalUsers(response.data.users.total);
   };
 
+  const handlePageClick = (event: { selected: number }) => {
+    const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
+    setItemOffset(newOffset);
+  };
+
+  console.log(pageCount);
+
   useEffect(() => {
-    fetchUsers(selected === "ALL" ? "" : selected);
-  }, [selected]);
+    fetchUsers(selected === "ALL" ? "" : selected, itemOffset);
+  }, [selected, itemOffset]);
 
   return (
     <div className={styles.main}>
@@ -60,6 +78,24 @@ const CriminalCheck = () => {
       <div className={styles.profilesWrapper}>
         <ProfilesList users={users} />
       </div>
+      <ReactPaginate
+        breakLabel="..."
+        nextLabel=""
+        onPageChange={handlePageClick}
+        pageRangeDisplayed={5}
+        pageCount={pageCount}
+        previousLabel=""
+        renderOnZeroPageCount={null}
+        containerClassName={paginateStyles.paginateWrapper}
+        pageClassName={paginateStyles.pageBtn}
+        pageLinkClassName={paginateStyles.pageLink}
+        activeClassName={paginateStyles.activePage}
+        nextClassName={paginateStyles.nextPageBtn}
+        nextLinkClassName={paginateStyles.nextLink}
+        previousClassName={paginateStyles.prevPageBtn}
+        previousLinkClassName={paginateStyles.prevLink}
+        breakClassName={paginateStyles.break}
+      />
     </div>
   );
 };
