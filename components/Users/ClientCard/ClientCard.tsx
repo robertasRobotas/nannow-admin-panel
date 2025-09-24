@@ -6,6 +6,7 @@ import Button from "@/components/Button/Button";
 import { getClientStats } from "@/data/clientStats";
 import { useRouter } from "next/router";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
+import defaultUserImg from "../../../assets/images/default-avatar.png";
 
 type ClientCardProps = {
   client: Client;
@@ -24,7 +25,7 @@ const ClientCard = ({ client }: ClientCardProps) => {
       <div className={styles.profileWrapper}>
         <ProfileInfo
           name={`${client.firstName} ${client.lastName}`}
-          imgUrl={client.imgUrl}
+          imgUrl={client.imgUrl !== "" ? client.imgUrl : defaultUserImg.src}
           id={client.id}
         />
         {/*

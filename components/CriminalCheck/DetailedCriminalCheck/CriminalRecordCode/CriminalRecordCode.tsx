@@ -30,6 +30,12 @@ const CriminalRecordCode = ({ code }: CriminalRecordCodeProps) => {
       <img src={devImg.src} alt="Code" />
       <span className={styles.title}>Criminal record code</span>
       <p className={styles.code}>{code}</p>
+      <a
+        className={styles.code}
+        href={`https://epaslaugos.ird.lt/vrmeport-api/rest/public/get-f200/${code}`}
+      >
+        See detailed QR info
+      </a>
     </div>
   );
 };

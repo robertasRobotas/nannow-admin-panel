@@ -4,6 +4,7 @@ export type CriminalCheckUser = {
   lastName: string;
   email: string;
   isProvider: boolean;
+  imgUrl: string;
   providerId: string;
   createdAt: string;
   criminalRecordStatus: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";

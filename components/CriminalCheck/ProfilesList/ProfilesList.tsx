@@ -1,6 +1,7 @@
 import { CriminalCheckUser } from "@/types/CriminalCheckUser";
 import styles from "./profilesList.module.css";
 import Profile from "./Profile/Profile";
+import defaultUserImg from "../../../assets/images/default-avatar.png";
 
 type ProfilesListProps = {
   users: CriminalCheckUser[];
@@ -13,7 +14,7 @@ const ProfilesList = ({ users }: ProfilesListProps) => {
         <Profile
           key={u.id}
           status={u.criminalRecordStatus}
-          imgUrl="https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/User_icon_2.svg/640px-User_icon_2.svg.png"
+          imgUrl={u.imgUrl !== "" ? u.imgUrl : defaultUserImg.src}
           name={`${u.firstName} ${u.lastName}`}
           id={u.id}
         />
