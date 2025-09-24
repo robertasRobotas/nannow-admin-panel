@@ -1,4 +1,4 @@
-import styles from "./Review.module.css";
+import styles from "./review.module.css";
 import arrowImg from "../../../../assets/images/arrow-right.svg";
 import starImg from "../../../../assets/images/star-filled.svg";
 
