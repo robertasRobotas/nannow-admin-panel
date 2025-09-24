@@ -17,7 +17,7 @@ export type Client = {
 };
 */
 
-import { Chat } from "./Chats";
+import { ChatType } from "./Chats";
 
 export type Client = {
   _id: string;
@@ -140,5 +140,5 @@ export type ClientDetails = {
     roles: string[];
     createdAt: string;
   };
-  chats: Chat[];
+  chats: ChatType[];
 };

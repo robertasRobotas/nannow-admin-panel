@@ -4,13 +4,14 @@ import { reviews } from "@/mocks/reviews";
 import { useMediaQuery } from "react-responsive";
 import ReviewsList from "./ReviewsList/ReviewsList";
 import DetailedReview from "./DetailedReview/DetailedReview";
+import { ReviewType } from "@/types/Reviews";
 
 const Reviews = () => {
   const [selectedReviewId, setSelectedReviewId] = useState("");
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
-  const findSelectedReview = (id: string) => {
-    const review = reviews.find((c) => c.id === id) ?? {};
+  const findSelectedReview = (id: string): ReviewType | object => {
+    const review: ReviewType | object = reviews.find((c) => c.id === id) ?? {};
     return review;
   };
 
@@ -19,7 +20,7 @@ const Reviews = () => {
       {isMobile ? (
         selectedReviewId ? (
           <DetailedReview
-            review={findSelectedReview(selectedReviewId)}
+            review={findSelectedReview(selectedReviewId) as ReviewType}
             onBackClick={() => setSelectedReviewId("")}
           />
         ) : (
@@ -38,7 +39,7 @@ const Reviews = () => {
           />
           {selectedReviewId && (
             <DetailedReview
-              review={findSelectedReview(selectedReviewId)}
+              review={findSelectedReview(selectedReviewId) as ReviewType}
               onBackClick={() => setSelectedReviewId("")}
             />
           )}

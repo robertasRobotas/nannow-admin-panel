@@ -1,3 +1,4 @@
+/*
 import { Client } from "@/types/Client";
 import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
 import DocInProgressIcon from "@/components/Icons/DocInProgressIcon";
@@ -38,3 +39,4 @@ export const getClientStats = (client: Client) => [
     value: client.reviews,
   },
 ];
+*/

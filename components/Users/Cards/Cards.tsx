@@ -1,7 +1,6 @@
 import { Client } from "@/types/Client";
 import ClientCard from "../ClientCard/ClientCard";
 import styles from "./cards.module.css";
-import { clients } from "@/mocks/clients";
 
 type CardsProps = {
   users: Client[];

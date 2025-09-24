@@ -3,7 +3,7 @@ import styles from "./clientCard.module.css";
 import { nunito } from "@/helpers/fonts";
 import balanceImg from "../../../assets/images/wallet.svg";
 import Button from "@/components/Button/Button";
-import { getClientStats } from "@/data/clientStats";
+//import { getClientStats } from "@/data/clientStats";
 import { useRouter } from "next/router";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
@@ -13,7 +13,7 @@ type ClientCardProps = {
 };
 
 const ClientCard = ({ client }: ClientCardProps) => {
-  const stats = getClientStats(client);
+  //const stats = getClientStats(client);
   const router = useRouter();
 
   const onButtonClick = () => {

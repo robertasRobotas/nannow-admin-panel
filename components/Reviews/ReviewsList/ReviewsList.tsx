@@ -2,11 +2,11 @@ import styles from "./reviewsList.module.css";
 import { nunito } from "@/helpers/fonts";
 import { Dispatch, SetStateAction, useState } from "react";
 import Review from "./Review/Review";
-import starImg from "../../../assets/images/star-filled.svg";
 import DropDownMenu from "./DropDownMenu/DropDownMenu";
+import { ReviewType } from "@/types/Reviews";
 
 type ReviewsListProps = {
-  reviews: any;
+  reviews: ReviewType[];
   selectedReviewId: string;
   setSelectedReviewId: Dispatch<SetStateAction<string>>;
 };

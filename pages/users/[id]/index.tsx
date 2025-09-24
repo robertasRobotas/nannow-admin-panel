@@ -1,9 +1,6 @@
 import { useRouter } from "next/router";
-import styles from "./detailedProfilePage.module.css";
 import { useEffect, useState } from "react";
 import DetailedClient from "@/components/Users/DetailedClient/DetailedClient";
-import Header from "@/components/Header/Header";
-import axios from "axios";
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
 import { getClientById } from "@/pages/api/fetch";
 

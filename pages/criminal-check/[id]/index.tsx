@@ -1,5 +1,4 @@
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
-import styles from "./detailedCriminalCheckPage.module.css";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { getCriminalCheckById } from "@/pages/api/fetch";

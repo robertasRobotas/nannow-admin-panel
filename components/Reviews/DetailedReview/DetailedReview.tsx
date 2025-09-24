@@ -5,9 +5,10 @@ import trashImg from "../../../assets/images/trash.svg";
 import checkmarkImg from "../../../assets/images/checkmark-white.svg";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
+import { ReviewType } from "@/types/Reviews";
 
 type DetailedReview = {
-  review: any;
+  review: ReviewType;
   onBackClick: () => void;
 };
 
@@ -42,11 +43,17 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
           </div>
         </div>
         <div className={styles.btnsWrapper}>
-          <Button title="Delete review" imgUrl={trashImg.src} type="GRAY" />
+          <Button
+            title="Delete review"
+            imgUrl={trashImg.src}
+            type="GRAY"
+            onClick={() => console.log("placeholder")}
+          />
           <Button
             title="Mark as Approved"
             imgUrl={checkmarkImg.src}
             type="GREEN"
+            onClick={() => console.log("placeholder")}
           />
           {isMobile && (
             <Button title="Back" type="OUTLINED" onClick={onBackClick} />
