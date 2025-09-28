@@ -25,7 +25,7 @@ const LoginForm = () => {
       if (response.status === 200) {
         Cookies.set("@user_jwt", response.data.jwt);
         setTimeout(() => {
-          router.push("/");
+          router.push("/users");
         }, 500);
         return;
       }
