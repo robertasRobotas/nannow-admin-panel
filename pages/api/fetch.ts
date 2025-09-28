@@ -1,15 +1,37 @@
 import axios from "axios";
 
-const BASE_URL = "https://nannow-api.com";
+import Cookies from "js-cookie";
+
+// const BASE_URL = "https://nannow-api.com";
+const BASE_URL = "http://localhost:8080";
+
+const jwt = Cookies.get("@user_jwt");
+
+export const login = async (loginData: { email: string; password: string }) => {
+  const response = await axios.post(
+    `${BASE_URL}/admin-user/users/login`,
+    loginData
+  );
+
+  return response;
+};
 
 export const getAllUsers = async (url: string) => {
-  const response = await axios.get(`${BASE_URL}/${url}`);
+  const response = await axios.get(`${BASE_URL}/${url}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
   console.log(response);
   return response;
 };
 
 export const getClientById = async (id: string) => {
-  const response = await axios.get(`${BASE_URL}/admin/clients/${id}`);
+  const response = await axios.get(`${BASE_URL}/admin/clients/${id}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
   console.log(response);
   return response;
 };
@@ -19,7 +41,12 @@ export const getUsersByCriminalRecordStatus = async (
   startIndex: number
 ) => {
   const response = await axios.get(
-    `${BASE_URL}/admin/criminal-record-status/users?startIndex=${startIndex}&status=${status}`
+    `${BASE_URL}/admin/criminal-record-status/users?startIndex=${startIndex}&status=${status}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
   );
   console.log(response);
   return response;
@@ -27,7 +54,12 @@ export const getUsersByCriminalRecordStatus = async (
 
 export const getCriminalCheckById = async (id: string) => {
   const response = await axios.get(
-    `${BASE_URL}/admin/criminal-record-status/users/${id}`
+    `${BASE_URL}/admin/criminal-record-status/users/${id}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
   );
   console.log(response);
   return response;
@@ -36,7 +68,12 @@ export const getCriminalCheckById = async (id: string) => {
 export const updateCriminalCheckStatus = async (id: string, status: string) => {
   const response = await axios.put(
     `${BASE_URL}/admin/criminal-record-status/users/${id}`,
-    { status: status }
+    { status: status },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
   );
   return response;
 };
@@ -44,33 +81,58 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
 export const addCriminalCheckNote = async (id: string, note: string) => {
   const response = await axios.post(
     `${BASE_URL}/admin/criminal-record-status/users/${id}/admin-notes`,
-    { note: note }
+    { note: note },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
   );
   console.log(response);
   return response;
 };
 
 export const updateReportStatus = async (id: string, isSolved: boolean) => {
-  const response = await axios.put(`${BASE_URL}/admin/reports/${id}`, {
-    isResolved: isSolved,
-  });
+  const response = await axios.put(
+    `${BASE_URL}/admin/reports/${id}`,
+    {
+      isResolved: isSolved,
+    },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
   return response;
 };
 
 export const getChatById = async (id: string) => {
-  const response = await axios.get(`${BASE_URL}/admin/chats/${id}`);
+  const response = await axios.get(`${BASE_URL}/admin/chats/${id}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
   console.log(response);
   return response;
 };
 
 export const getAllReports = async () => {
-  const response = await axios.get(`${BASE_URL}/admin/reports`);
+  const response = await axios.get(`${BASE_URL}/admin/reports`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
   console.log(response);
   return response;
 };
 
 export const getReportById = async (id: string) => {
-  const response = await axios.get(`${BASE_URL}/admin/reports/${id}`);
+  const response = await axios.get(`${BASE_URL}/admin/reports/${id}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
   console.log(response);
   return response;
 };
