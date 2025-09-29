@@ -5,12 +5,14 @@ import Cards from "./Cards/Cards";
 import styles from "./users.module.css";
 import axios from "axios";
 import { getAllUsers } from "@/pages/api/fetch";
+import { useRouter } from "next/router";
 
 const Users = () => {
   const [isSelectedClients, setSelectedClients] = useState(true);
   const [isSelectedProviders, setSelectedProviders] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [users, setUsers] = useState([]);
+  const router = useRouter();
 
   const fetchUsers = async () => {
     try {
@@ -22,6 +24,11 @@ const Users = () => {
       setUsers(response.data.users.items);
     } catch (err) {
       console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/login");
+        }
+      }
     }
   };
 

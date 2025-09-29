@@ -5,8 +5,6 @@ import Cookies from "js-cookie";
 const BASE_URL = "https://nannow-api.com";
 // const BASE_URL = "http://localhost:8080";
 
-const jwt = Cookies.get("@user_jwt");
-
 export const login = async (loginData: { email: string; password: string }) => {
   const response = await axios.post(`${BASE_URL}/admin-user/login`, loginData);
 
@@ -14,6 +12,7 @@ export const login = async (loginData: { email: string; password: string }) => {
 };
 
 export const getAllUsers = async (url: string) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/${url}`, {
     headers: {
       Authorization: jwt,
@@ -24,6 +23,7 @@ export const getAllUsers = async (url: string) => {
 };
 
 export const getClientById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/clients/${id}`, {
     headers: {
       Authorization: jwt,
@@ -37,6 +37,7 @@ export const getUsersByCriminalRecordStatus = async (
   status: string,
   startIndex: number
 ) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
     `${BASE_URL}/admin/criminal-record-status/users?startIndex=${startIndex}&status=${status}`,
     {
@@ -50,6 +51,7 @@ export const getUsersByCriminalRecordStatus = async (
 };
 
 export const getCriminalCheckById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
     `${BASE_URL}/admin/criminal-record-status/users/${id}`,
     {
@@ -63,6 +65,7 @@ export const getCriminalCheckById = async (id: string) => {
 };
 
 export const updateCriminalCheckStatus = async (id: string, status: string) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(
     `${BASE_URL}/admin/criminal-record-status/users/${id}`,
     { status: status },
@@ -76,6 +79,7 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
 };
 
 export const addCriminalCheckNote = async (id: string, note: string) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
     `${BASE_URL}/admin/criminal-record-status/users/${id}/admin-notes`,
     { note: note },
@@ -90,6 +94,7 @@ export const addCriminalCheckNote = async (id: string, note: string) => {
 };
 
 export const updateReportStatus = async (id: string, isSolved: boolean) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(
     `${BASE_URL}/admin/reports/${id}`,
     {
@@ -105,6 +110,7 @@ export const updateReportStatus = async (id: string, isSolved: boolean) => {
 };
 
 export const getChatById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/chats/${id}`, {
     headers: {
       Authorization: jwt,
@@ -115,6 +121,7 @@ export const getChatById = async (id: string) => {
 };
 
 export const getAllReports = async () => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/reports`, {
     headers: {
       Authorization: jwt,
@@ -125,6 +132,7 @@ export const getAllReports = async () => {
 };
 
 export const getReportById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/reports/${id}`, {
     headers: {
       Authorization: jwt,

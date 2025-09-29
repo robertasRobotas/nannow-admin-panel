@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import styles from "./criminalCheck.module.css";
 import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
@@ -6,6 +6,8 @@ import { getUsersByCriminalRecordStatus } from "@/pages/api/fetch";
 import ProfilesList from "./ProfilesList/ProfilesList";
 import ReactPaginate from "react-paginate";
 import paginateStyles from "../../styles/paginate.module.css";
+import axios from "axios";
+import { useRouter } from "next/router";
 
 const CriminalCheck = () => {
   const [selected, setSelected] = useState<
@@ -16,15 +18,25 @@ const CriminalCheck = () => {
   const [itemsPerPage, setItemsPerPage] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const router = useRouter();
 
   const fetchUsers = async (status: string, startIndex: number) => {
-    const response = await getUsersByCriminalRecordStatus(status, startIndex);
-    setUsers(response.data.users.items);
-    setItemsPerPage(response.data.users.pageSize);
-    setPageCount(
-      Math.ceil(response.data.users.total / response.data.users.pageSize)
-    );
-    setTotalUsers(response.data.users.total);
+    try {
+      const response = await getUsersByCriminalRecordStatus(status, startIndex);
+      setUsers(response.data.users.items);
+      setItemsPerPage(response.data.users.pageSize);
+      setPageCount(
+        Math.ceil(response.data.users.total / response.data.users.pageSize)
+      );
+      setTotalUsers(response.data.users.total);
+    } catch (err) {
+      console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/login");
+        }
+      }
+    }
   };
 
   const handlePageClick = (event: { selected: number }) => {

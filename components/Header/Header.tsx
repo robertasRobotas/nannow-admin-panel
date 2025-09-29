@@ -8,10 +8,13 @@ import { links } from "@/data/headerLinks";
 import { useState } from "react";
 import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
+import Cookies from "js-cookie";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
   const { pathname } = useRouter();
+
+  const router = useRouter();
 
   return (
     <>
@@ -39,7 +42,10 @@ const Header = () => {
         </nav>
         <div className={styles.logOutBtn}>
           <Button
-            onClick={() => console.log("wip")}
+            onClick={() => {
+              Cookies.remove("@user_jwt");
+              router.push("/login");
+            }}
             title="Logout"
             type="OUTLINED"
           />

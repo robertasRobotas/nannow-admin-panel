@@ -4,12 +4,15 @@ import { useMediaQuery } from "react-responsive";
 import ReportsList from "./ReportsList/ReportsList";
 import DetailedReport from "./DetailedReport/DetailedReport";
 import { getAllReports, getReportById } from "@/pages/api/fetch";
+import axios from "axios";
+import { useRouter } from "next/router";
 
 const Reports = () => {
   const [selectedReportId, setSelectedReportId] = useState("");
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [reports, setReports] = useState([]);
   const [selectedReport, setReportById] = useState<ReportType>();
+  const router = useRouter();
 
   const fetchReports = async () => {
     try {
@@ -17,6 +20,11 @@ const Reports = () => {
       setReports(response.data.result.items);
     } catch (err) {
       console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/login");
+        }
+      }
     }
   };
 
