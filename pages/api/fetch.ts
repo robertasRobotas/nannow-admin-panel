@@ -8,10 +8,7 @@ const BASE_URL = "https://nannow-api.com";
 const jwt = Cookies.get("@user_jwt");
 
 export const login = async (loginData: { email: string; password: string }) => {
-  const response = await axios.post(
-    `${BASE_URL}/admin-user/users/login`,
-    loginData
-  );
+  const response = await axios.post(`${BASE_URL}/admin-user/login`, loginData);
 
   return response;
 };
