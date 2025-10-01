@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./criminalCheck.module.css";
 import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
@@ -43,8 +43,6 @@ const CriminalCheck = () => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
     setItemOffset(newOffset);
   };
-
-  console.log(pageCount);
 
   useEffect(() => {
     fetchUsers(selected === "ALL" ? "" : selected, itemOffset);

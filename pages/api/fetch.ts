@@ -149,3 +149,17 @@ export const getCriminalRecordInfo = async (code: string) => {
   console.log(response);
   return response;
 };
+
+export const getOrders = async (status: string, startIndex: number) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders?startIndex=${startIndex}&status=${status}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
+  console.log(response);
+  return response;
+};

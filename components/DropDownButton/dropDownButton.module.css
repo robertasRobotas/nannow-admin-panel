@@ -30,11 +30,12 @@
 }
 
 .dropdownMenu {
-  width: 100%;
+  min-width: 100%;
   position: absolute;
   top: 100%;
   display: flex;
   flex-direction: column;
+  z-index: 9999;
 }
 
 .dropDownItem {
@@ -46,6 +47,7 @@
   padding: 6px 12px;
   gap: 6px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .downArrow {

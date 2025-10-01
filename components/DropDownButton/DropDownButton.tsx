@@ -11,7 +11,7 @@ import styles from "./dropDownButton.module.css";
 type DropDownButtonProps = {
   options: {
     title: string;
-    icon: string;
+    icon?: string;
     value: string;
   }[];
   selectedOption: number;
@@ -52,11 +52,14 @@ const DropDownButton = ({
         {
           <>
             <div className={styles.option}>
-              <img
-                className={styles.optionIcon}
-                src={options[selectedOption].icon}
-                alt={options[selectedOption].title}
-              />
+              {options[selectedOption].icon && (
+                <img
+                  className={styles.optionIcon}
+                  src={options[selectedOption].icon}
+                  alt={options[selectedOption].title}
+                />
+              )}
+
               <span>{options[selectedOption].title}</span>
             </div>
             <img
@@ -76,11 +79,13 @@ const DropDownButton = ({
               className={styles.dropDownItem}
               onClick={() => handleSelect(options.indexOf(option))}
             >
-              <img
-                className={styles.optionIcon}
-                src={option.icon}
-                alt={option.title}
-              />
+              {option.icon && (
+                <img
+                  className={styles.optionIcon}
+                  src={option.icon}
+                  alt={option.title}
+                />
+              )}
               <span>{option.title}</span>
             </div>
           ))}
