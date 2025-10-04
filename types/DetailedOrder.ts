@@ -1,0 +1,162 @@
+export type DetailedOrderType = {
+  id: string;
+  clientId: string;
+  clientUserId: string;
+  isClientUserVerified: boolean;
+  clientLongitude: number;
+  clientLatitude: number;
+  location: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  startsAt: string;
+  endsAt: string;
+  clientFirstName: string;
+  clientImgUrl: string;
+  isClientVerified: boolean;
+  addressId: string;
+  childrenIds: string[];
+  isDropOff: boolean;
+  isUrgent: boolean;
+  currentSelectedAlergiesIds: string[];
+  currentSelectedDisabilitiesIds: string[];
+  selectedSpokenLanguageIds: string[];
+  selectedPetIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  pendingProviderIds: {
+    id: string;
+    addedAt: string;
+    _id: string;
+  }[];
+  approvedProviderId: string;
+  serviceProviderPricePerHour: number;
+  finalPricePerHour: number;
+  serviceDurationHours: number;
+  urgentFee: number;
+  totalPrice: number;
+  subtotalPrice: number;
+  platformFeePrice: number;
+  status: string;
+  paymentStatus: string;
+  orderPrettyId: string;
+  isDirectOrderToProvider: boolean;
+  requiredProviderId: string | null;
+  providerReviewId: string | null;
+  clientReviewId: string | null;
+  providerReviewCreatedAt: string | null;
+  clientReviewCreatedAt: string | null;
+  provider_markedAsServiceInProgressAt: string | null;
+  provider_markedAsServiceEndedAt: string | null;
+  stripeAccountId: string;
+  isConfirmed: boolean;
+  __v: number;
+  children: {
+    _id: string;
+    id: string;
+    gender: string;
+    name: string;
+    birthDate: string;
+    clientId: string;
+    allergiesIds: string[];
+    disabilitiesIds: string[];
+    __v: number;
+  }[];
+  address: {
+    _id: string;
+    id: string;
+    latitude: number;
+    longitude: number;
+    location: {
+      type: "Point";
+      coordinates: [number, number];
+    };
+    country: string;
+    city: string;
+    street: string;
+    houseNumber: string;
+    postalCode: string;
+    userId: string;
+    userMode: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+  };
+  client: {
+    _id: string;
+    id: string;
+    userId: string;
+    languages: string[];
+    addressesIds: string[];
+    badgesIds: string[];
+    childIds: string[];
+    animals: string[];
+    createdAt: string;
+    updatedAt: string;
+    savedProviderIds: string[];
+    leftReviewIds: string[];
+    receivedReviewIds: string[];
+    rating: number | null;
+    positiveReviewsCount: number;
+    __v: number;
+    defaultAddressId: string;
+  };
+  clientUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    imgUrl: string;
+  };
+  approvedProvider: {
+    id: string;
+    userId: string;
+    badgesIds: string[];
+    languages: string[];
+    operationCountry: string;
+    isAvailableStatus: boolean;
+    rating: {
+      generalRating: number;
+      punctualityRating: number;
+      empathyRating: number;
+      communicationRating: number;
+      cleanlinessRating: number;
+    };
+    positiveReviewsCount: number;
+    defaultAddressId: string;
+    user: {
+      firstName: string;
+      lastName: string;
+      imgUrl: string;
+    };
+    address: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  pendingProviders: {
+    id: string;
+    userId: string;
+    firstName: string;
+    lastName: string;
+    imgUrl: string;
+    rating: {
+      generalRating: number;
+      punctualityRating: number;
+      empathyRating: number;
+      communicationRating: number;
+      cleanlinessRating: number;
+    };
+    isAvailableStatus: boolean;
+    positiveReviewsCount: number;
+    defaultAddressId: string;
+    operationCountry: string;
+    badgesIds: string[];
+    languages: string[];
+    address: {
+      latitude: number;
+      longitude: number;
+    };
+    addedAt: string;
+  }[];
+};

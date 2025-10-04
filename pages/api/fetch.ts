@@ -163,3 +163,14 @@ export const getOrders = async (status: string, startIndex: number) => {
   console.log(response);
   return response;
 };
+
+export const getOrderById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/orders/${id}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  console.log(response);
+  return response;
+};

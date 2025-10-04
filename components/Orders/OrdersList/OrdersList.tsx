@@ -8,32 +8,36 @@ type OrdersListProps = {
 };
 
 const OrdersList = ({ orders }: OrdersListProps) => {
+  const getUserImage = (imgUrl?: string) =>
+    imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
+
+  const getUserName = (firstName?: string, lastName?: string) =>
+    `${firstName ?? "Deleted"} ${lastName ?? "User"}`;
+
   return (
     <div className={styles.main}>
-      {orders.map((u) => (
-        <Order
-          key={u.id}
-          providerImgUrl={
-            u.approvedProvider?.user.imgUrl &&
-            u.approvedProvider?.user.imgUrl.length > 0
-              ? u.approvedProvider?.user.imgUrl
-              : defaultUserImg.src
-          }
-          clientImgUrl={
-            u.clientUser?.imgUrl && u.clientUser?.imgUrl.length > 0
-              ? u.clientUser?.imgUrl
-              : defaultUserImg.src
-          }
-          id={u.id}
-          providerName={`${u.approvedProvider?.user?.firstName ?? "Deleted"} ${
-            u.approvedProvider?.user?.lastName ?? "User"
-          }`}
-          clientName={`${u.clientUser?.firstName ?? "Deleted"} ${
-            u.clientUser?.lastName ?? "User"
-          }`}
-          status={u.status}
-        />
-      ))}
+      {orders.map((u) => {
+        const providerUser = u.approvedProvider?.user;
+        const clientUser = u.clientUser;
+
+        return (
+          <Order
+            key={u.id}
+            providerImgUrl={getUserImage(providerUser?.imgUrl)}
+            clientImgUrl={getUserImage(clientUser?.imgUrl)}
+            id={u.id}
+            providerName={getUserName(
+              providerUser?.firstName,
+              providerUser?.lastName
+            )}
+            clientName={getUserName(
+              clientUser?.firstName,
+              clientUser?.lastName
+            )}
+            status={u.status}
+          />
+        );
+      })}
     </div>
   );
 };
