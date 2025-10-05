@@ -13,6 +13,7 @@ import childrenImg from "../../../assets/images/kid-gray.svg";
 import { useMediaQuery } from "react-responsive";
 import PriceSummary from "./PriceSummary/PriceSummary";
 import Button from "@/components/Button/Button";
+import ProcessCard from "./ProcessCard/ProcessCard";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
@@ -47,6 +48,34 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const leaveTime = order?.endsAt
     ? new Date(order.endsAt).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "-";
+
+  const providerMarkedServiceInProgressAt =
+    order?.provider_markedAsServiceInProgressAt
+      ? new Date(order?.provider_markedAsServiceInProgressAt).toLocaleString(
+          "en-US",
+          {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+            timeZoneName: "short",
+          }
+        )
+      : "-";
+
+  const providerMarkedServiceEndedAt = order?.provider_markedAsServiceEndedAt
+    ? new Date(order?.provider_markedAsServiceEndedAt).toLocaleString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -105,6 +134,25 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             type={isMobile ? "SPAN2" : "SPAN2"}
             info={childrenNames}
           />
+        </div>
+        <div className={`${styles.title} ${nunito.className}`}>
+          Order process
+        </div>
+        <div className={styles.processCards}>
+          {order?.provider_markedAsServiceInProgressAt && (
+            <ProcessCard
+              imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
+              process="Parent marked service as in progress"
+              date={providerMarkedServiceInProgressAt}
+            />
+          )}
+          {order?.provider_markedAsServiceEndedAt && (
+            <ProcessCard
+              imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
+              process="Parent marked service as ended"
+              date={providerMarkedServiceEndedAt}
+            />
+          )}
         </div>
         <div className={`${styles.title} ${nunito.className}`}>
           Price summary

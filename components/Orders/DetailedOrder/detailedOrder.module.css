@@ -54,6 +54,13 @@
   letter-spacing: -0.48px;
 }
 
+.processCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding-bottom: 40px;
+}
+
 @media (max-width: 936px) {
   .orderWrapper {
     padding: 30px;
@@ -62,5 +69,9 @@
   .orderInfo {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
+  }
+
+  .processCards {
+    grid-template-columns: 1fr;
   }
 }
