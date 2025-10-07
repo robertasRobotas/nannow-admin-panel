@@ -174,7 +174,11 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             order?.totalPrice ?? 0
           }`}</span>
         </div>
-        <Button title="Pay the sitter" type="BLACK" />
+        <Button
+          title="Pay the sitter"
+          type="BLACK"
+          isDisabled={!order?.provider_markedAsServiceEndedAt}
+        />
       </div>
     </div>
   );

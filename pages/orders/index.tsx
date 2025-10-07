@@ -3,7 +3,7 @@ import Orders from "@/components/Orders/Orders";
 
 const OrdersPage = () => {
   return (
-    <ModalPageTemplate>
+    <ModalPageTemplate isScrollable={true}>
       <Orders />
     </ModalPageTemplate>
   );

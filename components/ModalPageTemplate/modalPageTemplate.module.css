@@ -6,13 +6,15 @@
 
 .contentWrapper {
   flex: 1;
-  min-height: 800px;
   padding: 20px 86px 55px 86px;
+}
+
+.isScrollable {
+  min-height: 800px;
 }
 
 @media (max-width: 936px) {
   .contentWrapper {
     padding: 20px 20px 33px 20px;
-    min-height: auto;
   }
 }

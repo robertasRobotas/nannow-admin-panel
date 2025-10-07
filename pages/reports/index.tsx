@@ -3,7 +3,7 @@ import Reports from "@/components/Reports/Reports";
 
 const ReportsPage = () => {
   return (
-    <ModalPageTemplate>
+    <ModalPageTemplate isScrollable={true}>
       <Reports />
     </ModalPageTemplate>
   );

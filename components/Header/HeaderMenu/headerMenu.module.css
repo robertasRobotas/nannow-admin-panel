@@ -7,6 +7,7 @@
   background: white;
   box-shadow: 10px 0 34px 0 rgba(0, 0, 0, 0.1);
   position: fixed;
+  z-index: 9999999;
   top: 0px;
 }
 

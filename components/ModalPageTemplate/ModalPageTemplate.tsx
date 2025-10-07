@@ -4,13 +4,24 @@ import Header from "../Header/Header";
 
 type ModalPageTemplateProps = {
   children: ReactNode;
+  isScrollable?: boolean;
 };
 
-const ModalPageTemplate = ({ children }: ModalPageTemplateProps) => {
+const ModalPageTemplate = ({
+  children,
+  isScrollable = false,
+}: ModalPageTemplateProps) => {
+  console.log(isScrollable);
   return (
-    <div className={styles.wrapper}>
+    <div className={`${styles.wrapper}`}>
       <Header />
-      <div className={styles.contentWrapper}>{children}</div>
+      <div
+        className={`${styles.contentWrapper} ${
+          isScrollable && styles.isScrollable
+        }`}
+      >
+        {children}
+      </div>
     </div>
   );
 };

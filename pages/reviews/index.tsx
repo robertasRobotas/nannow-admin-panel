@@ -3,7 +3,7 @@ import Reviews from "@/components/Reviews/Reviews";
 
 const ReviewsPage = () => {
   return (
-    <ModalPageTemplate>
+    <ModalPageTemplate isScrollable={true}>
       <Reviews />
     </ModalPageTemplate>
   );

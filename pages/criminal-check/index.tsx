@@ -3,7 +3,7 @@ import CriminalCheck from "@/components/CriminalCheck/CriminalCheck";
 
 const CriminalCheckPage = () => {
   return (
-    <ModalPageTemplate>
+    <ModalPageTemplate isScrollable={true}>
       <CriminalCheck />
     </ModalPageTemplate>
   );
