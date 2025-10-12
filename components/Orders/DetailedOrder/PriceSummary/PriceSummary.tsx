@@ -5,16 +5,21 @@ type PriceSummaryProps = {
   hourlyRate: number;
   duration: number;
   subtotal: number;
+  uegentFee: number;
+
   serviceFee: number;
-  total: number;
+  totalProviderPrice: number;
+  totalorderCost: number;
 };
 
 const PriceSummary = ({
   hourlyRate,
   duration,
   subtotal,
+  uegentFee,
   serviceFee,
-  total,
+  totalorderCost,
+  totalProviderPrice,
 }: PriceSummaryProps) => {
   return (
     <div className={`${styles.main} ${nunito.className}`}>
@@ -22,7 +27,9 @@ const PriceSummary = ({
         <div className={styles.pricesSide}>
           <div className={styles.info}>
             <span className={styles.infoTitle}>Price</span>
-            <span className={styles.infoValue}>{`€${hourlyRate} / hour`}</span>
+            <span className={styles.infoValue}>{`€${hourlyRate.toFixed(
+              2
+            )} / hour`}</span>
           </div>
           <div className={styles.info}>
             <span className={styles.infoTitle}>Duration</span>
@@ -34,17 +41,33 @@ const PriceSummary = ({
         <div className={styles.pricesSide}>
           <div className={styles.info}>
             <span className={styles.infoTitle}>Subtotal</span>
-            <span className={styles.infoValue}>{`€${subtotal}`}</span>
+            <span className={styles.infoValue}>{`€${subtotal.toFixed(
+              2
+            )}`}</span>
           </div>
           <div className={styles.info}>
-            <span className={styles.infoTitle}>Service fee</span>
-            <span className={styles.infoValue}>{`€${serviceFee} (10%)`}</span>
+            <span className={styles.infoTitle}>Urgent fee</span>
+            <span className={styles.infoValue}>{`€${uegentFee.toFixed(
+              2
+            )} (€5+10%)`}</span>
           </div>
+        </div>
+        <div className={styles.info}>
+          <span className={styles.infoTitle}>Service fee</span>
+          <span className={styles.infoValue}>{`€${serviceFee.toFixed(
+            2
+          )} (10%)`}</span>
+        </div>
+        <div className={styles.info}>
+          <span className={styles.infoTitle}>Final sitter fee</span>
+          <span className={styles.infoValue}>{`€${totalProviderPrice.toFixed(
+            2
+          )}`}</span>
         </div>
       </div>
       <div className={`${styles.total} ${nunito.className}`}>
         <span>Total</span>
-        <span>{`€${total}`}</span>
+        <span>{`€${totalorderCost.toFixed(2)}`}</span>
       </div>
     </div>
   );

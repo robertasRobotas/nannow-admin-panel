@@ -36,6 +36,7 @@ export type DetailedOrderType = {
   urgentFee: number;
   totalPrice: number;
   subtotalPrice: number;
+  totalProviderPrice: number;
   platformFeePrice: number;
   status: string;
   paymentStatus: string;
@@ -159,4 +160,6 @@ export type DetailedOrderType = {
     };
     addedAt: string;
   }[];
+  isReleasedFundsToProvider: boolean;
+  releasedFundsToProviderAt: string | null;
 };

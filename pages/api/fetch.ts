@@ -2,8 +2,8 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-const BASE_URL = "https://nannow-api.com";
-// const BASE_URL = "http://localhost:8080";
+// const BASE_URL = "https://nannow-api.com";
+const BASE_URL = "http://192.168.1.192:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
   const response = await axios.post(`${BASE_URL}/admin-user/login`, loginData);
@@ -172,5 +172,20 @@ export const getOrderById = async (id: string) => {
     },
   });
   console.log(response);
+  return response;
+};
+
+export const releaseFundsByOrderId = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/release-funds`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
+
   return response;
 };
