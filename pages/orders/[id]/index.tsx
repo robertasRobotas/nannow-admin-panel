@@ -14,7 +14,9 @@ const DetailedOrderPage = () => {
   };
 
   useEffect(() => {
-    router.query.id && fetchOrder(router.query.id as string);
+    if (router.query.id) {
+      void fetchOrder(router.query.id as string);
+    }
   }, [router.query.id]);
   return (
     <ModalPageTemplate>

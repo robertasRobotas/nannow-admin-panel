@@ -37,6 +37,12 @@
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.paidText {
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .finalPriceTitle {
   color: #000;
   font-size: 14px;
@@ -61,6 +67,51 @@
   padding-bottom: 40px;
 }
 
+.confirmationBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.confirmationModal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  max-width: 420px;
+  width: 100%;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.confirmationTitle {
+  margin: 0;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.48px;
+}
+
+.confirmationBody {
+  margin: 0;
+  color: rgba(27, 27, 31, 0.8);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.confirmationActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
 @media (max-width: 936px) {
   .orderWrapper {
     padding: 30px;
@@ -73,5 +124,9 @@
 
   .processCards {
     grid-template-columns: 1fr;
+  }
+
+  .confirmationModal {
+    padding: 24px;
   }
 }

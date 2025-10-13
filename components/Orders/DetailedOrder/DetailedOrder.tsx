@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DetailedOrderType } from "@/types/DetailedOrder";
 import styles from "./detailedOrder.module.css";
 import { nunito } from "@/helpers/fonts";
@@ -14,12 +15,15 @@ import { useMediaQuery } from "react-responsive";
 import PriceSummary from "./PriceSummary/PriceSummary";
 import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
+import { releaseFundsByOrderId } from "@/pages/api/fetch";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
 };
 
 const DetailedOrder = ({ order }: DetailedOrderProps) => {
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isReleasingFunds, setIsReleasingFunds] = useState(false);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   const getUserImage = (imgUrl: string) =>
@@ -87,6 +91,39 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     : "-";
 
   const childrenNames = order?.children.map((c) => c.name).join(", ");
+
+  const payOrderHandler = () => {
+    setIsConfirmModalOpen(true);
+  };
+
+  const confirmPayOrder = async () => {
+    try {
+      setIsReleasingFunds(true);
+      const response = await releaseFundsByOrderId(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to release funds", error);
+    } finally {
+      setIsReleasingFunds(false);
+      setIsConfirmModalOpen(false);
+    }
+  };
+
+  const closeConfirmModal = () => setIsConfirmModalOpen(false);
+
+  const releasedFundsAt = order?.releasedFundsToProviderAt
+    ? new Date(order.releasedFundsToProviderAt).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "-";
 
   return (
     <div className={styles.main}>
@@ -161,8 +198,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           hourlyRate={order?.finalPricePerHour ?? 0}
           serviceFee={order?.platformFeePrice ?? 0}
           subtotal={order?.subtotalPrice ?? 0}
-          total={order?.totalPrice ?? 0}
+          totalorderCost={order?.totalPrice ?? 0}
           duration={order?.serviceDurationHours}
+          uegentFee={order?.urgentFee ?? 0}
+          totalProviderPrice={order?.totalProviderPrice ?? 0}
         />
       </div>
       <div className={`${styles.finalPrice} ${nunito.className}`}>
@@ -170,16 +209,49 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           <span className={styles.finalPriceTitle}>
             Final price to pay the sitter
           </span>
-          <span className={styles.finalPriceValue}>{`€${
-            order?.totalPrice ?? 0
-          }`}</span>
+          <span
+            className={styles.finalPriceValue}
+          >{`€${order?.totalProviderPrice.toFixed(2)}`}</span>
         </div>
-        <Button
-          title="Pay the sitter"
-          type="BLACK"
-          isDisabled={!order?.provider_markedAsServiceEndedAt}
-        />
+        {order?.isReleasedFundsToProvider ? (
+          <span className={`${styles.paidText} ${nunito.className}`}>
+            {`Sitter was paid at ${releasedFundsAt}`}
+          </span>
+        ) : (
+          <Button
+            title={isReleasingFunds ? "Paying..." : "Pay the sitter"}
+            type="BLACK"
+            isDisabled={
+              !order?.provider_markedAsServiceEndedAt || isReleasingFunds
+            }
+            onClick={payOrderHandler}
+          />
+        )}
       </div>
+      {isConfirmModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Release funds?</h2>
+            <p className={styles.confirmationBody}>
+              Are you sure you want to pay the sitter? This action cannot be
+              undone.
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeConfirmModal}
+              />
+              <Button
+                title={isReleasingFunds ? "Paying..." : "Confirm payment"}
+                type="BLACK"
+                onClick={confirmPayOrder}
+                isDisabled={isReleasingFunds}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
