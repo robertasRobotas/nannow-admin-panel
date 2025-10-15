@@ -22,6 +22,9 @@ type DetailedCriminalCheckProps = {
 };
 
 const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
+  const [notes, setNotes] = useState(
+    user?.provider?.criminalRecordStatusAdminNotes ?? []
+  );
   const criminalRecordDocUrls = user?.provider?.criminalRecordDocUrls ?? [];
 
   const options = [
@@ -90,8 +93,9 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
           <CriminalRecordCode code={user.provider.criminalRecordCode} />
         )}
         <CriminalRecordComment
-          notes={user?.provider?.criminalRecordStatusAdminNotes ?? []}
+          notes={notes}
           userId={user.id}
+          setNotes={setNotes}
         />
         {user?.provider?.criminalRecordVerifiedType === "DOCUMENT" &&
           criminalRecordDocUrls.map((c) => (

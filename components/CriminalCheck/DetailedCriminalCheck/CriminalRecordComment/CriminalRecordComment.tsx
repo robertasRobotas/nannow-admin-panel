@@ -4,15 +4,18 @@ import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { nunito } from "@/helpers/fonts";
 import Button from "@/components/Button/Button";
 import { addCriminalCheckNote } from "@/pages/api/fetch";
+import { toast } from "react-toastify";
 
 type CriminalRecordCommentProps = {
   notes: string[];
   userId: string;
+  setNotes: Dispatch<SetStateAction<string[]>>;
 };
 
 const CriminalRecordComment = ({
   notes,
   userId,
+  setNotes,
 }: CriminalRecordCommentProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -23,6 +26,11 @@ const CriminalRecordComment = ({
   const onAddNoteClick = async () => {
     try {
       const response = await addCriminalCheckNote(userId, note);
+      if (response.status === 200) {
+        toast("Successfully added note.");
+        setNotes((prevState) => [...prevState, note]);
+        setNote("");
+      }
     } catch (err) {
       console.log(err);
     }
