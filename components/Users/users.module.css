@@ -1,5 +1,7 @@
 .main {
   padding: 38px 86px;
+  display: flex;
+  flex-direction: column;
 }
 
 .heading {

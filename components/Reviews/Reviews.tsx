@@ -12,7 +12,7 @@ import { getAllReviews, getReviewById } from "@/pages/api/fetch";
 const Reviews = () => {
   const [selectedReviewId, setSelectedReviewId] = useState("");
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
-  const [selectedReview, setReviewById] = useState<ReportType>();
+  const [selectedReview, setReviewById] = useState<ReviewType>();
   const [reviews, setReviews] = useState([]);
   const router = useRouter();
 
@@ -52,7 +52,7 @@ const Reviews = () => {
   return (
     <div className={styles.main}>
       {isMobile ? (
-        selectedReviewId ? (
+        selectedReviewId && selectedReview ? (
           <DetailedReview
             review={selectedReview}
             onBackClick={() => setSelectedReviewId("")}
@@ -71,7 +71,7 @@ const Reviews = () => {
             selectedReviewId={selectedReviewId}
             setSelectedReviewId={setSelectedReviewId}
           />
-          {selectedReviewId && (
+          {selectedReviewId && selectedReview && (
             <DetailedReview
               review={selectedReview}
               onBackClick={() => setSelectedReviewId("")}
