@@ -63,7 +63,7 @@ const Users = () => {
           <SearchBar
             searchText={searchText}
             setSearchText={setSearchText}
-            placeholder="Type user name or ID  here"
+            placeholder="Type username, ID  or email"
             onButtonClick={() => fetchUsers()}
           />
         </div>

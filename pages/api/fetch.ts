@@ -2,8 +2,8 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-// const BASE_URL = "https://nannow-api.com";
-const BASE_URL = "http://192.168.1.192:8080";
+const BASE_URL = "https://nannow-api.com";
+//const BASE_URL = "http://192.168.1.192:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
   const response = await axios.post(`${BASE_URL}/admin-user/login`, loginData);
@@ -134,6 +134,50 @@ export const getAllReports = async () => {
 export const getReportById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/reports/${id}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  console.log(response);
+  return response;
+};
+
+export const getAllReviews = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/reviews`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  console.log(response);
+  return response;
+};
+
+export const getReviewById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/reviews/${id}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  console.log(response);
+  return response;
+};
+
+export const getAllFeedback = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/feedback`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  console.log(response);
+  return response;
+};
+
+export const getFeedbackById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/feedback/${id}`, {
     headers: {
       Authorization: jwt,
     },

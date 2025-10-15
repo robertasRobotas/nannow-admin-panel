@@ -209,9 +209,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           <span className={styles.finalPriceTitle}>
             Final price to pay the sitter
           </span>
-          <span
-            className={styles.finalPriceValue}
-          >{`€${order?.totalProviderPrice.toFixed(2)}`}</span>
+          <span className={styles.finalPriceValue}>{`€${
+            order?.totalProviderPrice?.toFixed(2) ?? "-"
+          }`}</span>
         </div>
         {order?.isReleasedFundsToProvider ? (
           <span className={`${styles.paidText} ${nunito.className}`}>

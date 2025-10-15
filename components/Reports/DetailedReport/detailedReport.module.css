@@ -96,7 +96,7 @@
   line-height: 22px; /* 137.5% */
 }
 
-@media (max-width: 1220px) {
+@media (max-width: 1320px) {
   .heading {
     flex-direction: column;
     gap: 20px;

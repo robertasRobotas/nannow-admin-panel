@@ -15,6 +15,7 @@ import CriminalRecordCode from "./CriminalRecordCode/CriminalRecordCode";
 import CriminalRecordComment from "./CriminalRecordComment/CriminalRecordComment";
 import Document from "./Document/Document";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
+import { toast } from "react-toastify";
 
 type DetailedCriminalCheckProps = {
   user: User;
@@ -43,6 +44,8 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
         user.id,
         options[selectedOption].value
       );
+      if (response.status === 200)
+        toast("Successfully updated criminal check status.");
     } catch (err) {
       console.log(err);
     }

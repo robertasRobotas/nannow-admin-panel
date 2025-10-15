@@ -14,10 +14,20 @@ const Reports = () => {
   const [selectedReport, setReportById] = useState<ReportType>();
   const router = useRouter();
 
+  const [itemOffset, setItemOffset] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(null);
+  const [pageCount, setPageCount] = useState(0);
+  const [totalReports, setTotalReports] = useState(0);
+
   const fetchReports = async () => {
     try {
       const response = await getAllReports();
       setReports(response.data.result.items);
+      setItemsPerPage(response.data.result.pageSize);
+      setPageCount(
+        Math.ceil(response.data.result.total / response.data.result.pageSize)
+      );
+      setTotalReports(response.data.result.total);
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -62,6 +72,10 @@ const Reports = () => {
         reports={reports}
         selectedReportId={selectedReportId}
         setSelectedReportId={setSelectedReportId}
+        itemsPerPage={itemsPerPage ?? 0}
+        pageCount={pageCount ?? 0}
+        totalReports={totalReports ?? 0}
+        setItemOffset={setItemOffset}
       />
     );
   };
@@ -72,6 +86,10 @@ const Reports = () => {
         reports={reports}
         selectedReportId={selectedReportId}
         setSelectedReportId={setSelectedReportId}
+        itemsPerPage={itemsPerPage ?? 0}
+        pageCount={pageCount ?? 0}
+        totalReports={totalReports ?? 0}
+        setItemOffset={setItemOffset}
       />
       {selectedReportId && selectedReport && (
         <DetailedReport

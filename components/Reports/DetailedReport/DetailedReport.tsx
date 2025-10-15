@@ -1,17 +1,19 @@
 import styles from "./detailedReport.module.css";
 import { nunito } from "@/helpers/fonts";
 import arrowImg from "../../../assets/images/arrow-right.svg";
-import flashImg from "../../../assets/images/flash-white.svg";
 import crossImg from "../../../assets/images/cross.svg";
 import checkmarkImg from "../../../assets/images/checkmark-white.svg";
 import avatarImg from "../../../assets/images/default-avatar.png";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { updateReportStatus } from "@/pages/api/fetch";
+import arrowOut from "../../../assets/images/arrow-out.svg";
+import { toast } from "react-toastify";
+import { copyReport } from "@/helpers/clipboardWrites";
 
 type DetailedReport = {
   report: ReportType;
-  onBackClick: () => void;
+  onBackClick?: () => void;
 };
 
 const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
@@ -23,6 +25,11 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
     } catch (err) {
       console.log(err);
     }
+  };
+
+  const onShare = async () => {
+    copyReport(report.id);
+    toast("Link to report copied!");
   };
 
   return (
@@ -75,7 +82,13 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
             type="GRAY"
             onClick={() => onMarkSolved(false)}
           />
-          {isMobile && (
+          <Button
+            title="Share"
+            imgUrl={arrowOut.src}
+            type="OUTLINED"
+            onClick={() => onShare()}
+          />
+          {isMobile && onBackClick && (
             <Button title="Back" type="OUTLINED" onClick={onBackClick} />
           )}
         </div>
