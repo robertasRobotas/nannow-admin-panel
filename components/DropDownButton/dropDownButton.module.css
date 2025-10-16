@@ -36,15 +36,18 @@
   display: flex;
   flex-direction: column;
   z-index: 9999;
+  padding: 10px 0 12px 0;
+  margin-top: 8px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 20px 20px -20px rgba(0, 0, 0, 0.1), 0 5px 15px 0 rgba(0, 0, 0, 0.08);
 }
 
 .dropDownItem {
   display: flex;
   align-items: center;
-  background-color: #f0f0f0;
-  border-radius: 40px;
-  height: 36px;
-  padding: 6px 12px;
+  padding: 8px 16px;
   gap: 6px;
   cursor: pointer;
   white-space: nowrap;
@@ -53,4 +56,12 @@
 .downArrow {
   width: 16px;
   height: 16px;
+}
+
+.dropDownItem:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dropDownItem:active {
+  background: rgba(0, 0, 0, 0.1);
 }
