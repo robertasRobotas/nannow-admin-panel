@@ -11,7 +11,7 @@ const Reports = () => {
   const [selectedReportId, setSelectedReportId] = useState("");
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [reports, setReports] = useState([]);
-  const [selectedReport, setReportById] = useState<ReportType>();
+  const [selectedReport, setReportById] = useState<ReportType | null>();
   const router = useRouter();
 
   const [itemOffset, setItemOffset] = useState(0);
@@ -76,6 +76,7 @@ const Reports = () => {
         pageCount={pageCount ?? 0}
         totalReports={totalReports ?? 0}
         setItemOffset={setItemOffset}
+        setReportById={setReportById}
       />
     );
   };
@@ -90,6 +91,7 @@ const Reports = () => {
         pageCount={pageCount ?? 0}
         totalReports={totalReports ?? 0}
         setItemOffset={setItemOffset}
+        setReportById={setReportById}
       />
       {selectedReportId && selectedReport && (
         <DetailedReport

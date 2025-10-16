@@ -40,24 +40,26 @@ const Report = ({
       className={`${styles.main} ${isSelected && styles.selected}`}
     >
       <img src={icon} alt="Icon" />
-      <div className={styles.reportDetails}>
-        <div className={styles.profile}>
-          <img src={reportedByImg} alt="Profile" />
-          <div>
-            <span className={styles.title}>Reported by</span>
-            <span className={styles.name}>{reportedByName}</span>
+      <div className={styles.top}>
+        <div className={styles.reportDetails}>
+          <div className={styles.profile}>
+            <img src={reportedByImg} alt="Profile" />
+            <div>
+              <span className={styles.title}>Reported by</span>
+              <span className={styles.name}>{reportedByName}</span>
+            </div>
+          </div>
+          <img src={arrowImg.src} alt="Arrow" />
+          <div className={styles.profile}>
+            <img src={reportedImg} alt="Profile" />
+            <div>
+              <span className={styles.title}>Has been reported</span>
+              <span className={styles.name}>{reportedName}</span>
+            </div>
           </div>
         </div>
-        <img src={arrowImg.src} alt="Arrow" />
-        <div className={styles.profile}>
-          <img src={reportedImg} alt="Profile" />
-          <div>
-            <span className={styles.title}>Has been reported</span>
-            <span className={styles.name}>{reportedName}</span>
-          </div>
-        </div>
+        <span className={styles.date}>{dateFormatted}</span>
       </div>
-      <span className={styles.date}>{dateFormatted}</span>
     </div>
   );
 };

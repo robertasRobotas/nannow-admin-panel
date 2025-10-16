@@ -47,7 +47,7 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
             <div>
               <span className={styles.title}>Has been reported</span>
               <span className={styles.name}>
-                {`${report?.reportedUser?.firstName ?? "Deleted"} ${
+                {`${report?.reportedUser?.firstName ?? "Deleted"}\n${
                   report?.reportedUser?.lastName ?? "User"
                 }`}
               </span>
@@ -62,7 +62,7 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
             <div>
               <span className={styles.title}>Reported by</span>
               <span className={styles.name}>
-                {`${report?.reportedBy?.firstName ?? "Deleted"} ${
+                {`${report?.reportedBy?.firstName ?? "Deleted"}\n${
                   report?.reportedBy?.lastName ?? "User"
                 }`}
               </span>

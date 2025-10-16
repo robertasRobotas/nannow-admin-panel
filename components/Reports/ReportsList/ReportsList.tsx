@@ -16,6 +16,7 @@ type ReportsListProps = {
   pageCount: number;
   totalReports: number;
   setItemOffset: Dispatch<SetStateAction<number>>;
+  setReportById: Dispatch<SetStateAction<ReportType | null | undefined>>;
 };
 
 const ReportsList = ({
@@ -26,6 +27,7 @@ const ReportsList = ({
   pageCount,
   totalReports,
   setItemOffset,
+  setReportById,
 }: ReportsListProps) => {
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalReports;
@@ -43,16 +45,19 @@ const ReportsList = ({
               key={r.id}
               icon={icon}
               reportedByImg={r?.reportedBy?.imgUrl ?? avatarImg.src}
-              reportedByName={`${r?.reportedBy?.firstName ?? "Deleted"} ${
+              reportedByName={`${r?.reportedBy?.firstName ?? "Deleted"}\n${
                 r?.reportedBy?.lastName ?? "User"
               }`}
               reportedImg={r?.reportedUser?.imgUrl ?? avatarImg.src}
-              reportedName={`${r?.reportedUser?.firstName ?? "Deleted"} ${
+              reportedName={`${r?.reportedUser?.firstName ?? "Deleted"}\n${
                 r?.reportedUser?.lastName ?? "User"
               }`}
               date={r?.createdAt}
               isSelected={selectedReportId === r.id}
-              onClick={() => setSelectedReportId(r.id)}
+              onClick={() => {
+                setReportById(null);
+                setSelectedReportId(r.id);
+              }}
             />
           );
         })}

@@ -2,8 +2,15 @@
   display: flex;
   padding: 20px 16px;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.top {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .reportDetails {
@@ -38,14 +45,18 @@
   font-size: 8px;
   font-weight: 600;
   text-transform: uppercase;
+  white-space: nowrap;
+  margin-bottom: 2px;
 }
 
 .name {
+  display: block;
   color: #000;
   font-family: Inter;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: -0.22px;
+  white-space: pre-wrap;
+  line-height: 15px;
 }
 
 .date {

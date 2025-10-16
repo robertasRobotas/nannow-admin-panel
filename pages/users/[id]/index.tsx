@@ -22,7 +22,7 @@ const DetailedProfilePage = () => {
   }, [router.query.id]);
 
   return (
-    <ModalPageTemplate>
+    <ModalPageTemplate isScrollable={true}>
       {client && <DetailedClient client={client} />}
     </ModalPageTemplate>
   );
