@@ -16,12 +16,14 @@ import CriminalRecordComment from "./CriminalRecordComment/CriminalRecordComment
 import Document from "./Document/Document";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
 import { toast } from "react-toastify";
+import checkmarkImgNoOutline from "../../../assets/images/green-checkmark-no-outline.svg";
 
 type DetailedCriminalCheckProps = {
   user: User;
 };
 
 const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
+  const [statusSaved, setStatusSaved] = useState(false);
   const [notes, setNotes] = useState(
     user?.provider?.criminalRecordStatusAdminNotes ?? []
   );
@@ -34,11 +36,15 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
     { title: "Rejected", icon: crossImg.src, value: "REJECTED" },
   ];
 
-  const [selectedOption, setSelectedOption] = useState<number>(
+  const [userCriminalCheckStatus, setUserCriminalCheckStatus] = useState(
     options.findIndex(
       (o) =>
         o.value === (user?.provider?.criminalRecordStatus ?? "NOT_SUBMITTED")
     )
+  );
+
+  const [selectedOption, setSelectedOption] = useState<number>(
+    userCriminalCheckStatus
   );
 
   const onUpdateCriminalCheck = async () => {
@@ -47,8 +53,11 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
         user.id,
         options[selectedOption].value
       );
-      if (response.status === 200)
+      if (response.status === 200) {
+        setUserCriminalCheckStatus(selectedOption);
+        setStatusSaved(true);
         toast("Successfully updated criminal check status.");
+      }
     } catch (err) {
       console.log(err);
     }
@@ -69,15 +78,23 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
           >{`${user.firstName} ${user.lastName}`}</span>
         </div>
         <div className={styles.buttons}>
+          {statusSaved && (
+            <div className={styles.savedStatus}>
+              <img src={checkmarkImgNoOutline.src} />
+              <span>Saved</span>
+            </div>
+          )}
           <DropDownButton
             options={options}
             selectedOption={selectedOption}
             setSelectedOption={setSelectedOption}
+            onClickOption={() => setStatusSaved(false)}
           />
           <Button
             title="Update"
             type="BLACK"
             onClick={() => onUpdateCriminalCheck()}
+            isDisabled={selectedOption === userCriminalCheckStatus}
           />
         </div>
       </div>

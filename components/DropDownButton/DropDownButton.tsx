@@ -16,12 +16,14 @@ type DropDownButtonProps = {
   }[];
   selectedOption: number;
   setSelectedOption: Dispatch<SetStateAction<number>>;
+  onClickOption?: () => void;
 };
 
 const DropDownButton = ({
   options,
   selectedOption,
   setSelectedOption,
+  onClickOption,
 }: DropDownButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -77,7 +79,10 @@ const DropDownButton = ({
             <div
               key={option.title}
               className={styles.dropDownItem}
-              onClick={() => handleSelect(options.indexOf(option))}
+              onClick={() => {
+                if (onClickOption) onClickOption();
+                handleSelect(options.indexOf(option));
+              }}
             >
               {option.icon && (
                 <img

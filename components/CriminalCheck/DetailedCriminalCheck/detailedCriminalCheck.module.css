@@ -39,6 +39,7 @@
 .buttons {
   display: flex;
   gap: 16px;
+  align-items: center;
 }
 
 .criminalCheckInfo {
@@ -46,6 +47,18 @@
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
   grid-template-rows: auto auto auto auto;
   gap: 20px;
+}
+
+.savedStatus {
+  color: #19ad3e;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.savedStatus img {
+  margin-right: 4px;
 }
 
 @media (max-width: 936px) {

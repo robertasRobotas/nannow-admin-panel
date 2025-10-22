@@ -24,7 +24,7 @@ const Reviews = () => {
       console.log(err);
       if (axios.isAxiosError(err)) {
         if (err.status === 401) {
-          router.push("/login");
+          router.push("/");
         }
       }
     }

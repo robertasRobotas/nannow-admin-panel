@@ -44,7 +44,7 @@ const Header = () => {
           <Button
             onClick={() => {
               Cookies.remove("@user_jwt");
-              router.push("/login");
+              router.push("/");
             }}
             title="Logout"
             type="OUTLINED"

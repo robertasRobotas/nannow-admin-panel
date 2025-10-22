@@ -12,6 +12,7 @@ type ButtonProps = {
   isSelected?: boolean;
   isDisabled?: boolean;
   alignBaseline?: boolean;
+  height?: number;
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -25,11 +26,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       isSelected = false,
       isDisabled = false,
       alignBaseline,
+      height = 40,
     },
     ref
   ) => {
     return (
       <button
+        style={{ height: `${height}px` }}
         ref={ref}
         onClick={onClick}
         disabled={isDisabled}
