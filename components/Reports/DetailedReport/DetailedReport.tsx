@@ -10,18 +10,40 @@ import { updateReportStatus } from "@/pages/api/fetch";
 import arrowOut from "../../../assets/images/arrow-out.svg";
 import { toast } from "react-toastify";
 import { copyReport } from "@/helpers/clipboardWrites";
+import attentionImg from "../../../assets/images/attention.svg";
+import checkmarkGreenImg from "../../../assets/images/circle-checkmark-filled.svg";
+import { Dispatch, SetStateAction, useState } from "react";
 
 type DetailedReport = {
   report: ReportType;
   onBackClick?: () => void;
+  reports: ReportType[];
+  setReports: Dispatch<SetStateAction<ReportType[]>>;
 };
 
-const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
+const DetailedReport = ({
+  report,
+  reports,
+  onBackClick,
+  setReports,
+}: DetailedReport) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+  const [isSolved, setIsSolved] = useState(report?.isResolved);
 
   const onMarkSolved = async (isSolved: boolean) => {
     try {
       const response = await updateReportStatus(report.id, isSolved);
+      if (response.status === 200) {
+        toast("Successfully updated status");
+        setReports(
+          reports.map((r) => {
+            if (r.id === report.id) {
+              return { ...r, isResolved: !r.isResolved };
+            } else return r;
+          })
+        );
+        setIsSolved((prevState) => !prevState);
+      }
     } catch (err) {
       console.log(err);
     }
@@ -37,6 +59,18 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
       <span className={`${styles.sectionTitle} ${nunito.className}`}>
         Details
       </span>
+      <div className={styles.status}>
+        <span className={styles.statusTitle}>STATUS:</span>
+        <img
+          src={isSolved ? checkmarkGreenImg.src : attentionImg.src}
+          className={styles.statusImg}
+        />
+        <span
+          className={isSolved ? styles.solvedStatus : styles.reportedStatus}
+        >
+          {isSolved ? "SOLVED" : "REPORTED"}
+        </span>
+      </div>
       <div className={styles.heading}>
         <div className={styles.reportDetails}>
           <div className={styles.profile}>
@@ -70,18 +104,23 @@ const DetailedReport = ({ report, onBackClick }: DetailedReport) => {
           </div>
         </div>
         <div className={styles.btnsWrapper}>
-          <Button
-            title="Mark as solved"
-            imgUrl={checkmarkImg.src}
-            type="GREEN"
-            onClick={() => onMarkSolved(true)}
-          />
-          <Button
-            title="Mark as not solved"
-            imgUrl={crossImg.src}
-            type="GRAY"
-            onClick={() => onMarkSolved(false)}
-          />
+          {!isSolved && (
+            <Button
+              title="Mark as solved"
+              imgUrl={checkmarkImg.src}
+              type="GREEN"
+              onClick={() => onMarkSolved(true)}
+            />
+          )}
+          {isSolved && (
+            <Button
+              title="Mark as not solved"
+              imgUrl={crossImg.src}
+              type="GRAY"
+              onClick={() => onMarkSolved(false)}
+            />
+          )}
+
           <Button
             title="Share"
             imgUrl={arrowOut.src}

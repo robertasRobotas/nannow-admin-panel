@@ -120,13 +120,16 @@ export const getChatById = async (id: string) => {
   return response;
 };
 
-export const getAllReports = async () => {
+export const getAllReports = async (startIndex: number) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/reports`, {
-    headers: {
-      Authorization: jwt,
-    },
-  });
+  const response = await axios.get(
+    `${BASE_URL}/admin/reports?startIndex=${startIndex}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
   console.log(response);
   return response;
 };

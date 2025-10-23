@@ -10,7 +10,7 @@ import { useRouter } from "next/router";
 const Reports = () => {
   const [selectedReportId, setSelectedReportId] = useState("");
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState<ReportType[]>([]);
   const [selectedReport, setReportById] = useState<ReportType | null>();
   const router = useRouter();
 
@@ -21,7 +21,7 @@ const Reports = () => {
 
   const fetchReports = async () => {
     try {
-      const response = await getAllReports();
+      const response = await getAllReports(itemOffset);
       setReports(response.data.result.items);
       setItemsPerPage(response.data.result.pageSize);
       setPageCount(
@@ -63,6 +63,8 @@ const Reports = () => {
         <DetailedReport
           report={selectedReport}
           onBackClick={() => setSelectedReportId("")}
+          setReports={setReports}
+          reports={reports}
         />
       );
     }
@@ -97,6 +99,8 @@ const Reports = () => {
         <DetailedReport
           report={selectedReport}
           onBackClick={() => setSelectedReportId("")}
+          setReports={setReports}
+          reports={reports}
         />
       )}
     </>
