@@ -7,7 +7,11 @@ import { getAllReports, getReportById } from "@/pages/api/fetch";
 import axios from "axios";
 import { useRouter } from "next/router";
 
-const Reports = () => {
+type ReportsProps = {
+  detailedPageId?: string;
+};
+
+const Reports = ({ detailedPageId }: ReportsProps) => {
   const [selectedReportId, setSelectedReportId] = useState("");
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [reports, setReports] = useState<ReportType[]>([]);
@@ -49,6 +53,10 @@ const Reports = () => {
 
   useEffect(() => {
     fetchReports();
+    if (detailedPageId) {
+      fetchReportById(detailedPageId);
+      console.log(detailedPageId);
+    }
   }, []);
 
   useEffect(() => {
@@ -58,7 +66,7 @@ const Reports = () => {
   }, [selectedReportId]);
 
   const renderMobile = () => {
-    if (selectedReportId && selectedReport) {
+    if (selectedReport) {
       return (
         <DetailedReport
           report={selectedReport}
@@ -95,7 +103,7 @@ const Reports = () => {
         setItemOffset={setItemOffset}
         setReportById={setReportById}
       />
-      {selectedReportId && selectedReport && (
+      {selectedReport && (
         <DetailedReport
           report={selectedReport}
           onBackClick={() => setSelectedReportId("")}
