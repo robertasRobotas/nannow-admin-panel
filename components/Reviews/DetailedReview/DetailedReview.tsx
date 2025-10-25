@@ -6,13 +6,22 @@ import checkmarkImg from "../../../assets/images/checkmark-white.svg";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { ReviewType } from "@/types/Reviews";
+import { Dispatch, SetStateAction } from "react";
+import avatarImg from "../../../assets/images/default-avatar.png";
 
 type DetailedReview = {
   review: ReviewType;
   onBackClick: () => void;
+  setReviews: Dispatch<SetStateAction<ReviewType[]>>;
+  reviews: ReviewType[];
 };
 
-const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
+const DetailedReview = ({
+  review,
+  onBackClick,
+  setReviews,
+  reviews,
+}: DetailedReview) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   return (
@@ -23,21 +32,27 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
       <div className={styles.heading}>
         <div className={styles.reviewDetails}>
           <div className={styles.profile}>
-            <img src={review.reviewed_by.imgUrl} alt="Profile" />
+            <img
+              src={review?.reviewee?.imgUrl ?? avatarImg.src}
+              alt="Profile"
+            />
             <div>
               <span className={styles.title}>Has been reviewed</span>
               <span className={styles.name}>
-                {review.reviewed.name.split(" ")[0]}
+                {`${review.reviewee.firstName}\n${review.reviewee.lastName}`}
               </span>
             </div>
           </div>
           <img src={arrowImg.src} alt="Arrow" />
           <div className={styles.profile}>
-            <img src={review.reviewed.imgUrl} alt="Profile" />
+            <img
+              src={review?.reviewer?.imgUrl ?? avatarImg.src}
+              alt="Profile"
+            />
             <div>
               <span className={styles.title}>Reviewed by</span>
               <span className={styles.name}>
-                {review.reviewed_by.name.split(" ")[0]}
+                {`${review.reviewer.firstName}\n${review.reviewer.lastName}`}
               </span>
             </div>
           </div>
@@ -61,8 +76,8 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
         </div>
       </div>
       <div className={styles.review}>
-        <img src={review.reviewed_by.imgUrl} alt="Profile" />
-        <div className={styles.reviewBubble}>{review.review}</div>
+        <img src={review.reviewer.imgUrl} alt="Profile" />
+        <div className={styles.reviewBubble}>placeholder</div>
       </div>
     </div>
   );

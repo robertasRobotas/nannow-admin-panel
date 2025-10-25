@@ -55,7 +55,6 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
     fetchReports();
     if (detailedPageId) {
       fetchReportById(detailedPageId);
-      console.log(detailedPageId);
     }
   }, []);
 

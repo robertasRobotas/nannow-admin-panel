@@ -1,14 +1,29 @@
 export type ReviewType = {
   id: string;
-  reviewed_by: {
-    name: string;
+  generalRating: number;
+  punctualityRating: number;
+  empathyRating: number;
+  communicationRating: number;
+  cleanlinessRating: number;
+  orderId: string;
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+  likes: string[];
+  dislikes: string[];
+  reviewerId: string;
+  targetId: string;
+  reviewee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    providerId: string;
     imgUrl: string;
   };
-  reviewed: {
-    name: string;
+  reviewer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    providerId: string;
     imgUrl: string;
   };
-  rating: number;
-  createdAt: string; // could refine to Date or a stricter format if you want
-  review: string;
 };

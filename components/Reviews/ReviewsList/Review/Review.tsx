@@ -23,6 +23,18 @@ const Review = ({
   isSelected,
   onClick,
 }: ReviewProps) => {
+  const dateFormatted = date
+    ? new Date(date).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "-";
+
   return (
     <div
       onClick={onClick}
@@ -32,24 +44,26 @@ const Review = ({
         <img src={starImg.src} alt="Star" />
         <span>{rating.toFixed(1)}</span>
       </div>
-      <div className={styles.reviewDetails}>
-        <div className={styles.profile}>
-          <img src={reviewedByImg} alt="Profile" />
-          <div>
-            <span className={styles.title}>Reviewed by</span>
-            <span className={styles.name}>{reviewedByName}</span>
+      <div className={styles.top}>
+        <div className={styles.reviewDetails}>
+          <div className={styles.profile}>
+            <img src={reviewedByImg} alt="Profile" />
+            <div>
+              <span className={styles.title}>Reviewed by</span>
+              <span className={styles.name}>{reviewedByName}</span>
+            </div>
+          </div>
+          <img src={arrowImg.src} alt="Arrow" />
+          <div className={styles.profile}>
+            <img src={reviewedImg} alt="Profile" />
+            <div>
+              <span className={styles.title}>Has been reviewed</span>
+              <span className={styles.name}>{reviewedName}</span>
+            </div>
           </div>
         </div>
-        <img src={arrowImg.src} alt="Arrow" />
-        <div className={styles.profile}>
-          <img src={reviewedImg} alt="Profile" />
-          <div>
-            <span className={styles.title}>Has been reviewed</span>
-            <span className={styles.name}>{reviewedName}</span>
-          </div>
-        </div>
+        <span className={styles.date}>{dateFormatted}</span>
       </div>
-      <span className={styles.date}>{date}</span>
     </div>
   );
 };

@@ -17,6 +17,13 @@
   font-weight: 600;
 }
 
+.top {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .reviewDetails {
   display: flex;
   align-items: center;
@@ -49,20 +56,25 @@
   font-size: 8px;
   font-weight: 600;
   text-transform: uppercase;
+  white-space: nowrap;
+  margin-bottom: 2px;
 }
 
 .name {
+  display: block;
   color: #000;
   font-family: Inter;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: -0.22px;
+  white-space: pre-wrap;
+  line-height: 15px;
 }
 
 .date {
   color: #999;
   font-size: 11px;
   font-weight: 500;
+  text-align: center;
 }
 
 .selected {
