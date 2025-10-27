@@ -7,3 +7,7 @@ export const copyReport = (id: string) => {
 export const copyReview = (id: string) => {
   navigator.clipboard.writeText(`${BASE_URL}/reviews/${id}`);
 };
+
+export const copyFeedback = (id: string) => {
+  navigator.clipboard.writeText(`${BASE_URL}/feedback/${id}`);
+};

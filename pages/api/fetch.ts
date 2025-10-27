@@ -109,6 +109,22 @@ export const updateReportStatus = async (id: string, isSolved: boolean) => {
   return response;
 };
 
+export const updateFeedbackStatus = async (id: string, isSolved: boolean) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/feedback/${id}`,
+    {
+      isResolved: isSolved,
+    },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
+  return response;
+};
+
 export const getChatById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/chats/${id}`, {
@@ -170,13 +186,16 @@ export const getReviewById = async (id: string) => {
   return response;
 };
 
-export const getAllFeedback = async () => {
+export const getAllFeedback = async (startIndex: number) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/feedback`, {
-    headers: {
-      Authorization: jwt,
-    },
-  });
+  const response = await axios.get(
+    `${BASE_URL}/admin/feedback?startIndex=${startIndex}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
   console.log(response);
   return response;
 };
