@@ -1,5 +1,6 @@
 import { ChatMessageType } from "@/types/Chats";
 import styles from "./chatMessages.module.css";
+import avatarImg from "../../../../../assets/images/default-avatar.png";
 
 type ChatMessagesProps = {
   messages: ChatMessageType[];
@@ -26,7 +27,12 @@ const ChatMessages = ({
             }`}
           >
             {!isFromUser && (
-              <img className={styles.profileImg} src={otherUserImgUrl} />
+              <img
+                className={styles.profileImg}
+                src={
+                  otherUserImgUrl.length > 0 ? otherUserImgUrl : avatarImg.src
+                }
+              />
             )}
             <div
               className={`${styles.chatBubble} ${
@@ -36,7 +42,10 @@ const ChatMessages = ({
               <span>{m.content}</span>
             </div>
             {isFromUser && (
-              <img className={styles.profileImg} src={userImgUrl} />
+              <img
+                className={styles.profileImg}
+                src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src}
+              />
             )}
           </div>
         );

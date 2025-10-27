@@ -6,6 +6,7 @@ import trashImg from "../../../../assets/images/trash.svg";
 import balanceImg from "../../../../assets/images/wallet.svg";
 import { ClientDetails } from "@/types/Client";
 import { Dispatch, SetStateAction } from "react";
+import avatarImg from "../../../../assets/images/default-avatar.png";
 
 type ProfileMenuProps = {
   client: ClientDetails;
@@ -25,7 +26,9 @@ const ProfileMenu = ({
       <div className={styles.profileWrapper}>
         <ProfileInfo
           name={`${client.user.firstName} ${client.user.lastName}`}
-          imgUrl={client.user.imgUrl}
+          imgUrl={
+            client.user.imgUrl.length > 0 ? client.user.imgUrl : avatarImg.src
+          }
           id={client.client.id}
         />
         <div className={styles.balance}>

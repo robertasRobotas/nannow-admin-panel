@@ -3,7 +3,7 @@ import styles from "./messagesSection.module.css";
 import Inbox from "./Inbox/Inbox";
 import ChatMessages from "./ChatMessages/ChatMessages";
 import Button from "@/components/Button/Button";
-import { ChatType } from "@/types/Chats";
+import { ChatMessageType, ChatType } from "@/types/Chats";
 import { getChatById } from "@/pages/api/fetch";
 
 type MessagesSectionProps = {
@@ -18,7 +18,7 @@ const MessagesSection = ({
   userId,
 }: MessagesSectionProps) => {
   const [selectedChatId, setSelectedChatId] = useState("");
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<ChatMessageType[] | null>([]);
   const [userImgUrl, setUserImgUrl] = useState("");
   const [otherUserImgUrl, setOtherUserImgUrl] = useState("");
 
@@ -50,7 +50,7 @@ const MessagesSection = ({
 
   return (
     <div className={styles.wrapper}>
-      {selectedChatId ? (
+      {selectedChatId !== "" && messages ? (
         <ChatMessages
           messages={messages}
           userId={userId}
@@ -58,7 +58,13 @@ const MessagesSection = ({
           otherUserImgUrl={otherUserImgUrl}
         />
       ) : (
-        <Inbox chats={chats} setSelectedChatId={setSelectedChatId} />
+        <Inbox
+          chats={chats}
+          setSelectedChatId={setSelectedChatId}
+          setMessages={setMessages}
+          setUserImgUrl={setUserImgUrl}
+          setOtherUserImgUrl={setOtherUserImgUrl}
+        />
       )}
       <div className={styles.backBtnWrapper}>
         <Button
