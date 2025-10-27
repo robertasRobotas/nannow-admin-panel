@@ -1,13 +1,14 @@
 import styles from "./detailedReview.module.css";
 import { nunito } from "@/helpers/fonts";
 import arrowImg from "../../../assets/images/arrow-right.svg";
-import trashImg from "../../../assets/images/trash.svg";
-import checkmarkImg from "../../../assets/images/checkmark-white.svg";
+import arrowOut from "../../../assets/images/arrow-out.svg";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { ReviewType } from "@/types/Reviews";
 import { Dispatch, SetStateAction } from "react";
 import avatarImg from "../../../assets/images/default-avatar.png";
+import { toast } from "react-toastify";
+import { copyReview } from "@/helpers/clipboardWrites";
 
 type DetailedReview = {
   review: ReviewType;
@@ -23,6 +24,11 @@ const DetailedReview = ({
   reviews,
 }: DetailedReview) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+
+  const onShare = async () => {
+    copyReview(review.id);
+    toast("Link to report copied!");
+  };
 
   return (
     <div className={styles.main}>
@@ -59,16 +65,10 @@ const DetailedReview = ({
         </div>
         <div className={styles.btnsWrapper}>
           <Button
-            title="Delete review"
-            imgUrl={trashImg.src}
-            type="GRAY"
-            onClick={() => console.log("placeholder")}
-          />
-          <Button
-            title="Mark as Approved"
-            imgUrl={checkmarkImg.src}
-            type="GREEN"
-            onClick={() => console.log("placeholder")}
+            title="Share"
+            imgUrl={arrowOut.src}
+            type="OUTLINED"
+            onClick={() => onShare()}
           />
           {isMobile && (
             <Button title="Back" type="OUTLINED" onClick={onBackClick} />
@@ -77,7 +77,9 @@ const DetailedReview = ({
       </div>
       <div className={styles.review}>
         <img src={review.reviewer.imgUrl} alt="Profile" />
-        <div className={styles.reviewBubble}>placeholder</div>
+        <div className={styles.reviewBubble}>
+          {review?.text ? review.text : "No text provided."}
+        </div>
       </div>
     </div>
   );

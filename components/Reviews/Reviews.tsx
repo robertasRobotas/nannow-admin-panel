@@ -66,7 +66,7 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
   }, [selectedReviewId]);
 
   const renderMobile = () => {
-    if (selectedReview) {
+    if (selectedReviewId !== "" && selectedReview) {
       return (
         <DetailedReview
           review={selectedReview}

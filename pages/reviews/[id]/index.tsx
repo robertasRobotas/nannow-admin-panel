@@ -1,14 +1,14 @@
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
 import { useRouter } from "next/router";
-import React, { useEffect, useState } from "react";
-import Reports from "@/components/Reports/Reports";
+import React from "react";
+import Reviews from "@/components/Reviews/Reviews";
 
 const DetailedReportPage = () => {
   const router = useRouter();
   return (
     <ModalPageTemplate isScrollable={true}>
       {router.query.id && (
-        <Reports detailedPageId={router.query.id as string} />
+        <Reviews detailedPageId={router.query.id as string} />
       )}
     </ModalPageTemplate>
   );

@@ -58,7 +58,10 @@ const ReviewsList = ({
               reviewedName={`${r.reviewee.firstName}\n${r.reviewee.lastName}`}
               date={r.createdAt}
               isSelected={selectedReviewId === r.id}
-              onClick={() => setSelectedReviewId(r.id)}
+              onClick={() => {
+                setReviewById(null);
+                setSelectedReviewId(r.id);
+              }}
             />
           );
         })}

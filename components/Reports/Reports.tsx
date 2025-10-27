@@ -65,7 +65,7 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
   }, [selectedReportId]);
 
   const renderMobile = () => {
-    if (selectedReport) {
+    if (selectedReportId !== "" && selectedReport) {
       return (
         <DetailedReport
           report={selectedReport}

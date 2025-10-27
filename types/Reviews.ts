@@ -26,4 +26,5 @@ export type ReviewType = {
     providerId: string;
     imgUrl: string;
   };
+  text: string;
 };
