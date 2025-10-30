@@ -29,11 +29,10 @@ const ProfileMenu = ({
           imgUrl={
             user.user.imgUrl.length > 0 ? user.user.imgUrl : avatarImg.src
           }
-          id={user.client.id}
+          id={user.user.id}
         />
         <div className={styles.balance}>
           <img src={balanceImg.src} alt="Balance" />
-          {/*<span>{`€ ${client.balance.toFixed(2)}`}</span>*/}
           <span>€ 0</span>
         </div>
       </div>

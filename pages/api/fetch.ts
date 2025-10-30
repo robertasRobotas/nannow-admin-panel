@@ -22,7 +22,7 @@ export const getAllUsers = async (url: string) => {
   return response;
 };
 
-export const getClientById = async (id: string) => {
+export const getUserById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/clients/${id}`, {
     headers: {
