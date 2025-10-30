@@ -1,16 +1,16 @@
-import { Client } from "@/types/Client";
-import ClientCard from "../ClientCard/ClientCard";
+import { User } from "@/types/Client";
 import styles from "./cards.module.css";
+import UserCard from "../UserCard/UserCard";
 
 type CardsProps = {
-  users: Client[];
+  users: User[];
 };
 
 const Cards = ({ users }: CardsProps) => {
   return (
     <div className={styles.main}>
       {users.map((c) => (
-        <ClientCard key={c.id} client={c} />
+        <UserCard key={c.id} user={c} />
       ))}
     </div>
   );

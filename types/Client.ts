@@ -19,7 +19,7 @@ export type Client = {
 
 import { ChatType } from "./Chats";
 
-export type Client = {
+export type User = {
   _id: string;
   id: string;
   userId: string;
