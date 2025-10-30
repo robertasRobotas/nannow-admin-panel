@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import { ClientDetails } from "@/types/Client";
 import styles from "./detailedClient.module.css";
 import { useState } from "react";
@@ -6,6 +5,8 @@ import GeneralSection from "./GeneralSection/GeneralSection";
 import ProfileMenu from "./ProfileMenu/ProfileMenu";
 import { useMediaQuery } from "react-responsive";
 import MessagesSection from "./MessagesSection/MessagesSection";
+import ChildrenSection from "./ChildrenSection/ChildrenSection";
+import AddressesSection from "./AddressesSection/AddressesSection";
 
 type DetailedClientProps = {
   client: ClientDetails;
@@ -39,6 +40,28 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
             }}
             chats={client.chats}
             userId={client.user.id}
+          />
+        );
+      }
+      case "children": {
+        return (
+          <ChildrenSection
+            childrenData={client.children}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+      case "addresses": {
+        return (
+          <AddressesSection
+            addresses={client.addresses}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
           />
         );
       }
