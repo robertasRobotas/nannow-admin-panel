@@ -12,7 +12,7 @@ const ProfileInfo = ({ name, imgUrl, id }: ProfileInfoProps) => {
     <div className={styles.profileInfo}>
       <img className={styles.profileImg} src={imgUrl} alt="Profile Image" />
       <span className={`${styles.name} ${nunito.className}`}>{name}</span>
-      <span className={styles.id}>{`ID: ${id}`}</span>
+      <span className={styles.id}>{`USER ID: ${id}`}</span>
     </div>
   );
 };

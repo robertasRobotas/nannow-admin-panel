@@ -31,7 +31,7 @@ export type User = {
   updatedAt: string;
 };
 
-export type ClientDetails = {
+export type UserDetails = {
   client: {
     id: string;
     userId: string;

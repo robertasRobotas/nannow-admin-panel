@@ -22,7 +22,7 @@ const UserCard = ({ user }: ClientCardProps) => {
         <ProfileInfo
           name={`${user.firstName} ${user.lastName}`}
           imgUrl={user.imgUrl !== "" ? user.imgUrl : defaultUserImg.src}
-          id={user.id}
+          id={user.userId}
         />
       </div>
       <Button onClick={onButtonClick} title="View profile" type="OUTLINED" />

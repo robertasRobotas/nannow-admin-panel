@@ -1,17 +1,17 @@
 import { getInfoCards } from "@/data/generalInfoCards";
 import styles from "./generalSection.module.css";
 import { nunito } from "@/helpers/fonts";
-import { ClientDetails } from "@/types/Client";
+import { UserDetails } from "@/types/Client";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 
 type GeneralSectionProps = {
-  client: ClientDetails;
+  user: UserDetails;
   onBackClick: () => void;
 };
 
-const GeneralSection = ({ client, onBackClick }: GeneralSectionProps) => {
-  const cards = getInfoCards(client);
+const GeneralSection = ({ user, onBackClick }: GeneralSectionProps) => {
+  const cards = getInfoCards(user);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   return (

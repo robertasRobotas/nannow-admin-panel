@@ -1,4 +1,4 @@
-import { ClientDetails } from "@/types/Client";
+import { UserDetails } from "@/types/Client";
 import styles from "./detailedClient.module.css";
 import { useState } from "react";
 import GeneralSection from "./GeneralSection/GeneralSection";
@@ -9,10 +9,10 @@ import ChildrenSection from "./ChildrenSection/ChildrenSection";
 import AddressesSection from "./AddressesSection/AddressesSection";
 
 type DetailedClientProps = {
-  client: ClientDetails;
+  user: UserDetails;
 };
 
-const DetailedClient = ({ client }: DetailedClientProps) => {
+const DetailedClient = ({ user }: DetailedClientProps) => {
   const [selectedSection, setSelectedSection] = useState("general");
   //for responsive
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
@@ -23,7 +23,7 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
       case "general": {
         return (
           <GeneralSection
-            client={client}
+            user={user}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);
@@ -38,15 +38,15 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
               setSelectedSection("");
               setIsSelectedMenu(true);
             }}
-            chats={client.chats}
-            userId={client.user.id}
+            chats={user.chats}
+            userId={user.user.id}
           />
         );
       }
       case "children": {
         return (
           <ChildrenSection
-            childrenData={client.children}
+            childrenData={user.children}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);
@@ -57,7 +57,7 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
       case "addresses": {
         return (
           <AddressesSection
-            addresses={client.addresses}
+            addresses={user.addresses}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);
@@ -77,7 +77,7 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
             style={{ display: isSelectedMenu ? "block" : "none" }}
           >
             <ProfileMenu
-              client={client}
+              user={user}
               setIsSelectedMenu={() => setIsSelectedMenu(false)}
               selectedSection={selectedSection}
               setSelectedSection={setSelectedSection}
@@ -93,7 +93,7 @@ const DetailedClient = ({ client }: DetailedClientProps) => {
       ) : (
         <>
           <ProfileMenu
-            client={client}
+            user={user}
             setIsSelectedMenu={() => setIsSelectedMenu(false)}
             selectedSection={selectedSection}
             setSelectedSection={setSelectedSection}

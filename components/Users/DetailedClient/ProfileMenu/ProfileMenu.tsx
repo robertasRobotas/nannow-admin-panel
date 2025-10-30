@@ -4,19 +4,19 @@ import ProfileMenuButtons from "../ProfileMenuButtons/ProfileMenuButtons";
 import styles from "./profileMenu.module.css";
 import trashImg from "../../../../assets/images/trash.svg";
 import balanceImg from "../../../../assets/images/wallet.svg";
-import { ClientDetails } from "@/types/Client";
+import { UserDetails } from "@/types/Client";
 import { Dispatch, SetStateAction } from "react";
 import avatarImg from "../../../../assets/images/default-avatar.png";
 
 type ProfileMenuProps = {
-  client: ClientDetails;
+  user: UserDetails;
   selectedSection: string;
   setIsSelectedMenu: () => void;
   setSelectedSection: Dispatch<SetStateAction<string>>;
 };
 
 const ProfileMenu = ({
-  client,
+  user,
   setIsSelectedMenu,
   selectedSection,
   setSelectedSection,
@@ -25,11 +25,11 @@ const ProfileMenu = ({
     <div className={styles.aside}>
       <div className={styles.profileWrapper}>
         <ProfileInfo
-          name={`${client.user.firstName} ${client.user.lastName}`}
+          name={`${user.user.firstName} ${user.user.lastName}`}
           imgUrl={
-            client.user.imgUrl.length > 0 ? client.user.imgUrl : avatarImg.src
+            user.user.imgUrl.length > 0 ? user.user.imgUrl : avatarImg.src
           }
-          id={client.client.id}
+          id={user.client.id}
         />
         <div className={styles.balance}>
           <img src={balanceImg.src} alt="Balance" />
@@ -39,7 +39,7 @@ const ProfileMenu = ({
       </div>
       <ProfileMenuButtons
         setIsSelectedMenu={setIsSelectedMenu}
-        client={client}
+        client={user}
         selectedSection={selectedSection}
         setSelectedSection={setSelectedSection}
       />
