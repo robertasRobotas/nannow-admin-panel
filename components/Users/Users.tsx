@@ -20,6 +20,23 @@ const Users = () => {
   const [itemsPerPage, setItemsPerPage] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [modeReady, setModeReady] = useState(false);
+
+  // Sync selected mode with URL query (?mode=clients|providers)
+  useEffect(() => {
+    if (!router.isReady) return;
+    const mode =
+      typeof router.query.mode === "string" ? router.query.mode : undefined;
+    if (mode === "providers") {
+      setSelectedProviders(true);
+      setSelectedClients(false);
+    } else {
+      // default to clients
+      setSelectedProviders(false);
+      setSelectedClients(true);
+    }
+    setModeReady(true);
+  }, [router.isReady, router.query.mode]);
 
   const fetchUsers = async () => {
     try {
@@ -50,8 +67,9 @@ const Users = () => {
   };
 
   useEffect(() => {
+    if (!router.isReady || !modeReady) return;
     fetchUsers();
-  }, [isSelectedClients]);
+  }, [router.isReady, modeReady, isSelectedClients]);
 
   return (
     <div className={styles.main}>
@@ -61,6 +79,14 @@ const Users = () => {
             onClick={() => {
               setSelectedProviders(false);
               setSelectedClients(true);
+              router.replace(
+                {
+                  pathname: router.pathname,
+                  query: { ...router.query, mode: "clients" },
+                },
+                undefined,
+                { shallow: true }
+              );
             }}
             title="Clients"
             type="PLAIN"
@@ -70,6 +96,14 @@ const Users = () => {
             onClick={() => {
               setSelectedProviders(true);
               setSelectedClients(false);
+              router.replace(
+                {
+                  pathname: router.pathname,
+                  query: { ...router.query, mode: "providers" },
+                },
+                undefined,
+                { shallow: true }
+              );
             }}
             title="Providers"
             type="PLAIN"
