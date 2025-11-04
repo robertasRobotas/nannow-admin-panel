@@ -5,15 +5,16 @@ import { useRouter } from "next/router";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
 
-type ClientCardProps = {
+type UserCardProps = {
   user: User;
+  mode: "client" | "provider";
 };
 
-const UserCard = ({ user }: ClientCardProps) => {
+const UserCard = ({ user, mode }: UserCardProps) => {
   const router = useRouter();
 
   const onButtonClick = () => {
-    router.push(`/users/${user.userId}`);
+    router.push(`/${mode}/${user.userId}`);
   };
 
   return (

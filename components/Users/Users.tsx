@@ -11,7 +11,6 @@ import ReactPaginate from "react-paginate";
 
 const Users = () => {
   const [isSelectedClients, setSelectedClients] = useState(true);
-  const [isSelectedProviders, setSelectedProviders] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [users, setUsers] = useState([]);
   const router = useRouter();
@@ -28,15 +27,13 @@ const Users = () => {
     const mode =
       typeof router.query.mode === "string" ? router.query.mode : undefined;
     if (mode === "providers") {
-      setSelectedProviders(true);
       setSelectedClients(false);
     } else {
       // default to clients
-      setSelectedProviders(false);
       setSelectedClients(true);
     }
     setModeReady(true);
-  }, [router.isReady, router.query.mode]);
+  }, [router.isReady, router.query.mode, isSelectedClients]);
 
   const fetchUsers = async () => {
     try {
@@ -77,7 +74,6 @@ const Users = () => {
         <div className={styles.headingLeftSide}>
           <Button
             onClick={() => {
-              setSelectedProviders(false);
               setSelectedClients(true);
               router.replace(
                 {
@@ -94,7 +90,6 @@ const Users = () => {
           />
           <Button
             onClick={() => {
-              setSelectedProviders(true);
               setSelectedClients(false);
               router.replace(
                 {
@@ -107,7 +102,7 @@ const Users = () => {
             }}
             title="Providers"
             type="PLAIN"
-            isSelected={isSelectedProviders}
+            isSelected={!isSelectedClients}
           />
         </div>
         <div>
@@ -122,7 +117,7 @@ const Users = () => {
           />
         </div>
       </div>
-      <Cards users={users} />
+      <Cards users={users} mode={isSelectedClients ? "client" : "provider"} />
       <ReactPaginate
         breakLabel="..."
         nextLabel=""
