@@ -1,23 +1,23 @@
 /* eslint-disable @next/next/no-img-element */
-import { getButtonsData } from "@/data/clientProfileMenu";
+import { getButtonsData } from "@/data/userProfileMenu";
 import styles from "./profileMenuButtons.module.css";
-import { Client, ClientDetails } from "@/types/Client";
+import { UserDetails } from "@/types/Client";
 import { Dispatch, SetStateAction } from "react";
 
 type ProfileMenuButtonsProps = {
-  client: ClientDetails;
+  user: UserDetails;
   setIsSelectedMenu: () => void;
   selectedSection: string;
   setSelectedSection: Dispatch<SetStateAction<string>>;
 };
 
 const ProfileMenuButtons = ({
-  client,
+  user,
   setIsSelectedMenu,
   selectedSection,
   setSelectedSection,
 }: ProfileMenuButtonsProps) => {
-  const buttonsData = getButtonsData(client);
+  const buttonsData = getButtonsData(user);
 
   return (
     <div className={styles.main}>

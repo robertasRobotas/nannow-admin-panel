@@ -33,12 +33,12 @@ const ProfileMenu = ({
         />
         <div className={styles.balance}>
           <img src={balanceImg.src} alt="Balance" />
-          <span>€ 0</span>
+          <span>€ not working yet</span>
         </div>
       </div>
       <ProfileMenuButtons
         setIsSelectedMenu={setIsSelectedMenu}
-        client={user}
+        user={user}
         selectedSection={selectedSection}
         setSelectedSection={setSelectedSection}
       />

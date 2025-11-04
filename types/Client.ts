@@ -18,6 +18,7 @@ export type Client = {
 */
 
 import { ChatType } from "./Chats";
+import { ReviewType } from "./Reviews";
 
 export type User = {
   _id: string;
@@ -83,15 +84,8 @@ export type UserDetails = {
     };
   }[];
   documents: any[];
-  reviews: {
-    given: any[];
-    received: {
-      stats: {
-        count: number;
-      };
-      latest: any[];
-    };
-  };
+  receivedReviews: ReviewType[];
+  givenReviews: ReviewType[];
   orders: {
     countsByStatus: {
       count: number;
