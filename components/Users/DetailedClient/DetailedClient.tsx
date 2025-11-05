@@ -7,6 +7,7 @@ import { useMediaQuery } from "react-responsive";
 import MessagesSection from "./MessagesSection/MessagesSection";
 import ChildrenSection from "./ChildrenSection/ChildrenSection";
 import AddressesSection from "./AddressesSection/AddressesSection";
+import ReviewsSection from "./ReviewsSection/ReviewsSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -59,6 +60,30 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
         return (
           <AddressesSection
             addresses={user.addresses}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+      case "given_reviews": {
+        return (
+          <ReviewsSection
+            title="Given Reviews"
+            reviews={user.givenReviews}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+      case "received_reviews": {
+        return (
+          <ReviewsSection
+            title="Received Reviews"
+            reviews={user.receivedReviews}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

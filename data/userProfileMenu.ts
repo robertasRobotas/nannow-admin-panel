@@ -46,7 +46,7 @@ export const getButtonsData = (
       title: "Given Reviews",
       icon: DocWithPencilIcon,
       number: user?.givenReviews?.length ?? 0,
-      id: "reviews",
+      id: "given_reviews",
       visibleFor: ["client", "provider"],
     },
     {
