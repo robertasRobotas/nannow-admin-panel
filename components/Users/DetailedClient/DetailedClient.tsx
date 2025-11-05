@@ -10,9 +10,10 @@ import AddressesSection from "./AddressesSection/AddressesSection";
 
 type DetailedClientProps = {
   user: UserDetails;
+  mode: "client" | "provider";
 };
 
-const DetailedClient = ({ user }: DetailedClientProps) => {
+const DetailedClient = ({ user, mode }: DetailedClientProps) => {
   const [selectedSection, setSelectedSection] = useState("general");
   //for responsive
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
@@ -81,6 +82,7 @@ const DetailedClient = ({ user }: DetailedClientProps) => {
               setIsSelectedMenu={() => setIsSelectedMenu(false)}
               selectedSection={selectedSection}
               setSelectedSection={setSelectedSection}
+              mode={mode}
             />
           </div>
           <div
@@ -97,6 +99,7 @@ const DetailedClient = ({ user }: DetailedClientProps) => {
             setIsSelectedMenu={() => setIsSelectedMenu(false)}
             selectedSection={selectedSection}
             setSelectedSection={setSelectedSection}
+            mode={mode}
           />
           <div className={styles.sectionWrapper}>{renderSelectedSection()}</div>
         </>

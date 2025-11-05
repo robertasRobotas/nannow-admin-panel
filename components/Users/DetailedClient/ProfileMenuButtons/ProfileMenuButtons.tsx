@@ -9,6 +9,7 @@ type ProfileMenuButtonsProps = {
   setIsSelectedMenu: () => void;
   selectedSection: string;
   setSelectedSection: Dispatch<SetStateAction<string>>;
+  mode: "client" | "provider";
 };
 
 const ProfileMenuButtons = ({
@@ -16,8 +17,9 @@ const ProfileMenuButtons = ({
   setIsSelectedMenu,
   selectedSection,
   setSelectedSection,
+  mode,
 }: ProfileMenuButtonsProps) => {
-  const buttonsData = getButtonsData(user);
+  const buttonsData = getButtonsData(user, mode);
 
   return (
     <div className={styles.main}>

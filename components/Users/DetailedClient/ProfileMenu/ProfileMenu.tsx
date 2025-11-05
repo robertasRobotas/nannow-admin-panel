@@ -13,6 +13,7 @@ type ProfileMenuProps = {
   selectedSection: string;
   setIsSelectedMenu: () => void;
   setSelectedSection: Dispatch<SetStateAction<string>>;
+  mode: "client" | "provider";
 };
 
 const ProfileMenu = ({
@@ -20,6 +21,7 @@ const ProfileMenu = ({
   setIsSelectedMenu,
   selectedSection,
   setSelectedSection,
+  mode,
 }: ProfileMenuProps) => {
   return (
     <div className={styles.aside}>
@@ -30,6 +32,7 @@ const ProfileMenu = ({
             user.user.imgUrl.length > 0 ? user.user.imgUrl : avatarImg.src
           }
           id={user.user.id}
+          mode={mode}
         />
         <div className={styles.balance}>
           <img src={balanceImg.src} alt="Balance" />
@@ -41,6 +44,7 @@ const ProfileMenu = ({
         user={user}
         selectedSection={selectedSection}
         setSelectedSection={setSelectedSection}
+        mode={mode}
       />
       <Button
         title="Delete profile"

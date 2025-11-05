@@ -23,7 +23,7 @@ const DetailedProfilePage = () => {
 
   return (
     <ModalPageTemplate isScrollable={true}>
-      {user && <DetailedClient user={user} />}
+      {user && <DetailedClient user={user} mode="client" />}
     </ModalPageTemplate>
   );
 };
