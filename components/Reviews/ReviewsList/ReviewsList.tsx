@@ -46,10 +46,10 @@ const ReviewsList = ({
             <Review
               key={r.id}
               rating={r.generalRating}
-              reviewedByImg={r?.reviewer?.imgUrl}
-              reviewedByName={`${r?.reviewer?.firstName}\n${r?.reviewer?.lastName}`}
-              reviewedImg={r?.reviewee?.imgUrl}
-              reviewedName={`${r?.reviewee?.firstName}\n${r?.reviewee?.lastName}`}
+              reviewedByImg={r?.reviewerImgUrl}
+              reviewedByName={`${r?.reviewerFirstName}\n${r?.reviewerSurname}`}
+              reviewedImg={r?.revieweeImgUrl}
+              reviewedName={`${r?.revieweeFirstName}\n${r?.revieweeSurname}`}
               date={r.createdAt}
               isSelected={selectedReviewId === r.id}
               onClick={() => {
