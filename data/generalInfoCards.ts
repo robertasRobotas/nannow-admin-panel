@@ -1,11 +1,11 @@
-import { ClientDetails } from "@/types/Client";
+import { UserDetails } from "@/types/Client";
 import profileImg from "../assets/images/profile.svg";
 import phoneImg from "../assets/images/phone.svg";
 import locationPinImg from "../assets/images/location-pin.svg";
 import idImg from "../assets/images/id.svg";
 import shieldImg from "../assets/images/shield.svg";
 
-export const getInfoCards = (client: ClientDetails) => {
+export const getInfoCards = (client: UserDetails) => {
   return [
     {
       title: "Full name",

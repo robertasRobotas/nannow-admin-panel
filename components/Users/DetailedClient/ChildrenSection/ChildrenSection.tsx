@@ -2,10 +2,10 @@ import styles from "./childrenSection.module.css";
 import { nunito } from "@/helpers/fonts";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
-import { ClientDetails } from "@/types/Client";
+import { UserDetails } from "@/types/Client";
 
 type ChildrenSectionProps = {
-  childrenData: ClientDetails["children"];
+  childrenData: UserDetails["children"];
   onBackClick: () => void;
 };
 

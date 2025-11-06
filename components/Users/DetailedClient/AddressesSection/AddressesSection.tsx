@@ -2,10 +2,10 @@ import styles from "./addressesSection.module.css";
 import { nunito } from "@/helpers/fonts";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
-import { ClientDetails } from "@/types/Client";
+import { UserDetails } from "@/types/Client";
 
 type AddressesSectionProps = {
-  addresses: ClientDetails["addresses"];
+  addresses: UserDetails["addresses"];
   onBackClick: () => void;
 };
 
