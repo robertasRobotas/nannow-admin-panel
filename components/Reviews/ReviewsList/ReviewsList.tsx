@@ -33,8 +33,6 @@ const ReviewsList = ({
     setItemOffset(newOffset);
   };
 
-  console.log(reviews);
-
   return (
     <div className={styles.main}>
       <div className={`${styles.title} ${nunito.className}`}>
@@ -53,7 +51,6 @@ const ReviewsList = ({
               date={r.createdAt}
               isSelected={selectedReviewId === r.id}
               onClick={() => {
-                setReviewById(null);
                 setSelectedReviewId(r.id);
               }}
             />

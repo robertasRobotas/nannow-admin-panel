@@ -4,6 +4,7 @@
   align-items: center;
   gap: 16px;
   border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
 }
 
 .rating {

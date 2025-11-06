@@ -4,7 +4,7 @@ import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import ReviewsList from "@/components/Reviews/ReviewsList/ReviewsList";
 import DetailedReview from "@/components/Reviews/DetailedReview/DetailedReview";
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { ReviewType } from "@/types/Reviews";
 
 type ReviewsSectionProps = {
@@ -33,6 +33,15 @@ const ReviewsSection = ({
   const pageCount = 1;
   const totalReviews = reviews?.length ?? 0;
   const [, setItemOffset] = useState(0);
+
+  useEffect(() => {
+    if (!selectedReviewId) {
+      setSelectedReview(null);
+      return;
+    }
+    const found = reviews?.find((r) => r.id === selectedReviewId) ?? null;
+    setSelectedReview(found);
+  }, [selectedReviewId, reviews]);
 
   const renderMobile = () => {
     if (selectedReviewId !== "" && selectedReview) {
