@@ -5,7 +5,7 @@ type ProfileInfoProps = {
   name: string;
   imgUrl: string;
   id: string;
-  mode: "client" | "provider";
+  mode?: "client" | "provider";
 };
 
 const ProfileInfo = ({ name, imgUrl, id, mode }: ProfileInfoProps) => {
