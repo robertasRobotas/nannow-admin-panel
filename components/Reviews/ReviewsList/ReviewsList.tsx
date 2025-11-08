@@ -10,15 +10,15 @@ import { options } from "../../../data/reviewRatingOptions";
 
 type ReviewsListProps = {
   reviews: ReviewType[];
-  selectedReviewId: string;
+  selectedReviewId?: string;
   setSelectedReviewId: Dispatch<SetStateAction<string>>;
   itemsPerPage: number;
   pageCount: number;
   totalReviews: number;
   setItemOffset: Dispatch<SetStateAction<number>>;
   setReviewById: Dispatch<SetStateAction<ReviewType | null | undefined>>;
-  selectedOption: number;
-  setSelectedOption: Dispatch<SetStateAction<number>>;
+  selectedOption?: number;
+  setSelectedOption?: Dispatch<SetStateAction<number>>;
   onClickOption?: () => void;
 };
 
@@ -45,12 +45,14 @@ const ReviewsList = ({
     <div className={styles.main}>
       <div className={`${styles.title} ${nunito.className}`}>
         <span>Reviews</span>
-        <DropDownButton
-          options={options}
-          selectedOption={selectedOption}
-          setSelectedOption={setSelectedOption}
-          onClickOption={onClickOption}
-        />
+        {selectedOption !== undefined && setSelectedOption && (
+          <DropDownButton
+            options={options}
+            selectedOption={selectedOption}
+            setSelectedOption={setSelectedOption}
+            onClickOption={onClickOption}
+          />
+        )}
       </div>
       <div className={styles.list}>
         {reviews.map((r) => {
