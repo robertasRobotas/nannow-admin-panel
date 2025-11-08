@@ -194,17 +194,24 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           Order process
         </div>
         <div className={styles.processCards}>
+          {!order?.provider_markedAsServiceInProgressAt && (
+            <ProcessCard
+              imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
+              process="Service not started yet"
+              date={providerMarkedServiceInProgressAt}
+            />
+          )}
           {order?.provider_markedAsServiceInProgressAt && (
             <ProcessCard
               imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
-              process="Parent marked service as in progress"
+              process="Provider marked service in progress"
               date={providerMarkedServiceInProgressAt}
             />
           )}
           {order?.provider_markedAsServiceEndedAt && (
             <ProcessCard
               imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
-              process="Parent marked service as ended"
+              process="Provider marked service ended"
               date={providerMarkedServiceEndedAt}
             />
           )}

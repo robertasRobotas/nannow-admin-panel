@@ -5,6 +5,8 @@ import Review from "./Review/Review";
 import paginateStyles from "../../../styles/paginate.module.css";
 import { ReviewType } from "@/types/Reviews";
 import ReactPaginate from "react-paginate";
+import DropDownButton from "@/components/DropDownButton/DropDownButton";
+import { options } from "../../../data/reviewRatingOptions";
 
 type ReviewsListProps = {
   reviews: ReviewType[];
@@ -15,6 +17,9 @@ type ReviewsListProps = {
   totalReviews: number;
   setItemOffset: Dispatch<SetStateAction<number>>;
   setReviewById: Dispatch<SetStateAction<ReviewType | null | undefined>>;
+  selectedOption: number;
+  setSelectedOption: Dispatch<SetStateAction<number>>;
+  onClickOption?: () => void;
 };
 
 const ReviewsList = ({
@@ -26,6 +31,9 @@ const ReviewsList = ({
   totalReviews,
   setItemOffset,
   setReviewById,
+  selectedOption,
+  setSelectedOption,
+  onClickOption,
 }: ReviewsListProps) => {
   //const [selectedRating, setSelectedRating] = useState("5.0");
   const handlePageClick = (event: { selected: number }) => {
@@ -37,6 +45,12 @@ const ReviewsList = ({
     <div className={styles.main}>
       <div className={`${styles.title} ${nunito.className}`}>
         <span>Reviews</span>
+        <DropDownButton
+          options={options}
+          selectedOption={selectedOption}
+          setSelectedOption={setSelectedOption}
+          onClickOption={onClickOption}
+        />
       </div>
       <div className={styles.list}>
         {reviews.map((r) => {

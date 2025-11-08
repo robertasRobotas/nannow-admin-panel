@@ -173,10 +173,15 @@ export const getReportById = async (id: string) => {
   return response;
 };
 
-export const getAllReviews = async (startIndex: number) => {
+export const getAllReviews = async (
+  startIndex: number,
+  rating?: number | string
+) => {
   const jwt = Cookies.get("@user_jwt");
+  const ratingQuery =
+    rating !== undefined && `${rating}`.length > 0 ? `&rating=${rating}` : "";
   const response = await axios.get(
-    `${BASE_URL}/admin/reviews?startIndex=${startIndex}`,
+    `${BASE_URL}/admin/reviews?startIndex=${startIndex}${ratingQuery}`,
     {
       headers: {
         Authorization: jwt,

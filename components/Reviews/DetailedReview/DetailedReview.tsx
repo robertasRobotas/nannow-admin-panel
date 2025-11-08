@@ -30,6 +30,7 @@ const DetailedReview = ({
     toast("Link to report copied!");
   };
 
+  console.log(review);
   return (
     <div className={styles.main}>
       <span className={`${styles.sectionTitle} ${nunito.className}`}>
