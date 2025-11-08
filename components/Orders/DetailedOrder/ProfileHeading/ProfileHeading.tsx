@@ -19,7 +19,7 @@ const ProfileHeading = ({
       <div className={styles.profile}>
         <img src={sitterImgUrl} />
         <div className={styles.profileInfo}>
-          <div className={styles.role}>Sitter</div>
+          <div className={styles.role}>PROVIDER</div>
           <div className={`${styles.userName} ${nunito.className}`}>
             {sitterName}
           </div>
@@ -28,7 +28,7 @@ const ProfileHeading = ({
       <div className={styles.profile}>
         <img src={parentImgUrl} />
         <div className={styles.profileInfo}>
-          <div className={styles.role}>Parent</div>
+          <div className={styles.role}>CLIENT</div>
           <div className={`${styles.userName} ${nunito.className}`}>
             {parentName}
           </div>

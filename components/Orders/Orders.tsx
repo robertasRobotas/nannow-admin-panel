@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./orders.module.css";
 import { nunito } from "@/helpers/fonts";
-import Button from "../Button/Button";
 import { getOrders } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import ReactPaginate from "react-paginate";
@@ -10,35 +9,41 @@ import axios from "axios";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import OrdersList from "./OrdersList/OrdersList";
 import { options } from "@/data/orderStatusOptions";
+import SearchBar from "@/components/SearchBar/SearchBar";
+import { OrderType } from "@/types/Order";
 
 const Orders = () => {
   const [selectedOption, setSelectedOption] = useState<number>(0);
 
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
+  const [orderIdQuery, setOrderIdQuery] = useState("");
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const router = useRouter();
 
-  const fetchOrders = async (status: string, startIndex: number) => {
-    try {
-      const response = await getOrders(status, startIndex);
-      setOrders(response.data.result.items);
-      setItemsPerPage(response.data.result.pageSize);
-      setPageCount(
-        Math.ceil(response.data.result.total / response.data.result.pageSize)
-      );
-      setTotalUsers(response.data.result.total);
-    } catch (err) {
-      console.log(err);
-      if (axios.isAxiosError(err)) {
-        if (err.status === 401) {
-          router.push("/");
+  const fetchOrders = useCallback(
+    async (status: string, startIndex: number) => {
+      try {
+        const response = await getOrders(status, startIndex);
+        setOrders(response.data.result.items);
+        setItemsPerPage(response.data.result.pageSize);
+        setPageCount(
+          Math.ceil(response.data.result.total / response.data.result.pageSize)
+        );
+        setTotalUsers(response.data.result.total);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
         }
       }
-    }
-  };
+    },
+    [router]
+  );
 
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
@@ -47,7 +52,15 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders(options[selectedOption].value, itemOffset);
-  }, [selectedOption, itemOffset]);
+  }, [selectedOption, itemOffset, fetchOrders]);
+
+  const normalizedQuery = orderIdQuery.trim().toLowerCase();
+  const displayedOrders =
+    normalizedQuery.length > 0
+      ? orders.filter((o) =>
+          (o.orderPrettyId ?? "").toLowerCase().includes(normalizedQuery)
+        )
+      : orders;
 
   return (
     <div className={styles.main}>
@@ -60,9 +73,20 @@ const Orders = () => {
           selectedOption={selectedOption}
           setSelectedOption={setSelectedOption}
         />
+        <div style={{ marginLeft: 12 }}>
+          <SearchBar
+            placeholder="Type order ID"
+            searchText={orderIdQuery}
+            setSearchText={setOrderIdQuery}
+            onButtonClick={() => {
+              // No-op: filtering happens live as you type
+              // Keep the callback to match component API
+            }}
+          />
+        </div>
       </div>
       <div className={styles.ordersWrapper}>
-        <OrdersList orders={orders} />
+        <OrdersList orders={displayedOrders} />
       </div>
       <ReactPaginate
         breakLabel="..."

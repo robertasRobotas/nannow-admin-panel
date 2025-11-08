@@ -16,6 +16,7 @@ import PriceSummary from "./PriceSummary/PriceSummary";
 import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
 import { releaseFundsByOrderId } from "@/pages/api/fetch";
+import documentImg from "../../../assets/images/doc.svg";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
@@ -125,6 +126,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       })
     : "-";
 
+  const getProviderName = (fullName: string, status: string) => {
+    const isProviderNotSelected = [
+      "ORDER_CREATED",
+      "PROVIDER_SENT_OFFER_TO_CLIENT",
+    ].includes(status);
+    return isProviderNotSelected ? "Not selected yet" : fullName;
+  };
+
   return (
     <div className={styles.main}>
       <div className={styles.orderWrapper}>
@@ -132,15 +141,24 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           Order details
         </div>
         <ProfileHeading
-          sitterName={getUserName(
-            sitterUser?.user?.firstName,
-            sitterUser?.user?.lastName
+          sitterName={getProviderName(
+            getUserName(
+              sitterUser?.user?.firstName,
+              sitterUser?.user?.lastName
+            ),
+            order.status
           )}
           sitterImgUrl={getUserImage(sitterUser?.user?.imgUrl)}
           parentName={getUserName(parentUser?.firstName, parentUser?.lastName)}
           parentImgUrl={getUserImage(parentUser?.imgUrl)}
         />
         <div className={styles.orderInfo}>
+          <InfoCard
+            title="Order ID"
+            iconImgUrl={documentImg.src}
+            type={isMobile ? "SPAN2" : "SPAN2"}
+            info={order.orderPrettyId}
+          />
           <InfoCard
             title="Status"
             iconImgUrl={flashImg.src}

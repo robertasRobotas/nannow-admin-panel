@@ -60,4 +60,6 @@ export type OrderType = {
   client: Client;
   approvedProvider?: ApprovedProvider; // may be missing if not approved
   clientUser: ClientUser;
+  // Optional: present on list responses for display/search convenience
+  orderPrettyId?: string;
 };

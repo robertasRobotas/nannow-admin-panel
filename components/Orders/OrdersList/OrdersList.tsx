@@ -14,6 +14,14 @@ const OrdersList = ({ orders }: OrdersListProps) => {
   const getUserName = (firstName?: string, lastName?: string) =>
     `${firstName ?? "Deleted"} ${lastName ?? "User"}`;
 
+  const getProviderName = (fullName: string, status: string) => {
+    const isProviderNotSelected = [
+      "ORDER_CREATED",
+      "PROVIDER_SENT_OFFER_TO_CLIENT",
+    ].includes(status);
+    return isProviderNotSelected ? "Not selected yet(Provider)" : fullName;
+  };
+
   return (
     <div className={styles.main}>
       {orders.map((u) => {
@@ -26,14 +34,14 @@ const OrdersList = ({ orders }: OrdersListProps) => {
             providerImgUrl={getUserImage(providerUser?.imgUrl)}
             clientImgUrl={getUserImage(clientUser?.imgUrl)}
             id={u.id}
-            providerName={getUserName(
-              providerUser?.firstName,
-              providerUser?.lastName
+            providerName={getProviderName(
+              getUserName(providerUser?.firstName, providerUser?.lastName),
+              u.status
             )}
-            clientName={getUserName(
+            clientName={`${getUserName(
               clientUser?.firstName,
               clientUser?.lastName
-            )}
+            )} (Client)`}
             status={u.status}
           />
         );
