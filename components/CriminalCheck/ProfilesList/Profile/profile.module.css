@@ -5,6 +5,12 @@
   gap: 16px;
   align-self: stretch;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.main:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .profile {

@@ -11,6 +11,7 @@ type ButtonProps = {
   arrowDown?: boolean;
   isSelected?: boolean;
   isDisabled?: boolean;
+  isLoading?: boolean;
   alignBaseline?: boolean;
   height?: number;
 };
@@ -25,6 +26,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       arrowDown,
       isSelected = false,
       isDisabled = false,
+      isLoading = false,
       alignBaseline,
       height = 40,
     },
@@ -35,13 +37,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         style={{ height: `${height}px` }}
         ref={ref}
         onClick={onClick}
-        disabled={isDisabled}
+        disabled={isDisabled || isLoading}
         className={`${styles.main} ${styles[type]} ${
           isSelected && styles.selected
-        } ${isDisabled && styles.disabled} ${
+        } ${(isDisabled || isLoading) && styles.disabled} ${
           alignBaseline && styles.alignBaseline
         }`}
       >
+        {isLoading && <span className={styles.spinner} aria-hidden="true" />}
         {imgUrl && <img className={styles.icon} src={imgUrl} alt="Icon" />}
         {title}
         {arrowDown && (

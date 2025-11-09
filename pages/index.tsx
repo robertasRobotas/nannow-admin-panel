@@ -11,10 +11,14 @@ const MainPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
 
   const onSubmit = async () => {
+    if (isLoading) return;
+    setIsError(false);
+    setIsLoading(true);
     try {
       const loginData = {
         email: email,
@@ -32,6 +36,9 @@ const MainPage = () => {
       }
     } catch (err) {
       setIsError(true);
+      void err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -58,7 +65,14 @@ const MainPage = () => {
         {isError && (
           <p className={styles.error}>Your email or password is wrong</p>
         )}
-        <Button title="Login" type="BLACK" height={48} onClick={onSubmit} />
+        <Button
+          title="Login"
+          type="BLACK"
+          height={48}
+          isDisabled={isLoading}
+          isLoading={isLoading}
+          onClick={onSubmit}
+        />
       </div>
     </div>
   );

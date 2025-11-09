@@ -5,6 +5,10 @@
   gap: 16px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.main:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .rating {
