@@ -17,6 +17,7 @@ import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
 import { releaseFundsByOrderId } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
+import Review from "@/components/Reviews/ReviewsList/Review/Review";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
@@ -25,6 +26,7 @@ type DetailedOrderProps = {
 const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isReleasingFunds, setIsReleasingFunds] = useState(false);
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   const getUserImage = (imgUrl: string) =>
@@ -196,7 +198,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         <div className={styles.processCards}>
           {!order?.provider_markedAsServiceInProgressAt && (
             <ProcessCard
-              imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
+              imgUrl={""}
               process="Service not started yet"
               date={providerMarkedServiceInProgressAt}
             />
@@ -216,6 +218,28 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             />
           )}
         </div>
+
+        <div className={styles.reviews}>
+          <div className={`${styles.title} ${nunito.className}`}>Reviews</div>
+          {(order?.reviews?.length ?? 0) > 0 &&
+            order.reviews?.map((r) => (
+              <Review
+                key={r.id}
+                rating={r.generalRating}
+                reviewedByImg={r?.reviewerImgUrl}
+                reviewedByName={`${r?.reviewerFirstName}\n${r?.reviewerSurname}`}
+                reviewedImg={r?.revieweeImgUrl}
+                reviewedName={`${r?.revieweeFirstName}\n${r?.revieweeSurname}`}
+                date={r.createdAt}
+                isSelected={selectedReviewId === r.id}
+                onClick={() => setSelectedReviewId(r.id)}
+              />
+            ))}
+          <div className={styles.noReviews}>
+            {(order?.reviews?.length ?? 0) === 0 && "No reviews yet"}
+          </div>
+        </div>
+
         <div className={`${styles.title} ${nunito.className}`}>
           Price summary
         </div>

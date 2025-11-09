@@ -1,3 +1,5 @@
+import { ReviewType } from "./Reviews";
+
 export type DetailedOrderType = {
   id: string;
   clientId: string;
@@ -162,4 +164,5 @@ export type DetailedOrderType = {
   }[];
   isReleasedFundsToProvider: boolean;
   releasedFundsToProviderAt: string | null;
+  reviews?: ReviewType[];
 };
