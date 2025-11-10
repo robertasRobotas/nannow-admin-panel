@@ -124,6 +124,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
         return (
           <SpecialSkillsSection
             specialSkills={user?.provider?.specialSkills}
+            providerId={user?.provider?.id}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

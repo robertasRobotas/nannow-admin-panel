@@ -39,6 +39,7 @@ type SpecialSkills = {
 
 type SpecialSkillsSectionProps = {
   specialSkills?: SpecialSkills;
+  providerId?: string;
   onBackClick: () => void;
 };
 
@@ -100,6 +101,7 @@ const getStatusClass = (status?: string) => {
   const up = status.toUpperCase();
   if (up === "VERIFIED") return styles.verified;
   if (up === "VERIFYING") return styles.verifying;
+  if (up === "REJECTED") return styles.rejected;
   return styles.blank;
 };
 
@@ -114,10 +116,18 @@ const fmt = (iso?: string) => {
 
 const SpecialSkillsSection = ({
   specialSkills,
+  providerId,
   onBackClick,
 }: SpecialSkillsSectionProps) => {
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
   const [reviewedDocIds, setReviewedDocIds] = useState<Set<string>>(new Set());
+  const [statusByKey, setStatusByKey] = useState<
+    Record<string, string | undefined>
+  >(() => {
+    const initial: Record<string, string | undefined> = {};
+    ALL_KEYS.forEach((k) => (initial[k] = specialSkills?.[k]?.status));
+    return initial;
+  });
 
   useEffect(() => {
     const initial = new Set<string>();
@@ -128,6 +138,9 @@ const SpecialSkillsSection = ({
       }
     });
     setReviewedDocIds(initial);
+    const initialStatuses: Record<string, string | undefined> = {};
+    ALL_KEYS.forEach((k) => (initialStatuses[k] = specialSkills?.[k]?.status));
+    setStatusByKey(initialStatuses);
   }, [specialSkills]);
   return (
     <div className={styles.main}>
@@ -135,7 +148,7 @@ const SpecialSkillsSection = ({
       <div className={styles.list}>
         {ALL_KEYS.map((key) => {
           const s = specialSkills?.[key];
-          const statusClass = getStatusClass(s?.status);
+          const statusClass = getStatusClass(statusByKey[key] ?? s?.status);
           const doc = s?.document;
           const isReviewed = doc?.id ? reviewedDocIds.has(doc.id) : false;
           return (
@@ -144,7 +157,7 @@ const SpecialSkillsSection = ({
                 <div className={styles.left}>
                   <div className={styles.skillName}>{LABELS[key]}</div>
                   <div className={`${styles.statusBadge} ${statusClass}`}>
-                    {s?.status ? s.status : "No data"}
+                    {statusByKey[key] ?? s?.status ?? "No data"}
                   </div>
                 </div>
                 <div className={styles.right}>
@@ -171,6 +184,15 @@ const SpecialSkillsSection = ({
                     </div>
                   )}
                 </div>
+              </div>
+              <div className={styles.statusDropdownWrapper}>
+                <StatusDropdown
+                  providerId={providerId}
+                  skillKey={key}
+                  onChangedStatus={(newStatus) =>
+                    setStatusByKey((prev) => ({ ...prev, [key]: newStatus }))
+                  }
+                />
               </div>
               {doc && (
                 <div className={styles.docBlock}>
@@ -278,3 +300,82 @@ const SpecialSkillsSection = ({
 };
 
 export default SpecialSkillsSection;
+
+// Local helper component: dropdown to change skill status
+import DropDownButton from "@/components/DropDownButton/DropDownButton";
+import { reviewSpecialSkill } from "@/pages/api/fetch";
+import { Dispatch, SetStateAction } from "react";
+
+type StatusDropdownProps = {
+  providerId?: string;
+  skillKey: keyof SpecialSkills;
+  onChangedStatus: (status: "VERIFIED" | "REJECTED" | "VERIFYING") => void;
+};
+
+const toEnumKey = (key: keyof SpecialSkills) => {
+  switch (key) {
+    case "firstAid":
+      return "FIRST_AID";
+    case "teacher":
+      return "TEACHER";
+    case "professionalNanny":
+      return "PROFESSIONAL_NANNY";
+    case "artEducator":
+      return "ART_EDUCATOR";
+    case "language":
+      return "LANGUAGE";
+    case "psychologist":
+      return "PSYCHOLOGIST";
+    case "sportsCoach":
+      return "SPORTS_COACH";
+  }
+};
+
+const STATUS_OPTIONS = [
+  { title: "Change status", value: "" },
+  { title: "Set VERIFIED", value: "VERIFIED" },
+  { title: "Set REJECTED", value: "REJECTED" },
+  { title: "Set VERIFYING", value: "VERIFYING" },
+] as const;
+
+const StatusDropdown = ({
+  providerId,
+  skillKey,
+  onChangedStatus,
+}: StatusDropdownProps) => {
+  const [selected, setSelected] = useState<number>(0);
+
+  const handleChange = async (nextIndex: number) => {
+    setSelected(nextIndex);
+    if (nextIndex === 0) return;
+    const status = STATUS_OPTIONS[nextIndex].value as
+      | "VERIFIED"
+      | "REJECTED"
+      | "VERIFYING";
+    if (!providerId) return;
+    try {
+      await reviewSpecialSkill(providerId, toEnumKey(skillKey), status);
+      onChangedStatus(status);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      // reset to "Change status" label
+      setSelected(0);
+    }
+  };
+
+  return (
+    <div className={styles.actions}>
+      <DropDownButton
+        options={
+          STATUS_OPTIONS as unknown as { title: string; value: string }[]
+        }
+        selectedOption={selected}
+        setSelectedOption={
+          handleChange as unknown as Dispatch<SetStateAction<number>>
+        }
+        onClickOption={undefined}
+      />
+    </div>
+  );
+};

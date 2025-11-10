@@ -7,6 +7,12 @@
   padding: 1rem;
 }
 
+.statusDropdownWrapper {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .title {
   font-size: 20px;
   font-weight: 700;
@@ -15,14 +21,14 @@
 .list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 1.5rem;
 }
 
 .item {
-  border: 1px solid #e6e6e6;
+  border: 1px solid #c0c0c0;
   border-radius: 12px;
-  background: #fff;
-  padding: 12px;
+  background: #f8f8f8;
+  padding: 2rem;
 }
 
 .row {
@@ -69,6 +75,12 @@
   color: #065f46;
   background: #d1fae5;
   border-color: #a7f3d0;
+}
+
+.rejected {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
 }
 
 .right {
