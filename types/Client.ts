@@ -33,7 +33,12 @@ export type User = {
 };
 
 export type UserDetails = {
-  client: {
+  provider?: {
+    id: string;
+    userId: string;
+    totalEarnings: number;
+  };
+  client?: {
     id: string;
     userId: string;
     languages: string[];

@@ -36,7 +36,10 @@ const ProfileMenu = ({
         />
         <div className={styles.balance}>
           <img src={balanceImg.src} alt="Balance" />
-          <span>€ not working yet</span>
+
+          {mode === "provider" && (
+            <span> Total earnings: € {user?.provider?.totalEarnings}</span>
+          )}
         </div>
       </div>
       <ProfileMenuButtons
