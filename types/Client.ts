@@ -38,6 +38,57 @@ export type UserDetails = {
     userId: string;
     totalEarnings: number;
     badgesIds?: string[];
+    specialSkills?: {
+      firstAid?: {
+        documentId?: string;
+        status?: string; // e.g. 'VERIFYING' | 'VERIFIED'
+        verifiedAt?: string;
+        appliedAt?: string;
+        verifiedByAdminId?: string;
+      };
+      teacher?: {
+        documentId?: string;
+        status?: string;
+        verifiedAt?: string;
+        appliedAt?: string;
+        verifiedByAdminId?: string;
+      };
+      professionalNanny?: {
+        documentId?: string;
+        status?: string;
+        appliedAt?: string;
+        verifiedAt?: string;
+        verifiedByAdminId?: string;
+      };
+      artEducator?: {
+        documentId?: string;
+        status?: string;
+        verifiedAt?: string;
+        appliedAt?: string;
+        verifiedByAdminId?: string;
+      };
+      language?: {
+        documentId?: string;
+        status?: string;
+        verifiedAt?: string;
+        appliedAt?: string;
+        verifiedByAdminId?: string;
+      };
+      psychologist?: {
+        documentId?: string;
+        status?: string;
+        verifiedAt?: string;
+        appliedAt?: string;
+        verifiedByAdminId?: string;
+      };
+      sportsCoach?: {
+        documentId?: string;
+        status?: string;
+        verifiedAt?: string;
+        appliedAt?: string;
+        verifiedByAdminId?: string;
+      };
+    };
   };
   client?: {
     id: string;

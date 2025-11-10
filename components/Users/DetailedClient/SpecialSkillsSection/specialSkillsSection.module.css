@@ -1,0 +1,160 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap");
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.item {
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.skillName {
+  color: #111;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.statusBadge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+}
+
+.blank {
+  color: #6b7280;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.verifying {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.verified {
+  color: #065f46;
+  background: #d1fae5;
+  border-color: #a7f3d0;
+}
+
+.right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.meta {
+  display: flex;
+  gap: 6px;
+}
+
+.metaLabel {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.metaValue {
+  color: #111827;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.docBlock {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px dashed #eee;
+  padding-top: 10px;
+}
+
+.docTop {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+}
+
+.thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  flex: 0 0 64px;
+  cursor: pointer;
+}
+
+.docInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.docTitle {
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fileName {
+  color: #111;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.uploadedAt {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.backBtnWrapper {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}

@@ -9,6 +9,8 @@ import ChildrenSection from "./ChildrenSection/ChildrenSection";
 import AddressesSection from "./AddressesSection/AddressesSection";
 import ReviewsSection from "./ReviewsSection/ReviewsSection";
 import BadgesSection from "./BadgesSection/BadgesSection";
+import DocumentsSection from "./DocumentsSection/DocumentsSection";
+import SpecialSkillsSection from "./SpecialSkillsSection/SpecialSkillsSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -98,6 +100,30 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           <BadgesSection
             selectedBadges={user?.provider?.badgesIds ?? []}
             providerUserId={user.user.id}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
+      case "documents": {
+        return (
+          <DocumentsSection
+            documents={user.documents}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
+      case "special_skills": {
+        return (
+          <SpecialSkillsSection
+            specialSkills={user?.provider?.specialSkills}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

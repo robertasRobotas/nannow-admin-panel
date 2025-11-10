@@ -43,6 +43,12 @@ export const getButtonsData = (
       visibleFor: ["client", "provider"],
     },
     {
+      title: "Special skills",
+      icon: DocWithCheckmarkIcon,
+      id: "special_skills",
+      visibleFor: ["provider"],
+    },
+    {
       title: "Given Reviews",
       icon: DocWithPencilIcon,
       number: user?.givenReviews?.length ?? 0,
@@ -55,6 +61,13 @@ export const getButtonsData = (
       number: user?.receivedReviews?.length ?? 0,
       id: "received_reviews",
       visibleFor: ["client", "provider"],
+    },
+    {
+      title: "Documents",
+      icon: DocInProgressIcon,
+      number: user?.documents?.length ?? 0,
+      id: "documents",
+      visibleFor: ["provider"],
     },
     {
       title: "Badges",
