@@ -8,6 +8,7 @@ import MessagesSection from "./MessagesSection/MessagesSection";
 import ChildrenSection from "./ChildrenSection/ChildrenSection";
 import AddressesSection from "./AddressesSection/AddressesSection";
 import ReviewsSection from "./ReviewsSection/ReviewsSection";
+import BadgesSection from "./BadgesSection/BadgesSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -84,6 +85,19 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           <ReviewsSection
             title="Received Reviews"
             reviews={user.receivedReviews}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
+      case "badges": {
+        return (
+          <BadgesSection
+            selectedBadges={user?.provider?.badgesIds ?? []}
+            providerUserId={user.user.id}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

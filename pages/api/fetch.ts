@@ -275,3 +275,20 @@ export const releaseFundsByOrderId = async (id: string) => {
 
   return response;
 };
+
+export const toggleProviderBadge = async (
+  providerUserId: string,
+  badge: string
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/provider/badges`,
+    { providerUserId, badge },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
+  return response;
+};

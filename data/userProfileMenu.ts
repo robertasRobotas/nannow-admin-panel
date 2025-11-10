@@ -59,7 +59,7 @@ export const getButtonsData = (
     {
       title: "Badges",
       icon: BadgeIcon,
-      number: user?.client?.badgesIds?.length ?? 0,
+      number: (user as any)?.provider?.badgesIds?.length ?? 0,
       id: "badges",
       visibleFor: ["provider"],
     },

@@ -37,6 +37,7 @@ export type UserDetails = {
     id: string;
     userId: string;
     totalEarnings: number;
+    badgesIds?: string[];
   };
   client?: {
     id: string;

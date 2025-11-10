@@ -1,0 +1,64 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap");
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #000;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.badgeButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.badgeButton img {
+  width: 20px;
+  height: 20px;
+}
+
+.badgeButton span {
+  color: #000;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.badgeButton:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.active {
+  background: #111827;
+  border-color: #111827;
+}
+
+.active span {
+  color: #fff;
+}
+
+.backBtnWrapper {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
