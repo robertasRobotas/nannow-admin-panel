@@ -307,6 +307,24 @@ export const toggleDocumentReviewed = async (documentId: string) => {
   return response;
 };
 
+export const getDocuments = async (
+  startIndex: number,
+  status?: "REVIEWED" | "NOT_REVIEWED"
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const statusQuery = status ? `&status=${status}` : "";
+  const response = await axios.get(
+    `${BASE_URL}/admin/documents?startIndex=${startIndex}${statusQuery}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
+  console.log(response);
+  return response;
+};
+
 export const reviewSpecialSkill = async (
   providerId: string,
   skillName: string,
