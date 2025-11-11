@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import DetailedUser from "@/components/Users/DetailedClient/DetailedClient";
+import DetailedUser from "@/components/Users/DetailedUser/DetailedUser";
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
 import { getProviderById } from "@/pages/api/fetch";
 

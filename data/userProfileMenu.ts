@@ -74,7 +74,7 @@ export const getButtonsData = (
       icon: BadgeIcon,
       number: (user as any)?.provider?.badgesIds?.length ?? 0,
       id: "badges",
-      visibleFor: ["provider"],
+      visibleFor: ["provider", "client"],
     },
     // {
     //   title: "Profile completion",

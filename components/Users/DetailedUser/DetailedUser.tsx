@@ -1,5 +1,5 @@
 import { UserDetails } from "@/types/Client";
-import styles from "./detailedClient.module.css";
+import styles from "./detailedUser.module.css";
 import { useState } from "react";
 import GeneralSection from "./GeneralSection/GeneralSection";
 import ProfileMenu from "./ProfileMenu/ProfileMenu";
@@ -98,6 +98,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
       case "badges": {
         return (
           <BadgesSection
+            mode={mode}
             selectedBadges={user?.provider?.badgesIds ?? []}
             providerUserId={user.user.id}
             userId={user.user.id}

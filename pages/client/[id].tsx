@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import DetailedClient from "@/components/Users/DetailedClient/DetailedClient";
+import DetailedUser from "@/components/Users/DetailedUser/DetailedUser";
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
 import { getClientById } from "@/pages/api/fetch";
 
@@ -23,7 +23,7 @@ const DetailedProfilePage = () => {
 
   return (
     <ModalPageTemplate isScrollable={true}>
-      {user && <DetailedClient user={user} mode="client" />}
+      {user && <DetailedUser user={user} mode="client" />}
     </ModalPageTemplate>
   );
 };

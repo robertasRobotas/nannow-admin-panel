@@ -8,6 +8,7 @@ import shieldImg from "../../../../assets/images/shield.svg";
 import { toggleProviderBadge, toggleUserVerified } from "@/pages/api/fetch";
 
 type BadgesSectionProps = {
+  mode: "client" | "provider";
   selectedBadges: string[];
   providerUserId: string;
   userId: string;
@@ -31,6 +32,7 @@ const ALL_BADGES: BadgeDef[] = [
 ];
 
 const BadgesSection = ({
+  mode,
   selectedBadges,
   providerUserId,
   userId,
@@ -86,28 +88,29 @@ const BadgesSection = ({
         </button>
       </div>
 
-      <h3 className={styles.title}>Provider Badges</h3>
-      <div className={styles.grid}>
-        {ALL_BADGES.map((b) => {
-          const isActive = selectedSet.has(b.id);
-          return (
-            <button
-              key={b.id}
-              className={`${styles.badgeButton} ${
-                isActive ? styles.active : ""
-              }`}
-              onClick={() => handleToggle(b.id)}
-              disabled={!!loadingId}
-            >
-              <img src={b.img} alt={`${b.label} icon`} />
-              <span>{b.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className={styles.backBtnWrapper}>
-        <Button title="Back" type="PRIMARY" onClick={onBackClick} />
-      </div>
+      {mode === "provider" && (
+        <>
+          <h3 className={styles.title}>Provider Badges</h3>
+          <div className={styles.grid}>
+            {ALL_BADGES.map((b) => {
+              const isActive = selectedSet.has(b.id);
+              return (
+                <button
+                  key={b.id}
+                  className={`${styles.badgeButton} ${
+                    isActive ? styles.active : ""
+                  }`}
+                  onClick={() => handleToggle(b.id)}
+                  disabled={!!loadingId}
+                >
+                  <img src={b.img} alt={`${b.label} icon`} />
+                  <span>{b.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 };
