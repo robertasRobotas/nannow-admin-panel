@@ -342,3 +342,13 @@ export const reviewSpecialSkill = async (
   );
   return response;
 };
+
+export const toggleUserVerified = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/${userId}/verify`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};

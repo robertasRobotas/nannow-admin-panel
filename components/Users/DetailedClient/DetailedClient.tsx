@@ -100,6 +100,8 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           <BadgesSection
             selectedBadges={user?.provider?.badgesIds ?? []}
             providerUserId={user.user.id}
+            userId={user.user.id}
+            userIsVerified={user.user.isUserVerified}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

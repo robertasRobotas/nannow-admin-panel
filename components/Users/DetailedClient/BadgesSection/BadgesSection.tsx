@@ -5,11 +5,13 @@ import Button from "@/components/Button/Button";
 import verifiedBadgeImg from "../../../../assets/images/verified_badge.svg";
 import crownImg from "../../../../assets/images/crown.svg";
 import shieldImg from "../../../../assets/images/shield.svg";
-import { toggleProviderBadge } from "@/pages/api/fetch";
+import { toggleProviderBadge, toggleUserVerified } from "@/pages/api/fetch";
 
 type BadgesSectionProps = {
   selectedBadges: string[];
   providerUserId: string;
+  userId: string;
+  userIsVerified: boolean;
   onBackClick: () => void;
 };
 
@@ -20,7 +22,6 @@ type BadgeDef = {
 };
 
 const ALL_BADGES: BadgeDef[] = [
-  { id: "verified", label: "Verified", img: verifiedBadgeImg.src },
   { id: "top", label: "Top", img: crownImg.src },
   {
     id: "crimilal_record_verified",
@@ -32,10 +33,14 @@ const ALL_BADGES: BadgeDef[] = [
 const BadgesSection = ({
   selectedBadges,
   providerUserId,
+  userId,
+  userIsVerified,
   onBackClick,
 }: BadgesSectionProps) => {
   const [badges, setBadges] = useState<string[]>(selectedBadges ?? []);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [verifyLoading, setVerifyLoading] = useState<boolean>(false);
+  const [isVerified, setIsVerified] = useState<boolean>(!!userIsVerified);
   const selectedSet = useMemo(() => new Set(badges), [badges]);
 
   const handleToggle = async (badgeId: string) => {
@@ -55,9 +60,33 @@ const BadgesSection = ({
     }
   };
 
+  const handleToggleVerified = async () => {
+    try {
+      setVerifyLoading(true);
+      await toggleUserVerified(userId);
+      setIsVerified((prev) => !prev);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
   return (
     <div className={styles.main}>
-      <h3 className={styles.title}>Badges</h3>
+      <h3 className={styles.title}>User Badges</h3>
+      <div className={styles.grid}>
+        <button
+          className={`${styles.badgeButton} ${isVerified ? styles.active : ""}`}
+          onClick={handleToggleVerified}
+          disabled={verifyLoading}
+        >
+          <img src={verifiedBadgeImg.src} alt="Verified user icon" />
+          <span>Verified user</span>
+        </button>
+      </div>
+
+      <h3 className={styles.title}>Provider Badges</h3>
       <div className={styles.grid}>
         {ALL_BADGES.map((b) => {
           const isActive = selectedSet.has(b.id);
@@ -75,6 +104,9 @@ const BadgesSection = ({
             </button>
           );
         })}
+      </div>
+      <div className={styles.backBtnWrapper}>
+        <Button title="Back" type="PRIMARY" onClick={onBackClick} />
       </div>
     </div>
   );
