@@ -23,6 +23,8 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [isSelectedMenu, setIsSelectedMenu] = useState(false);
 
+  console.log(isMobile);
+
   const renderSelectedSection = () => {
     switch (selectedSection) {
       case "general": {
@@ -140,39 +142,14 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
 
   return (
     <div className={styles.main}>
-      {isMobile ? (
-        <>
-          <div
-            className={styles.menuWrapper}
-            style={{ display: isSelectedMenu ? "block" : "none" }}
-          >
-            <ProfileMenu
-              user={user}
-              setIsSelectedMenu={() => setIsSelectedMenu(false)}
-              selectedSection={selectedSection}
-              setSelectedSection={setSelectedSection}
-              mode={mode}
-            />
-          </div>
-          <div
-            className={styles.sectionWrapper}
-            style={{ display: !isSelectedMenu ? "block" : "none" }}
-          >
-            {renderSelectedSection()}
-          </div>
-        </>
-      ) : (
-        <>
-          <ProfileMenu
-            user={user}
-            setIsSelectedMenu={() => setIsSelectedMenu(false)}
-            selectedSection={selectedSection}
-            setSelectedSection={setSelectedSection}
-            mode={mode}
-          />
-          <div className={styles.sectionWrapper}>{renderSelectedSection()}</div>
-        </>
-      )}
+      <ProfileMenu
+        user={user}
+        setIsSelectedMenu={() => setIsSelectedMenu(false)}
+        selectedSection={selectedSection}
+        setSelectedSection={setSelectedSection}
+        mode={mode}
+      />
+      <div className={styles.sectionWrapper}>{renderSelectedSection()}</div>
     </div>
   );
 };
