@@ -19,7 +19,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
@@ -75,6 +75,33 @@
 .uploadedAt {
   color: #6b7280;
   font-size: 12px;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  cursor: pointer;
+  padding: 4px;
+}
+.userRow:hover {
+  background: #d9d9d9;
+  border-radius: 8px;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  flex: 0 0 24px;
+}
+
+.userName {
+  font-size: 13px;
+  color: #0f172a;
 }
 
 .actions {

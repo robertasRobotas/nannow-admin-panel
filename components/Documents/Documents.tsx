@@ -12,6 +12,8 @@ import { useRouter } from "next/router";
 import fileIcon from "@/assets/images/doc.svg";
 import arrowOutImg from "@/assets/images/arrow-out.svg";
 import downloadImg from "@/assets/images/download.svg";
+import avatarImg from "@/assets/images/default-avatar.png";
+import Link from "next/link";
 
 type AdminDocument = {
   id: string;
@@ -26,6 +28,12 @@ type AdminDocument = {
   reviewedAt?: string;
   adminReviewedAt?: string;
   reviwedAt?: string;
+  user?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    imgUrl?: string;
+  };
 };
 
 const isImageUrl = (url: string) =>
@@ -193,9 +201,28 @@ const Documents = () => {
                     )}
                   </div>
                 </div>
+                {doc.user && (
+                  <Link href={`/provider/${doc.user.id}`}>
+                    <div className={styles.userRow}>
+                      <img
+                        className={styles.avatar}
+                        src={doc.user.imgUrl ?? avatarImg.src}
+                        alt={
+                          `${doc.user.firstName ?? ""} ${
+                            doc.user.lastName ?? ""
+                          }`.trim() || "User"
+                        }
+                      />
+                      <div className={styles.userName}>
+                        {(doc.user.firstName ?? "").trim()}{" "}
+                        {(doc.user.lastName ?? "").trim()}
+                      </div>
+                    </div>
+                  </Link>
+                )}
                 <div className={styles.actions}>
                   <Button
-                    title="Open"
+                    title="Open doc"
                     imgUrl={arrowOutImg.src}
                     type="WHITE"
                     onClick={() =>
