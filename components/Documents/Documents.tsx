@@ -126,7 +126,7 @@ const Documents = () => {
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
-        if ((err as any).status === 401) {
+        if (err.status === 401) {
           router.push("/");
         }
       }
