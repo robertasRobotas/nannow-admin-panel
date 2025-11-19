@@ -11,6 +11,7 @@ import ReviewsSection from "./ReviewsSection/ReviewsSection";
 import BadgesSection from "./BadgesSection/BadgesSection";
 import DocumentsSection from "./DocumentsSection/DocumentsSection";
 import SpecialSkillsSection from "./SpecialSkillsSection/SpecialSkillsSection";
+import AddAdminReviewSection from "./AddAdminReviewSection/AddAdminReviewSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -130,6 +131,18 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           <SpecialSkillsSection
             specialSkills={user?.provider?.specialSkills}
             providerId={user?.provider?.id}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+      case "add_admin_review": {
+        return (
+          <AddAdminReviewSection
+            user={user}
+            mode={mode}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

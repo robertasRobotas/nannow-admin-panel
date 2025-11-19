@@ -63,6 +63,12 @@ export const getButtonsData = (
       visibleFor: ["client", "provider"],
     },
     {
+      title: "Add Review (Admin)",
+      icon: DocWithPencilIcon,
+      id: "add_admin_review",
+      visibleFor: ["client", "provider"],
+    },
+    {
       title: "Documents",
       icon: DocInProgressIcon,
       number: user?.documents?.length ?? 0,

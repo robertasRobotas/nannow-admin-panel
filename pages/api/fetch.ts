@@ -352,3 +352,30 @@ export const toggleUserVerified = async (userId: string) => {
   });
   return response;
 };
+
+export const addReviewByAdmin = async (
+  orderId: string,
+  payload: {
+    generalRating: number;
+    punctualityRating?: number;
+    empathyRating?: number;
+    communicationRating?: number;
+    cleanlinessRating?: number;
+    text?: string;
+    clientId: string;
+    providerId: string;
+    textCreatedAt?: string | Date;
+  }
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/reviews/${orderId}`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    }
+  );
+  return response;
+};

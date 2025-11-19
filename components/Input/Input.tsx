@@ -9,6 +9,7 @@ type InputProps = {
   isPassword?: boolean;
   isError: boolean;
   setIsError: Dispatch<SetStateAction<boolean>>;
+  disabled?: boolean;
 };
 
 const Input = ({
@@ -18,6 +19,7 @@ const Input = ({
   isPassword = false,
   isError,
   setIsError,
+  disabled = false,
 }: InputProps) => {
   const [showPass, setShowPass] = useState(isPassword);
   const [isFocused, setFocused] = useState(false);
@@ -40,6 +42,7 @@ const Input = ({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className={styles.input}
+          disabled={disabled}
         />
         {isPassword && (
           <img
