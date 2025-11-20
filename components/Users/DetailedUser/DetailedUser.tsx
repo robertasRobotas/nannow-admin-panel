@@ -143,6 +143,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           <AddAdminReviewSection
             user={user}
             mode={mode}
+            defaultOrderId={user?.orders?.lastOrder?.id}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

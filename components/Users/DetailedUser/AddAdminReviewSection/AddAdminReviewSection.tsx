@@ -28,9 +28,7 @@ const AddAdminReviewSection = ({
   onBackClick,
   user,
   mode,
-  defaultOrderId,
 }: AddAdminReviewSectionProps) => {
-  const [orderId] = useState(defaultOrderId ?? "");
   const [providerId, setProviderId] = useState("");
   const [generalRating, setGeneralRating] = useState("");
   const [punctualityRating, setPunctualityRating] = useState("");
@@ -55,21 +53,11 @@ const AddAdminReviewSection = ({
   const handleSubmit = async () => {
     setError(null);
     setSuccess(null);
-    const missingOrder = orderId.trim().length === 0;
     const missingProvider = providerId.trim().length === 0;
     const missingGeneral = generalRating.trim().length === 0;
 
     setProviderIdErr(missingProvider);
     setGeneralRatingErr(missingGeneral);
-
-    if (missingOrder || missingProvider || missingGeneral) {
-      setError(
-        missingOrder
-          ? "Order ID is required but not editable here. Please open this form from an order context."
-          : "Please fill in required fields."
-      );
-      return;
-    }
 
     const payload: AdminReviewPayload = {
       generalRating: Number(generalRating),
@@ -88,9 +76,8 @@ const AddAdminReviewSection = ({
 
     try {
       setLoading(true);
-      await addReviewByAdmin(orderId.trim(), payload);
+      await addReviewByAdmin(user.user.id, payload);
       setSuccess("Review added successfully.");
-      // keep inputs except orderId to allow multiple additions for same context
     } catch (err) {
       setError("Failed to add review. Please verify IDs and try again.");
       console.log(err);
@@ -98,6 +85,8 @@ const AddAdminReviewSection = ({
       setLoading(false);
     }
   };
+
+  console.log(user);
 
   return (
     <div className={styles.main}>

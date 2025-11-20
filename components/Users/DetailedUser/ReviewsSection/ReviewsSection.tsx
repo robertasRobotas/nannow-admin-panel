@@ -6,6 +6,7 @@ import ReviewsList from "@/components/Reviews/ReviewsList/ReviewsList";
 import DetailedReview from "@/components/Reviews/DetailedReview/DetailedReview";
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { ReviewType } from "@/types/Reviews";
+import nannowImg from "../../../../assets/images/nannow.png";
 
 type ReviewsSectionProps = {
   title: string;
@@ -29,9 +30,27 @@ const ReviewsSection = ({
     Dispatch<SetStateAction<ReviewType[]>>
   ] = useState<ReviewType[]>(reviews ?? []);
 
-  const itemsPerPage = useMemo(() => (reviews?.length ?? 0) || 1, [reviews]);
+  const mappedReviews = useMemo(() => {
+    if (title !== "Received Reviews") return reviews ?? [];
+    return (reviews ?? []).map((r) => {
+      if (r?.reviewType === "ADDED_BY_ADMIN") {
+        return {
+          ...r,
+          reviewerFirstName: "Review added by",
+          reviewerSurname: "Nannow",
+          reviewerImgUrl: nannowImg.src,
+        };
+      }
+      return r;
+    });
+  }, [reviews, title]);
+
+  const itemsPerPage = useMemo(
+    () => (mappedReviews?.length ?? 0) || 1,
+    [mappedReviews]
+  );
   const pageCount = 1;
-  const totalReviews = reviews?.length ?? 0;
+  const totalReviews = mappedReviews?.length ?? 0;
   const [, setItemOffset] = useState(0);
 
   useEffect(() => {
@@ -39,9 +58,9 @@ const ReviewsSection = ({
       setSelectedReview(null);
       return;
     }
-    const found = reviews?.find((r) => r.id === selectedReviewId) ?? null;
+    const found = mappedReviews?.find((r) => r.id === selectedReviewId) ?? null;
     setSelectedReview(found);
-  }, [selectedReviewId, reviews]);
+  }, [selectedReviewId, mappedReviews]);
 
   const renderMobile = () => {
     if (selectedReviewId !== "" && selectedReview) {
@@ -58,7 +77,7 @@ const ReviewsSection = ({
     return (
       <>
         <ReviewsList
-          reviews={reviews ?? []}
+          reviews={mappedReviews ?? []}
           selectedReviewId={selectedReviewId}
           setSelectedReviewId={setSelectedReviewId}
           itemsPerPage={itemsPerPage}
@@ -77,7 +96,7 @@ const ReviewsSection = ({
   const renderDesktop = () => (
     <div className={styles.content}>
       <ReviewsList
-        reviews={reviews ?? []}
+        reviews={mappedReviews ?? []}
         selectedReviewId={selectedReviewId}
         setSelectedReviewId={setSelectedReviewId}
         itemsPerPage={itemsPerPage}

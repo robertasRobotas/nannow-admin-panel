@@ -5,9 +5,7 @@ import HouseIcon from "@/components/Icons/HouseIcon";
 import DocInProgressIcon from "@/components/Icons/DocInProgressIcon";
 import DocWithPencilIcon from "@/components/Icons/DocWithPencilIcon";
 import BadgeIcon from "@/components/Icons/BadgeIcon";
-import IdIcon from "@/components/Icons/IdIcon";
 import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
-import DocWithErrorIcon from "@/components/Icons/DocWithErrorIcon";
 import ChildrenIcon from "@/components/Icons/ChildrenIcon";
 
 export const getButtonsData = (
@@ -66,7 +64,7 @@ export const getButtonsData = (
       title: "Add Review (Admin)",
       icon: DocWithPencilIcon,
       id: "add_admin_review",
-      visibleFor: ["client", "provider"],
+      visibleFor: ["provider"],
     },
     {
       title: "Documents",
@@ -78,7 +76,7 @@ export const getButtonsData = (
     {
       title: "Badges",
       icon: BadgeIcon,
-      number: (user as any)?.provider?.badgesIds?.length ?? 0,
+      number: user?.provider?.badgesIds?.length ?? 0,
       id: "badges",
       visibleFor: ["provider", "client"],
     },

@@ -12,6 +12,7 @@ export type ReviewType = {
   dislikes: string[];
   reviewerId: string;
   targetId: string;
+  reviewType?: string; // e.g., 'ADDED_BY_ADMIN'
   reviewee: {
     id: string;
     firstName: string;
