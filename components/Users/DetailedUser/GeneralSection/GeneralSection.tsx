@@ -7,12 +7,15 @@ import { useMediaQuery } from "react-responsive";
 
 type GeneralSectionProps = {
   user: UserDetails;
+  mode: "client" | "provider";
   onBackClick: () => void;
 };
 
-const GeneralSection = ({ user, onBackClick }: GeneralSectionProps) => {
-  const cards = getInfoCards(user);
+const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
+  const cards = getInfoCards(user, mode);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+
+  console.log(user);
 
   return (
     <div className={styles.main}>

@@ -32,6 +32,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
         return (
           <GeneralSection
             user={user}
+            mode={mode}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

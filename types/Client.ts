@@ -38,6 +38,13 @@ export type UserDetails = {
     userId: string;
     totalEarnings: number;
     badgesIds?: string[];
+    criminalRecord?: {
+      status: string;
+      statusAdminNotes: string[];
+      code: string;
+      verifiedAt: string;
+      verifiedType: string;
+    };
     specialSkills?: {
       firstAid?: {
         documentId?: string;
@@ -140,7 +147,13 @@ export type UserDetails = {
       imgUrl: string;
     };
   }[];
-  documents: any[];
+  documents: {
+    id: string;
+    url: string;
+    type: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
   receivedReviews: ReviewType[];
   givenReviews: ReviewType[];
   orders: {
@@ -190,6 +203,7 @@ export type UserDetails = {
     country: string;
     roles: string[];
     createdAt: string;
+    pushToken?: string;
   };
   chats: ChatType[];
 };
