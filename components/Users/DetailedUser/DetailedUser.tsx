@@ -118,7 +118,12 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
       case "documents": {
         return (
           <DocumentsSection
-            documents={user.documents}
+            documents={user.documents?.map((d) => ({
+              id: d.id,
+              uploadedAt: d.createdAt,
+              documentUrl: d.url,
+              documentType: d.type,
+            }))}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);
