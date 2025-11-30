@@ -47,6 +47,8 @@
   border-radius: 8px;
   border: 1px solid #eee;
   flex: 0 0 64px;
+  /* Honor EXIF rotation so photos aren't sideways */
+  image-orientation: from-image;
 }
 
 .docInfo {

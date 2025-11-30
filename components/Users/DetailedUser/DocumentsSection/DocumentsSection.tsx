@@ -8,29 +8,16 @@ import { useEffect, useState } from "react";
 import { toggleDocumentReviewed } from "@/pages/api/fetch";
 
 type DocumentsSectionProps = {
-  documents: {
-    id: string;
-    title?: string;
-    description?: string;
-    uploadedAt?: string;
-    documentUrl: string;
-    documentType?: string;
-    isEditable?: boolean;
-    isReviewed?: boolean;
-    reviewed?: boolean;
-    reviewedAt?: string;
-    adminReviewedAt?: string;
-    // Backend may send a misspelled key
-    reviwedAt?: string;
-  }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  documents: any[];
   onBackClick: () => void;
 };
 
 const isImageUrl = (url: string) =>
-  /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url.split("?")[0] ?? url);
+  /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url?.split("?")[0] ?? url);
 
 const getFileName = (url: string) => {
-  const m = url.match(/[^\\/]+$/);
+  const m = url?.match(/[^\\/]+$/);
   return m ? m[0] : url;
 };
 
@@ -94,6 +81,8 @@ const DocumentsSection = ({
     });
     setReviewedIds(initial);
   }, [documents]);
+
+  console.log(documents);
 
   return (
     <div className={styles.main}>

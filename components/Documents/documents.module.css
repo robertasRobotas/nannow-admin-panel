@@ -52,6 +52,8 @@
   border-radius: 8px;
   border: 1px solid #eee;
   flex: 0 0 64px;
+  /* Ensure JPEGs honor EXIF rotation (e.g., iPhone photos) */
+  image-orientation: from-image;
 }
 
 .docInfo {

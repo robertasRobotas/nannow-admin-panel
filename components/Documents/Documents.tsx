@@ -144,6 +144,8 @@ const Documents = () => {
     setItemOffset(newOffset);
   };
 
+  console.log(documents);
+
   return (
     <div className={styles.main}>
       <div className={styles.toolbar}>

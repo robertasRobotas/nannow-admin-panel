@@ -24,7 +24,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [isSelectedMenu, setIsSelectedMenu] = useState(false);
 
-  console.log(isMobile);
+  console.log(user);
 
   const renderSelectedSection = () => {
     switch (selectedSection) {
@@ -118,12 +118,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
       case "documents": {
         return (
           <DocumentsSection
-            documents={user.documents?.map((d) => ({
-              id: d.id,
-              uploadedAt: d.createdAt,
-              documentUrl: d.url,
-              documentType: d.type,
-            }))}
+            documents={user.documents}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);
