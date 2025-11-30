@@ -99,8 +99,8 @@ const ALL_KEYS: (keyof SpecialSkills)[] = [
 const getStatusClass = (status?: string) => {
   if (!status) return styles.blank;
   const up = status.toUpperCase();
-  if (up === "VERIFIED") return styles.verified;
-  if (up === "VERIFYING") return styles.verifying;
+  if (up === "APPROVED") return styles.verified;
+  if (up === "PENDING") return styles.verifying;
   if (up === "REJECTED") return styles.rejected;
   return styles.blank;
 };
@@ -309,7 +309,7 @@ import { Dispatch, SetStateAction } from "react";
 type StatusDropdownProps = {
   providerId?: string;
   skillKey: keyof SpecialSkills;
-  onChangedStatus: (status: "VERIFIED" | "REJECTED" | "VERIFYING") => void;
+  onChangedStatus: (status: "APPROVED" | "REJECTED" | "PENDING") => void;
 };
 
 const toEnumKey = (key: keyof SpecialSkills) => {
@@ -333,9 +333,9 @@ const toEnumKey = (key: keyof SpecialSkills) => {
 
 const STATUS_OPTIONS = [
   { title: "Change status", value: "" },
-  { title: "Set VERIFIED", value: "VERIFIED" },
+  { title: "Set APPROVED", value: "APPROVED" },
   { title: "Set REJECTED", value: "REJECTED" },
-  { title: "Set VERIFYING", value: "VERIFYING" },
+  { title: "Set PENDING", value: "PENDING" },
 ] as const;
 
 const StatusDropdown = ({
@@ -349,9 +349,9 @@ const StatusDropdown = ({
     setSelected(nextIndex);
     if (nextIndex === 0) return;
     const status = STATUS_OPTIONS[nextIndex].value as
-      | "VERIFIED"
+      | "APPROVED"
       | "REJECTED"
-      | "VERIFYING";
+      | "PENDING";
     if (!providerId) return;
     try {
       await reviewSpecialSkill(providerId, toEnumKey(skillKey), status);

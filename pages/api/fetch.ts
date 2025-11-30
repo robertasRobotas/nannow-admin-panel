@@ -328,7 +328,7 @@ export const getDocuments = async (
 export const reviewSpecialSkill = async (
   providerId: string,
   skillName: string,
-  status: "VERIFIED" | "REJECTED" | "VERIFYING"
+  status: "APPROVED" | "REJECTED" | "PENDING"
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(

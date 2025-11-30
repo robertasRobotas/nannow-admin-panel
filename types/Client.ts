@@ -48,7 +48,7 @@ export type UserDetails = {
     specialSkills?: {
       firstAid?: {
         documentId?: string;
-        status?: string; // e.g. 'VERIFYING' | 'VERIFIED'
+        status?: string; // e.g. 'PENDING' | 'APPROVED'
         verifiedAt?: string;
         appliedAt?: string;
         verifiedByAdminId?: string;
