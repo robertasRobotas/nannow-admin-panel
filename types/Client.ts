@@ -38,6 +38,9 @@ export type UserDetails = {
     userId: string;
     totalEarnings: number;
     badgesIds?: string[];
+    stripeAccountVerifiedAt?: string;
+    isAvailableStatusChangedAt?: string;
+    isAvailableStatus?: boolean;
     criminalRecord?: {
       status: string;
       statusAdminNotes: string[];

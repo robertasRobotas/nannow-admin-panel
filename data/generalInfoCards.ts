@@ -56,6 +56,27 @@ export const getInfoCards = (
         icon: locationPinImg,
         value: data?.defaultAddress?.city ?? "—",
       },
+      {
+        title: "Stripe verified at",
+        icon: locationPinImg,
+        value: data?.provider?.stripeAccountVerifiedAt
+          ? new Date(
+              Number(data?.provider?.stripeAccountVerifiedAt) * 1000
+            ).toLocaleString()
+          : "Not verified",
+      },
+      {
+        title: "Availability status switched at",
+        icon: locationPinImg,
+        value: data?.provider?.isAvailableStatusChangedAt
+          ? data?.provider?.isAvailableStatusChangedAt
+          : "Not verified",
+      },
+      {
+        title: "Is available now",
+        icon: locationPinImg,
+        value: data?.provider?.isAvailableStatus ? "YES" : "NO",
+      },
     ];
   }
 
