@@ -20,6 +20,13 @@ export const getButtonsData = (
       visibleFor: ["client", "provider"],
     },
     {
+      title: "Booked time slots",
+      icon: MessagesIcon,
+      number: user?.provider?.unavailablePeriods?.length ?? 0,
+      id: "booked_time_slots",
+      visibleFor: ["client", "provider"],
+    },
+    {
       title: "Messages",
       icon: MessagesIcon,
       number: user?.chatCount ?? 0,

@@ -41,6 +41,11 @@ export type UserDetails = {
     stripeAccountVerifiedAt?: string;
     isAvailableStatusChangedAt?: string;
     isAvailableStatus?: boolean;
+    unavailablePeriods?: {
+      endsAt: Date;
+      startsAt: Date;
+      orderId: string;
+    }[];
     criminalRecord?: {
       status: string;
       statusAdminNotes: string[];

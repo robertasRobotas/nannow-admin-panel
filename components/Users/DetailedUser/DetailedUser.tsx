@@ -12,6 +12,7 @@ import BadgesSection from "./BadgesSection/BadgesSection";
 import DocumentsSection from "./DocumentsSection/DocumentsSection";
 import SpecialSkillsSection from "./SpecialSkillsSection/SpecialSkillsSection";
 import AddAdminReviewSection from "./AddAdminReviewSection/AddAdminReviewSection";
+import BookedTimeSlotsSection from "./BookedTimeSlotsSection/BookedTimeSlotsSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -40,6 +41,19 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           />
         );
       }
+
+      case "booked_time_slots": {
+        return (
+          <BookedTimeSlotsSection
+            periods={user?.provider?.unavailablePeriods}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
       case "messages": {
         return (
           <MessagesSection

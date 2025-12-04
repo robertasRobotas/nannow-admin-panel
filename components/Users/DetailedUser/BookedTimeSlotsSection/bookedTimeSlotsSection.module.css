@@ -1,0 +1,111 @@
+.main {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.group {
+  border-radius: 10px;
+  border: 1px solid #e6e6e6;
+  overflow: hidden;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.groupDate {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.groupBadge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #1b1b1b;
+}
+
+.groupContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+
+.timeRange {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.orderId {
+  font-size: 12px;
+  color: #666666;
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  border: 1px dashed #d9d9d9;
+  border-radius: 10px;
+  color: #8c8c8c;
+}
+
+.backBtnWrapper {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* state colors */
+.statePast .groupHeader {
+  background: #fbfbfb;
+}
+.statePast {
+  border-left: 4px solid #d9d9d9;
+}
+
+.stateUpcoming .groupHeader {
+  background: #f6ffed;
+}
+.stateUpcoming {
+  border-left: 4px solid #95de64;
+}
+
+.stateToday .groupHeader {
+  background: #e6f4ff;
+}
+.stateToday {
+  border-left: 4px solid #69b1ff;
+}
