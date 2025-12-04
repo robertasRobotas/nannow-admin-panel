@@ -138,7 +138,7 @@ const BookedTimeSlotsSection = ({
                     const starts = item.startsAt as Date;
                     const ends = item.endsAt as Date;
                     const id =
-                      (item as any)._id ??
+                      (item as Period)._id ??
                       `${item.orderId}-${(
                         item.startsAt as Date
                       ).toISOString()}`;
