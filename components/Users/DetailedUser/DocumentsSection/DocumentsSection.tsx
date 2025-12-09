@@ -74,7 +74,7 @@ const DocumentsSection = ({
         d?.reviewed ||
         d?.reviewedAt ||
         d?.adminReviewedAt ||
-        d?.reviwedAt
+        d?.reviewedAt
       ) {
         initial.add(d.id);
       }

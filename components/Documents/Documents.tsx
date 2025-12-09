@@ -27,7 +27,7 @@ type AdminDocument = {
   reviewed?: boolean;
   reviewedAt?: string;
   adminReviewedAt?: string;
-  reviwedAt?: string;
+  reviewedAt?: string;
   user?: {
     id: string;
     firstName?: string;
@@ -117,7 +117,7 @@ const Documents = () => {
           d?.reviewed ||
           d?.reviewedAt ||
           d?.adminReviewedAt ||
-          d?.reviwedAt
+          d?.reviewedAt
         ) {
           initial.add(d.id);
         }

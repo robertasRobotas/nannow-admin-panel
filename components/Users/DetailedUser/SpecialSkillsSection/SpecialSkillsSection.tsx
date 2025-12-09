@@ -23,7 +23,7 @@ type Skill = {
     documentCategories?: string;
     reviewerId?: string;
     reviewedAt?: string;
-    reviwedAt?: string;
+    reviewedAt?: string;
   };
 };
 
@@ -133,7 +133,7 @@ const SpecialSkillsSection = ({
     const initial = new Set<string>();
     ALL_KEYS.forEach((k) => {
       const d = specialSkills?.[k]?.document;
-      if (d?.reviewedAt || d?.reviwedAt || d?.reviewerId) {
+      if (d?.reviewedAt || d?.reviewedAt || d?.reviewerId) {
         initial.add(d.id);
       }
     });
