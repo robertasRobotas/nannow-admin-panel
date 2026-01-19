@@ -25,7 +25,6 @@ type AdminDocument = {
   isEditable?: boolean;
   isReviewed?: boolean;
   reviewed?: boolean;
-  reviewedAt?: string;
   adminReviewedAt?: string;
   reviewedAt?: string;
   user?: {

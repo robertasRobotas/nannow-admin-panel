@@ -23,7 +23,6 @@ type Skill = {
     documentCategories?: string;
     reviewerId?: string;
     reviewedAt?: string;
-    reviewedAt?: string;
   };
 };
 
