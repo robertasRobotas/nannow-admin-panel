@@ -13,6 +13,8 @@ import DocumentsSection from "./DocumentsSection/DocumentsSection";
 import SpecialSkillsSection from "./SpecialSkillsSection/SpecialSkillsSection";
 import AddAdminReviewSection from "./AddAdminReviewSection/AddAdminReviewSection";
 import BookedTimeSlotsSection from "./BookedTimeSlotsSection/BookedTimeSlotsSection";
+import OrdersSection from "./OrdersSection/OrdersSection";
+import ClientOrdersSection from "./ClientOrdersSection/ClientOrdersSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -34,6 +36,30 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           <GeneralSection
             user={user}
             mode={mode}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
+      case "orders": {
+        return (
+          <OrdersSection
+            user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
+      case "client_orders": {
+        return (
+          <ClientOrdersSection
+            user={user}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);

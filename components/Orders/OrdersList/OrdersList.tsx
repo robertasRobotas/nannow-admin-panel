@@ -34,6 +34,8 @@ const OrdersList = ({ orders }: OrdersListProps) => {
             providerImgUrl={getUserImage(providerUser?.imgUrl)}
             clientImgUrl={getUserImage(clientUser?.imgUrl)}
             id={u.id}
+            startsAt={u.startsAt}
+            endsAt={u.endsAt}
             providerName={getProviderName(
               getUserName(providerUser?.firstName, providerUser?.lastName),
               u.status

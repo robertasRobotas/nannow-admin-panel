@@ -180,6 +180,7 @@ export type UserDetails = {
       count: number;
       totalSpend: number;
     };
+    length: number;
   };
   defaultAddress: {
     id: string;

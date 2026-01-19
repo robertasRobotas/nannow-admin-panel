@@ -5,7 +5,7 @@
     0 2px 10px 0 rgba(0, 0, 0, 0.04);
   display: grid;
   grid-template-columns: 300px 1fr;
-  height: 100%;
+  min-height: 100%;
 }
 
 .menuWrapper {

@@ -1,20 +1,20 @@
 export const options = [
   { title: "All", value: "" },
-  { title: "Order created", value: "ORDER_CREATED" },
-  { title: "Provider offered service", value: "PROVIDER_OFFERED_SERVICE" },
+  { title: "ORDER_CREATED (DIRECT ORDER TO PROVIDER)", value: "ORDER_CREATED" },
+  { title: "PROVIDER_OFFERED_SERVICE", value: "PROVIDER_OFFERED_SERVICE" },
   {
-    title: "Provider accepted direct offer",
+    title: "PROVIDER_ACCEPTED_DIRECT_OFFER",
     value: "PROVIDER_ACCEPTED_DIRECT_OFFER",
   },
-  { title: "Both approved", value: "BOTH_APPROVED" },
+  { title: "BOTH_APPROVED", value: "BOTH_APPROVED" },
   {
-    title: "Provider marked as service in progress",
+    title: "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
     value: "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
   },
   {
-    title: "Provider marked as service ended",
+    title: "PROVIDER_MARKED_AS_SERVICE_ENDED",
     value: "PROVIDER_MARKED_AS_SERVICE_ENDED",
   },
-  { title: "Client canceled", value: "CLIENT_CANCELED" },
-  { title: "Provider canceled", value: "PROVIDER_CANCELED" },
+  { title: "CLIENT_CANCELED", value: "CLIENT_CANCELED" },
+  { title: "PROVIDER_CANCELED", value: "PROVIDER_CANCELED" },
 ];
