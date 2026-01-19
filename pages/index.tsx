@@ -42,9 +42,14 @@ const MainPage = () => {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit();
+  };
+
   return (
     <div className={styles.main}>
-      <div className={styles.loginModal}>
+      <form className={styles.loginModal} onSubmit={handleSubmit}>
         <img src={logo.src} />
         <Input
           value={email}
@@ -73,7 +78,7 @@ const MainPage = () => {
           isLoading={isLoading}
           onClick={onSubmit}
         />
-      </div>
+      </form>
     </div>
   );
 };
