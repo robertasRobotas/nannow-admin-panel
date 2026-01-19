@@ -47,7 +47,7 @@ export const getProviderById = async (id: string) => {
 
 export const getUsersByCriminalRecordStatus = async (
   status: string,
-  startIndex: number
+  startIndex: number,
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
@@ -56,7 +56,7 @@ export const getUsersByCriminalRecordStatus = async (
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -70,7 +70,7 @@ export const getCriminalCheckById = async (id: string) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -85,7 +85,7 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   return response;
 };
@@ -99,7 +99,7 @@ export const addCriminalCheckNote = async (id: string, note: string) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -116,7 +116,7 @@ export const updateReportStatus = async (id: string, isSolved: boolean) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   return response;
 };
@@ -132,7 +132,7 @@ export const updateFeedbackStatus = async (id: string, isSolved: boolean) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   return response;
 };
@@ -156,7 +156,7 @@ export const getAllReports = async (startIndex: number) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -175,7 +175,7 @@ export const getReportById = async (id: string) => {
 
 export const getAllReviews = async (
   startIndex: number,
-  rating?: number | string
+  rating?: number | string,
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const ratingQuery =
@@ -186,7 +186,7 @@ export const getAllReviews = async (
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -211,7 +211,7 @@ export const getAllFeedback = async (startIndex: number) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -230,7 +230,7 @@ export const getFeedbackById = async (id: string) => {
 
 export const getCriminalRecordInfo = async (code: string) => {
   const response = await axios.get(
-    `https://epaslaugos.ird.lt/vrmeport-api/rest/public/get-f200/${code}`
+    `https://epaslaugos.ird.lt/vrmeport-api/rest/public/get-f200/${code}`,
   );
   console.log(response);
   return response;
@@ -244,7 +244,7 @@ export const getOrders = async (status: string, startIndex: number) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -270,7 +270,7 @@ export const releaseFundsByOrderId = async (id: string) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
 
   return response;
@@ -278,7 +278,7 @@ export const releaseFundsByOrderId = async (id: string) => {
 
 export const toggleProviderBadge = async (
   providerUserId: string,
-  badge: string
+  badge: string,
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
@@ -288,7 +288,7 @@ export const toggleProviderBadge = async (
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   return response;
 };
@@ -302,14 +302,14 @@ export const toggleDocumentReviewed = async (documentId: string) => {
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   return response;
 };
 
 export const getDocuments = async (
   startIndex: number,
-  status?: "REVIEWED" | "NOT_REVIEWED"
+  status?: "REVIEWED" | "NOT_REVIEWED",
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const statusQuery = status ? `&status=${status}` : "";
@@ -319,7 +319,7 @@ export const getDocuments = async (
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   console.log(response);
   return response;
@@ -328,7 +328,7 @@ export const getDocuments = async (
 export const reviewSpecialSkill = async (
   providerId: string,
   skillName: string,
-  status: "APPROVED" | "REJECTED" | "PENDING"
+  status: "APPROVED" | "REJECTED" | "PENDING",
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(
@@ -338,7 +338,7 @@ export const reviewSpecialSkill = async (
       headers: {
         Authorization: jwt,
       },
-    }
+    },
   );
   return response;
 };
@@ -365,7 +365,7 @@ export const addReviewByAdmin = async (
     clientId: string;
     providerId: string;
     textCreatedAt?: string | Date;
-  }
+  },
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
@@ -375,7 +375,23 @@ export const addReviewByAdmin = async (
       headers: {
         Authorization: jwt,
       },
-    }
+    },
+  );
+  return response;
+};
+
+export const deleteProviderBookingSlot = async (
+  providerId: string,
+  orderId: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.delete(
+    `${BASE_URL}/admin/providers/${providerId}/booking-slots/${orderId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
   );
   return response;
 };

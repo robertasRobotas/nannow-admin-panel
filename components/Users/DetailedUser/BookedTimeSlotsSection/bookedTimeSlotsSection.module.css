@@ -10,6 +10,7 @@
   font-size: 20px;
   font-weight: 700;
   margin: 0;
+  color: black;
 }
 
 .list {
@@ -27,7 +28,7 @@
 .groupHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 10px 12px;
   background: #fafafa;
   border-bottom: 1px solid #eeeeee;
@@ -36,6 +37,7 @@
 .groupDate {
   font-weight: 600;
   font-size: 14px;
+  color: black;
 }
 
 .groupBadge {
@@ -53,11 +55,17 @@
   padding: 10px 12px;
   background: #ffffff;
 }
+.itemRow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
 
 .item {
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 20px;
   padding: 8px 10px;
   border: 1px solid #f0f0f0;
   border-radius: 8px;
@@ -66,11 +74,17 @@
 .timeRange {
   font-weight: 600;
   font-size: 14px;
+  color: black;
 }
 
 .orderId {
   font-size: 12px;
   color: #666666;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.orderId:hover {
+  opacity: 0.8;
 }
 
 .empty {
@@ -108,4 +122,81 @@
 }
 .stateToday {
   border-left: 4px solid #69b1ff;
+}
+.orderLink {
+  color: var(--primary-color);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.deleteBtn {
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #ffccc7;
+  background: #fff1f0;
+  color: #cf1322;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+}
+
+.deleteBtn:hover {
+  background: #ffccc7;
+}
+
+.deleteBtn:hover {
+  background: #ffccc7;
+}
+.itemRow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* modal */
+.confirmationBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.confirmationModal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  max-width: 420px;
+  width: 100%;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.confirmationTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: black;
+}
+
+.confirmationBody {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: rgba(27, 27, 31, 0.8);
+}
+
+.confirmationActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
 }
