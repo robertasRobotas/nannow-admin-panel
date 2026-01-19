@@ -126,3 +126,19 @@
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
+.DELETE {
+  border: 1px solid #ff3b30;
+  color: #ff3b30;
+  background-color: transparent;
+}
+
+.DELETE:hover:enabled {
+  background-color: #ff3b30;
+  color: white;
+}
+
+.DELETE:active:enabled {
+  background-color: #e02e24;
+  border-color: #e02e24;
+  color: white;
+}

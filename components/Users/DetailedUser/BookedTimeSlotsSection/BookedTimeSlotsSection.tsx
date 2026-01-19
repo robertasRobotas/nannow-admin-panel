@@ -4,6 +4,8 @@ import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { UserDetails } from "@/types/Client";
 import React from "react";
+import Link from "next/link";
+import { deleteProviderBookingSlot } from "@/pages/api/fetch";
 
 type Period = NonNullable<
   NonNullable<UserDetails["provider"]>["unavailablePeriods"]
@@ -15,6 +17,7 @@ type Period = NonNullable<
 
 type BookedTimeSlotsSectionProps = {
   periods: Period[] | undefined;
+  providerId: string | undefined;
   onBackClick: () => void;
 };
 
@@ -49,12 +52,53 @@ function parseToDate(value: string | Date): Date {
 
 const BookedTimeSlotsSection = ({
   periods,
+  providerId,
   onBackClick,
 }: BookedTimeSlotsSectionProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [zoneLabel, setZoneLabel] = React.useState<string>("");
   const now = new Date();
   const todayKey = toDateOnlyKey(now);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(
+    null,
+  );
+  const [localPeriods, setLocalPeriods] = React.useState<Period[]>([]);
+
+  React.useEffect(() => {
+    setLocalPeriods(periods ?? []);
+  }, [periods]);
+  const openDeleteModal = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedOrderId(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedOrderId) return;
+    if (!providerId) {
+      console.warn("providerId is undefined, cannot delete booking slot");
+      closeDeleteModal();
+      return;
+    }
+
+    try {
+      await deleteProviderBookingSlot(providerId, selectedOrderId);
+
+      setLocalPeriods((prev) =>
+        prev.filter((p) => p.orderId !== selectedOrderId),
+      );
+
+      console.log("delete order", selectedOrderId);
+    } finally {
+      closeDeleteModal();
+    }
+  };
 
   React.useEffect(() => {
     const tzOffsetMinutes = new Date().getTimezoneOffset();
@@ -70,14 +114,14 @@ const BookedTimeSlotsSection = ({
     setZoneLabel(`GMT${sign}${offset} (UTC${sign}${offset})`);
   }, []);
 
-  const normalized = (periods ?? [])
+  const normalized = localPeriods
     .map((p) => ({
       ...p,
       startsAt: parseToDate(p.startsAt),
       endsAt: parseToDate(p.endsAt),
     }))
     .sort(
-      (a, b) => (a.startsAt as Date).getTime() - (b.startsAt as Date).getTime()
+      (a, b) => (a.startsAt as Date).getTime() - (b.startsAt as Date).getTime(),
     );
 
   const groups = normalized.reduce<
@@ -92,7 +136,7 @@ const BookedTimeSlotsSection = ({
   }, {});
 
   const sortedGroupKeys = Object.keys(groups).sort(
-    (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    (a, b) => new Date(a).getTime() - new Date(b).getTime(),
   );
 
   const getGroupState = (key: string) => {
@@ -122,8 +166,8 @@ const BookedTimeSlotsSection = ({
               state === "past"
                 ? `${styles.group} ${styles.statePast}`
                 : state === "today"
-                ? `${styles.group} ${styles.stateToday}`
-                : `${styles.group} ${styles.stateUpcoming}`;
+                  ? `${styles.group} ${styles.stateToday}`
+                  : `${styles.group} ${styles.stateUpcoming}`;
 
             return (
               <div key={key} className={wrapperClass}>
@@ -143,17 +187,33 @@ const BookedTimeSlotsSection = ({
                         item.startsAt as Date
                       ).toISOString()}`;
                     return (
-                      <div key={id} className={styles.item}>
-                        <span
-                          className={`${styles.timeRange} ${nunito.className}`}
-                        >
-                          {formatTime(starts)} - {formatTime(ends)}
-                        </span>
-                        {item.orderId ? (
-                          <span className={styles.orderId}>
-                            order: {item.orderId}
+                      <div key={id} className={styles.itemRow}>
+                        <div className={styles.item}>
+                          <span
+                            className={`${styles.timeRange} ${nunito.className}`}
+                          >
+                            {formatTime(starts)} - {formatTime(ends)}
                           </span>
-                        ) : null}
+
+                          {item.orderId && (
+                            <Link
+                              href={`/orders/${item.orderId}`}
+                              className={styles.orderId}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              order: {item.orderId}
+                            </Link>
+                          )}
+                        </div>
+
+                        {state === "upcoming" && (
+                          <Button
+                            title="Delete"
+                            type="DELETE"
+                            onClick={() => openDeleteModal(item.orderId)}
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -166,6 +226,26 @@ const BookedTimeSlotsSection = ({
       {isMobile && (
         <div className={styles.backBtnWrapper}>
           <Button title="Back" onClick={onBackClick} type="OUTLINED" />
+        </div>
+      )}
+      {isDeleteModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Delete time slot?</h2>
+            <p className={styles.confirmationBody}>
+              Are you sure you want to delete this booked time slot? This action
+              cannot be undone.
+            </p>
+
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeDeleteModal}
+              />
+              <Button title="Delete" type="DELETE" onClick={confirmDelete} />
+            </div>
+          </div>
         </div>
       )}
     </div>

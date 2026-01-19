@@ -72,6 +72,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
         return (
           <BookedTimeSlotsSection
             periods={user?.provider?.unavailablePeriods}
+            providerId={user?.provider?.id}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);
