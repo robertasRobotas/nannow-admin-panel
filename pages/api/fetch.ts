@@ -2,9 +2,9 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-const BASE_URL = "https://nannow-api.com";
+// const BASE_URL = "https://nannow-api.com";
 //const BASE_URL = "http://192.168.1.192:8080";
-// const BASE_URL = "http://localhost:8080";
+const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
   const response = await axios.post(`${BASE_URL}/admin-user/login`, loginData);
@@ -393,5 +393,15 @@ export const deleteProviderBookingSlot = async (
       },
     },
   );
+  return response;
+};
+
+export const deleteUser = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.delete(`${BASE_URL}/admin/users/${userId}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
   return response;
 };
