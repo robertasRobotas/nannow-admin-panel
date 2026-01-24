@@ -6,12 +6,20 @@ import idImg from "../assets/images/id.svg";
 import shieldImg from "../assets/images/shield.svg";
 import kidImg from "../assets/images/kid-gray.svg";
 import walletImg from "../assets/images/wallet.svg";
+import type { StaticImageData } from "next/image";
+
+export type InfoCard = {
+  title: string;
+  icon: StaticImageData;
+  value: string | number;
+  link?: string;
+};
 
 export const getInfoCards = (
   data: UserDetails,
-  mode: "client" | "provider"
-) => {
-  const baseCards = [
+  mode: "client" | "provider",
+): InfoCard[] => {
+  const baseCards: InfoCard[] = [
     {
       title: "Full name",
       icon: profileImg,
@@ -42,6 +50,7 @@ export const getInfoCards = (
         title: "Criminal record check",
         icon: shieldImg,
         value: data?.provider?.criminalRecord?.status ?? "—",
+        link: `/criminal-check/${data?.user?.id}`,
       },
       {
         title: "Total earnings",
@@ -61,7 +70,7 @@ export const getInfoCards = (
         icon: locationPinImg,
         value: data?.provider?.stripeAccountVerifiedAt
           ? new Date(
-              Number(data?.provider?.stripeAccountVerifiedAt) * 1000
+              Number(data?.provider?.stripeAccountVerifiedAt) * 1000,
             ).toLocaleString()
           : "Not verified",
       },
