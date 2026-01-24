@@ -5,7 +5,6 @@ import { UserDetails } from "@/types/Client";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { useRouter } from "next/router";
-import Image from "next/image";
 
 type GeneralSectionProps = {
   user: UserDetails;
@@ -25,7 +24,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       <div className={styles.infoCardsWrapper}>
         {cards.map((c, i) => (
           <div key={i} className={styles.card}>
-            <Image src={c.icon} alt="Icon" />
+            <img src={c.icon.src} alt="Icon" />
 
             <span className={styles.cardTitle}>{c.title}</span>
             <span className={`${styles.cardValue} ${nunito.className}`}>
