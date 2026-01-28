@@ -26,3 +26,9 @@
   font-size: 12px;
   font-weight: 400;
 }
+.email {
+  color: #666666;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
