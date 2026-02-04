@@ -213,6 +213,7 @@ export type UserDetails = {
     roles: string[];
     createdAt: string;
     pushToken?: string;
+    userAppLanguage?: string;
   };
   chats: ChatType[];
 };

@@ -4,6 +4,7 @@ import { nunito } from "@/helpers/fonts";
 import { UserDetails } from "@/types/Client";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
+import { useRouter } from "next/router";
 
 type GeneralSectionProps = {
   user: UserDetails;
@@ -14,7 +15,7 @@ type GeneralSectionProps = {
 const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const cards = getInfoCards(user, mode);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
-
+  const router = useRouter();
   console.log(user);
 
   return (
@@ -24,10 +25,18 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
         {cards.map((c, i) => (
           <div key={i} className={styles.card}>
             <img src={c.icon.src} alt="Icon" />
+
             <span className={styles.cardTitle}>{c.title}</span>
             <span className={`${styles.cardValue} ${nunito.className}`}>
               {c.value}
             </span>
+            {c.link && (
+              <Button
+                title="Details"
+                type="OUTLINED"
+                onClick={() => router.push(c.link!)}
+              />
+            )}
           </div>
         ))}
       </div>

@@ -24,6 +24,7 @@ const UserCard = ({ user, mode }: UserCardProps) => {
           name={`${user.firstName} ${user.lastName}`}
           imgUrl={user.imgUrl !== "" ? user.imgUrl : defaultUserImg.src}
           id={user.userId}
+          email={user.email}
         />
       </div>
       <Button onClick={onButtonClick} title="View profile" type="OUTLINED" />

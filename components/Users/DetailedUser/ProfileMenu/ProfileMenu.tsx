@@ -45,9 +45,9 @@ const ProfileMenu = ({
     try {
       setIsDeleting(true);
       await deleteUser(user.user.id);
-      
+
       toast.success("User was successfully deleted");
-      
+
       // Redirect to users page after a short delay
       setTimeout(() => {
         router.push("/users");
@@ -71,6 +71,8 @@ const ProfileMenu = ({
           }
           id={user.user.id}
           mode={mode}
+          email={user.user.email}
+          locale={user.user.userAppLanguage}
         />
         <div className={styles.balance}>
           <img src={balanceImg.src} alt="Balance" />
@@ -93,13 +95,14 @@ const ProfileMenu = ({
         type="OUTLINED"
         onClick={openDeleteModal}
       />
-      
+
       {isDeleteModalOpen && (
         <div className={styles.confirmationBackdrop}>
           <div className={`${styles.confirmationModal} ${nunito.className}`}>
             <h2 className={styles.confirmationTitle}>Delete user?</h2>
             <p className={styles.confirmationBody}>
-              Are you sure you want to delete this user? This action cannot be undone.
+              Are you sure you want to delete this user? This action cannot be
+              undone.
             </p>
             <div className={styles.confirmationActions}>
               <Button
