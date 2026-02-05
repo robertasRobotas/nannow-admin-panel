@@ -13,6 +13,7 @@ import { copyReport } from "@/helpers/clipboardWrites";
 import attentionImg from "../../../assets/images/attention.svg";
 import checkmarkGreenImg from "../../../assets/images/circle-checkmark-filled.svg";
 import { Dispatch, SetStateAction, useState } from "react";
+import Link from "next/link";
 
 type DetailedReport = {
   report: ReportType;
@@ -40,7 +41,7 @@ const DetailedReport = ({
             if (r.id === report.id) {
               return { ...r, isResolved: !r.isResolved };
             } else return r;
-          })
+          }),
         );
         setIsSolved((prevState) => !prevState);
       }
@@ -53,6 +54,17 @@ const DetailedReport = ({
     copyReport(report.id);
     toast("Link to report copied!");
   };
+
+  // keep same mapping logic: reportedRole tells who is client/provider
+  const reporterHref =
+    report.reportedRole === "CLIENT"
+      ? `/provider/${report.reportedBy.id}`
+      : `/client/${report.reportedBy.id}`;
+
+  const reportedHref =
+    report.reportedRole === "CLIENT"
+      ? `/client/${report.reportedUser.id}`
+      : `/provider/${report.reportedUser.id}`;
 
   return (
     <div className={styles.main}>
@@ -73,22 +85,7 @@ const DetailedReport = ({
       </div>
       <div className={styles.heading}>
         <div className={styles.reportDetails}>
-          <div className={styles.profile}>
-            <img
-              src={report?.reportedUser?.imgUrl ?? avatarImg.src}
-              alt="Profile"
-            />
-            <div>
-              <span className={styles.title}>Has been reported</span>
-              <span className={styles.name}>
-                {`${report?.reportedUser?.firstName ?? "Deleted"}\n${
-                  report?.reportedUser?.lastName ?? "User"
-                }`}
-              </span>
-            </div>
-          </div>
-          <img src={arrowImg.src} alt="Arrow" />
-          <div className={styles.profile}>
+          <Link href={reporterHref} className={styles.profile}>
             <img
               src={report?.reportedBy?.imgUrl ?? avatarImg.src}
               alt="Profile"
@@ -101,7 +98,27 @@ const DetailedReport = ({
                 }`}
               </span>
             </div>
-          </div>
+          </Link>
+          <img src={arrowImg.src} alt="Arrow" />
+          <Link href={reportedHref} className={styles.profile}>
+            <img
+              src={report?.reportedUser?.imgUrl ?? avatarImg.src}
+              alt="Profile"
+            />
+            <div>
+              <span className={styles.title}>Has been reported</span>
+              <span className={styles.name}>
+                {`${report?.reportedUser?.firstName ?? "Deleted"}\n${
+                  report?.reportedUser?.lastName ?? "User"
+                }`}
+              </span>
+            </div>
+          </Link>
+        </div>
+        <div className={styles.reportedRole}>
+          {report.reportedRole === "CLIENT"
+            ? "Client was reported"
+            : "Provider was reported"}
         </div>
         <div className={styles.btnsWrapper}>
           {!isSolved && (

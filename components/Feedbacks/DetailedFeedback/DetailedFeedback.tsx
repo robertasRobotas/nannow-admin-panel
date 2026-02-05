@@ -1,6 +1,5 @@
 import styles from "./detailedFeedback.module.css";
 import { nunito } from "@/helpers/fonts";
-import arrowImg from "../../../assets/images/arrow-right.svg";
 import crossImg from "../../../assets/images/cross.svg";
 import checkmarkImg from "../../../assets/images/checkmark-white.svg";
 import avatarImg from "../../../assets/images/default-avatar.png";
@@ -41,7 +40,7 @@ const DetailedFeedback = ({
             if (r.id === feedback.id) {
               return { ...r, isResolved: !r.isResolved };
             } else return r;
-          })
+          }),
         );
         setIsSolved((prevState) => !prevState);
       }
@@ -54,6 +53,8 @@ const DetailedFeedback = ({
     copyFeedback(feedback.id);
     toast("Link to feedback copied!");
   };
+
+  console.log(feedback);
 
   return (
     <div className={styles.main}>
