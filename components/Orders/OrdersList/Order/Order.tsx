@@ -12,6 +12,7 @@ type OrderProps = {
   id: string;
   startsAt: string;
   endsAt: string;
+  isProviderIgnoredEndNotification?: boolean;
 };
 
 const Order = ({
@@ -23,6 +24,7 @@ const Order = ({
   id,
   startsAt,
   endsAt,
+  isProviderIgnoredEndNotification,
 }: OrderProps) => {
   const router = useRouter();
 
@@ -61,6 +63,11 @@ const Order = ({
       </div>
       <div className={styles.orderStatus}>
         {options.find((o) => o.value === status)?.title}
+        {isProviderIgnoredEndNotification && (
+          <div className={styles.isProviderIgnoredEndNotification}>
+            (Provider ignored end notification)
+          </div>
+        )}
       </div>
     </div>
   );

@@ -15,9 +15,11 @@ import { useMediaQuery } from "react-responsive";
 import PriceSummary from "./PriceSummary/PriceSummary";
 import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
-import { releaseFundsByOrderId } from "@/pages/api/fetch";
+import { finishOrderByAdmin, releaseFundsByOrderId } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
 import Review from "@/components/Reviews/ReviewsList/Review/Review";
+import callImg from "../../../assets/images/call.svg";
+import closeImg from "../../../assets/images/close.svg";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
@@ -27,7 +29,29 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isReleasingFunds, setIsReleasingFunds] = useState(false);
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+  const [problemNote, setProblemNote] = useState(
+    order?.providerIgnoredEndNotificationResolvedReason ?? "No notes yet",
+  );
+  const [isProblemMenuOpen, setIsProblemMenuOpen] = useState(false);
+  const [isFinishingOrder, setIsFinishingOrder] = useState(false);
+  const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+
+  const finishOrder = async (resolvedReason: string) => {
+    if (isFinishingOrder) return;
+    try {
+      setIsFinishingOrder(true);
+      const response = await finishOrderByAdmin(order.id, resolvedReason);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to finish order", error);
+    } finally {
+      setIsFinishingOrder(false);
+      setIsProblemMenuOpen(false);
+    }
+  };
 
   const getUserImage = (imgUrl: string) =>
     imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
@@ -37,6 +61,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const sitterUser = order?.approvedProvider;
   const parentUser = order?.clientUser;
+
   const parentLocation = `${order?.address?.street ?? "Unknown"} ${
     order?.address?.houseNumber ?? ""
   }, ${order?.address?.city ?? ""}`;
@@ -77,7 +102,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             minute: "2-digit",
             hour12: true,
             timeZoneName: "short",
-          }
+          },
         )
       : "-";
 
@@ -146,13 +171,15 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           sitterName={getProviderName(
             getUserName(
               sitterUser?.user?.firstName,
-              sitterUser?.user?.lastName
+              sitterUser?.user?.lastName,
             ),
-            order.status
+            order.status,
           )}
           sitterImgUrl={getUserImage(sitterUser?.user?.imgUrl)}
           parentName={getUserName(parentUser?.firstName, parentUser?.lastName)}
           parentImgUrl={getUserImage(parentUser?.imgUrl)}
+          sitterPhoneNo={sitterUser?.user?.phoneNumber}
+          parentPhoneNo={parentUser?.phoneNumber}
         />
         <div className={styles.orderInfo}>
           <InfoCard
@@ -165,7 +192,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             title="Status"
             iconImgUrl={flashImg.src}
             type={isMobile ? "SPAN1" : "SPAN3"}
-            info={options.find((o) => o.value === order?.status)?.title ?? "-"}
+            info={
+              <>
+                <div>
+                  {options.find((o) => o.value === problemStatus)?.title ?? "-"}
+                </div>
+                {order?.isProviderIgnoredEndNotification && (
+                  <div className={styles.statusAttention}>
+                    Provider ignored end notification
+                  </div>
+                )}
+              </>
+            }
           />
           <InfoCard
             title="Parent location"
@@ -252,6 +290,93 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           uegentFee={order?.urgentFee ?? 0}
           totalProviderPrice={order?.totalProviderPrice ?? 0}
         />
+        {order?.isProviderIgnoredEndNotification && (
+          <div className={styles.problemSection}>
+            <div className={`${styles.title} ${nunito.className}`}>
+              Order problems
+            </div>
+            <div
+              className={`${styles.problemCard} ${
+                problemStatus === "PROVIDER_MARKED_AS_SERVICE_ENDED"
+                  ? styles.problemCardResolved
+                  : ""
+              }`}
+            >
+              <div className={styles.problemText}>
+                <div
+                  className={`${styles.problemTitle} ${
+                    problemStatus === "PROVIDER_MARKED_AS_SERVICE_ENDED"
+                      ? styles.problemTitleResolved
+                      : ""
+                  }`}
+                >
+                  Not ended
+                </div>
+                <div className={styles.problemSubtitle}>{problemNote}</div>
+              </div>
+              <button
+                type="button"
+                className={styles.problemSwitch}
+                onClick={() => setIsProblemMenuOpen(true)}
+                disabled={problemStatus === "PROVIDER_MARKED_AS_SERVICE_ENDED"}
+              >
+                <span className={styles.problemSwitchLabel}>
+                  {problemStatus === "PROVIDER_MARKED_AS_SERVICE_ENDED"
+                    ? "Solved"
+                    : "Not solved"}
+                </span>
+                <span
+                  className={`${styles.problemSwitchUi} ${
+                    problemStatus === "PROVIDER_MARKED_AS_SERVICE_ENDED"
+                      ? styles.problemSwitchUiSolved
+                      : ""
+                  }`}
+                />
+              </button>
+              {isProblemMenuOpen && (
+                <div className={styles.problemMenu}>
+                  <button
+                    type="button"
+                    className={styles.problemMenuItem}
+                    onClick={() => {
+                      const note = "Client was contacted";
+                      setProblemNote(note);
+                      setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
+                      finishOrder(note);
+                    }}
+                    disabled={isFinishingOrder}
+                  >
+                    <img src={callImg.src} alt="Call" />
+                    Client was contacted
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.problemMenuItem}
+                    onClick={() => {
+                      const note = "Provider was contacted";
+                      setProblemNote(note);
+                      setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
+                      finishOrder(note);
+                    }}
+                    disabled={isFinishingOrder}
+                  >
+                    <img src={callImg.src} alt="Call" />
+                    Provider was contacted
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.problemMenuItem} ${styles.problemMenuCancel}`}
+                    onClick={() => setIsProblemMenuOpen(false)}
+                    disabled={isFinishingOrder}
+                  >
+                    <img src={closeImg.src} alt="Close" />
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <div className={`${styles.finalPrice} ${nunito.className}`}>
         <div>

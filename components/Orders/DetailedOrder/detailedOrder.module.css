@@ -2,7 +2,8 @@
   border-radius: 20px;
   border: 1px solid #fff;
   background: #fff;
-  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
+  box-shadow:
+    0 10px 4px -10px rgba(0, 0, 0, 0.06),
     0 2px 10px 0 rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
@@ -71,6 +72,155 @@
   padding-bottom: 40px;
 }
 
+.problemSection {
+  padding-top: 40px;
+}
+
+.problemCard {
+  background: #ffeae9;
+  border-radius: 24px;
+  padding: 22px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.problemCardResolved {
+  background: #e8fce1;
+}
+
+.problemText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.problemTitle {
+  color: #d33a2c;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.problemTitleResolved {
+  color: #000;
+}
+
+.problemSubtitle {
+  color: rgba(27, 27, 31, 0.7);
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.problemSwitch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  color: #7a7a7a;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.problemSwitch:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.problemSwitch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.problemSwitchLabel {
+  color: #7a7a7a;
+}
+
+.problemSwitchUi {
+  width: 56px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.problemSwitchUi::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.problemSwitchUiSolved {
+  background: #40c914;
+}
+
+.problemSwitchUiSolved::after {
+  left: 30px;
+}
+
+.problemMenu {
+  position: absolute;
+  right: 16px;
+  top: -12px;
+  transform: translateY(-100%);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+  min-width: 260px;
+  padding: 8px 0;
+  z-index: 5;
+}
+
+.problemMenuItem {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.problemMenuItem:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.problemMenuItem img {
+  width: 20px;
+  height: 20px;
+}
+
+.problemMenuItem:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.problemMenuCancel {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  color: #000;
+  font-weight: 700;
+}
+
 .confirmationBackdrop {
   position: fixed;
   inset: 0;
@@ -114,6 +264,15 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: 8px;
+}
+
+.statusAttention {
+  color: #8a3d00;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: -0.12px;
+  margin-top: 4px;
 }
 
 @media (max-width: 936px) {

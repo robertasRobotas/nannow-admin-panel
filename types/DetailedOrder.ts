@@ -110,6 +110,7 @@ export type DetailedOrderType = {
     lastName: string;
     email: string;
     imgUrl: string;
+    phoneNumber: string;
   };
   approvedProvider: {
     id: string;
@@ -131,6 +132,7 @@ export type DetailedOrderType = {
       firstName: string;
       lastName: string;
       imgUrl: string;
+      phoneNumber: string;
     };
     address: {
       latitude: number;
@@ -162,6 +164,8 @@ export type DetailedOrderType = {
     };
     addedAt: string;
   }[];
+  isProviderIgnoredEndNotification?: boolean;
+  providerIgnoredEndNotificationResolvedReason?: string;
   isReleasedFundsToProvider: boolean;
   releasedFundsToProviderAt: string | null;
   reviews?: ReviewType[];

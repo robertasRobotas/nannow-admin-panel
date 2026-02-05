@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-//const BASE_URL = "http://192.168.1.192:8080";
+// const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -250,6 +250,17 @@ export const getOrders = async (status: string, startIndex: number) => {
   return response;
 };
 
+export const getNotEndedOrdersCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/orders/not-ended/count`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  console.log(response);
+  return response;
+};
+
 export const getOrderById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/orders/${id}`, {
@@ -273,6 +284,23 @@ export const releaseFundsByOrderId = async (id: string) => {
     },
   );
 
+  return response;
+};
+
+export const finishOrderByAdmin = async (
+  id: string,
+  resolvedReason: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/finish`,
+    { resolvedReason },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
   return response;
 };
 

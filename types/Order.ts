@@ -7,7 +7,9 @@ export type OrderStatus =
   | "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS"
   | "PROVIDER_MARKED_AS_SERVICE_ENDED"
   | "CLIENT_CANCELED"
-  | "PROVIDER_CANCELED";
+  | "PROVIDER_CANCELED"
+  | "NOT_STARTED_IN_TIME"
+  | "NOT_ENDED_IN_TIME";
 
 export type Rating = {
   generalRating: number;
@@ -23,6 +25,7 @@ export type User = {
   lastName: string;
   email: string;
   imgUrl: string;
+  phoneNumber: string;
 };
 
 export type Client = {
@@ -62,4 +65,5 @@ export type OrderType = {
   clientUser: ClientUser;
   // Optional: present on list responses for display/search convenience
   orderPrettyId?: string;
+  isProviderIgnoredEndNotification?: boolean;
 };

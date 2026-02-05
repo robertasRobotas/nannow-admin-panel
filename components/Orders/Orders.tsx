@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import styles from "./orders.module.css";
 import { nunito } from "@/helpers/fonts";
-import { getOrders } from "@/pages/api/fetch";
+import { getNotEndedOrdersCount, getOrders } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import ReactPaginate from "react-paginate";
 import paginateStyles from "../../styles/paginate.module.css";
@@ -11,11 +11,13 @@ import OrdersList from "./OrdersList/OrdersList";
 import { options } from "@/data/orderStatusOptions";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import { OrderType } from "@/types/Order";
+import Button from "../Button/Button";
 
 const Orders = () => {
   const [selectedOption, setSelectedOption] = useState<number>(0);
 
   const [orders, setOrders] = useState<OrderType[]>([]);
+  const [notEndedOrdersQTY, setNotEndedOrdersQTY] = useState<number>(0);
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(null);
@@ -30,7 +32,7 @@ const Orders = () => {
         setOrders(response.data.result.items);
         setItemsPerPage(response.data.result.pageSize);
         setPageCount(
-          Math.ceil(response.data.result.total / response.data.result.pageSize)
+          Math.ceil(response.data.result.total / response.data.result.pageSize),
         );
         setTotalUsers(response.data.result.total);
       } catch (err) {
@@ -42,23 +44,50 @@ const Orders = () => {
         }
       }
     },
-    [router]
+    [router],
   );
+
+  const fetchNotEndedOrdersCount = useCallback(async () => {
+    try {
+      const response = await getNotEndedOrdersCount();
+      const count =
+        response.data?.result?.count ??
+        response.data?.count ??
+        response.data?.result ??
+        0;
+      setNotEndedOrdersQTY(count);
+    } catch (err) {
+      console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/");
+        }
+      }
+    }
+  }, [router]);
+
+  useEffect(() => {
+    fetchOrders(options[selectedOption].value, itemOffset);
+  }, [selectedOption, itemOffset, fetchOrders]);
+
+  useEffect(() => {
+    fetchNotEndedOrdersCount();
+  }, [fetchNotEndedOrdersCount]);
 
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
     setItemOffset(newOffset);
   };
 
-  useEffect(() => {
-    fetchOrders(options[selectedOption].value, itemOffset);
-  }, [selectedOption, itemOffset, fetchOrders]);
+  const handleIgnoredOrdersClick = () => {
+    fetchOrders("NOT_ENDED_IN_TIME", itemOffset);
+  };
 
   const normalizedQuery = orderIdQuery.trim().toLowerCase();
   const displayedOrders =
     normalizedQuery.length > 0
       ? orders.filter((o) =>
-          (o.orderPrettyId ?? "").toLowerCase().includes(normalizedQuery)
+          (o.orderPrettyId ?? "").toLowerCase().includes(normalizedQuery),
         )
       : orders;
 
@@ -74,6 +103,15 @@ const Orders = () => {
           setSelectedOption={setSelectedOption}
         />
         <div style={{ marginLeft: 12 }}>
+          <Button
+            title={`Not ended (${notEndedOrdersQTY})`}
+            type="DELETE"
+            onClick={() => {
+              handleIgnoredOrdersClick();
+            }}
+          />
+        </div>
+        <div style={{ marginLeft: "auto" }}>
           <SearchBar
             placeholder="Type order ID"
             searchText={orderIdQuery}

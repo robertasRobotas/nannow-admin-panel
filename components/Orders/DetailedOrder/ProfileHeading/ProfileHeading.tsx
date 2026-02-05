@@ -6,6 +6,8 @@ type ProfileHeadingProps = {
   sitterName: string;
   parentImgUrl: string;
   parentName: string;
+  sitterPhoneNo: string;
+  parentPhoneNo: string;
 };
 
 const ProfileHeading = ({
@@ -13,6 +15,8 @@ const ProfileHeading = ({
   sitterName,
   parentImgUrl,
   parentName,
+  sitterPhoneNo,
+  parentPhoneNo,
 }: ProfileHeadingProps) => {
   return (
     <div className={styles.main}>
@@ -23,6 +27,7 @@ const ProfileHeading = ({
           <div className={`${styles.userName} ${nunito.className}`}>
             {sitterName}
           </div>
+          <div className={styles.phoneNo}>{sitterPhoneNo}</div>
         </div>
       </div>
       <div className={styles.profile}>
@@ -32,6 +37,7 @@ const ProfileHeading = ({
           <div className={`${styles.userName} ${nunito.className}`}>
             {parentName}
           </div>
+          <div className={styles.phoneNo}>{parentPhoneNo}</div>
         </div>
       </div>
     </div>

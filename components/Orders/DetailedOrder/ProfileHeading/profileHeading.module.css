@@ -38,6 +38,14 @@
   letter-spacing: -0.4px;
   white-space: pre-wrap;
 }
+.phoneNo {
+  color: #000;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 26px; /* 130% */
+  letter-spacing: -0.4px;
+  white-space: pre-wrap;
+}
 
 @media (max-width: 924px) {
   .profile img {

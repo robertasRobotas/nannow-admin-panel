@@ -5,16 +5,43 @@ import HeaderButton from "../HeaderButton/HeaderButton";
 import Button from "../Button/Button";
 import burgerBtn from "../../assets/images/burger-btn.svg";
 import { links } from "@/data/headerLinks";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
+import { getNotEndedOrdersCount } from "@/pages/api/fetch";
+import axios from "axios";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
+  const [hasNotEndedOrders, setHasNotEndedOrders] = useState(false);
   const { pathname } = useRouter();
 
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchNotEndedOrdersCount = async () => {
+      try {
+        const response = await getNotEndedOrdersCount();
+
+        const count =
+          response.data?.result?.count ??
+          response.data?.count ??
+          response.data?.result ??
+          0;
+        setHasNotEndedOrders(Number(count) > 0);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    };
+
+    fetchNotEndedOrdersCount();
+  }, [router]);
 
   return (
     <>
@@ -34,6 +61,7 @@ const Header = () => {
                   <HeaderButton
                     title={l.title}
                     isActive={`/${pathname.split("/")[1]}` === l.link}
+                    isAttention={l.link === "/orders" && hasNotEndedOrders}
                   />
                 </Link>
               </li>
@@ -52,7 +80,11 @@ const Header = () => {
         </div>
       </div>
       {isMenuDisplayed && (
-        <HeaderMenu links={links} onClose={() => setMenuDisplayed(false)} />
+        <HeaderMenu
+          links={links}
+          onClose={() => setMenuDisplayed(false)}
+          hasNotEndedOrders={hasNotEndedOrders}
+        />
       )}
     </>
   );

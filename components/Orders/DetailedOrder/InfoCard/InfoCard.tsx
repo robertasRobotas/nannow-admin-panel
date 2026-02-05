@@ -1,9 +1,10 @@
+import { ReactNode } from "react";
 import styles from "./infoCard.module.css";
 
 type InfoCardProps = {
   title: string;
   iconImgUrl: string;
-  info: string;
+  info: ReactNode;
   type: string;
 };
 

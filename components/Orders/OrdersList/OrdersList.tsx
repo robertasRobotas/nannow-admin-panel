@@ -38,13 +38,16 @@ const OrdersList = ({ orders }: OrdersListProps) => {
             endsAt={u.endsAt}
             providerName={getProviderName(
               getUserName(providerUser?.firstName, providerUser?.lastName),
-              u.status
+              u.status,
             )}
             clientName={`${getUserName(
               clientUser?.firstName,
-              clientUser?.lastName
+              clientUser?.lastName,
             )} (Client)`}
             status={u.status}
+            isProviderIgnoredEndNotification={
+              u.isProviderIgnoredEndNotification
+            }
           />
         );
       })}
