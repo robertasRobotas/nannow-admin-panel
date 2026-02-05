@@ -11,7 +11,6 @@ const ModalPageTemplate = ({
   children,
   isScrollable = false,
 }: ModalPageTemplateProps) => {
-  console.log(isScrollable);
   return (
     <div className={`${styles.wrapper}`}>
       <Header />

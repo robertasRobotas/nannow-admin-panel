@@ -75,9 +75,8 @@
 .review {
   display: flex;
   gap: 12px;
-  flex: 1;
   padding-top: 88px;
-  align-items: end;
+  align-items: center;
 }
 
 .review img {

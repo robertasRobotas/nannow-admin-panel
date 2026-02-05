@@ -39,6 +39,7 @@
   display: flex;
   justify-content: center;
   gap: 8px;
+  cursor: pointer;
 }
 
 .profile img {
@@ -75,10 +76,9 @@
 
 .review {
   display: flex;
+  align-items: center;
   gap: 12px;
-  flex: 1;
   padding-top: 88px;
-  align-items: end;
 }
 
 .review img {

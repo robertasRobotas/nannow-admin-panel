@@ -19,7 +19,6 @@ export const getAllUsers = async (url: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -30,7 +29,6 @@ export const getClientById = async (id: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -41,7 +39,6 @@ export const getProviderById = async (id: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -58,7 +55,6 @@ export const getUsersByCriminalRecordStatus = async (
       },
     },
   );
-  console.log(response);
   return response;
 };
 
@@ -72,7 +68,6 @@ export const getCriminalCheckById = async (id: string) => {
       },
     },
   );
-  console.log(response);
   return response;
 };
 
@@ -101,7 +96,6 @@ export const addCriminalCheckNote = async (id: string, note: string) => {
       },
     },
   );
-  console.log(response);
   return response;
 };
 
@@ -144,7 +138,6 @@ export const getChatById = async (id: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -158,7 +151,6 @@ export const getAllReports = async (startIndex: number) => {
       },
     },
   );
-  console.log(response);
   return response;
 };
 
@@ -169,7 +161,6 @@ export const getReportById = async (id: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -188,7 +179,6 @@ export const getAllReviews = async (
       },
     },
   );
-  console.log(response);
   return response;
 };
 
@@ -199,7 +189,6 @@ export const getReviewById = async (id: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -213,7 +202,6 @@ export const getAllFeedback = async (startIndex: number) => {
       },
     },
   );
-  console.log(response);
   return response;
 };
 
@@ -224,7 +212,6 @@ export const getFeedbackById = async (id: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -232,7 +219,6 @@ export const getCriminalRecordInfo = async (code: string) => {
   const response = await axios.get(
     `https://epaslaugos.ird.lt/vrmeport-api/rest/public/get-f200/${code}`,
   );
-  console.log(response);
   return response;
 };
 
@@ -246,7 +232,6 @@ export const getOrders = async (status: string, startIndex: number) => {
       },
     },
   );
-  console.log(response);
   return response;
 };
 
@@ -268,7 +253,6 @@ export const getOrderById = async (id: string) => {
       Authorization: jwt,
     },
   });
-  console.log(response);
   return response;
 };
 
@@ -349,7 +333,6 @@ export const getDocuments = async (
       },
     },
   );
-  console.log(response);
   return response;
 };
 

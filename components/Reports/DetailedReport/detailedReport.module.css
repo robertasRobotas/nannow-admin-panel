@@ -57,6 +57,14 @@
   white-space: nowrap;
 }
 
+.reportedRole {
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 15px;
+  white-space: pre-wrap;
+}
+
 .name {
   display: block;
   color: #000;
@@ -75,9 +83,8 @@
 .review {
   display: flex;
   gap: 12px;
-  flex: 1;
   padding-top: 88px;
-  align-items: end;
+  align-items: center;
 }
 
 .review img {

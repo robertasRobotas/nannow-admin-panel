@@ -34,4 +34,6 @@ export type ReviewType = {
   reviewerImgUrl: string;
   revieweeImgUrl: string;
   text: string;
+  providerUserId: string;
+  clientUserId: string;
 };
