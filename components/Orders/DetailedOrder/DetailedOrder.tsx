@@ -15,11 +15,16 @@ import { useMediaQuery } from "react-responsive";
 import PriceSummary from "./PriceSummary/PriceSummary";
 import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
-import { finishOrderByAdmin, releaseFundsByOrderId } from "@/pages/api/fetch";
+import {
+  cancelOrderByAdmin,
+  finishOrderByAdmin,
+  releaseFundsByOrderId,
+} from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
 import Review from "@/components/Reviews/ReviewsList/Review/Review";
 import callImg from "../../../assets/images/call.svg";
 import closeImg from "../../../assets/images/close.svg";
+import crossRedImg from "../../../assets/images/cross-red.svg";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
@@ -34,6 +39,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   );
   const [isProblemMenuOpen, setIsProblemMenuOpen] = useState(false);
   const [isFinishingOrder, setIsFinishingOrder] = useState(false);
+  const [isCancelingOrder, setIsCancelingOrder] = useState(false);
   const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
@@ -49,6 +55,22 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       console.error("Failed to finish order", error);
     } finally {
       setIsFinishingOrder(false);
+      setIsProblemMenuOpen(false);
+    }
+  };
+
+  const cancelOrder = async () => {
+    if (isCancelingOrder) return;
+    try {
+      setIsCancelingOrder(true);
+      const response = await cancelOrderByAdmin(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to cancel order", error);
+    } finally {
+      setIsCancelingOrder(false);
       setIsProblemMenuOpen(false);
     }
   };
@@ -335,43 +357,52 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               </button>
               {isProblemMenuOpen && (
                 <div className={styles.problemMenu}>
-                  <button
-                    type="button"
-                    className={styles.problemMenuItem}
-                    onClick={() => {
-                      const note = "Client was contacted";
-                      setProblemNote(note);
-                      setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
-                      finishOrder(note);
-                    }}
-                    disabled={isFinishingOrder}
-                  >
+                    <button
+                      type="button"
+                      className={styles.problemMenuItem}
+                      onClick={() => {
+                        const note = "Client was contacted";
+                        setProblemNote(note);
+                        setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
+                        finishOrder(note);
+                      }}
+                      disabled={isFinishingOrder}
+                    >
                     <img src={callImg.src} alt="Call" />
                     Client was contacted
                   </button>
-                  <button
-                    type="button"
-                    className={styles.problemMenuItem}
-                    onClick={() => {
-                      const note = "Provider was contacted";
-                      setProblemNote(note);
-                      setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
-                      finishOrder(note);
-                    }}
-                    disabled={isFinishingOrder}
-                  >
-                    <img src={callImg.src} alt="Call" />
-                    Provider was contacted
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.problemMenuItem} ${styles.problemMenuCancel}`}
-                    onClick={() => setIsProblemMenuOpen(false)}
-                    disabled={isFinishingOrder}
-                  >
-                    <img src={closeImg.src} alt="Close" />
-                    Cancel
-                  </button>
+                    <button
+                      type="button"
+                      className={styles.problemMenuItem}
+                      onClick={() => {
+                        const note = "Provider was contacted";
+                        setProblemNote(note);
+                        setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
+                        finishOrder(note);
+                      }}
+                      disabled={isFinishingOrder}
+                    >
+                      <img src={callImg.src} alt="Call" />
+                      Provider was contacted
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.problemMenuItem}
+                      onClick={cancelOrder}
+                      disabled={isCancelingOrder}
+                    >
+                      <img src={crossRedImg.src} alt="Cancel" />
+                      Cancel by admin
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.problemMenuItem} ${styles.problemMenuCancel}`}
+                      onClick={() => setIsProblemMenuOpen(false)}
+                      disabled={isFinishingOrder || isCancelingOrder}
+                    >
+                      <img src={closeImg.src} alt="Close" />
+                      Cancel
+                    </button>
                 </div>
               )}
             </div>

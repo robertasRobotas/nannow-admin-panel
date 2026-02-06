@@ -288,6 +288,20 @@ export const finishOrderByAdmin = async (
   return response;
 };
 
+export const cancelOrderByAdmin = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/cancel`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const toggleProviderBadge = async (
   providerUserId: string,
   badge: string,
