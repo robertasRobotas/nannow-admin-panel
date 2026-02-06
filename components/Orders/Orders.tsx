@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import styles from "./orders.module.css";
 import { nunito } from "@/helpers/fonts";
-import { getNotEndedOrdersCount, getOrders } from "@/pages/api/fetch";
+import {
+  getNotEndedOrdersCount,
+  getNotPaidOrders,
+  getNotPaidOrdersCount,
+  getOrders,
+} from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import ReactPaginate from "react-paginate";
 import paginateStyles from "../../styles/paginate.module.css";
@@ -18,6 +23,7 @@ const Orders = () => {
 
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [notEndedOrdersQTY, setNotEndedOrdersQTY] = useState<number>(0);
+  const [notPaidOrdersQTY, setNotPaidOrdersQTY] = useState<number>(0);
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(null);
@@ -29,6 +35,28 @@ const Orders = () => {
     async (status: string, startIndex: number) => {
       try {
         const response = await getOrders(status, startIndex);
+        setOrders(response.data.result.items);
+        setItemsPerPage(response.data.result.pageSize);
+        setPageCount(
+          Math.ceil(response.data.result.total / response.data.result.pageSize),
+        );
+        setTotalUsers(response.data.result.total);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    },
+    [router],
+  );
+
+  const fetchNotPaidOrders = useCallback(
+    async (status: string, startIndex: number) => {
+      try {
+        const response = await getNotPaidOrders(status, startIndex);
         setOrders(response.data.result.items);
         setItemsPerPage(response.data.result.pageSize);
         setPageCount(
@@ -66,6 +94,25 @@ const Orders = () => {
     }
   }, [router]);
 
+  const fetchNotPaidOrdersCount = useCallback(async () => {
+    try {
+      const response = await getNotPaidOrdersCount();
+      const count =
+        response.data?.result?.count ??
+        response.data?.count ??
+        response.data?.result ??
+        0;
+      setNotPaidOrdersQTY(count);
+    } catch (err) {
+      console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/");
+        }
+      }
+    }
+  }, [router]);
+
   useEffect(() => {
     fetchOrders(options[selectedOption].value, itemOffset);
   }, [selectedOption, itemOffset, fetchOrders]);
@@ -73,6 +120,9 @@ const Orders = () => {
   useEffect(() => {
     fetchNotEndedOrdersCount();
   }, [fetchNotEndedOrdersCount]);
+  useEffect(() => {
+    fetchNotPaidOrdersCount();
+  }, [fetchNotPaidOrdersCount]);
 
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
@@ -81,6 +131,10 @@ const Orders = () => {
 
   const handleIgnoredOrdersClick = () => {
     fetchOrders("NOT_ENDED_IN_TIME", itemOffset);
+  };
+
+  const handleNotPaidOrdersClick = () => {
+    fetchNotPaidOrders("NOT_PAID", itemOffset);
   };
 
   const normalizedQuery = orderIdQuery.trim().toLowerCase();
@@ -108,6 +162,15 @@ const Orders = () => {
             type="DELETE"
             onClick={() => {
               handleIgnoredOrdersClick();
+            }}
+          />
+        </div>
+        <div style={{ marginLeft: 12 }}>
+          <Button
+            title={`Ended but not paid (${notPaidOrdersQTY})`}
+            type="DELETE"
+            onClick={() => {
+              handleNotPaidOrdersClick();
             }}
           />
         </div>

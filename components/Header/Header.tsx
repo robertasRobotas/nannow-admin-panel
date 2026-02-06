@@ -9,12 +9,16 @@ import { useEffect, useState } from "react";
 import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
-import { getNotEndedOrdersCount } from "@/pages/api/fetch";
+import {
+  getNotEndedOrdersCount,
+  getNotPaidOrdersCount,
+} from "@/pages/api/fetch";
 import axios from "axios";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
   const [hasNotEndedOrders, setHasNotEndedOrders] = useState(false);
+  const [hasNotPaidOrders, setHasNotPaidOrders] = useState(false);
   const { pathname } = useRouter();
 
   const router = useRouter();
@@ -39,8 +43,28 @@ const Header = () => {
         }
       }
     };
+    const fetchNotPaidOrdersCount = async () => {
+      try {
+        const response = await getNotPaidOrdersCount();
+
+        const count =
+          response.data?.result?.count ??
+          response.data?.count ??
+          response.data?.result ??
+          0;
+        setHasNotPaidOrders(Number(count) > 0);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    };
 
     fetchNotEndedOrdersCount();
+    fetchNotPaidOrdersCount();
   }, [router]);
 
   return (
@@ -61,7 +85,10 @@ const Header = () => {
                   <HeaderButton
                     title={l.title}
                     isActive={`/${pathname.split("/")[1]}` === l.link}
-                    isAttention={l.link === "/orders" && hasNotEndedOrders}
+                    isAttention={
+                      l.link === "/orders" &&
+                      (hasNotEndedOrders || hasNotPaidOrders)
+                    }
                   />
                 </Link>
               </li>

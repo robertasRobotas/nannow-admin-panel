@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-// const BASE_URL = "http://192.168.1.192:8080/v1";
+//const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -235,9 +235,35 @@ export const getOrders = async (status: string, startIndex: number) => {
   return response;
 };
 
+export const getNotPaidOrders = async (status: string, startIndex: number) => {
+  const jwt = Cookies.get("@user_jwt");
+  const filters = encodeURIComponent(
+    JSON.stringify({ isReleasedFundsToProvider: { $ne: true } }),
+  );
+
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders?startIndex=${startIndex}&status=PROVIDER_MARKED_AS_SERVICE_ENDED&filters=${filters}`,
+    {
+      headers: { Authorization: jwt },
+    },
+  );
+  return response;
+};
+
 export const getNotEndedOrdersCount = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/orders/not-ended/count`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  console.log(response);
+  return response;
+};
+
+export const getNotPaidOrdersCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/orders/not-paid/count`, {
     headers: {
       Authorization: jwt,
     },
