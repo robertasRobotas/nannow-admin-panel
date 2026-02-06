@@ -27,8 +27,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [isSelectedMenu, setIsSelectedMenu] = useState(false);
 
-  console.log(user);
-
   const renderSelectedSection = () => {
     switch (selectedSection) {
       case "general": {

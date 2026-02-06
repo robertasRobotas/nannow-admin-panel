@@ -51,6 +51,58 @@
   letter-spacing: -0.32px;
 }
 
+.suspendSwitch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  color: #7a7a7a;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.suspendSwitch:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.suspendSwitchLabel {
+  color: #7a7a7a;
+}
+
+.suspendSwitchUi {
+  width: 56px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.suspendSwitchUi::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.suspendSwitchUiActive {
+  background: #40c914;
+}
+
+.suspendSwitchUiActive::after {
+  left: 30px;
+}
+
 .backBtnWrapper {
   padding-top: 1rem;
 }

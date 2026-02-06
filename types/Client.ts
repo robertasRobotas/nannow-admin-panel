@@ -30,6 +30,8 @@ export type User = {
   imgUrl: string;
   createdAt: string;
   updatedAt: string;
+  isSuspendedByAdmin: boolean;
+  suspensionReason: string;
 };
 
 export type UserDetails = {
@@ -214,6 +216,8 @@ export type UserDetails = {
     createdAt: string;
     pushToken?: string;
     userAppLanguage?: string;
+    isSuspendedByAdmin: boolean;
+    suspensionReason: string;
   };
   chats: ChatType[];
 };

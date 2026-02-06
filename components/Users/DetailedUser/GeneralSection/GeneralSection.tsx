@@ -5,6 +5,9 @@ import { UserDetails } from "@/types/Client";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { useRouter } from "next/router";
+import { useState } from "react";
+import { setUserSuspendedStatus } from "@/pages/api/fetch";
+import axios from "axios";
 
 type GeneralSectionProps = {
   user: UserDetails;
@@ -13,7 +16,34 @@ type GeneralSectionProps = {
 };
 
 const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
-  const cards = getInfoCards(user, mode);
+  const [isSuspendedLocal, setIsSuspendedLocal] = useState(
+    user?.user?.isSuspendedByAdmin ?? false,
+  );
+  const [isSuspendedSaving, setIsSuspendedSaving] = useState(false);
+  const cards = getInfoCards(user, mode, {
+    suspendedSwitch: {
+      value: isSuspendedLocal,
+      onChange: async () => {
+        if (isSuspendedSaving) return;
+        const next = !isSuspendedLocal;
+        try {
+          setIsSuspendedSaving(true);
+          setIsSuspendedLocal(next);
+          await setUserSuspendedStatus(user?.user?.id, next);
+        } catch (err) {
+          console.log(err);
+          setIsSuspendedLocal((prev) => !prev);
+          if (axios.isAxiosError(err)) {
+            if (err.status === 401) {
+              router.push("/");
+            }
+          }
+        } finally {
+          setIsSuspendedSaving(false);
+        }
+      },
+    },
+  });
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
   console.log(user);
@@ -30,6 +60,20 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             <span className={`${styles.cardValue} ${nunito.className}`}>
               {c.value}
             </span>
+            {c.booleanSwitch && (
+              <button
+                type="button"
+                className={styles.suspendSwitch}
+                onClick={c.booleanSwitch.onChange}
+                disabled={isSuspendedSaving}
+              >
+                <span
+                  className={`${styles.suspendSwitchUi} ${
+                    c.booleanSwitch.value ? styles.suspendSwitchUiActive : ""
+                  }`}
+                />
+              </button>
+            )}
             {c.link && (
               <Button
                 title="Details"

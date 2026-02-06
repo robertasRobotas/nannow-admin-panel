@@ -4,6 +4,8 @@ import phoneImg from "../assets/images/phone.svg";
 import locationPinImg from "../assets/images/location-pin.svg";
 import idImg from "../assets/images/id.svg";
 import shieldImg from "../assets/images/shield.svg";
+import suspendedGreenImg from "../assets/images/suspended-green.svg";
+import suspendedRedImg from "../assets/images/suspended-red.svg";
 import kidImg from "../assets/images/kid-gray.svg";
 import walletImg from "../assets/images/wallet.svg";
 import type { StaticImageData } from "next/image";
@@ -13,12 +15,24 @@ export type InfoCard = {
   icon: StaticImageData;
   value: string | number;
   link?: string;
+  booleanSwitch?: {
+    value: boolean;
+    onChange: () => void;
+  };
 };
 
 export const getInfoCards = (
   data: UserDetails,
   mode: "client" | "provider",
+  options?: {
+    suspendedSwitch?: {
+      value: boolean;
+      onChange: () => void;
+    };
+  },
 ): InfoCard[] => {
+  const isSuspended =
+    options?.suspendedSwitch?.value ?? data?.user?.isSuspendedByAdmin ?? false;
   const baseCards: InfoCard[] = [
     {
       title: "Full name",
@@ -40,6 +54,12 @@ export const getInfoCards = (
       title: "Push token",
       icon: shieldImg,
       value: data?.user?.pushToken ?? "—",
+    },
+    {
+      title: "Suspended status",
+      icon: isSuspended ? suspendedRedImg : suspendedGreenImg,
+      value: isSuspended ? "Suspended" : "Not suspended",
+      booleanSwitch: options?.suspendedSwitch,
     },
   ];
 

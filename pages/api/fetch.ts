@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-//const BASE_URL = "http://192.168.1.192:8080/v1";
+// const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -106,6 +106,23 @@ export const updateReportStatus = async (id: string, isSolved: boolean) => {
     {
       isResolved: isSolved,
     },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const setUserSuspendedStatus = async (
+  id: string,
+  isSuspended: boolean,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/users/${id}/suspend`,
+    { isSuspended },
     {
       headers: {
         Authorization: jwt,
