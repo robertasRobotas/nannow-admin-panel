@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Button from "../Button/Button";
 import SearchBar from "../SearchBar/SearchBar";
 import Cards from "./Cards/Cards";
@@ -45,7 +45,7 @@ const Users = () => {
       setUsers(response.data.users.items);
       setItemsPerPage(response.data.users.pageSize);
       setPageCount(
-        Math.ceil(response.data.users.total / response.data.users.pageSize)
+        Math.ceil(response.data.users.total / response.data.users.pageSize),
       );
       setTotalUsers(response.data.users.total);
     } catch (err) {
@@ -66,7 +66,7 @@ const Users = () => {
   useEffect(() => {
     if (!router.isReady || !modeReady) return;
     fetchUsers();
-  }, [router.isReady, modeReady, isSelectedClients]);
+  }, [router.isReady, modeReady, isSelectedClients, itemOffset]);
 
   return (
     <div className={styles.main}>
@@ -81,7 +81,7 @@ const Users = () => {
                   query: { ...router.query, mode: "clients" },
                 },
                 undefined,
-                { shallow: true }
+                { shallow: true },
               );
             }}
             title="Clients"
@@ -97,7 +97,7 @@ const Users = () => {
                   query: { ...router.query, mode: "providers" },
                 },
                 undefined,
-                { shallow: true }
+                { shallow: true },
               );
             }}
             title="Providers"
