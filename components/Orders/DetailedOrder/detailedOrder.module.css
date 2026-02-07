@@ -72,6 +72,64 @@
   padding-bottom: 40px;
 }
 
+.pendingProvidersSection {
+  padding-bottom: 20px;
+}
+
+.pendingProvidersList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding-bottom: 20px;
+}
+
+.pendingProviderCard {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pendingProviderCard:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.pendingProviderAvatarBtn {
+  display: flex;
+}
+
+.pendingProviderAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pendingProviderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pendingProviderName {
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.pendingProviderDate {
+  color: rgba(27, 27, 31, 0.7);
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .problemSection {
   padding-top: 40px;
 }
@@ -286,6 +344,10 @@
   }
 
   .processCards {
+    grid-template-columns: 1fr;
+  }
+
+  .pendingProvidersList {
     grid-template-columns: 1fr;
   }
 

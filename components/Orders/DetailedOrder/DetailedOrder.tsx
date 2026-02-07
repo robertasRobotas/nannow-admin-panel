@@ -141,6 +141,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     : "-";
 
   const childrenNames = order?.children.map((c) => c.name).join(", ");
+  const pendingProviders = order?.pendingProviders ?? [];
 
   const payOrderHandler = () => {
     setIsConfirmModalOpen(true);
@@ -175,11 +176,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       })
     : "-";
 
-  const getProviderName = (fullName: string, status: string) => {
-    const isProviderNotSelected = [
-      "ORDER_CREATED",
-      "PROVIDER_SENT_OFFER_TO_CLIENT",
-    ].includes(status);
+  const getProviderName = (fullName: string) => {
+    const isProviderNotSelected = order.approvedProviderId === null;
     return isProviderNotSelected ? "Not selected yet" : fullName;
   };
 
@@ -195,7 +193,6 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               sitterUser?.user?.firstName,
               sitterUser?.user?.lastName,
             ),
-            order.status,
           )}
           sitterImgUrl={getUserImage(sitterUser?.user?.imgUrl)}
           parentName={getUserName(parentUser?.firstName, parentUser?.lastName)}
@@ -252,6 +249,52 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             info={childrenNames}
           />
         </div>
+        {pendingProviders.length > 0 && (
+          <div className={styles.pendingProvidersSection}>
+            <div className={`${styles.title} ${nunito.className}`}>
+              Pending providers
+            </div>
+            <div className={styles.pendingProvidersList}>
+              {pendingProviders.map((provider, index) => (
+                <button
+                  type="button"
+                  key={`${provider.id}-${index}`}
+                  className={styles.pendingProviderCard}
+                  onClick={() => {
+                    window.open(`/provider/${provider.userId}`, "_blank");
+                  }}
+                >
+                  <span className={styles.pendingProviderAvatarBtn}>
+                    <img
+                      src={getUserImage(provider.imgUrl)}
+                      className={styles.pendingProviderAvatar}
+                      alt={`${provider.firstName} ${provider.lastName}`}
+                    />
+                  </span>
+                  <div className={styles.pendingProviderInfo}>
+                    <div className={styles.pendingProviderName}>
+                      {`${provider.firstName ?? "Deleted"} ${provider.lastName ?? "User"}`}
+                    </div>
+                    <div className={styles.pendingProviderDate}>
+                      Added at:{" "}
+                      {provider.addedAt
+                        ? new Date(provider.addedAt).toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                            timeZoneName: "short",
+                          })
+                        : "-"}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className={`${styles.title} ${nunito.className}`}>
           Order process
         </div>
@@ -357,52 +400,52 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               </button>
               {isProblemMenuOpen && (
                 <div className={styles.problemMenu}>
-                    <button
-                      type="button"
-                      className={styles.problemMenuItem}
-                      onClick={() => {
-                        const note = "Client was contacted";
-                        setProblemNote(note);
-                        setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
-                        finishOrder(note);
-                      }}
-                      disabled={isFinishingOrder}
-                    >
+                  <button
+                    type="button"
+                    className={styles.problemMenuItem}
+                    onClick={() => {
+                      const note = "Client was contacted";
+                      setProblemNote(note);
+                      setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
+                      finishOrder(note);
+                    }}
+                    disabled={isFinishingOrder}
+                  >
                     <img src={callImg.src} alt="Call" />
                     Client was contacted
                   </button>
-                    <button
-                      type="button"
-                      className={styles.problemMenuItem}
-                      onClick={() => {
-                        const note = "Provider was contacted";
-                        setProblemNote(note);
-                        setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
-                        finishOrder(note);
-                      }}
-                      disabled={isFinishingOrder}
-                    >
-                      <img src={callImg.src} alt="Call" />
-                      Provider was contacted
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.problemMenuItem}
-                      onClick={cancelOrder}
-                      disabled={isCancelingOrder}
-                    >
-                      <img src={crossRedImg.src} alt="Cancel" />
-                      Cancel by admin
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.problemMenuItem} ${styles.problemMenuCancel}`}
-                      onClick={() => setIsProblemMenuOpen(false)}
-                      disabled={isFinishingOrder || isCancelingOrder}
-                    >
-                      <img src={closeImg.src} alt="Close" />
-                      Cancel
-                    </button>
+                  <button
+                    type="button"
+                    className={styles.problemMenuItem}
+                    onClick={() => {
+                      const note = "Provider was contacted";
+                      setProblemNote(note);
+                      setProblemStatus("PROVIDER_MARKED_AS_SERVICE_ENDED");
+                      finishOrder(note);
+                    }}
+                    disabled={isFinishingOrder}
+                  >
+                    <img src={callImg.src} alt="Call" />
+                    Provider was contacted
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.problemMenuItem}
+                    onClick={cancelOrder}
+                    disabled={isCancelingOrder}
+                  >
+                    <img src={crossRedImg.src} alt="Cancel" />
+                    Cancel by admin
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.problemMenuItem} ${styles.problemMenuCancel}`}
+                    onClick={() => setIsProblemMenuOpen(false)}
+                    disabled={isFinishingOrder || isCancelingOrder}
+                  >
+                    <img src={closeImg.src} alt="Close" />
+                    Cancel
+                  </button>
                 </div>
               )}
             </div>

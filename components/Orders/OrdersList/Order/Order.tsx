@@ -13,6 +13,7 @@ type OrderProps = {
   startsAt: string;
   endsAt: string;
   isProviderIgnoredEndNotification?: boolean;
+  pendingProvidersCount?: number;
 };
 
 const Order = ({
@@ -25,6 +26,7 @@ const Order = ({
   startsAt,
   endsAt,
   isProviderIgnoredEndNotification,
+  pendingProvidersCount,
 }: OrderProps) => {
   const router = useRouter();
 
@@ -54,6 +56,12 @@ const Order = ({
           <div className={styles.names}>
             <div className={styles.providerName}>{providerName}</div>
             <div className={styles.clientName}>{clientName}</div>
+            {pendingProvidersCount !== undefined &&
+              pendingProvidersCount > 0 && (
+                <div className={styles.pendingCount}>
+                  Pending Providers:{pendingProvidersCount}
+                </div>
+              )}
           </div>
           <div className={styles.startDate}>
             Starts: {formatDateTime(startsAt)}

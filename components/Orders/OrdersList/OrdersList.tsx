@@ -14,11 +14,11 @@ const OrdersList = ({ orders }: OrdersListProps) => {
   const getUserName = (firstName?: string, lastName?: string) =>
     `${firstName ?? "Deleted"} ${lastName ?? "User"}`;
 
-  const getProviderName = (fullName: string, status: string) => {
-    const isProviderNotSelected = [
-      "ORDER_CREATED",
-      "PROVIDER_SENT_OFFER_TO_CLIENT",
-    ].includes(status);
+  const getProviderName = (
+    fullName: string,
+    approvedProviderId: string | null,
+  ) => {
+    const isProviderNotSelected = approvedProviderId === null;
     return isProviderNotSelected ? "Not selected yet(Provider)" : fullName;
   };
 
@@ -38,7 +38,7 @@ const OrdersList = ({ orders }: OrdersListProps) => {
             endsAt={u.endsAt}
             providerName={getProviderName(
               getUserName(providerUser?.firstName, providerUser?.lastName),
-              u.status,
+              u.approvedProviderId,
             )}
             clientName={`${getUserName(
               clientUser?.firstName,
@@ -48,6 +48,7 @@ const OrdersList = ({ orders }: OrdersListProps) => {
             isProviderIgnoredEndNotification={
               u.isProviderIgnoredEndNotification
             }
+            pendingProvidersCount={u.pendingProvidersCount}
           />
         );
       })}
