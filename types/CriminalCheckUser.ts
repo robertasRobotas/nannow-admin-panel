@@ -10,6 +10,11 @@ export type CriminalCheckUser = {
   criminalRecordStatus: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
 };
 
+export type criminalRejectionReason = {
+  criminalRejectionText: string;
+  createdAt: string;
+};
+
 export interface Provider {
   _id: string;
   id: string;
@@ -39,11 +44,55 @@ export interface Provider {
   rating: number;
   receivedReviewIds: string[];
   unavailablePeriods: string[];
-  criminalRecordCode: string;
-  criminalRecordVerifiedAt: string; // ISO date
-  criminalRecordChangedAt: string;
-  criminalRecordVerifiedType: string; // e.g. "QR"
-  criminalRecordStatus: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
+
+  // New criminal record model
+  criminalRecord: {
+    currentStatus: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED";
+    currentVerifiedType: "QR" | "DOCUMENT" | null;
+    currentChangedAt: Date | null;
+    currentApplicationId: string | null;
+    applications: {
+      id: string; // uuid
+      verificationType: "QR" | "DOCUMENT";
+      decision:
+        | "APPROVE_AND_SET_CURRENT"
+        | "REJECT_AND_SET_CURRENT"
+        | "REJECT_HISTORY_ONLY"
+        | "SET_PENDING_CURRENT"
+        | "SET_NOT_SUBMITTED_CURRENT";
+      status: "PENDING" | "APPROVED" | "REJECTED" | "NOT_SUBMITTED";
+      createdAt: Date;
+      decidedAt?: Date;
+      decidedByAdminId?: string;
+      decidedByAdminName?: string;
+      rejectionReason?: string;
+      source: {
+        qrCode?: string;
+        documentIds?: string[];
+      };
+      policeCheck?: {
+        asmId?: number;
+        fullName?: string;
+        birthDate?: string;
+        issuedAt?: string;
+        expiresAt?: string | null;
+        raw?: unknown;
+      };
+      decisionContext?: {
+        appUserFullName?: string;
+        isNameMatch?: boolean;
+        autoDecisionBy?: "POLICE_QR" | "ADMIN_DOCUMENT" | "SYSTEM";
+      };
+    }[];
+  };
+
+  // Legacy fields kept optional for backward compatibility while components migrate
+  criminalRecordCode?: string;
+  criminalRecordVerifiedAt?: string; // ISO date
+  criminalRecordChangedAt?: string;
+  criminalRecordVerifiedType?: string; // e.g. "QR"
+  criminalRecordStatus?: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
+  criminalRejectionReasons?: criminalRejectionReason[];
 }
 
 export interface User {

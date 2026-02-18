@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-// const BASE_URL = "http://192.168.1.192:8080/v1";
+//const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -76,6 +76,61 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
   const response = await axios.put(
     `${BASE_URL}/admin/criminal-record-status/users/${id}`,
     { status: status },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+const parseJwtPayload = (token?: string) => {
+  try {
+    if (!token) return null;
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(normalized);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+};
+
+const getAdminIdFromJwt = () => {
+  const jwt = Cookies.get("@user_jwt");
+  const payload = parseJwtPayload(jwt);
+  return (
+    payload?.adminId ?? payload?.id ?? payload?.userId ?? payload?.sub ?? ""
+  );
+};
+
+export const applyCriminalRecordApplicationDecision = async (
+  userId: string,
+  payload: {
+    applicationId: string;
+    decision:
+      | "APPROVE_AND_SET_CURRENT"
+      | "REJECT_AND_SET_CURRENT"
+      | "REJECT_HISTORY_ONLY"
+      | "SET_PENDING_CURRENT"
+      | "SET_NOT_SUBMITTED_CURRENT";
+    criminalRejectionText?: string;
+    documentIds?: string[];
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const adminId = getAdminIdFromJwt();
+  const response = await axios.put(
+    `${BASE_URL}/admin/criminal-record-status/users/${userId}`,
+    {
+      adminId,
+      applicationId: payload.applicationId,
+      decision: payload.decision,
+      criminalRejectionText: payload.criminalRejectionText,
+      documentIds: payload.documentIds ?? [],
+    },
     {
       headers: {
         Authorization: jwt,
@@ -367,6 +422,19 @@ export const toggleDocumentReviewed = async (documentId: string) => {
   const response = await axios.put(
     `${BASE_URL}/admin/documents/${documentId}/review`,
     {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getDocumentById = async (documentId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/documents/${documentId}`,
     {
       headers: {
         Authorization: jwt,

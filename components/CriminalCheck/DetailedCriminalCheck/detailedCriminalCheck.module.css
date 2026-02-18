@@ -61,6 +61,150 @@
   margin-right: 4px;
 }
 
+.applicationsSection {
+  grid-column: 1/7;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.applicationsTitle {
+  color: #000;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+
+.emptyApplications {
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.applicationCard {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.applicationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.applicationType {
+  color: #000;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.applicationStatus {
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.applicationStatus img {
+  width: 16px;
+  height: 16px;
+}
+
+.applicationMeta {
+  display: grid;
+  gap: 6px;
+  color: #000;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.rejectionReason {
+  border: 1px solid rgba(184, 25, 25, 0.25);
+  background: rgba(184, 25, 25, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #8e1d1d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qrInfo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  color: #000;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.documentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.documentLink {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.documentLink img {
+  width: 20px;
+  height: 20px;
+}
+
+.documentLink span {
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.pendingActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pendingControls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.applicationComment {
+  min-height: 88px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  padding: 10px 12px;
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+  resize: vertical;
+}
+
 @media (max-width: 936px) {
   .heading {
     flex-direction: column;
@@ -69,5 +213,19 @@
 
   .main {
     padding: 30px;
+  }
+
+  .applicationHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .qrInfo {
+    grid-template-columns: 1fr;
+  }
+
+  .pendingControls {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
