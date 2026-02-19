@@ -1,7 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useMemo, useState } from "react";
 import styles from "./badgesSection.module.css";
-import Button from "@/components/Button/Button";
 import verifiedBadgeImg from "../../../../assets/images/verified_badge.svg";
 import crownImg from "../../../../assets/images/crown.svg";
 import shieldImg from "../../../../assets/images/shield.svg";
@@ -13,6 +12,7 @@ type BadgesSectionProps = {
   providerUserId: string;
   userId: string;
   userIsVerified: boolean;
+  isProviderCriminalRecordVerified: boolean;
   onBackClick: () => void;
 };
 
@@ -37,13 +37,22 @@ const BadgesSection = ({
   providerUserId,
   userId,
   userIsVerified,
-  onBackClick,
+  isProviderCriminalRecordVerified,
 }: BadgesSectionProps) => {
   const [badges, setBadges] = useState<string[]>(selectedBadges ?? []);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [verifyLoading, setVerifyLoading] = useState<boolean>(false);
   const [isVerified, setIsVerified] = useState<boolean>(!!userIsVerified);
   const selectedSet = useMemo(() => new Set(badges), [badges]);
+  const providerBadges = useMemo(
+    () =>
+      ALL_BADGES.filter(
+        (badge) =>
+          badge.id !== "crimilal_record_verified" ||
+          isProviderCriminalRecordVerified,
+      ),
+    [isProviderCriminalRecordVerified],
+  );
 
   const handleToggle = async (badgeId: string) => {
     try {
@@ -52,7 +61,7 @@ const BadgesSection = ({
       setBadges((prev) =>
         prev.includes(badgeId)
           ? prev.filter((b) => b !== badgeId)
-          : [...prev, badgeId]
+          : [...prev, badgeId],
       );
     } catch (err) {
       console.log(err);
@@ -74,42 +83,75 @@ const BadgesSection = ({
     }
   };
 
+  const openCriminalCheckPage = () => {
+    window.open(`/criminal-check/${userId}`, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className={styles.main}>
-      <h3 className={styles.title}>User Badges</h3>
-      <div className={styles.grid}>
-        <button
-          className={`${styles.badgeButton} ${isVerified ? styles.active : ""}`}
-          onClick={handleToggleVerified}
-          disabled={verifyLoading}
-        >
-          <img src={verifiedBadgeImg.src} alt="Verified user icon" />
-          <span>Verified user</span>
-        </button>
+      <div className={styles.category}>
+        <h3 className={styles.title}>User Badges</h3>
+        <div className={styles.list}>
+          <div className={styles.badgeRow}>
+            <div className={styles.badgeInfo}>
+              <img src={verifiedBadgeImg.src} alt="Verified user icon" />
+              <span className={styles.badgeTitle}>Verified user</span>
+            </div>
+            <button
+              type="button"
+              className={styles.suspendSwitch}
+              onClick={handleToggleVerified}
+              disabled={verifyLoading}
+            >
+              <span
+                className={`${styles.suspendSwitchUi} ${
+                  isVerified ? styles.suspendSwitchUiActive : ""
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
 
       {mode === "provider" && (
-        <>
+        <div className={styles.category}>
           <h3 className={styles.title}>Provider Badges</h3>
-          <div className={styles.grid}>
-            {ALL_BADGES.map((b) => {
-              const isActive = selectedSet.has(b.id);
+          <div className={styles.list}>
+            {providerBadges.map((b) => {
+              const isCriminalRecordBadge =
+                b.id === "crimilal_record_verified";
+              const isActive = isCriminalRecordBadge
+                ? isProviderCriminalRecordVerified
+                : selectedSet.has(b.id);
               return (
-                <button
-                  key={b.id}
-                  className={`${styles.badgeButton} ${
-                    isActive ? styles.active : ""
-                  }`}
-                  onClick={() => handleToggle(b.id)}
-                  disabled={!!loadingId}
-                >
-                  <img src={b.img} alt={`${b.label} icon`} />
-                  <span>{b.label}</span>
-                </button>
+                <div key={b.id} className={styles.badgeRow}>
+                  <div className={styles.badgeInfo}>
+                    <img src={b.img} alt={`${b.label} icon`} />
+                    <span className={styles.badgeTitle}>{b.label}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`${styles.suspendSwitch} ${
+                      isCriminalRecordBadge ? styles.readOnlySwitch : ""
+                    }`}
+                    onClick={() =>
+                      isCriminalRecordBadge
+                        ? openCriminalCheckPage()
+                        : handleToggle(b.id)
+                    }
+                    disabled={!isCriminalRecordBadge && !!loadingId}
+                  >
+                    <span
+                      className={`${styles.suspendSwitchUi} ${
+                        isActive ? styles.suspendSwitchUiActive : ""
+                      }`}
+                    />
+                  </button>
+                </div>
               );
             })}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

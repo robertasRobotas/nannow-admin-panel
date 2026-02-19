@@ -51,6 +51,7 @@ export type UserDetails = {
       orderId: string;
     }[];
     criminalRecord?: {
+      currentStatus?: string;
       status: string;
       statusAdminNotes: string[];
       code: string;

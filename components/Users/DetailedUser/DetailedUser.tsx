@@ -139,6 +139,11 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
       }
 
       case "badges": {
+        const criminalStatus = (
+          user.provider?.criminalRecord?.currentStatus ??
+          user.provider?.criminalRecord?.status ??
+          ""
+        ).toUpperCase();
         return (
           <BadgesSection
             mode={mode}
@@ -146,6 +151,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             providerUserId={user.user.id}
             userId={user.user.id}
             userIsVerified={user.user.isUserVerified}
+            isProviderCriminalRecordVerified={criminalStatus === "APPROVED"}
             onBackClick={() => {
               setSelectedSection("");
               setIsSelectedMenu(true);
