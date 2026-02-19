@@ -50,8 +50,12 @@ export type UserDetails = {
       startsAt: Date;
       orderId: string;
     }[];
+    criminalRecordStatus?: string;
     criminalRecord?: {
       currentStatus?: string;
+      applications?: {
+        id: string;
+      }[];
       status: string;
       statusAdminNotes: string[];
       code: string;

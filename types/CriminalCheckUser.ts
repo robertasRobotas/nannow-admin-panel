@@ -8,6 +8,14 @@ export type CriminalCheckUser = {
   providerId: string;
   createdAt: string;
   criminalRecordStatus: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
+  provider?: {
+    criminalRecord?: {
+      currentStatus?: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
+      applications?: {
+        id: string;
+      }[];
+    };
+  };
 };
 
 export type criminalRejectionReason = {

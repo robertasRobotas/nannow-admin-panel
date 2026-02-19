@@ -35,6 +35,23 @@ export const getInfoCards = (
 ): InfoCard[] => {
   const isSuspended =
     options?.suspendedSwitch?.value ?? data?.user?.isSuspendedByAdmin ?? false;
+  const newCriminalRecordStatus = data?.provider?.criminalRecord?.currentStatus;
+  const criminalRecordApplications = data?.provider?.criminalRecord?.applications;
+  const hasNewCriminalRecordFields =
+    typeof newCriminalRecordStatus === "string" ||
+    Array.isArray(criminalRecordApplications);
+  const hasCriminalRecordApplications =
+    Array.isArray(criminalRecordApplications) &&
+    criminalRecordApplications.length > 0;
+  const criminalRecordCardStatus =
+    hasNewCriminalRecordFields &&
+    hasCriminalRecordApplications &&
+    newCriminalRecordStatus
+      ? newCriminalRecordStatus
+      : (data?.provider?.criminalRecordStatus ??
+        newCriminalRecordStatus ??
+        "NOT_SUBMITTED");
+
   const baseCards: InfoCard[] = [
     {
       title: "Full name",
@@ -81,7 +98,7 @@ export const getInfoCards = (
       {
         title: "Criminal record check",
         icon: shieldImg,
-        value: data?.provider?.criminalRecord?.status ?? "—",
+        value: criminalRecordCardStatus,
         link: `/criminal-check/${data?.user?.id}`,
       },
       {

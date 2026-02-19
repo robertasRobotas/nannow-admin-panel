@@ -49,16 +49,23 @@
   gap: 20px;
 }
 
-.savedStatus {
-  color: #19ad3e;
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
+.currentStatus {
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.savedStatus img {
-  margin-right: 4px;
+.currentStatus img {
+  width: 16px;
+  height: 16px;
 }
 
 .applicationsSection {

@@ -141,7 +141,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
       case "badges": {
         const criminalStatus = (
           user.provider?.criminalRecord?.currentStatus ??
-          user.provider?.criminalRecord?.status ??
+          user.provider?.criminalRecordStatus ??
           ""
         ).toUpperCase();
         return (

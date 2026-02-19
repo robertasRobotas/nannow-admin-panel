@@ -19,6 +19,8 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const [isSuspendedLocal, setIsSuspendedLocal] = useState(
     user?.user?.isSuspendedByAdmin ?? false,
   );
+
+  console.log(user.provider);
   const [isSuspendedSaving, setIsSuspendedSaving] = useState(false);
   const cards = getInfoCards(user, mode, {
     suspendedSwitch: {

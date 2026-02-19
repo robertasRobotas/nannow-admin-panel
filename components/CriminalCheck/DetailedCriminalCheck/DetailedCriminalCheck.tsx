@@ -11,7 +11,6 @@ import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import {
   applyCriminalRecordApplicationDecision,
   getDocumentById,
-  updateCriminalCheckStatus,
 } from "@/pages/api/fetch";
 import VerifiedType from "./VerifiedType/VerifiedType";
 import RecordChangedAt from "./RecordChangedAt/RecordChangedAt";
@@ -19,7 +18,6 @@ import CriminalRecordCode from "./CriminalRecordCode/CriminalRecordCode";
 import CriminalRecordComment from "./CriminalRecordComment/CriminalRecordComment";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
 import { toast } from "react-toastify";
-import checkmarkImgNoOutline from "../../../assets/images/green-checkmark-no-outline.svg";
 import docImg from "../../../assets/images/doc.svg";
 
 type DetailedCriminalCheckProps = {
@@ -27,7 +25,6 @@ type DetailedCriminalCheckProps = {
 };
 
 const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
-  const [statusSaved, setStatusSaved] = useState(false);
   const [notes, setNotes] = useState(
     user?.provider?.criminalRecordStatusAdminNotes ?? [],
   );
@@ -62,12 +59,6 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
     : (user?.provider?.criminalRecordChangedAt ?? "");
   const verifiedAt = user?.provider?.criminalRecordVerifiedAt ?? "";
 
-  const options = [
-    { title: "Approved", icon: checkmarkImg.src, value: "APPROVED" },
-    { title: "Not submitted", icon: questionImg.src, value: "NOT_SUBMITTED" },
-    { title: "Pending", icon: clockImg.src, value: "PENDING" },
-    { title: "Rejected", icon: crossImg.src, value: "REJECTED" },
-  ];
   const statusPresentation: Record<
     "APPROVED" | "NOT_SUBMITTED" | "PENDING" | "REJECTED",
     { title: string; icon: string }
@@ -77,23 +68,26 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
     PENDING: { title: "Pending", icon: clockImg.src },
     REJECTED: { title: "Rejected", icon: crossImg.src },
   };
-
-  const [userCriminalCheckStatus, setUserCriminalCheckStatus] = useState(
-    Math.max(
-      0,
-      options.findIndex(
-        (o) =>
-          o.value ===
-          (user?.provider?.criminalRecord?.currentStatus ??
-            user?.provider?.criminalRecordStatus ??
-            "NOT_SUBMITTED"),
-      ),
-    ),
+  const newCurrentStatus = user?.provider?.criminalRecord?.currentStatus;
+  const hasNewCriminalRecordFields =
+    typeof newCurrentStatus === "string" || Array.isArray(applications);
+  const hasCriminalRecordApplications = applications.length > 0;
+  const rawCurrentStatus =
+    hasNewCriminalRecordFields &&
+    hasCriminalRecordApplications &&
+    newCurrentStatus
+      ? newCurrentStatus
+      : (user?.provider?.criminalRecordStatus ??
+        newCurrentStatus ??
+        "NOT_SUBMITTED");
+  const normalizedCurrentStatus = (
+    rawCurrentStatus.toUpperCase() as "APPROVED" | "NOT_SUBMITTED" | "PENDING" | "REJECTED"
   );
-
-  const [selectedOption, setSelectedOption] = useState<number>(
-    userCriminalCheckStatus,
-  );
+  const currentStatus =
+    normalizedCurrentStatus in statusPresentation
+      ? normalizedCurrentStatus
+      : "NOT_SUBMITTED";
+  const currentStatusUi = statusPresentation[currentStatus];
 
   const getFileName = (url: string) => {
     const m = url?.match(/[^\\/]+$/);
@@ -205,22 +199,6 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
     }
   };
 
-  const onUpdateCriminalCheck = async () => {
-    try {
-      const response = await updateCriminalCheckStatus(
-        user.id,
-        options[selectedOption].value,
-      );
-      if (response.status === 200) {
-        setUserCriminalCheckStatus(selectedOption);
-        setStatusSaved(true);
-        toast("Successfully updated criminal check status.");
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
   return (
     <div className={styles.main}>
       <div className={styles.heading}>
@@ -234,24 +212,10 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
           >{`${user.firstName} ${user.lastName}`}</span>
         </div>
         <div className={styles.buttons}>
-          {statusSaved && (
-            <div className={styles.savedStatus}>
-              <img src={checkmarkImgNoOutline.src} alt="Saved" />
-              <span>Saved</span>
-            </div>
-          )}
-          <DropDownButton
-            options={options}
-            selectedOption={selectedOption}
-            setSelectedOption={setSelectedOption}
-            onClickOption={() => setStatusSaved(false)}
-          />
-          <Button
-            title="Update"
-            type="BLACK"
-            onClick={() => onUpdateCriminalCheck()}
-            isDisabled={selectedOption === userCriminalCheckStatus}
-          />
+          <div className={styles.currentStatus}>
+            <img src={currentStatusUi.icon} alt={currentStatusUi.title} />
+            <span>{currentStatusUi.title}</span>
+          </div>
         </div>
       </div>
       <div className={styles.criminalCheckInfo}>
