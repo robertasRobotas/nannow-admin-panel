@@ -4,22 +4,26 @@ type HeaderButtonProps = {
   title: string;
   isActive?: boolean;
   justify?: string;
-  isAttention?: boolean;
+  attentionNumber?: number;
 };
 
 const HeaderButton = ({
   title,
   isActive = false,
   justify = "JUSTIFY-CENTER",
-  isAttention = false,
+  attentionNumber,
 }: HeaderButtonProps) => {
+  const showAttention =
+    typeof attentionNumber === "number" && attentionNumber > 0;
+
   return (
     <div
-      className={`${styles.main} ${styles[justify]} ${
-        isActive && styles.active
-      } ${isAttention && styles.attention}`}
+      className={`${styles.main} ${styles[justify]} ${isActive && styles.active}`}
     >
-      {title}
+      <span className={styles.title}>{title}</span>
+      {showAttention && (
+        <span className={styles.attentionBubble}>{attentionNumber}</span>
+      )}
     </div>
   );
 };

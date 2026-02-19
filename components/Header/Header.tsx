@@ -17,8 +17,8 @@ import axios from "axios";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
-  const [hasNotEndedOrders, setHasNotEndedOrders] = useState(false);
-  const [hasNotPaidOrders, setHasNotPaidOrders] = useState(false);
+  const [notEndedOrdersCount, setNotEndedOrdersCount] = useState(0);
+  const [notPaidOrdersCount, setNotPaidOrdersCount] = useState(0);
   const { pathname } = useRouter();
 
   const router = useRouter();
@@ -33,7 +33,7 @@ const Header = () => {
           response.data?.count ??
           response.data?.result ??
           0;
-        setHasNotEndedOrders(Number(count) > 0);
+        setNotEndedOrdersCount(Number(count) || 0);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -52,7 +52,7 @@ const Header = () => {
           response.data?.count ??
           response.data?.result ??
           0;
-        setHasNotPaidOrders(Number(count) > 0);
+        setNotPaidOrdersCount(Number(count) || 0);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -66,6 +66,8 @@ const Header = () => {
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
   }, [router]);
+
+  const ordersAttentionNumber = notEndedOrdersCount + notPaidOrdersCount;
 
   return (
     <>
@@ -85,9 +87,10 @@ const Header = () => {
                   <HeaderButton
                     title={l.title}
                     isActive={`/${pathname.split("/")[1]}` === l.link}
-                    isAttention={
-                      l.link === "/orders" &&
-                      (hasNotEndedOrders || hasNotPaidOrders)
+                    attentionNumber={
+                      l.link === "/orders" && ordersAttentionNumber > 0
+                        ? ordersAttentionNumber
+                        : undefined
                     }
                   />
                 </Link>
@@ -110,7 +113,7 @@ const Header = () => {
         <HeaderMenu
           links={links}
           onClose={() => setMenuDisplayed(false)}
-          hasNotEndedOrders={hasNotEndedOrders}
+          ordersAttentionNumber={ordersAttentionNumber}
         />
       )}
     </>

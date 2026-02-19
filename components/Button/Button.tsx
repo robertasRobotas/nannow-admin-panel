@@ -7,6 +7,7 @@ type ButtonProps = {
   title: string;
   type: string;
   onClick: () => void;
+  attentionNumber?: number;
   imgUrl?: string;
   arrowDown?: boolean;
   isSelected?: boolean;
@@ -22,6 +23,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       title,
       type,
       onClick,
+      attentionNumber,
       imgUrl,
       arrowDown,
       isSelected = false,
@@ -32,6 +34,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    const showAttentionNumber =
+      typeof attentionNumber === "number" && attentionNumber > 0;
+
     return (
       <button
         style={{ height: `${height}px` }}
@@ -46,7 +51,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading && <span className={styles.spinner} aria-hidden="true" />}
         {imgUrl && <img className={styles.icon} src={imgUrl} alt="Icon" />}
-        {title}
+        <span>{title}</span>
+        {showAttentionNumber && (
+          <span className={styles.attentionBubble}>{attentionNumber}</span>
+        )}
         {arrowDown && (
           <img className={styles.arrowDown} src={arrowDownImg.src} alt="" />
         )}

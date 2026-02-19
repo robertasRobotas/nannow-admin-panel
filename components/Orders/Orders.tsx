@@ -156,24 +156,30 @@ const Orders = () => {
           selectedOption={selectedOption}
           setSelectedOption={setSelectedOption}
         />
-        <div style={{ marginLeft: 12 }}>
-          <Button
-            title={`Not ended (${notEndedOrdersQTY})`}
-            type="DELETE"
-            onClick={() => {
-              handleIgnoredOrdersClick();
-            }}
-          />
-        </div>
-        <div style={{ marginLeft: 12 }}>
-          <Button
-            title={`Ended but not paid (${notPaidOrdersQTY})`}
-            type="DELETE"
-            onClick={() => {
-              handleNotPaidOrdersClick();
-            }}
-          />
-        </div>
+        {notEndedOrdersQTY > 0 && (
+          <div style={{ marginLeft: 12 }}>
+            <Button
+              title="Not ended"
+              type="PLAIN"
+              attentionNumber={notEndedOrdersQTY}
+              onClick={() => {
+                handleIgnoredOrdersClick();
+              }}
+            />
+          </div>
+        )}
+        {notPaidOrdersQTY > 0 && (
+          <div style={{ marginLeft: 12 }}>
+            <Button
+              title="Ended but not paid"
+              type="PLAIN"
+              attentionNumber={notPaidOrdersQTY}
+              onClick={() => {
+                handleNotPaidOrdersClick();
+              }}
+            />
+          </div>
+        )}
         <div style={{ marginLeft: "auto" }}>
           <SearchBar
             placeholder="Type order ID"

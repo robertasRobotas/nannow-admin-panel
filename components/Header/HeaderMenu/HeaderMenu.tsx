@@ -11,13 +11,13 @@ import { useRouter } from "next/router";
 type HeaderMenuProps = {
   links: HeaderLink[];
   onClose: () => void;
-  hasNotEndedOrders: boolean;
+  ordersAttentionNumber?: number;
 };
 
 const HeaderMenu = ({
   links,
   onClose,
-  hasNotEndedOrders,
+  ordersAttentionNumber,
 }: HeaderMenuProps) => {
   const [isClosing, setClosing] = useState(false);
   const { pathname } = useRouter();
@@ -48,7 +48,11 @@ const HeaderMenu = ({
                   title={l.title}
                   isActive={pathname === l.link}
                   justify="JUSTIFY-START"
-                  isAttention={l.link === "/orders" && hasNotEndedOrders}
+                  attentionNumber={
+                    l.link === "/orders" && (ordersAttentionNumber ?? 0) > 0
+                      ? ordersAttentionNumber
+                      : undefined
+                  }
                 />
               </Link>
             </li>
