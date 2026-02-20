@@ -87,7 +87,7 @@ const CriminalCheck = () => {
         />
         <Button
           onClick={() => setSelected("NOT_SUBMITTED")}
-          title="Not Provided"
+          title="Not submitted"
           type="PLAIN"
           isSelected={selected === "NOT_SUBMITTED"}
         />
