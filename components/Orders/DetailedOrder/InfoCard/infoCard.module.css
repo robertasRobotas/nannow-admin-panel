@@ -1,22 +1,27 @@
 .main {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 1 auto;
+  height: 96px;
   padding: 20px;
   align-items: center;
   gap: 16px;
   border-radius: 20px;
   background: rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
 
 .SPAN3 {
-  grid-column: span 3;
+  /* preserved for compatibility, layout is content-sized */
 }
 
 .SPAN2 {
-  grid-column: span 2;
+  /* preserved for compatibility, layout is content-sized */
 }
 
 .SPAN1 {
-  grid-column: span 1;
+  /* preserved for compatibility, layout is content-sized */
 }
 
 .infoContent {
@@ -48,5 +53,7 @@
     justify-content: center;
     align-items: start;
     gap: 10px;
+    width: 100%;
+    height: auto;
   }
 }

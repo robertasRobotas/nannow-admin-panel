@@ -27,9 +27,9 @@
 }
 
 .orderInfo {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-  grid-template-rows: auto auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 20px;
   padding-bottom: 40px;
 }
@@ -341,7 +341,6 @@
   }
 
   .orderInfo {
-    grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
 
