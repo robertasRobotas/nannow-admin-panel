@@ -115,6 +115,8 @@ export type DetailedOrderType = {
   approvedProvider: {
     id: string;
     userId: string;
+    activityNumber?: string;
+    activityNo?: string;
     badgesIds: string[];
     languages: string[];
     operationCountry: string;
@@ -138,6 +140,7 @@ export type DetailedOrderType = {
       latitude: number;
       longitude: number;
     };
+    acactivityNumber: string;
   };
   pendingProviders: {
     id: string;
@@ -169,4 +172,5 @@ export type DetailedOrderType = {
   isReleasedFundsToProvider: boolean;
   releasedFundsToProviderAt: string | null;
   reviews?: ReviewType[];
+  invoiceDate?: string;
 };

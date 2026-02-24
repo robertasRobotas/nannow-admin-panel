@@ -18,6 +18,9 @@ import ProcessCard from "./ProcessCard/ProcessCard";
 import {
   cancelOrderByAdmin,
   finishOrderByAdmin,
+  getOrderInvoice,
+  getOrderProviderInvoice,
+  getOrderProviderReceipt,
   releaseFundsByOrderId,
 } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
@@ -40,6 +43,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isProblemMenuOpen, setIsProblemMenuOpen] = useState(false);
   const [isFinishingOrder, setIsFinishingOrder] = useState(false);
   const [isCancelingOrder, setIsCancelingOrder] = useState(false);
+  const [isInvoiceLoading, setIsInvoiceLoading] = useState(false);
+  const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
+    useState(false);
   const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
@@ -79,7 +85,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
 
   const getUserName = (name: string, lastName: string) =>
-    `${name ?? "Deleted"}\n${lastName ?? "User"}`;
+    `${name ?? "Deleted"} ${lastName ?? "User"}`;
 
   const sitterUser = order?.approvedProvider;
   const parentUser = order?.clientUser;
@@ -164,6 +170,96 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const closeConfirmModal = () => setIsConfirmModalOpen(false);
 
+  const openOrderInvoice = async () => {
+    if (isInvoiceLoading) return;
+    try {
+      setIsInvoiceLoading(true);
+      const response = await getOrderInvoice(order.id);
+      const pdfBlob =
+        response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data], { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(pdfBlob);
+
+      const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+      console.error("Failed to get invoice", error);
+    } finally {
+      setIsInvoiceLoading(false);
+    }
+  };
+
+  const openProviderInvoice = async () => {
+    if (isProviderInvoiceLoading) return;
+    try {
+      setIsProviderInvoiceLoading(true);
+      const response = await getOrderProviderInvoice(order.id);
+      const pdfBlob =
+        response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data], { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(pdfBlob);
+
+      const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+      console.error("Failed to get provider invoice", error);
+    } finally {
+      setIsProviderInvoiceLoading(false);
+    }
+  };
+
+  const openProviderReceipt = async () => {
+    if (isProviderInvoiceLoading) return;
+    try {
+      setIsProviderInvoiceLoading(true);
+      const response = await getOrderProviderReceipt(order.id);
+      const pdfBlob =
+        response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data], { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(pdfBlob);
+
+      const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+      console.error("Failed to get provider receipt", error);
+    } finally {
+      setIsProviderInvoiceLoading(false);
+    }
+  };
+
   const releasedFundsAt = order?.releasedFundsToProviderAt
     ? new Date(order.releasedFundsToProviderAt).toLocaleString("en-US", {
         year: "numeric",
@@ -180,6 +276,13 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     const isProviderNotSelected = order.approvedProviderId === null;
     return isProviderNotSelected ? "Not selected yet" : fullName;
   };
+
+  const hasProviderActivityNumber = Boolean(
+    order?.approvedProvider?.activityNumber || order?.approvedProvider?.activityNo,
+  );
+  const shouldShowProviderDocumentCard =
+    order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" &&
+    !!order?.approvedProviderId;
 
   return (
     <div className={styles.main}>
@@ -248,6 +351,58 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             type={isMobile ? "SPAN2" : "SPAN2"}
             info={childrenNames}
           />
+          {order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" && (
+            <InfoCard
+              title="Invoice from nannow"
+              iconImgUrl={documentImg.src}
+              type={isMobile ? "SPAN2" : "SPAN1"}
+              info={
+                <Button
+                  title={
+                    order?.invoiceDate ? "Open invoice" : "Generate invoice"
+                  }
+                  type="OUTLINED"
+                  onClick={openOrderInvoice}
+                  alignBaseline={true}
+                  isLoading={isInvoiceLoading}
+                  isDisabled={isInvoiceLoading}
+                />
+              }
+            />
+          )}
+          {shouldShowProviderDocumentCard && (
+              <InfoCard
+                title={
+                  hasProviderActivityNumber
+                    ? "Invoice from provider"
+                    : "Receipt from provider"
+                }
+                iconImgUrl={documentImg.src}
+                type={isMobile ? "SPAN2" : "SPAN1"}
+                info={
+                  <Button
+                    title={
+                      hasProviderActivityNumber
+                        ? order?.invoiceDate
+                          ? "Open invoice"
+                          : "Generate invoice"
+                        : order?.invoiceDate
+                          ? "Open receipt"
+                          : "Generate receipt"
+                    }
+                    type="OUTLINED"
+                    onClick={
+                      hasProviderActivityNumber
+                        ? openProviderInvoice
+                        : openProviderReceipt
+                    }
+                    alignBaseline={true}
+                    isLoading={isProviderInvoiceLoading}
+                    isDisabled={isProviderInvoiceLoading}
+                  />
+                }
+              />
+          )}
         </div>
         {pendingProviders.length > 0 && (
           <div className={styles.pendingProvidersSection}>
