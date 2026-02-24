@@ -354,6 +354,45 @@ export const getOrderById = async (id: string) => {
   return response;
 };
 
+export const getOrderInvoice = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/orders/${id}/invoice`, {
+    headers: {
+      Authorization: jwt,
+    },
+    responseType: "blob",
+  });
+  return response;
+};
+
+export const getOrderProviderInvoice = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/${id}/provider-invoice`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+      responseType: "blob",
+    },
+  );
+  return response;
+};
+
+export const getOrderProviderReceipt = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/${id}/provider-receipt`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+      responseType: "blob",
+    },
+  );
+  return response;
+};
+
 export const releaseFundsByOrderId = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(
