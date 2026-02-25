@@ -17,6 +17,10 @@ export type InfoCard = {
   icon: StaticImageData;
   value: string | number;
   link?: string;
+  actionButton?: {
+    title: string;
+    action: "DELETE_STRIPE";
+  };
   booleanSwitch?: {
     value: boolean;
     onChange: () => void;
@@ -122,6 +126,10 @@ export const getInfoCards = (
               Number(data?.provider?.stripeAccountVerifiedAt) * 1000,
             ).toLocaleString()
           : "Not verified",
+        actionButton: {
+          title: "Delete Stripe acc",
+          action: "DELETE_STRIPE",
+        },
       },
       {
         title: "Availability status switched at",
