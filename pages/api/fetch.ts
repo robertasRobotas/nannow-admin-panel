@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-//const BASE_URL = "http://192.168.1.192:8080/v1";
+// const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -318,6 +318,52 @@ export const getOrders = async (status: string, startIndex: number) => {
       },
     },
   );
+  return response;
+};
+
+export const getProviderPayouts = async (params: {
+  userId: string;
+  startIndex?: number;
+  pageSize?: number;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/payouts`, {
+    params: {
+      userId: params.userId,
+      startIndex: params.startIndex ?? 0,
+      pageSize: params.pageSize ?? 20,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getClientPayments = async (params: {
+  userId: string;
+  startIndex?: number;
+  pageSize?: number;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/payments`, {
+    params: {
+      userId: params.userId,
+      startIndex: params.startIndex ?? 0,
+      pageSize: params.pageSize ?? 20,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
   return response;
 };
 

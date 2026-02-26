@@ -15,6 +15,8 @@ import AddAdminReviewSection from "./AddAdminReviewSection/AddAdminReviewSection
 import BookedTimeSlotsSection from "./BookedTimeSlotsSection/BookedTimeSlotsSection";
 import OrdersSection from "./OrdersSection/OrdersSection";
 import ClientOrdersSection from "./ClientOrdersSection/ClientOrdersSection";
+import PayoutsSection from "./PayoutsSection/PayoutsSection";
+import PaymentsSection from "./PaymentsSection/PaymentsSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -54,9 +56,33 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
         );
       }
 
+      case "payouts": {
+        return (
+          <PayoutsSection
+            user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
       case "client_orders": {
         return (
           <ClientOrdersSection
+            user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+              setIsSelectedMenu(true);
+            }}
+          />
+        );
+      }
+
+      case "payments": {
+        return (
+          <PaymentsSection
             user={user}
             onBackClick={() => {
               setSelectedSection("");

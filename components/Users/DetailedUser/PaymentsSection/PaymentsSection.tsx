@@ -1,0 +1,322 @@
+import styles from "../PayoutsSection/payoutsSection.module.css";
+import { nunito } from "@/helpers/fonts";
+import Button from "@/components/Button/Button";
+import { useMediaQuery } from "react-responsive";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { UserDetails } from "@/types/Client";
+import { GetPaymentsResponse, Payment } from "@/types/Payment";
+import { getClientPayments } from "@/pages/api/fetch";
+import axios from "axios";
+import { useRouter } from "next/router";
+import ReactPaginate from "react-paginate";
+import paginateStyles from "@/styles/paginate.module.css";
+import Order from "@/components/Orders/OrdersList/Order/Order";
+import defaultUserImg from "@/assets/images/default-avatar.png";
+import calendarImg from "@/assets/images/calendar.svg";
+
+type PaymentsSectionProps = {
+  user: UserDetails;
+  onBackClick: () => void;
+};
+
+const toInputDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateTime = (value?: string) =>
+  value
+    ? new Date(value).toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    : "—";
+
+const formatMoney = (amount: number, currency: string) => {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency || "EUR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount ?? 0);
+  } catch {
+    return `${amount ?? 0} ${currency || "EUR"}`;
+  }
+};
+
+const openNativeDatePicker = (input: HTMLInputElement | null) => {
+  if (!input) return;
+  input.focus();
+  const pickerInput = input as HTMLInputElement & {
+    showPicker?: () => void;
+  };
+  if (typeof pickerInput.showPicker === "function") {
+    pickerInput.showPicker();
+    return;
+  }
+  input.click();
+};
+
+const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
+  const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
+  const router = useRouter();
+
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const defaultStartDate = `${currentYear}-01-01`;
+  const defaultEndDate = `${currentYear}-12-31`;
+
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
+  const [appliedStartDate, setAppliedStartDate] = useState(defaultStartDate);
+  const [appliedEndDate, setAppliedEndDate] = useState(defaultEndDate);
+
+  const [itemOffset, setItemOffset] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [pageCount, setPageCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [subtotalPaidAmt, setSubtotalPaidAmt] = useState(0);
+  const startDateInputRef = useRef<HTMLInputElement>(null);
+  const endDateInputRef = useRef<HTMLInputElement>(null);
+
+  const clientUserId = user?.user?.id;
+
+  const fetchPayments = useCallback(async () => {
+    if (!clientUserId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getClientPayments({
+        userId: clientUserId,
+        startIndex: itemOffset,
+        pageSize: itemsPerPage,
+        startDate: appliedStartDate,
+        endDate: appliedEndDate,
+      });
+      const data = response.data as GetPaymentsResponse;
+      const items = Array.isArray(data.payments)
+        ? data.payments
+        : Array.isArray(data.payouts)
+          ? data.payouts
+          : [];
+      setPayments(items);
+      setTotalCount(data.totalCount ?? 0);
+      setSubtotalPaidAmt(data.subtotalPaidAmt ?? data.subtotalAmount ?? 0);
+      setPageCount(
+        Math.ceil((data.totalCount ?? 0) / (itemsPerPage > 0 ? itemsPerPage : 1)),
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.message);
+        if (err.status === 401) {
+          router.push("/");
+        }
+      } else {
+        setError("Failed to load payments");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [appliedEndDate, appliedStartDate, clientUserId, itemOffset, itemsPerPage, router]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+
+  const onApplyFilters = () => {
+    const safeStart = startDate || toInputDate(new Date(currentYear, 0, 1));
+    const safeEnd = endDate || toInputDate(new Date(currentYear, 11, 31));
+    setAppliedStartDate(safeStart);
+    setAppliedEndDate(safeEnd);
+    setItemOffset(0);
+  };
+
+  const handlePageClick = (event: { selected: number }) => {
+    const newOffset = event.selected * itemsPerPage;
+    setItemOffset(newOffset);
+  };
+
+  const getUserImage = (imgUrl?: string) =>
+    imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
+
+  const getUserName = (firstName?: string, lastName?: string) =>
+    `${firstName ?? "Deleted"} ${lastName ?? "User"}`;
+
+  return (
+    <div className={styles.main}>
+      <h3 className={`${styles.title} ${nunito.className}`}>Payments</h3>
+
+      <div className={styles.topRow}>
+        <div className={styles.filters}>
+          <div className={styles.field}>
+            <label>Start date</label>
+            <div className={styles.dateInputWrap}>
+              <input
+                ref={startDateInputRef}
+                type="date"
+                className={styles.dateInput}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.datePickerBtn}
+                onClick={() => openNativeDatePicker(startDateInputRef.current)}
+                aria-label="Open start date picker"
+              >
+                <img src={calendarImg.src} alt="" />
+              </button>
+            </div>
+          </div>
+          <div className={styles.field}>
+            <label>End date</label>
+            <div className={styles.dateInputWrap}>
+              <input
+                ref={endDateInputRef}
+                type="date"
+                className={styles.dateInput}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.datePickerBtn}
+                onClick={() => openNativeDatePicker(endDateInputRef.current)}
+                aria-label="Open end date picker"
+              >
+                <img src={calendarImg.src} alt="" />
+              </button>
+            </div>
+          </div>
+          <div className={styles.applyBtnWrap}>
+            <Button title="Apply" type="OUTLINED" onClick={onApplyFilters} />
+          </div>
+        </div>
+        <div className={`${styles.subtotal} ${nunito.className}`}>
+          Subtotal paid: {formatMoney(subtotalPaidAmt, "EUR")}
+        </div>
+      </div>
+
+      {loading && <div className={styles.empty}>Loading...</div>}
+      {error && <div className={styles.empty}>{error}</div>}
+      {!loading && !error && payments.length === 0 && (
+        <div className={styles.empty}>No payments for selected dates</div>
+      )}
+
+      {!loading && !error && payments.length > 0 && (
+        <>
+          <div className={styles.list}>
+            {payments.map((payment) => {
+              const order = payment.order;
+              const amount = payment.paidAmt ?? payment.amount ?? 0;
+              const currency = payment.currency ?? "EUR";
+              return (
+                <div key={payment.id} className={styles.row}>
+                  <div className={styles.rowMeta}>
+                    <div className={styles.metaItem}>
+                      Date: {formatDateTime(payment.createdAt ?? payment.updatedAt)}
+                    </div>
+                    <div className={styles.metaItem}>
+                      Amount: {formatMoney(amount, currency)}
+                    </div>
+                  </div>
+
+                  {order ? (
+                    <Order
+                      key={order.id}
+                      providerImgUrl={getUserImage(order.approvedProvider?.user?.imgUrl)}
+                      clientImgUrl={getUserImage(order.clientUser?.imgUrl)}
+                      id={order.id}
+                      startsAt={order.startsAt}
+                      endsAt={order.endsAt}
+                      providerName={getUserName(
+                        order.approvedProvider?.user?.firstName,
+                        order.approvedProvider?.user?.lastName,
+                      )}
+                      clientName={`${getUserName(
+                        order.clientUser?.firstName,
+                        order.clientUser?.lastName,
+                      )} (Client)`}
+                      status={order.status}
+                      isProviderIgnoredEndNotification={
+                        order.isProviderIgnoredEndNotification
+                      }
+                      pendingProvidersCount={order.pendingProvidersCount}
+                    />
+                  ) : (
+                    <div className={styles.orderFallback}>
+                      <div className={styles.orderId}>Order ID: {payment.orderId}</div>
+                      <Button
+                        title="Open order"
+                        type="OUTLINED"
+                        onClick={() => router.push(`/orders/${payment.orderId}`)}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className={styles.paginationRow}>
+            <div className={styles.pageSize}>
+              <span>Page size</span>
+              <select
+                className={styles.pageSizeSelect}
+                value={itemsPerPage}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setItemsPerPage(next);
+                  setItemOffset(0);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <span>Total: {totalCount}</span>
+            </div>
+
+            <ReactPaginate
+              breakLabel="..."
+              nextLabel=""
+              onPageChange={handlePageClick}
+              pageRangeDisplayed={5}
+              pageCount={pageCount}
+              forcePage={Math.floor(itemOffset / itemsPerPage)}
+              previousLabel=""
+              renderOnZeroPageCount={null}
+              containerClassName={paginateStyles.paginateWrapper}
+              pageClassName={paginateStyles.pageBtn}
+              pageLinkClassName={paginateStyles.pageLink}
+              activeClassName={paginateStyles.activePage}
+              nextClassName={paginateStyles.nextPageBtn}
+              nextLinkClassName={paginateStyles.nextLink}
+              previousClassName={paginateStyles.prevPageBtn}
+              previousLinkClassName={paginateStyles.prevLink}
+              breakClassName={paginateStyles.break}
+            />
+          </div>
+        </>
+      )}
+
+      {isMobile && (
+        <div className={styles.backBtnWrapper}>
+          <Button title="Back" onClick={onBackClick} type="OUTLINED" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PaymentsSection;

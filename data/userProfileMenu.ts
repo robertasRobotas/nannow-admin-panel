@@ -33,12 +33,24 @@ export const getButtonsData = (
       id: "orders",
       visibleFor: ["provider"],
     },
+    {
+      title: "Payouts",
+      icon: DocWithCheckmarkIcon,
+      id: "payouts",
+      visibleFor: ["provider"],
+    },
 
     {
       title: "Client Orders",
       icon: DocWithCheckmarkIcon,
       number: user?.orders?.length ?? 0,
       id: "client_orders",
+      visibleFor: ["client"],
+    },
+    {
+      title: "Payments",
+      icon: DocWithCheckmarkIcon,
+      id: "payments",
       visibleFor: ["client"],
     },
     {

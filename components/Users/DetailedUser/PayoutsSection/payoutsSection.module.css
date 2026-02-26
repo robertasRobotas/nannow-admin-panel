@@ -1,0 +1,178 @@
+.main {
+  padding: 50px;
+}
+
+.title {
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.48px;
+}
+
+.topRow {
+  margin-top: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.applyBtnWrap {
+  display: flex;
+  align-items: flex-end;
+}
+
+.dateInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dateInput {
+  height: 40px;
+  width: 150px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  padding: 0 30px 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  background: #fff;
+}
+
+.datePickerBtn {
+  all: unset;
+  position: absolute;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.datePickerBtn img {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.subtotal {
+  color: #000;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.32px;
+}
+
+.list {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rowMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.orderFallback {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.orderId {
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.empty {
+  margin-top: 24px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.paginationRow {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pageSize {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pageSizeSelect {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.backBtnWrapper {
+  padding-top: 1rem;
+}
+
+@media (max-width: 936px) {
+  .main {
+    padding: 20px;
+  }
+
+  .filters {
+    flex-wrap: wrap;
+  }
+}
