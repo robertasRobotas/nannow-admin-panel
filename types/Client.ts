@@ -45,6 +45,7 @@ export type UserDetails = {
     stripeAccountVerifiedAt?: string;
     isAvailableStatusChangedAt?: string;
     isAvailableStatus?: boolean;
+    baseProviderRate: number;
     unavailablePeriods?: {
       endsAt: Date;
       startsAt: Date;

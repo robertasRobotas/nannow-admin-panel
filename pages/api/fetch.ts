@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-// const BASE_URL = "http://192.168.1.192:8080/v1";
+//const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -191,6 +191,26 @@ export const deleteProviderStripeAccount = async (userId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.delete(
     `${BASE_URL}/admin/providers/${userId}/stripe-account`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+
+  return response;
+};
+
+export const updateProviderFields = async (
+  providerId: string,
+  updates: {
+    baseProviderRate?: number;
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/providers/${providerId}/fields`,
+    { updates },
     {
       headers: {
         Authorization: jwt,

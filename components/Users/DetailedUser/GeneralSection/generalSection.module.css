@@ -151,3 +151,40 @@
   gap: 12px;
   margin-top: 8px;
 }
+
+.inputBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inputLabel {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.textInput {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #f1f1f1;
+  color: #000;
+  caret-color: #000;
+  color-scheme: light;
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: #000;
+}
+
+.inputError {
+  color: #ff3b30;
+  font-size: 12px;
+  font-weight: 600;
+}

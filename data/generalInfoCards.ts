@@ -19,7 +19,7 @@ export type InfoCard = {
   link?: string;
   actionButton?: {
     title: string;
-    action: "DELETE_STRIPE";
+    action: "DELETE_STRIPE" | "CHANGE_BASE_PRICE";
   };
   booleanSwitch?: {
     value: boolean;
@@ -112,6 +112,18 @@ export const getInfoCards = (
           typeof data?.provider?.totalEarnings === "number"
             ? `${data.provider.totalEarnings}`
             : "0",
+      },
+      {
+        title: "Base price",
+        icon: walletImg,
+        value:
+          typeof data?.provider?.baseProviderRate === "number"
+            ? `€ ${data.provider.baseProviderRate.toFixed(2)}`
+            : "—",
+        actionButton: {
+          title: "Change",
+          action: "CHANGE_BASE_PRICE",
+        },
       },
       {
         title: "City",
