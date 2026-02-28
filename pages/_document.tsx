@@ -6,12 +6,16 @@ export default function Document() {
       <Head>
         <link
           rel="icon"
-          href="/site-icon.svg?v=2"
+          href="/nannow-icon-black-64x64.svg"
           sizes="any"
           type="image/svg+xml"
         />
-        <link rel="shortcut icon" href="/site-icon.svg?v=2" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/site-icon.svg?v=2" />
+        <link
+          rel="shortcut icon"
+          href="/nannow-icon-black-64x64.svg"
+          type="image/svg+xml"
+        />
+        <link rel="apple-touch-icon" href="/nannow-icon-black-64x64.svg" />
       </Head>
       <body>
         <Main />
