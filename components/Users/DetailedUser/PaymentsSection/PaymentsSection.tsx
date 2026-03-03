@@ -5,7 +5,7 @@ import { useMediaQuery } from "react-responsive";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UserDetails } from "@/types/Client";
 import { GetPaymentsResponse, Payment } from "@/types/Payment";
-import { getClientPayments } from "@/pages/api/fetch";
+import { getClientPayments, getOrderById } from "@/pages/api/fetch";
 import axios from "axios";
 import { useRouter } from "next/router";
 import ReactPaginate from "react-paginate";
@@ -13,6 +13,7 @@ import paginateStyles from "@/styles/paginate.module.css";
 import Order from "@/components/Orders/OrdersList/Order/Order";
 import defaultUserImg from "@/assets/images/default-avatar.png";
 import calendarImg from "@/assets/images/calendar.svg";
+import { OrderType } from "@/types/Order";
 
 type PaymentsSectionProps = {
   user: UserDetails;
@@ -64,6 +65,24 @@ const openNativeDatePicker = (input: HTMLInputElement | null) => {
   input.click();
 };
 
+const extractPaymentOrderId = (payment: Payment): string | null => {
+  const candidateKeys = [
+    payment.orderId,
+    payment.order?.id,
+    (payment as unknown as { orderID?: unknown }).orderID,
+    (payment as unknown as { order_id?: unknown }).order_id,
+    (payment as unknown as { relatedOrderId?: unknown }).relatedOrderId,
+  ];
+
+  for (const key of candidateKeys) {
+    if (typeof key === "string" && key.trim().length > 0) {
+      return key.trim();
+    }
+  }
+
+  return null;
+};
+
 const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
@@ -85,6 +104,7 @@ const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [ordersById, setOrdersById] = useState<Record<string, OrderType>>({});
   const [subtotalPaidAmt, setSubtotalPaidAmt] = useState(0);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
@@ -113,7 +133,9 @@ const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
       setTotalCount(data.totalCount ?? 0);
       setSubtotalPaidAmt(data.subtotalPaidAmt ?? data.subtotalAmount ?? 0);
       setPageCount(
-        Math.ceil((data.totalCount ?? 0) / (itemsPerPage > 0 ? itemsPerPage : 1)),
+        Math.ceil(
+          (data.totalCount ?? 0) / (itemsPerPage > 0 ? itemsPerPage : 1),
+        ),
       );
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -127,11 +149,58 @@ const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, [appliedEndDate, appliedStartDate, clientUserId, itemOffset, itemsPerPage, router]);
+  }, [
+    appliedEndDate,
+    appliedStartDate,
+    clientUserId,
+    itemOffset,
+    itemsPerPage,
+    router,
+  ]);
 
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
+
+  useEffect(() => {
+    const missingOrderIds = Array.from(
+      new Set(
+        payments
+          .filter((payment) => !payment.order)
+          .map(extractPaymentOrderId)
+          .filter(
+            (id): id is string => Boolean(id) && !ordersById[id as string],
+          ),
+      ),
+    );
+
+    if (missingOrderIds.length === 0) return;
+
+    const fetchMissingOrders = async () => {
+      const results = await Promise.allSettled(
+        missingOrderIds.map(async (orderId) => {
+          const response = await getOrderById(orderId);
+          const payload = response.data as { result?: OrderType };
+          return payload.result;
+        }),
+      );
+
+      const nextMap: Record<string, OrderType> = {};
+      for (const result of results) {
+        if (result.status !== "fulfilled") continue;
+        const order = result.value;
+        if (order && order.id) {
+          nextMap[order.id] = order;
+        }
+      }
+
+      if (Object.keys(nextMap).length > 0) {
+        setOrdersById((prev) => ({ ...prev, ...nextMap }));
+      }
+    };
+
+    fetchMissingOrders();
+  }, [ordersById, payments]);
 
   const onApplyFilters = () => {
     const safeStart = startDate || toInputDate(new Date(currentYear, 0, 1));
@@ -217,14 +286,18 @@ const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
         <>
           <div className={styles.list}>
             {payments.map((payment) => {
-              const order = payment.order;
+              const paymentOrderId = extractPaymentOrderId(payment);
+              const order =
+                payment.order ??
+                (paymentOrderId ? ordersById[paymentOrderId] : undefined);
               const amount = payment.paidAmt ?? payment.amount ?? 0;
               const currency = payment.currency ?? "EUR";
               return (
                 <div key={payment.id} className={styles.row}>
                   <div className={styles.rowMeta}>
                     <div className={styles.metaItem}>
-                      Date: {formatDateTime(payment.createdAt ?? payment.updatedAt)}
+                      Date:{" "}
+                      {formatDateTime(payment.createdAt ?? payment.updatedAt)}
                     </div>
                     <div className={styles.metaItem}>
                       Amount: {formatMoney(amount, currency)}
@@ -234,7 +307,9 @@ const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
                   {order ? (
                     <Order
                       key={order.id}
-                      providerImgUrl={getUserImage(order.approvedProvider?.user?.imgUrl)}
+                      providerImgUrl={getUserImage(
+                        order.approvedProvider?.user?.imgUrl,
+                      )}
                       clientImgUrl={getUserImage(order.clientUser?.imgUrl)}
                       id={order.id}
                       startsAt={order.startsAt}
@@ -254,13 +329,10 @@ const PaymentsSection = ({ user, onBackClick }: PaymentsSectionProps) => {
                       pendingProvidersCount={order.pendingProvidersCount}
                     />
                   ) : (
-                    <div className={styles.orderFallback}>
-                      <div className={styles.orderId}>Order ID: {payment.orderId}</div>
-                      <Button
-                        title="Open order"
-                        type="OUTLINED"
-                        onClick={() => router.push(`/orders/${payment.orderId}`)}
-                      />
+                    <div className={styles.empty}>
+                      {paymentOrderId
+                        ? "Loading order details..."
+                        : "Order details are unavailable"}
                     </div>
                   )}
                 </div>

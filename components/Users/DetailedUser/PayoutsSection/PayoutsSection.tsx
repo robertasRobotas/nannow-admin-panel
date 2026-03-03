@@ -5,7 +5,7 @@ import { useMediaQuery } from "react-responsive";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UserDetails } from "@/types/Client";
 import { GetPayoutsResponse, Payout } from "@/types/Payout";
-import { getProviderPayouts } from "@/pages/api/fetch";
+import { getOrderById, getProviderPayouts } from "@/pages/api/fetch";
 import axios from "axios";
 import { useRouter } from "next/router";
 import ReactPaginate from "react-paginate";
@@ -13,6 +13,7 @@ import paginateStyles from "@/styles/paginate.module.css";
 import Order from "@/components/Orders/OrdersList/Order/Order";
 import defaultUserImg from "@/assets/images/default-avatar.png";
 import calendarImg from "@/assets/images/calendar.svg";
+import { OrderType } from "@/types/Order";
 
 type PayoutsSectionProps = {
   user: UserDetails;
@@ -64,6 +65,24 @@ const openNativeDatePicker = (input: HTMLInputElement | null) => {
   input.click();
 };
 
+const extractPayoutOrderId = (payout: Payout): string | null => {
+  const candidateKeys = [
+    payout.orderId,
+    payout.order?.id,
+    (payout as unknown as { orderID?: unknown }).orderID,
+    (payout as unknown as { order_id?: unknown }).order_id,
+    (payout as unknown as { relatedOrderId?: unknown }).relatedOrderId,
+  ];
+
+  for (const key of candidateKeys) {
+    if (typeof key === "string" && key.trim().length > 0) {
+      return key.trim();
+    }
+  }
+
+  return null;
+};
+
 const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
@@ -85,6 +104,7 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [ordersById, setOrdersById] = useState<Record<string, OrderType>>({});
   const [subtotalPaidAmt, setSubtotalPaidAmt] = useState(0);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +147,46 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
   useEffect(() => {
     fetchPayouts();
   }, [fetchPayouts]);
+
+  useEffect(() => {
+    const missingOrderIds = Array.from(
+      new Set(
+        payouts
+          .filter((payout) => !payout.order)
+          .map(extractPayoutOrderId)
+          .filter(
+            (id): id is string => Boolean(id) && !ordersById[id as string],
+          ),
+      ),
+    );
+
+    if (missingOrderIds.length === 0) return;
+
+    const fetchMissingOrders = async () => {
+      const results = await Promise.allSettled(
+        missingOrderIds.map(async (orderId) => {
+          const response = await getOrderById(orderId);
+          const payload = response.data as { result?: OrderType };
+          return payload.result;
+        }),
+      );
+
+      const nextMap: Record<string, OrderType> = {};
+      for (const result of results) {
+        if (result.status !== "fulfilled") continue;
+        const order = result.value;
+        if (order && order.id) {
+          nextMap[order.id] = order;
+        }
+      }
+
+      if (Object.keys(nextMap).length > 0) {
+        setOrdersById((prev) => ({ ...prev, ...nextMap }));
+      }
+    };
+
+    fetchMissingOrders();
+  }, [ordersById, payouts]);
 
   const onApplyFilters = () => {
     const safeStart = startDate || toInputDate(new Date(currentYear, 0, 1));
@@ -212,7 +272,10 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
         <>
           <div className={styles.list}>
             {payouts.map((payout) => {
-              const order = payout.order;
+              const payoutOrderId = extractPayoutOrderId(payout);
+              const order =
+                payout.order ??
+                (payoutOrderId ? ordersById[payoutOrderId] : undefined);
               return (
                 <div key={payout.id} className={styles.row}>
                   <div className={styles.rowMeta}>
@@ -247,13 +310,10 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
                       pendingProvidersCount={order.pendingProvidersCount}
                     />
                   ) : (
-                    <div className={styles.orderFallback}>
-                      <div className={styles.orderId}>Order ID: {payout.orderId}</div>
-                      <Button
-                        title="Open order"
-                        type="OUTLINED"
-                        onClick={() => router.push(`/orders/${payout.orderId}`)}
-                      />
+                    <div className={styles.empty}>
+                      {payoutOrderId
+                        ? "Loading order details..."
+                        : "Order details are unavailable"}
                     </div>
                   )}
                 </div>
