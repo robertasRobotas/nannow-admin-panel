@@ -35,6 +35,13 @@ type DetailedOrderProps = {
 
 const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isReleaseFundsErrorModalOpen, setIsReleaseFundsErrorModalOpen] =
+    useState(false);
+  const [releaseFundsErrorMessage, setReleaseFundsErrorMessage] =
+    useState<string>("");
+  const [releaseFundsErrorDetails, setReleaseFundsErrorDetails] = useState<
+    string | null
+  >(null);
   const [isReleasingFunds, setIsReleasingFunds] = useState(false);
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
   const [problemNote, setProblemNote] = useState(
@@ -153,6 +160,37 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     setIsConfirmModalOpen(true);
   };
 
+  const extractReleaseFundsError = (error: unknown) => {
+    const fallback = {
+      message: "Failed to release funds",
+      details: null as string | null,
+    };
+
+    if (typeof error !== "object" || error === null) return fallback;
+
+    const maybeResponse = (error as { response?: unknown }).response;
+    if (typeof maybeResponse !== "object" || maybeResponse === null) {
+      return fallback;
+    }
+
+    const maybeData = (maybeResponse as { data?: unknown }).data;
+    if (typeof maybeData !== "object" || maybeData === null) {
+      return fallback;
+    }
+
+    const payload = maybeData as { error?: unknown; details?: unknown };
+    const message =
+      typeof payload.error === "string" && payload.error.trim().length > 0
+        ? payload.error
+        : fallback.message;
+    const details =
+      typeof payload.details === "string" && payload.details.trim().length > 0
+        ? payload.details
+        : null;
+
+    return { message, details };
+  };
+
   const confirmPayOrder = async () => {
     try {
       setIsReleasingFunds(true);
@@ -161,7 +199,11 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         window.location.reload();
       }
     } catch (error) {
-      console.error("Failed to release funds", error);
+      console.warn("Failed to release funds");
+      const parsedError = extractReleaseFundsError(error);
+      setReleaseFundsErrorMessage(parsedError.message);
+      setReleaseFundsErrorDetails(parsedError.details);
+      setIsReleaseFundsErrorModalOpen(true);
     } finally {
       setIsReleasingFunds(false);
       setIsConfirmModalOpen(false);
@@ -650,6 +692,26 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 type="BLACK"
                 onClick={confirmPayOrder}
                 isDisabled={isReleasingFunds}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isReleaseFundsErrorModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Payment failed</h2>
+            <p className={styles.confirmationBody}>{releaseFundsErrorMessage}</p>
+            {releaseFundsErrorDetails && (
+              <p className={styles.errorDetails}>
+                Stripe reason: {releaseFundsErrorDetails}
+              </p>
+            )}
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Close"
+                type="OUTLINED"
+                onClick={() => setIsReleaseFundsErrorModalOpen(false)}
               />
             </div>
           </div>
