@@ -2,13 +2,26 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-const BASE_URL = "https://nannow-api.com/v1";
-//const BASE_URL = "http://192.168.1.192:8080/v1";
+// const BASE_URL = "https://nannow-api.com/v1";
+const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
   const response = await axios.post(`${BASE_URL}/admin-user/login`, loginData);
 
+  return response;
+};
+
+export const loginWithFirebase = async (firebaseIdToken: string) => {
+  const response = await axios.post(
+    `${BASE_URL}/admin-user/login/firebase`,
+    {},
+    {
+      headers: {
+        Authorization: firebaseIdToken,
+      },
+    },
+  );
   return response;
 };
 
