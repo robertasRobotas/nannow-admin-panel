@@ -24,6 +24,15 @@
   color: red;
   font-size: 16px;
   font-weight: 600;
+  text-align: center;
+}
+
+.mfaHint {
+  width: 100%;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
 }
 
 .divider {

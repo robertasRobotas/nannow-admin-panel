@@ -2,8 +2,8 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-// const BASE_URL = "https://nannow-api.com/v1";
-const BASE_URL = "http://192.168.1.192:8080/v1";
+const BASE_URL = "https://nannow-api.com/v1";
+//const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -19,6 +19,45 @@ export const loginWithFirebase = async (firebaseIdToken: string) => {
     {
       headers: {
         Authorization: firebaseIdToken,
+      },
+    },
+  );
+  return response;
+};
+
+export const verifyAdminLoginTotp = async (mfaToken: string, code: string) => {
+  const response = await axios.post(
+    `${BASE_URL}/admin-user/login/2fa/totp/verify`,
+    {
+      mfaToken,
+      code,
+    },
+  );
+  return response;
+};
+
+export const setupAdminTotp = async (authToken?: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin-user/2fa/totp/setup`,
+    {},
+    {
+      headers: {
+        Authorization: authToken ?? jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const verifyAdminTotpSetup = async (code: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin-user/2fa/totp/verify-setup`,
+    { code },
+    {
+      headers: {
+        Authorization: jwt,
       },
     },
   );

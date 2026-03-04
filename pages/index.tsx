@@ -4,7 +4,11 @@ import Input from "@/components/Input/Input";
 import { useState } from "react";
 import Button from "@/components/Button/Button";
 import { useRouter } from "next/router";
-import { login, loginWithFirebase } from "./api/fetch";
+import {
+  login,
+  loginWithFirebase,
+  verifyAdminLoginTotp,
+} from "./api/fetch";
 import Cookies from "js-cookie";
 import { getFirebaseAuth } from "@/helpers/firebaseClient";
 import {
@@ -21,8 +25,41 @@ const MainPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [isTotpVerifying, setIsTotpVerifying] = useState(false);
 
   const router = useRouter();
+
+  const completeLogin = (jwt: string) => {
+    Cookies.set("@user_jwt", jwt);
+    setTimeout(() => {
+      router.push("/users");
+    }, 500);
+  };
+
+  const handleAuthResponse = (response: {
+    status: number;
+    data: {
+      jwt?: string;
+      requires2fa?: boolean;
+      mfaToken?: string;
+    };
+  }) => {
+    if (response.status !== 200) return;
+
+    if (response.data.requires2fa && response.data.mfaToken) {
+      setMfaToken(response.data.mfaToken);
+      setTotpCode("");
+      setAuthErrorMessage("");
+      setIsError(false);
+      return;
+    }
+
+    if (response.data.jwt) {
+      completeLogin(response.data.jwt);
+    }
+  };
 
   const onSubmit = async () => {
     if (isLoading) return;
@@ -36,14 +73,7 @@ const MainPage = () => {
       };
 
       const response = await login(loginData);
-
-      if (response.status === 200) {
-        Cookies.set("@user_jwt", response.data.jwt);
-        setTimeout(() => {
-          router.push("/users");
-        }, 500);
-        return;
-      }
+      handleAuthResponse(response);
     } catch (err) {
       setIsError(true);
       setAuthErrorMessage("Your email or password is wrong");
@@ -77,13 +107,7 @@ const MainPage = () => {
       const result = await signInWithPopup(auth, authProvider);
       const firebaseIdToken = await result.user.getIdToken();
       const response = await loginWithFirebase(firebaseIdToken);
-
-      if (response.status === 200) {
-        Cookies.set("@user_jwt", response.data.jwt);
-        setTimeout(() => {
-          router.push("/users");
-        }, 500);
-      }
+      handleAuthResponse(response);
     } catch (err) {
       console.error(err);
       setIsError(true);
@@ -98,6 +122,36 @@ const MainPage = () => {
     }
   };
 
+  const verifyTotpAndLogin = async () => {
+    if (!mfaToken || isTotpVerifying) return;
+    setIsError(false);
+    setAuthErrorMessage("");
+
+    const normalizedCode = totpCode.trim();
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      setIsError(true);
+      setAuthErrorMessage("Enter a valid 6-digit code.");
+      return;
+    }
+
+    try {
+      setIsTotpVerifying(true);
+      const response = await verifyAdminLoginTotp(mfaToken, normalizedCode);
+      if (response.status === 200 && response.data?.jwt) {
+        completeLogin(response.data.jwt);
+        return;
+      }
+      setIsError(true);
+      setAuthErrorMessage("Failed to verify code.");
+    } catch (err) {
+      void err;
+      setIsError(true);
+      setAuthErrorMessage("Invalid or expired code.");
+    } finally {
+      setIsTotpVerifying(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit();
@@ -107,48 +161,97 @@ const MainPage = () => {
     <div className={styles.main}>
       <form className={styles.loginModal} onSubmit={handleSubmit}>
         <img src={logo.src} />
-        <Input
-          value={email}
-          setValue={setEmail}
-          label="Email"
-          isPassword={false}
-          isError={isError}
-          setIsError={setIsError}
-        />
-        <Input
-          value={password}
-          setValue={setPassword}
-          label="Password"
-          isPassword={true}
-          isError={isError}
-          setIsError={setIsError}
-        />
+        {!mfaToken && (
+          <>
+            <Input
+              value={email}
+              setValue={setEmail}
+              label="Email"
+              isPassword={false}
+              isError={isError}
+              setIsError={setIsError}
+            />
+            <Input
+              value={password}
+              setValue={setPassword}
+              label="Password"
+              isPassword={true}
+              isError={isError}
+              setIsError={setIsError}
+            />
+          </>
+        )}
+        {mfaToken && (
+          <>
+            <p className={styles.mfaHint}>
+              Enter the 6-digit code from Google Authenticator.
+            </p>
+            <Input
+              value={totpCode}
+              setValue={setTotpCode}
+              label="Authenticator code"
+              isPassword={false}
+              isError={isError}
+              setIsError={setIsError}
+            />
+          </>
+        )}
         {isError && <p className={styles.error}>{authErrorMessage}</p>}
-        <Button
-          title="Login"
-          type="BLACK"
-          height={48}
-          isDisabled={isLoading}
-          isLoading={isLoading}
-          onClick={onSubmit}
-        />
-        <div className={styles.divider}>or continue with</div>
-        <div className={styles.oauthButtons}>
+        {!mfaToken && (
           <Button
-            title={isGoogleLoading ? "Google..." : "Google"}
-            type="OUTLINED"
-            height={44}
-            isDisabled={isGoogleLoading || isAppleLoading || isLoading}
-            onClick={() => completeFirebaseLogin("google")}
+            title="Login"
+            type="BLACK"
+            height={48}
+            isDisabled={isLoading}
+            isLoading={isLoading}
+            onClick={onSubmit}
           />
-          <Button
-            title={isAppleLoading ? "Apple..." : "Apple"}
-            type="OUTLINED"
-            height={44}
-            isDisabled={isGoogleLoading || isAppleLoading || isLoading}
-            onClick={() => completeFirebaseLogin("apple")}
-          />
-        </div>
+        )}
+        {!mfaToken && <div className={styles.divider}>or continue with</div>}
+        {!mfaToken && (
+          <div className={styles.oauthButtons}>
+            <Button
+              title={isGoogleLoading ? "Google..." : "Google"}
+              type="OUTLINED"
+              height={44}
+              isDisabled={isGoogleLoading || isAppleLoading || isLoading}
+              onClick={() => completeFirebaseLogin("google")}
+            />
+            <Button
+              title={isAppleLoading ? "Apple..." : "Apple"}
+              type="OUTLINED"
+              height={44}
+              isDisabled={isGoogleLoading || isAppleLoading || isLoading}
+              onClick={() => completeFirebaseLogin("apple")}
+            />
+          </div>
+        )}
+        {mfaToken && (
+          <>
+          <div className={styles.oauthButtons}>
+            <Button
+              title={isTotpVerifying ? "Verifying..." : "Verify code"}
+              type="BLACK"
+              height={44}
+              isDisabled={isTotpVerifying}
+              isLoading={isTotpVerifying}
+              onClick={verifyTotpAndLogin}
+            />
+            <Button
+              title="Back"
+              type="OUTLINED"
+              height={44}
+              isDisabled={isTotpVerifying}
+              onClick={() => {
+                setMfaToken(null);
+                setTotpCode("");
+                setIsError(false);
+                setAuthErrorMessage("");
+              }}
+            />
+          </div>
+          </>
+        )}
       </form>
     </div>
   );

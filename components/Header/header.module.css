@@ -30,6 +30,95 @@
   list-style: none;
 }
 
+.logOutBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.totpBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999999;
+  padding: 20px;
+}
+
+.totpModal {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.totpTitle {
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.totpText {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.75);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.qrImg {
+  width: 220px;
+  height: 220px;
+  align-self: center;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.otpLink {
+  color: #333;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.totpInput {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.totpError {
+  margin: 0;
+  color: #ff3b30;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.totpSuccess {
+  margin: 0;
+  color: #1a9d29;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.totpActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 @media (max-width: 936px) {
   .nav {
     display: none;
