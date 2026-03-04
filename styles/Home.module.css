@@ -50,29 +50,3 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-
-.envDebug {
-  width: 100%;
-  border-radius: 10px;
-  background: #f3f3f3;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.envDebugTitle {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.8);
-  text-transform: uppercase;
-}
-
-.envDebug pre {
-  margin: 0;
-  font-size: 11px;
-  line-height: 16px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  color: #000;
-}
