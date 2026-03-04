@@ -28,6 +28,16 @@ const MainPage = () => {
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState("");
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
+  const firebaseEnvDebug = {
+    NEXT_PUBLIC_FIREBASE_API_KEY:
+      process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID:
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+    NEXT_PUBLIC_FIREBASE_APP_ID:
+      process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
+  };
 
   const router = useRouter();
 
@@ -252,6 +262,10 @@ const MainPage = () => {
           </div>
           </>
         )}
+        <div className={styles.envDebug}>
+          <div className={styles.envDebugTitle}>Firebase env debug</div>
+          <pre>{JSON.stringify(firebaseEnvDebug, null, 2)}</pre>
+        </div>
       </form>
     </div>
   );
