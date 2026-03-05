@@ -110,10 +110,54 @@
   flex-wrap: wrap;
 }
 
+.rowTop {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) auto;
+  gap: 10px 18px;
+  align-items: start;
+}
+
+.rowColLeft,
+.rowColRight {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rowColRight {
+  align-items: flex-end;
+}
+
 .metaItem {
   color: #000;
   font-size: 14px;
   font-weight: 700;
+}
+
+.payoutActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.payoutMetaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.payoutMetaItem {
+  color: rgba(0, 0, 0, 0.78);
+  font-size: 12px;
+  line-height: 18px;
+  word-break: break-word;
+}
+
+.stripeDataTitle {
+  margin-top: 2px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
 }
 
 .orderFallback {
@@ -174,5 +218,18 @@
 
   .filters {
     flex-wrap: wrap;
+  }
+
+  .rowTop {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .rowColRight {
+    align-items: flex-start;
+  }
+
+  .payoutMetaGrid {
+    grid-template-columns: 1fr;
   }
 }

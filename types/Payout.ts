@@ -9,6 +9,12 @@ export type Payout = {
   currency: string;
   stripeTransferId?: string | null;
   stripePayoutId?: string | null;
+  stripePayoutStatus?: string | null;
+  stripePayoutArrivalDate?: string | null;
+  stripePayoutPaidAt?: string | null;
+  stripePayoutFailedAt?: string | null;
+  stripePayoutFailureCode?: string | null;
+  stripePayoutFailureMessage?: string | null;
   createdAt?: string;
   updatedAt?: string;
   order?: OrderType;

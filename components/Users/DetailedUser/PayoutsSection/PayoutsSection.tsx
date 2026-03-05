@@ -5,7 +5,11 @@ import { useMediaQuery } from "react-responsive";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UserDetails } from "@/types/Client";
 import { GetPayoutsResponse, Payout } from "@/types/Payout";
-import { getOrderById, getProviderPayouts } from "@/pages/api/fetch";
+import {
+  getOrderById,
+  getProviderPayouts,
+  refreshPayoutByOrderId,
+} from "@/pages/api/fetch";
 import axios from "axios";
 import { useRouter } from "next/router";
 import ReactPaginate from "react-paginate";
@@ -14,6 +18,7 @@ import Order from "@/components/Orders/OrdersList/Order/Order";
 import defaultUserImg from "@/assets/images/default-avatar.png";
 import calendarImg from "@/assets/images/calendar.svg";
 import { OrderType } from "@/types/Order";
+import { toast } from "react-toastify";
 
 type PayoutsSectionProps = {
   user: UserDetails;
@@ -83,6 +88,9 @@ const extractPayoutOrderId = (payout: Payout): string | null => {
   return null;
 };
 
+const normalizePayoutStatus = (status?: string | null) =>
+  (status ?? "").toLowerCase();
+
 const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
@@ -106,6 +114,7 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [ordersById, setOrdersById] = useState<Record<string, OrderType>>({});
   const [subtotalPaidAmt, setSubtotalPaidAmt] = useState(0);
+  const [refreshingOrderId, setRefreshingOrderId] = useState<string | null>(null);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -207,6 +216,21 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
   const getUserName = (firstName?: string, lastName?: string) =>
     `${firstName ?? "Deleted"} ${lastName ?? "User"}`;
 
+  const refreshPayout = async (orderId: string) => {
+    if (refreshingOrderId) return;
+    try {
+      setRefreshingOrderId(orderId);
+      await refreshPayoutByOrderId(orderId);
+      toast.success("Payout refresh requested");
+      await fetchPayouts();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to refresh payout");
+    } finally {
+      setRefreshingOrderId(null);
+    }
+  };
+
   return (
     <div className={styles.main}>
       <h3 className={`${styles.title} ${nunito.className}`}>Payouts</h3>
@@ -276,14 +300,74 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
               const order =
                 payout.order ??
                 (payoutOrderId ? ordersById[payoutOrderId] : undefined);
+              const payoutStatus = normalizePayoutStatus(payout.stripePayoutStatus);
+              const showArrivalDate =
+                payoutStatus === "pending" || payoutStatus === "in_transit";
+              const showPaidAt = payoutStatus === "paid";
+              const showFailure = payoutStatus === "failed";
               return (
                 <div key={payout.id} className={styles.row}>
-                  <div className={styles.rowMeta}>
-                    <div className={styles.metaItem}>
-                      Date: {formatDateTime(payout.createdAt ?? payout.updatedAt)}
+                  <div className={styles.rowTop}>
+                    <div className={styles.rowColLeft}>
+                      <div className={styles.metaItem}>
+                        Date: {formatDateTime(payout.createdAt ?? payout.updatedAt)}
+                      </div>
+                      <div className={styles.stripeDataTitle}>Stripe data</div>
+                      <div className={styles.payoutMetaItem}>
+                        <b>Status:</b> {payout.stripePayoutStatus ?? "—"}
+                      </div>
+                      {showArrivalDate && (
+                        <div className={styles.payoutMetaItem}>
+                          <b>Expected arrival:</b>{" "}
+                          {formatDateTime(
+                            payout.stripePayoutArrivalDate ?? undefined,
+                          )}
+                        </div>
+                      )}
+                      {showPaidAt && (
+                        <div className={styles.payoutMetaItem}>
+                          <b>Paid at:</b>{" "}
+                          {formatDateTime(payout.stripePayoutPaidAt ?? undefined)}
+                        </div>
+                      )}
+                      {showFailure && (
+                        <>
+                          <div className={styles.payoutMetaItem}>
+                            <b>Failed at:</b>{" "}
+                            {formatDateTime(
+                              payout.stripePayoutFailedAt ?? undefined,
+                            )}
+                          </div>
+                          <div className={styles.payoutMetaItem}>
+                            <b>Failure code:</b>{" "}
+                            {payout.stripePayoutFailureCode ?? "—"}
+                          </div>
+                          <div className={styles.payoutMetaItem}>
+                            <b>Failure message:</b>{" "}
+                            {payout.stripePayoutFailureMessage ?? "—"}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <div className={styles.metaItem}>
-                      Amount: {formatMoney(payout.paidAmt ?? 0, payout.currency)}
+                    <div className={styles.rowColRight}>
+                      <div className={styles.metaItem}>
+                        Amount: {formatMoney(payout.paidAmt ?? 0, payout.currency)}
+                      </div>
+                      {payoutOrderId && (
+                        <div className={styles.payoutActions}>
+                          <Button
+                            title={
+                              refreshingOrderId === payoutOrderId
+                                ? "Refreshing..."
+                                : "Refresh"
+                            }
+                            type="OUTLINED"
+                            onClick={() => refreshPayout(payoutOrderId)}
+                            isDisabled={refreshingOrderId !== null}
+                            isLoading={refreshingOrderId === payoutOrderId}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
