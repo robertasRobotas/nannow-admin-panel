@@ -14,18 +14,67 @@ import { useRouter } from "next/router";
 
 const ROLE_OPTIONS: AdminRole[] = ["ADMIN", "SUPER_ADMIN"];
 
-const getAdminId = (admin: AdminUserPayload): string =>
-  admin.id ?? admin._id ?? "";
+const getAdminId = (admin: AdminUserPayload): string => {
+  const candidate = admin as AdminUserPayload & {
+    adminId?: string;
+    userId?: string;
+    sub?: string;
+  };
+  return (
+    candidate.id ??
+    candidate._id ??
+    candidate.adminId ??
+    candidate.userId ??
+    candidate.sub ??
+    ""
+  );
+};
+
+const isAdminCandidate = (item: unknown): item is AdminUserPayload => {
+  if (!item || typeof item !== "object") return false;
+  const candidate = item as Record<string, unknown>;
+  return typeof candidate.email === "string";
+};
 
 const normalizeAdmins = (data: unknown): AdminUserPayload[] => {
-  if (Array.isArray(data)) return data as AdminUserPayload[];
+  if (Array.isArray(data)) {
+    return data
+      .map((item) => {
+        if (isAdminCandidate(item)) return item;
+        if (item && typeof item === "object") {
+          const nested = item as Record<string, unknown>;
+          const candidate =
+            nested.admin ??
+            nested.user ??
+            nested.result ??
+            nested.item ??
+            nested.data;
+          if (isAdminCandidate(candidate)) return candidate;
+        }
+        return null;
+      })
+      .filter((item): item is AdminUserPayload => item !== null);
+  }
+
   if (data && typeof data === "object") {
     const payload = data as Record<string, unknown>;
     const result = payload.result as Record<string, unknown> | undefined;
-    const directAdmins = payload.admins;
-    const resultAdmins = result?.admins;
-    if (Array.isArray(directAdmins)) return directAdmins as AdminUserPayload[];
-    if (Array.isArray(resultAdmins)) return resultAdmins as AdminUserPayload[];
+    const candidates: unknown[] = [
+      payload.admins,
+      payload.items,
+      payload.users,
+      payload.data,
+      result?.admins,
+      result?.items,
+      result?.users,
+      result?.data,
+      result,
+    ];
+
+    for (const candidate of candidates) {
+      const normalized = normalizeAdmins(candidate);
+      if (normalized.length > 0) return normalized;
+    }
   }
   return [];
 };
@@ -154,15 +203,15 @@ const Admins = () => {
       setError("Admin id is missing.");
       return;
     }
-    if (!editEmail.trim() || !editFirstName.trim() || editRoles.length === 0) {
-      setError("Fill first name, email and roles.");
+    if (!editEmail.trim() || editRoles.length === 0) {
+      setError("Fill email and roles.");
       return;
     }
     try {
       setIsSavingEdit(true);
       setError("");
       await updateAdminUser(adminId, {
-        firstName: editFirstName.trim(),
+        firstName: editFirstName.trim() ? editFirstName.trim() : undefined,
         email: editEmail.trim(),
         roles: editRoles,
         password: removePassword
@@ -273,11 +322,9 @@ const Admins = () => {
                 <div className={styles.adminEmail}>{admin.email}</div>
               </div>
               <div className={styles.rolesPills}>
-                {(admin.roles ?? []).map((role) => (
-                  <span key={`${getAdminId(admin)}-${role}`} className={styles.rolePill}>
-                    {role}
-                  </span>
-                ))}
+                {(admin.roles ?? []).includes("SUPER_ADMIN") && (
+                  <span className={styles.superAdminPill}>SUPER ADMIN</span>
+                )}
               </div>
             </div>
             <Button

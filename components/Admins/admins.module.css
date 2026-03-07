@@ -67,8 +67,15 @@
   height: 42px;
   padding: 0 12px;
   background: #fff;
+  color: #000;
+  -webkit-text-fill-color: #000;
   font-size: 15px;
   font-weight: 600;
+}
+
+.field input::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.45);
 }
 
 .field input:focus {
@@ -140,6 +147,17 @@
   border: 1px solid rgba(0, 0, 0, 0.12);
   font-size: 12px;
   font-weight: 800;
+}
+
+.superAdminPill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #000;
+  border: 1px solid #000;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
 }
 
 .empty {

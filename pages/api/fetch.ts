@@ -165,7 +165,7 @@ export const parseJwtPayload = (token?: string) => {
 export const getCurrentAdminRolesFromJwt = (): AdminRole[] => {
   const jwt = Cookies.get("@user_jwt");
   const payload = parseJwtPayload(jwt);
-  console.log("Parsed JWT payload:", payload);
+
   const candidateRoles = [
     ...(Array.isArray(payload?.roles) ? payload.roles : []),
     ...(Array.isArray(payload?.admin?.roles) ? payload.admin.roles : []),
