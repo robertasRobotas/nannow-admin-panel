@@ -10,6 +10,7 @@ import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import {
+  getCurrentAdminRolesFromJwt,
   getNotEndedOrdersCount,
   getNotPaidOrdersCount,
   setupAdminTotp,
@@ -29,9 +30,15 @@ const Header = () => {
   const [totpError, setTotpError] = useState("");
   const [totpSuccess, setTotpSuccess] = useState("");
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { pathname } = useRouter();
 
   const router = useRouter();
+
+  useEffect(() => {
+    const roles = getCurrentAdminRolesFromJwt();
+    setIsSuperAdmin(roles.includes("SUPER_ADMIN"));
+  }, []);
 
   useEffect(() => {
     const fetchNotEndedOrdersCount = async () => {
@@ -78,6 +85,9 @@ const Header = () => {
   }, [router]);
 
   const ordersAttentionNumber = notEndedOrdersCount + notPaidOrdersCount;
+  const visibleLinks = isSuperAdmin
+    ? [...links, { title: "Admins", link: "/admins" }]
+    : links;
 
   const openTotpSetupModal = async () => {
     if (isTotpSetupLoading) return;
@@ -140,7 +150,7 @@ const Header = () => {
         <img className={styles.logoImg} src={logoImg.src} alt="Logo" />
         <nav className={styles.nav}>
           <ul>
-            {links.map((l) => (
+            {visibleLinks.map((l) => (
               <li key={l.link}>
                 <Link href={l.link}>
                   <HeaderButton
@@ -176,7 +186,7 @@ const Header = () => {
       </div>
       {isMenuDisplayed && (
         <HeaderMenu
-          links={links}
+          links={visibleLinks}
           onClose={() => setMenuDisplayed(false)}
           ordersAttentionNumber={ordersAttentionNumber}
         />

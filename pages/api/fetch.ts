@@ -6,6 +6,18 @@ const BASE_URL = "https://nannow-api.com/v1";
 // const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
+export type AdminRole = "ADMIN" | "SUPER_ADMIN";
+
+export type AdminUserPayload = {
+  id?: string;
+  _id?: string;
+  email: string;
+  firstName?: string;
+  roles?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export const login = async (loginData: { email: string; password: string }) => {
   const response = await axios.post(`${BASE_URL}/admin-user/login`, loginData);
 
@@ -137,7 +149,7 @@ export const updateCriminalCheckStatus = async (id: string, status: string) => {
   return response;
 };
 
-const parseJwtPayload = (token?: string) => {
+export const parseJwtPayload = (token?: string) => {
   try {
     if (!token) return null;
     const payload = token.split(".")[1];
@@ -148,6 +160,24 @@ const parseJwtPayload = (token?: string) => {
   } catch {
     return null;
   }
+};
+
+export const getCurrentAdminRolesFromJwt = (): AdminRole[] => {
+  const jwt = Cookies.get("@user_jwt");
+  const payload = parseJwtPayload(jwt);
+  console.log("Parsed JWT payload:", payload);
+  const candidateRoles = [
+    ...(Array.isArray(payload?.roles) ? payload.roles : []),
+    ...(Array.isArray(payload?.admin?.roles) ? payload.admin.roles : []),
+    ...(payload?.role ? [payload.role] : []),
+  ];
+  return Array.from(
+    new Set(
+      candidateRoles.filter(
+        (role): role is AdminRole => role === "ADMIN" || role === "SUPER_ADMIN",
+      ),
+    ),
+  );
 };
 
 const getAdminIdFromJwt = () => {
@@ -724,5 +754,69 @@ export const deleteUser = async (userId: string) => {
       Authorization: jwt,
     },
   });
+  return response;
+};
+
+export const getAllAdmins = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin-user`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const createAdminUser = async (payload: {
+  email: string;
+  firstName: string;
+  password?: string;
+  roles: AdminRole[];
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(`${BASE_URL}/admin-user`, payload, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const updateAdminUser = async (
+  adminId: string,
+  payload: {
+    firstName?: string;
+    email?: string;
+    password?: string | null;
+    roles?: AdminRole[];
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin-user/${adminId}`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const updateAdminUserRoles = async (
+  adminId: string,
+  roles: AdminRole[],
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin-user/${adminId}/roles`,
+    { roles },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
   return response;
 };
