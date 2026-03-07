@@ -86,7 +86,7 @@ const Header = () => {
 
   const ordersAttentionNumber = notEndedOrdersCount + notPaidOrdersCount;
   const visibleLinks = isSuperAdmin
-    ? [...links, { title: "Admins", link: "/admins" }]
+    ? [{ title: "Super Access", link: "/super-access" }, ...links]
     : links;
 
   const openTotpSetupModal = async () => {

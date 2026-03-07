@@ -3,10 +3,18 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-// const BASE_URL = "http://192.168.1.192:8080/v1";
+//const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export type AdminRole = "ADMIN" | "SUPER_ADMIN";
+export type SuperAccessEntity =
+  | "admins"
+  | "users"
+  | "clients"
+  | "children"
+  | "providers"
+  | "addresses"
+  | "orders";
 
 export type AdminUserPayload = {
   id?: string;
@@ -812,6 +820,66 @@ export const updateAdminUserRoles = async (
   const response = await axios.put(
     `${BASE_URL}/admin-user/${adminId}/roles`,
     { roles },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getSuperAccessList = async (
+  entity: SuperAccessEntity,
+  params?: { startIndex?: number; pageSize?: number },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const url =
+    entity === "admins"
+      ? `${BASE_URL}/admin-user`
+      : `${BASE_URL}/admin/super/${entity}`;
+  const response = await axios.get(url, {
+    params: {
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getSuperAccessItem = async (
+  entity: SuperAccessEntity,
+  id: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const url =
+    entity === "admins"
+      ? `${BASE_URL}/admin-user/${id}`
+      : `${BASE_URL}/admin/super/${entity}/${id}`;
+  const response = await axios.get(url, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const updateSuperAccessItem = async (
+  entity: SuperAccessEntity,
+  id: string,
+  updates: Record<string, unknown>,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const url =
+    entity === "admins"
+      ? `${BASE_URL}/admin-user/${id}`
+      : `${BASE_URL}/admin/super/${entity}/${id}`;
+  const response = await axios.put(
+    url,
+    entity === "admins" ? updates : { updates },
     {
       headers: {
         Authorization: jwt,
