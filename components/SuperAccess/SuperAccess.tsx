@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Button from "@/components/Button/Button";
+import SearchBar from "@/components/SearchBar/SearchBar";
 import styles from "./superAccess.module.css";
 import defaultUserImg from "../../assets/images/default-avatar.png";
+import calendarImg from "../../assets/images/calendar.svg";
 import {
   AdminRole,
   createAdminUser,
@@ -24,8 +26,8 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Admins", key: "admins" },
   { title: "Users", key: "users" },
   { title: "Clients", key: "clients" },
-  { title: "Children", key: "children" },
   { title: "Providers", key: "providers" },
+  { title: "Children", key: "children" },
   { title: "Addresses", key: "addresses" },
   { title: "Orders", key: "orders" },
 ];
@@ -126,19 +128,73 @@ const pickLinkedUserId = (item: Record<string, unknown>): string =>
 const isIsoDate = (value: string) =>
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value);
 
+const parseDateString = (value: string): Date | null => {
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) return direct;
+
+  // Supports "DD/MM/YYYY, HH:mm" and "DD/MM/YYYY"
+  const localMatch = value.match(
+    /^(\d{2})\/(\d{2})\/(\d{4})(?:,\s*(\d{2}):(\d{2}))?$/,
+  );
+  if (localMatch) {
+    const [, dd, mm, yyyy, hh = "00", min = "00"] = localMatch;
+    const parsed = new Date(
+      Number(yyyy),
+      Number(mm) - 1,
+      Number(dd),
+      Number(hh),
+      Number(min),
+    );
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  return null;
+};
+
+const isLikelyDateField = (key: string) =>
+  /(date|time|at)$/i.test(key) ||
+  /createdAt|updatedAt|birthDate|startsAt|endsAt|verifiedAt|changedAt/i.test(
+    key,
+  );
+
 const toDateTimeLocal = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = parseDateString(value);
+  if (!date) return "";
   const pad = (num: number) => String(num).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
     date.getDate(),
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
+const toDateLocal = (value: string) => {
+  const date = parseDateString(value);
+  if (!date) return "";
+  const pad = (num: number) => String(num).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
 const toIsoFromLocal = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toISOString();
+};
+
+const toIsoFromDateOnly = (value: string) => {
+  const date = new Date(`${value}T00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString();
+};
+
+const openNativePicker = (inputId: string) => {
+  const element = document.getElementById(inputId);
+  if (!element) return;
+  const input = element as HTMLInputElement & { showPicker?: () => void };
+  if (typeof input.showPicker === "function") {
+    input.showPicker();
+    return;
+  }
+  input.focus();
+  input.click();
 };
 
 const prettyTitle = (raw: string) =>
@@ -239,6 +295,8 @@ const SuperAccess = () => {
   const [startIndex, setStartIndex] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [removeAdminPassword, setRemoveAdminPassword] = useState(false);
   const [newAdminFirstName, setNewAdminFirstName] = useState("");
@@ -271,7 +329,11 @@ const SuperAccess = () => {
     try {
       setLoadingList(true);
       setError("");
-      const response = await getSuperAccessList(entity, { startIndex, pageSize });
+      const response = await getSuperAccessList(entity, {
+        startIndex,
+        pageSize,
+        search: appliedSearch.trim() || undefined,
+      });
       const parsed = parseListResponse(response.data);
       setList(parsed.items);
       setTotal(parsed.total);
@@ -288,7 +350,7 @@ const SuperAccess = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [entity, pageSize, router, selectedId, startIndex]);
+  }, [appliedSearch, entity, pageSize, router, selectedId, startIndex]);
 
   const fetchItem = useCallback(async () => {
     if (!selectedId) return;
@@ -756,6 +818,8 @@ const SuperAccess = () => {
                 setChildrenById({});
                 setClientsById({});
                 setStartIndex(0);
+                setSearchText("");
+                setAppliedSearch("");
               }}
             >
               {menuItem.title}
@@ -765,10 +829,21 @@ const SuperAccess = () => {
 
         <section className={styles.listPane}>
           <div className={styles.listHeader}>
-            <h2>{prettyTitle(entity)}</h2>
-            <span>
-              {total} total, page {currentPage}/{totalPages}
-            </span>
+            <div>
+              <h2>{prettyTitle(entity)}</h2>
+              <span>
+                {total} total, page {currentPage}/{totalPages}
+              </span>
+            </div>
+            <SearchBar
+              placeholder="Type to search"
+              searchText={searchText}
+              setSearchText={setSearchText}
+              onButtonClick={() => {
+                setStartIndex(0);
+                setAppliedSearch(searchText);
+              }}
+            />
           </div>
           <div className={styles.itemsGrid}>
             {list.map((item) => {
@@ -1099,6 +1174,37 @@ const SuperAccess = () => {
                   );
                 }
 
+                const isClientProviderUserIdField =
+                  (entity === "clients" || entity === "providers") &&
+                  key === "userId" &&
+                  typeof value === "string";
+                if (isClientProviderUserIdField) {
+                  const userId = value.trim();
+                  const linkedUser = userId ? linkedUsersById[userId] : null;
+                  const userName = getUserDisplayName(linkedUser);
+                  return (
+                    <div key={key} className={styles.field}>
+                      <span>User</span>
+                      {userId ? (
+                        <button
+                          type="button"
+                          className={styles.addressLink}
+                          onClick={() => {
+                            setEntity("users");
+                            setSelectedId(userId);
+                            setSelectedItem(null);
+                            setDraft({});
+                          }}
+                        >
+                          {userName || `User ${userId}`}
+                        </button>
+                      ) : (
+                        <div className={styles.addressEmpty}>No linked user</div>
+                      )}
+                    </div>
+                  );
+                }
+
                 const isChildIdsField =
                   entity === "clients" &&
                   (key === "childIds" || key === "childrenIds") &&
@@ -1232,18 +1338,45 @@ const SuperAccess = () => {
                   );
                 }
 
-                if (typeof value === "string" && isIsoDate(value)) {
+                const isDateField =
+                  isLikelyDateField(key) &&
+                  (typeof value === "string" ||
+                    value === null ||
+                    value === undefined);
+                if (isDateField) {
+                  const isDateOnly = /birthDate/i.test(key);
+                  const normalizedStringValue =
+                    typeof value === "string" ? value : "";
                   return (
                     <label key={key} htmlFor={fieldId} className={styles.field}>
                       <span>{prettyTitle(key)}</span>
-                      <input
-                        id={fieldId}
-                        type="datetime-local"
-                        value={toDateTimeLocal(value)}
-                        onChange={(e) =>
-                          handleFieldChange(key, toIsoFromLocal(e.target.value))
-                        }
-                      />
+                      <div className={styles.dateInputWrap}>
+                        <input
+                          id={fieldId}
+                          type={isDateOnly ? "date" : "datetime-local"}
+                          value={
+                            isDateOnly
+                              ? toDateLocal(normalizedStringValue)
+                              : toDateTimeLocal(normalizedStringValue)
+                          }
+                          onChange={(e) =>
+                            handleFieldChange(
+                              key,
+                              isDateOnly
+                                ? toIsoFromDateOnly(e.target.value)
+                                : toIsoFromLocal(e.target.value),
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          className={styles.datePickerBtn}
+                          onClick={() => openNativePicker(fieldId)}
+                          aria-label={`Open ${prettyTitle(key)} picker`}
+                        >
+                          <img src={calendarImg.src} alt="" />
+                        </button>
+                      </div>
                     </label>
                   );
                 }

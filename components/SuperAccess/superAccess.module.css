@@ -193,6 +193,35 @@
     "Liberation Mono", "Courier New", monospace;
 }
 
+.dateInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dateInputWrap input {
+  width: 100%;
+  padding-right: 38px;
+}
+
+.datePickerBtn {
+  all: unset;
+  position: absolute;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.datePickerBtn img {
+  width: 16px;
+  height: 16px;
+}
+
 .rolesMultiSelect {
   display: flex;
   align-items: center;

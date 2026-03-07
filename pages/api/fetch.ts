@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-//const BASE_URL = "http://192.168.1.192:8080/v1";
+// const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export type AdminRole = "ADMIN" | "SUPER_ADMIN";
@@ -831,7 +831,7 @@ export const updateAdminUserRoles = async (
 
 export const getSuperAccessList = async (
   entity: SuperAccessEntity,
-  params?: { startIndex?: number; pageSize?: number },
+  params?: { startIndex?: number; pageSize?: number; search?: string },
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const url =
@@ -842,6 +842,7 @@ export const getSuperAccessList = async (
     params: {
       startIndex: params?.startIndex ?? 0,
       pageSize: params?.pageSize ?? 20,
+      search: params?.search,
     },
     headers: {
       Authorization: jwt,
