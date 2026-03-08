@@ -10,6 +10,7 @@ import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import {
+  getCanceledPendingFinancialOrdersCount,
   getCurrentAdminRolesFromJwt,
   getNotEndedOrdersCount,
   getNotPaidOrdersCount,
@@ -22,6 +23,8 @@ const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
   const [notEndedOrdersCount, setNotEndedOrdersCount] = useState(0);
   const [notPaidOrdersCount, setNotPaidOrdersCount] = useState(0);
+  const [canceledPendingFinancialCount, setCanceledPendingFinancialCount] =
+    useState(0);
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
   const [isTotpSetupLoading, setIsTotpSetupLoading] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
@@ -79,12 +82,23 @@ const Header = () => {
         }
       }
     };
+    const fetchCanceledPendingFinancialOrdersCount = async () => {
+      try {
+        const response = await getCanceledPendingFinancialOrdersCount();
+        const count = response.data?.count ?? 0;
+        setCanceledPendingFinancialCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
 
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
+    fetchCanceledPendingFinancialOrdersCount();
   }, [router]);
 
-  const ordersAttentionNumber = notEndedOrdersCount + notPaidOrdersCount;
+  const ordersAttentionNumber =
+    notEndedOrdersCount + notPaidOrdersCount + canceledPendingFinancialCount;
   const visibleLinks = isSuperAdmin
     ? [{ title: "Super Access", link: "/super-access" }, ...links]
     : links;

@@ -66,4 +66,12 @@ export type OrderType = {
   // Optional: present on list responses for display/search convenience
   orderPrettyId?: string;
   isProviderIgnoredEndNotification?: boolean;
+  isOrderCancelBefore12hToStart?: boolean;
+  refundedAt?: string | null;
+  refundedAmount?: number | null;
+  refundedAmountCents?: number | null;
+  isCancelFeePaidToProvider?: boolean;
+  cancelFeePaidToProviderAt?: string | null;
+  cancelFeeAmount?: number | null;
+  cancelFeeAmountCents?: number | null;
 };

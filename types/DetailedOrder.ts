@@ -171,6 +171,14 @@ export type DetailedOrderType = {
   providerIgnoredEndNotificationResolvedReason?: string;
   isReleasedFundsToProvider: boolean;
   releasedFundsToProviderAt: string | null;
+  isOrderCancelBefore12hToStart?: boolean;
+  refundedAt?: string | null;
+  refundedAmount?: number | null;
+  refundedAmountCents?: number | null;
+  isCancelFeePaidToProvider?: boolean;
+  cancelFeePaidToProviderAt?: string | null;
+  cancelFeeAmount?: number | null;
+  cancelFeeAmountCents?: number | null;
   reviews?: ReviewType[];
   invoiceDate?: string;
 };

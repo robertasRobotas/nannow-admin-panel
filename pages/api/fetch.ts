@@ -592,6 +592,81 @@ export const releaseFundsByOrderId = async (id: string) => {
   return response;
 };
 
+export const refundOrderById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/refund`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const payoutCancelFeeByOrderId = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/cancel-fee-payout`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getCanceledPendingFinancialOrdersCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const statuses = ["CLIENT_CANCELED", "PROVIDER_CANCELED"];
+  const counted = new Set<string>();
+  let count = 0;
+
+  for (const status of statuses) {
+    let startIndex = 0;
+    let total = 0;
+    let pageSize = 20;
+
+    do {
+      const response = await axios.get(
+        `${BASE_URL}/admin/orders?startIndex=${startIndex}&status=${status}`,
+        {
+          headers: {
+            Authorization: jwt,
+          },
+        },
+      );
+
+      const result = response.data?.result ?? {};
+      const items = Array.isArray(result.items) ? result.items : [];
+      total = Number(result.total ?? 0);
+      pageSize = Number(result.pageSize ?? pageSize);
+
+      for (const order of items) {
+        const orderId = String(order?.id ?? "");
+        if (!orderId || counted.has(orderId)) continue;
+
+        const needsRefund = !order?.refundedAt;
+        const needsCancelFee =
+          !!order?.isOrderCancelBefore12hToStart &&
+          !order?.isCancelFeePaidToProvider;
+        if (needsRefund || needsCancelFee) {
+          count += 1;
+          counted.add(orderId);
+        }
+      }
+
+      startIndex += pageSize;
+    } while (startIndex < total);
+  }
+
+  return { data: { count } };
+};
+
 export const finishOrderByAdmin = async (
   id: string,
   resolvedReason: string,

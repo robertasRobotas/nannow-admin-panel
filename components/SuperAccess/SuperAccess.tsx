@@ -17,6 +17,21 @@ import {
 import { options as orderStatusOptions } from "@/data/orderStatusOptions";
 import { useRouter } from "next/router";
 
+type EntityRecord = {
+  [key: string]: unknown;
+  id?: string;
+  _id?: string;
+  userId?: string;
+  clientId?: string;
+  providerId?: string;
+  orderId?: string;
+  client?: EntityRecord;
+  provider?: EntityRecord;
+  approvedProvider?: EntityRecord;
+  clientUser?: EntityRecord;
+  user?: EntityRecord;
+};
+
 type SuperMenuItem = {
   title: string;
   key: SuperAccessEntity;
@@ -36,10 +51,10 @@ const ORDER_STATUSES = orderStatusOptions
   .map((item) => item.value)
   .filter((value) => value);
 
-const extractArray = (value: unknown): Record<string, unknown>[] => {
+const extractArray = (value: unknown): EntityRecord[] => {
   if (Array.isArray(value)) {
     return value.filter(
-      (item): item is Record<string, unknown> =>
+      (item): item is EntityRecord =>
         !!item && typeof item === "object",
     );
   }
@@ -47,7 +62,7 @@ const extractArray = (value: unknown): Record<string, unknown>[] => {
 };
 
 const parseListResponse = (data: unknown) => {
-  const fallback = { items: [] as Record<string, unknown>[], total: 0, pageSize: 20 };
+  const fallback = { items: [] as EntityRecord[], total: 0, pageSize: 20 };
   if (!data || typeof data !== "object") return fallback;
 
   const payload = data as Record<string, unknown>;
@@ -89,7 +104,7 @@ const parseListResponse = (data: unknown) => {
   };
 };
 
-const parseItemResponse = (data: unknown): Record<string, unknown> | null => {
+const parseItemResponse = (data: unknown): EntityRecord | null => {
   if (!data || typeof data !== "object") return null;
   const payload = data as Record<string, unknown>;
   const result = (payload.result as Record<string, unknown> | undefined) ?? payload;
@@ -105,13 +120,13 @@ const parseItemResponse = (data: unknown): Record<string, unknown> | null => {
   ];
   for (const candidate of candidates) {
     if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
-      return candidate as Record<string, unknown>;
+      return candidate as EntityRecord;
     }
   }
   return null;
 };
 
-const pickId = (item: Record<string, unknown>): string =>
+const pickId = (item: EntityRecord): string =>
   String(
     item.id ??
       item._id ??
@@ -122,7 +137,7 @@ const pickId = (item: Record<string, unknown>): string =>
       "",
   );
 
-const pickLinkedUserId = (item: Record<string, unknown>): string =>
+const pickLinkedUserId = (item: EntityRecord): string =>
   String(item.userId ?? item.id ?? item._id ?? "");
 
 const isIsoDate = (value: string) =>
@@ -203,7 +218,21 @@ const prettyTitle = (raw: string) =>
     .replace(/_/g, " ")
     .replace(/^./, (char) => char.toUpperCase());
 
-const formatAddressLabel = (address: Record<string, unknown>, fallbackId: string) => {
+const formatDateTimeShort = (value: unknown) => {
+  if (typeof value !== "string" || !value) return "—";
+  const date = parseDateString(value) ?? new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
+const formatAddressLabel = (address: EntityRecord, fallbackId: string) => {
   const country = String(address.country ?? "").trim();
   const city = String(address.city ?? "").trim();
   const street = String(address.street ?? "").trim();
@@ -217,7 +246,7 @@ const formatAddressLabel = (address: Record<string, unknown>, fallbackId: string
   return line || `Address ${fallbackId}`;
 };
 
-const getUserDisplayName = (user: Record<string, unknown> | null) => {
+const getUserDisplayName = (user: EntityRecord | null) => {
   if (!user) return "";
   const firstName = String(user.firstName ?? "").trim();
   const lastName = String(user.lastName ?? "").trim();
@@ -225,7 +254,7 @@ const getUserDisplayName = (user: Record<string, unknown> | null) => {
 };
 
 const getUserTargetEntity = (
-  user: Record<string, unknown> | null,
+  user: EntityRecord | null,
 ): "clients" | "providers" | null => {
   if (!user) return null;
   const roles = Array.isArray(user.roles)
@@ -257,7 +286,7 @@ const calculateAgeYears = (birthDateValue: unknown): number | null => {
   return age < 0 ? null : age;
 };
 
-const formatChildLabel = (child: Record<string, unknown>, fallbackId: string) => {
+const formatChildLabel = (child: EntityRecord, fallbackId: string) => {
   const name = String(child.name ?? "").trim() || `Child ${fallbackId}`;
   const genderRaw = String(child.gender ?? "").trim();
   const gender = genderRaw
@@ -267,7 +296,7 @@ const formatChildLabel = (child: Record<string, unknown>, fallbackId: string) =>
   return `${name}, ${gender}, ${age == null ? "—" : `${age} y`}`;
 };
 
-const formatChildSummary = (child: Record<string, unknown>, fallbackId: string) => {
+const formatChildSummary = (child: EntityRecord, fallbackId: string) => {
   const name = String(child.name ?? "").trim() || `Child ${fallbackId}`;
   const genderRaw = String(child.gender ?? "").trim();
   const gender = genderRaw
@@ -276,16 +305,37 @@ const formatChildSummary = (child: Record<string, unknown>, fallbackId: string) 
   const age = calculateAgeYears(child.birthDate);
   return `${name}, ${gender}, ${age == null ? "—" : `${age} y`}`;
 };
+
+const pickFirstString = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+};
+
+const withOrderFinancialFields = (item: EntityRecord): EntityRecord => ({
+  ...item,
+  isOrderCancelBefore12hToStart: item.isOrderCancelBefore12hToStart ?? false,
+  refundedAt: item.refundedAt ?? null,
+  refundedAmount: item.refundedAmount ?? null,
+  refundedAmountCents: item.refundedAmountCents ?? null,
+  isCancelFeePaidToProvider: item.isCancelFeePaidToProvider ?? false,
+  cancelFeePaidToProviderAt: item.cancelFeePaidToProviderAt ?? null,
+  cancelFeeAmount: item.cancelFeeAmount ?? null,
+  cancelFeeAmountCents: item.cancelFeeAmountCents ?? null,
+});
 
 const SuperAccess = () => {
   const router = useRouter();
   const [entity, setEntity] = useState<SuperAccessEntity>("users");
-  const [list, setList] = useState<Record<string, unknown>[]>([]);
+  const [list, setList] = useState<EntityRecord[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [selectedItem, setSelectedItem] = useState<Record<string, unknown> | null>(
+  const [selectedItem, setSelectedItem] = useState<EntityRecord | null>(
     null,
   );
-  const [draft, setDraft] = useState<Record<string, unknown>>({});
+  const [draft, setDraft] = useState<EntityRecord>({});
   const [error, setError] = useState("");
   const [loadingList, setLoadingList] = useState(false);
   const [loadingItem, setLoadingItem] = useState(false);
@@ -303,18 +353,12 @@ const SuperAccess = () => {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminRoles, setNewAdminRoles] = useState<AdminRole[]>(["ADMIN"]);
-  const [linkedUsersById, setLinkedUsersById] = useState<
-    Record<string, Record<string, unknown>>
-  >({});
-  const [addressesById, setAddressesById] = useState<
-    Record<string, Record<string, unknown>>
-  >({});
-  const [childrenById, setChildrenById] = useState<
-    Record<string, Record<string, unknown>>
-  >({});
-  const [clientsById, setClientsById] = useState<
-    Record<string, Record<string, unknown>>
-  >({});
+  const [linkedUsersById, setLinkedUsersById] = useState<Record<string, EntityRecord>>({});
+  const [addressesById, setAddressesById] = useState<Record<string, EntityRecord>>({});
+  const [childrenById, setChildrenById] = useState<Record<string, EntityRecord>>({});
+  const [clientsById, setClientsById] = useState<Record<string, EntityRecord>>({});
+  const [providersById, setProvidersById] = useState<Record<string, EntityRecord>>({});
+  const [ordersById, setOrdersById] = useState<Record<string, EntityRecord>>({});
 
   useEffect(() => {
     const roles = getCurrentAdminRolesFromJwt();
@@ -367,8 +411,12 @@ const SuperAccess = () => {
       setError("");
       const response = await getSuperAccessItem(entity, selectedId);
       const parsedItem = parseItemResponse(response.data);
-      setSelectedItem(parsedItem);
-      setDraft(parsedItem ?? {});
+      const normalizedItem =
+        entity === "orders" && parsedItem
+          ? withOrderFinancialFields(parsedItem)
+          : parsedItem;
+      setSelectedItem(normalizedItem);
+      setDraft(normalizedItem ?? {});
     } catch (err) {
       setSelectedItem(null);
       setDraft({});
@@ -476,31 +524,44 @@ const SuperAccess = () => {
   }, [entity, linkedUsersById, list]);
 
   useEffect(() => {
-    if (entity !== "clients" && entity !== "providers") return;
+    if (entity !== "clients" && entity !== "providers" && entity !== "orders")
+      return;
     if (!selectedItem) return;
 
-    const rawAddressIds =
-      selectedItem.addressesIds ??
-      selectedItem.addressIds ??
-      selectedItem.addresses ??
-      [];
+    const rawBaseAddressIds: unknown =
+      selectedItem.addressesIds ?? selectedItem.addressIds ?? selectedItem.addresses;
+    const baseAddressIds = Array.isArray(rawBaseAddressIds)
+      ? (rawBaseAddressIds as unknown[]).filter(
+          (id: unknown): id is string => typeof id === "string" && id.length > 0,
+        )
+      : [];
     const defaultAddressId =
       typeof selectedItem.defaultAddressId === "string"
         ? selectedItem.defaultAddressId
         : "";
-    if (!Array.isArray(rawAddressIds)) return;
+    const orderAddressIds =
+      entity === "orders"
+        ? Object.entries(selectedItem)
+            .filter(
+              ([key, value]) =>
+                /addressId$/i.test(key) &&
+                typeof value === "string" &&
+                value.length > 0,
+            )
+            .map(([, value]) => value as string)
+        : [];
 
-    const missingIds = rawAddressIds
-      .filter((id): id is string => typeof id === "string" && id.length > 0)
+    const missingIds = baseAddressIds
       .concat(defaultAddressId ? [defaultAddressId] : [])
-      .filter((id, index, arr) => arr.indexOf(id) === index)
-      .filter((id) => !addressesById[id]);
+      .concat(orderAddressIds)
+      .filter((id: string, index: number, arr: string[]) => arr.indexOf(id) === index)
+      .filter((id: string) => !addressesById[id]);
     if (missingIds.length === 0) return;
 
     let isMounted = true;
     const fetchAddresses = async () => {
       const entries = await Promise.all(
-        missingIds.map(async (addressId) => {
+        missingIds.map(async (addressId: string) => {
           try {
             const response = await getSuperAccessItem("addresses", addressId);
             const parsedAddress = parseItemResponse(response.data);
@@ -528,7 +589,7 @@ const SuperAccess = () => {
   }, [addressesById, entity, selectedItem]);
 
   useEffect(() => {
-    if (entity !== "clients") return;
+    if (entity !== "clients" && entity !== "orders") return;
     if (!selectedItem) return;
 
     const rawChildIds = selectedItem.childIds ?? selectedItem.childrenIds ?? [];
@@ -646,6 +707,190 @@ const SuperAccess = () => {
       isMounted = false;
     };
   }, [clientsById, entity, linkedUsersById]);
+
+  useEffect(() => {
+    if (entity !== "orders") return;
+    const clientIds = Array.from(
+      new Set(
+        list
+          .map((item) => String(item.clientId ?? item.client?.id ?? ""))
+          .filter((clientId) => clientId.length > 0 && !clientsById[clientId]),
+      ),
+    );
+    if (clientIds.length === 0) return;
+
+    let isMounted = true;
+    const fetchOrderClients = async () => {
+      const entries = await Promise.all(
+        clientIds.map(async (clientId) => {
+          try {
+            const response = await getSuperAccessItem("clients", clientId);
+            const parsedClient = parseItemResponse(response.data);
+            return [clientId, parsedClient] as const;
+          } catch {
+            return [clientId, null] as const;
+          }
+        }),
+      );
+      if (!isMounted) return;
+      setClientsById((prev) => {
+        const next = { ...prev };
+        for (const [clientId, client] of entries) {
+          if (client) next[clientId] = client;
+        }
+        return next;
+      });
+    };
+
+    fetchOrderClients();
+    return () => {
+      isMounted = false;
+    };
+  }, [clientsById, entity, list]);
+
+  useEffect(() => {
+    if (entity !== "orders") return;
+    const providerIds = Array.from(
+      new Set(
+        list
+          .map((item) =>
+            String(
+              item.approvedProviderId ??
+                item.approvedProvider?.id ??
+                item.providerId ??
+                "",
+            ),
+          )
+          .filter(
+            (providerId) => providerId.length > 0 && !providersById[providerId],
+          ),
+      ),
+    );
+    if (providerIds.length === 0) return;
+
+    let isMounted = true;
+    const fetchOrderProviders = async () => {
+      const entries = await Promise.all(
+        providerIds.map(async (providerId) => {
+          try {
+            const response = await getSuperAccessItem("providers", providerId);
+            const parsedProvider = parseItemResponse(response.data);
+            return [providerId, parsedProvider] as const;
+          } catch {
+            return [providerId, null] as const;
+          }
+        }),
+      );
+      if (!isMounted) return;
+      setProvidersById((prev) => {
+        const next = { ...prev };
+        for (const [providerId, provider] of entries) {
+          if (provider) next[providerId] = provider;
+        }
+        return next;
+      });
+    };
+
+    fetchOrderProviders();
+    return () => {
+      isMounted = false;
+    };
+  }, [entity, list, providersById]);
+
+  useEffect(() => {
+    if (entity !== "orders") return;
+
+    const userIds = Array.from(
+      new Set(
+        list
+          .flatMap((item) => [
+            String(
+              item.clientUserId ??
+                item.clientUser?.id ??
+                item.client?.userId ??
+                item.client?.user?.id ??
+                clientsById[String(item.clientId ?? item.client?.id ?? "")]?.userId ??
+                "",
+            ),
+            String(
+              item.approvedProviderUserId ??
+                item.approvedProvider?.userId ??
+                item.approvedProvider?.user?.id ??
+                providersById[
+                  String(item.approvedProviderId ?? item.approvedProvider?.id ?? "")
+                ]?.userId ??
+                item.requiredProviderId ??
+                "",
+            ),
+          ])
+          .filter((userId) => userId.length > 0 && !linkedUsersById[userId]),
+      ),
+    );
+    if (userIds.length === 0) return;
+
+    let isMounted = true;
+    const fetchOrderUsers = async () => {
+      const entries = await Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await getSuperAccessItem("users", userId);
+            const parsedUser = parseItemResponse(response.data);
+            return [userId, parsedUser] as const;
+          } catch {
+            return [userId, null] as const;
+          }
+        }),
+      );
+      if (!isMounted) return;
+      setLinkedUsersById((prev) => {
+        const next = { ...prev };
+        for (const [userId, user] of entries) {
+          if (user) next[userId] = user;
+        }
+        return next;
+      });
+    };
+
+    fetchOrderUsers();
+    return () => {
+      isMounted = false;
+    };
+  }, [clientsById, entity, linkedUsersById, list, providersById]);
+
+  useEffect(() => {
+    if (entity !== "orders") return;
+    const orderIds = list
+      .map((item) => pickId(item))
+      .filter((orderId) => orderId.length > 0 && !ordersById[orderId]);
+    if (orderIds.length === 0) return;
+
+    let isMounted = true;
+    const fetchOrderDetails = async () => {
+      const entries = await Promise.all(
+        orderIds.map(async (orderId) => {
+          try {
+            const response = await getSuperAccessItem("orders", orderId);
+            const parsedOrder = parseItemResponse(response.data);
+            return [orderId, parsedOrder] as const;
+          } catch {
+            return [orderId, null] as const;
+          }
+        }),
+      );
+      if (!isMounted) return;
+      setOrdersById((prev) => {
+        const next = { ...prev };
+        for (const [orderId, order] of entries) {
+          if (order) next[orderId] = order;
+        }
+        return next;
+      });
+    };
+    fetchOrderDetails();
+    return () => {
+      isMounted = false;
+    };
+  }, [entity, list, ordersById]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -817,6 +1062,8 @@ const SuperAccess = () => {
                 setLinkedUsersById({});
                 setChildrenById({});
                 setClientsById({});
+                setProvidersById({});
+                setOrdersById({});
                 setStartIndex(0);
                 setSearchText("");
                 setAppliedSearch("");
@@ -845,9 +1092,15 @@ const SuperAccess = () => {
               }}
             />
           </div>
-          <div className={styles.itemsGrid}>
+          <div
+            className={`${styles.itemsGrid} ${
+              entity === "orders" ? styles.itemsGridOrders : ""
+            }`}
+          >
             {list.map((item) => {
               const id = pickId(item);
+              const orderItem =
+                entity === "orders" ? ordersById[id] ?? item : item;
               const linkedUser =
                 entity === "clients" || entity === "providers"
                   ? linkedUsersById[pickLinkedUserId(item)]
@@ -903,6 +1156,83 @@ const SuperAccess = () => {
               );
               const childSummary =
                 entity === "children" ? formatChildSummary(item, id || "—") : "";
+              const orderClientUserId = String(
+                orderItem.clientUserId ??
+                  orderItem.clientUser?.id ??
+                  orderItem.client?.userId ??
+                  orderItem.client?.user?.id ??
+                  clientsById[
+                    String(orderItem.clientId ?? orderItem.client?.id ?? "")
+                  ]?.userId ??
+                  "",
+              );
+              const orderProviderUserId = String(
+                orderItem.approvedProviderUserId ??
+                  orderItem.approvedProvider?.userId ??
+                  orderItem.approvedProvider?.user?.id ??
+                  providersById[
+                    String(
+                      orderItem.approvedProviderId ?? orderItem.approvedProvider?.id ?? "",
+                    )
+                  ]?.userId ??
+                  orderItem.requiredProviderId ??
+                  "",
+              );
+              const orderClientUser = orderClientUserId
+                ? linkedUsersById[orderClientUserId]
+                : null;
+              const orderProviderUser = orderProviderUserId
+                ? linkedUsersById[orderProviderUserId]
+                : null;
+              const orderClientName = getUserDisplayName(orderClientUser) || "Client";
+              const orderClientNameFromItem = pickFirstString(
+                orderItem.clientName,
+                orderItem.clientUserName,
+                orderItem.clientUser?.firstName
+                  ? `${String(orderItem.clientUser?.firstName ?? "")} ${String(
+                      orderItem.clientUser?.lastName ?? "",
+                    )}`.trim()
+                  : "",
+                orderItem.client?.user?.firstName
+                  ? `${String(orderItem.client?.user?.firstName ?? "")} ${String(
+                      orderItem.client?.user?.lastName ?? "",
+                    )}`.trim()
+                  : "",
+              );
+              const orderProviderName =
+                String(
+                  orderItem.approvedProvider?.user?.firstName
+                    ? `${String(orderItem.approvedProvider?.user?.firstName ?? "")} ${String(
+                        orderItem.approvedProvider?.user?.lastName ?? "",
+                      )}`.trim()
+                    : getUserDisplayName(orderProviderUser) || "Provider",
+                );
+              const orderClientImg = pickFirstString(
+                orderItem.clientImgUrl,
+                orderItem.clientImgURI,
+                orderItem.clientImgUri,
+                orderItem.clientImageUrl,
+                orderItem.clientImageURI,
+                orderItem.clientImageUri,
+                orderItem.clientUser?.imgUrl,
+                orderItem.clientUser?.imageUrl,
+                orderItem.client?.user?.imgUrl,
+                orderItem.client?.user?.imageUrl,
+                orderClientUser?.imgUrl,
+                orderClientUser?.imageUrl,
+                defaultUserImg.src,
+              );
+              const orderProviderImg = pickFirstString(
+                orderItem.approvedProvider?.user?.imgUrl,
+                orderItem.approvedProvider?.user?.imageUrl,
+                orderItem.approvedProviderImgUrl,
+                orderItem.approvedProviderImageUrl,
+                orderItem.providerImgUrl,
+                orderItem.providerImageUrl,
+                orderProviderUser?.imgUrl,
+                orderProviderUser?.imageUrl,
+                defaultUserImg.src,
+              );
               return (
                 <button
                   key={id || title}
@@ -912,25 +1242,62 @@ const SuperAccess = () => {
                   }`}
                   onClick={() => setSelectedId(id)}
                 >
-                  <img src={imageUrl} alt="avatar" className={styles.avatar} />
-                  <div className={styles.itemTitle}>
-                    {entity === "addresses" ? addressText : title}
-                  </div>
-                  {entity === "children" ? (
-                    <>
-                      <div className={styles.itemSub}>{childSummary}</div>
-                      <div className={styles.itemSub}>
-                        Parent: {childParentName || "—"}
+                  {entity === "orders" ? (
+                    <div className={styles.orderRow}>
+                      <div className={styles.orderRowTop}>
+                        <div className={styles.orderRowUsers}>
+                          <img
+                            src={orderProviderImg}
+                            alt="provider"
+                            className={styles.orderProviderImg}
+                          />
+                          <img
+                            src={orderClientImg}
+                            alt="client"
+                            className={styles.orderClientImg}
+                          />
+                            <div className={styles.orderRowNames}>
+                              {orderProviderName} |{" "}
+                              {orderClientNameFromItem || orderClientName}
+                            </div>
+                        </div>
                       </div>
-                    </>
-                  ) : entity === "addresses" ? (
-                    <div className={styles.itemSub}>
-                      User: {addressUserName || "—"}
+                      <div className={styles.orderRowTime}>
+                        Starts: {formatDateTimeShort(orderItem.startsAt)}
+                      </div>
+                      <div className={styles.orderRowTime}>
+                        Ends: {formatDateTimeShort(orderItem.endsAt)}
+                      </div>
+                      <div className={styles.orderRowStatus}>
+                        {String(orderItem.status ?? "—")}
+                      </div>
+                      <div className={styles.orderRowPrettyId}>
+                        {String(orderItem.orderPrettyId ?? id)}
+                      </div>
                     </div>
                   ) : (
-                    email && <div className={styles.itemSub}>{email}</div>
+                    <>
+                      <img src={imageUrl} alt="avatar" className={styles.avatar} />
+                      <div className={styles.itemTitle}>
+                        {entity === "addresses" ? addressText : title}
+                      </div>
+                      {entity === "children" ? (
+                        <>
+                          <div className={styles.itemSub}>{childSummary}</div>
+                          <div className={styles.itemSub}>
+                            Parent: {childParentName || "—"}
+                          </div>
+                        </>
+                      ) : entity === "addresses" ? (
+                        <div className={styles.itemSub}>
+                          User: {addressUserName || "—"}
+                        </div>
+                      ) : (
+                        email && <div className={styles.itemSub}>{email}</div>
+                      )}
+                      <div className={styles.itemSub}>ID: {id || "—"}</div>
+                    </>
                   )}
-                  <div className={styles.itemSub}>ID: {id || "—"}</div>
                 </button>
               );
             })}
@@ -1306,6 +1673,175 @@ const SuperAccess = () => {
                       ) : (
                         <div className={styles.addressEmpty}>No linked user</div>
                       )}
+                    </div>
+                  );
+                }
+
+                const isOrderClientUserIdField =
+                  entity === "orders" &&
+                  key === "clientUserId" &&
+                  typeof value === "string";
+                if (isOrderClientUserIdField) {
+                  const userId = value.trim();
+                  const linkedUser = userId ? linkedUsersById[userId] : null;
+                  const userName = getUserDisplayName(linkedUser);
+                  return (
+                    <div key={key} className={styles.field}>
+                      <span>Client user</span>
+                      {userId ? (
+                        <button
+                          type="button"
+                          className={styles.addressLink}
+                          onClick={() => {
+                            setEntity("users");
+                            setSelectedId(userId);
+                            setSelectedItem(null);
+                            setDraft({});
+                          }}
+                        >
+                          {userName || `User ${userId}`}
+                        </button>
+                      ) : (
+                        <div className={styles.addressEmpty}>No linked user</div>
+                      )}
+                    </div>
+                  );
+                }
+
+                const isOrderApprovedProviderIdField =
+                  entity === "orders" &&
+                  key === "approvedProviderId" &&
+                  typeof value === "string";
+                if (isOrderApprovedProviderIdField) {
+                  const providerId = value.trim();
+                  const providerUserId = String(draft.approvedProviderUserId ?? "");
+                  const providerUser = providerUserId
+                    ? linkedUsersById[providerUserId]
+                    : null;
+                  const providerName =
+                    (draft.approvedProvider &&
+                    typeof draft.approvedProvider === "object"
+                      ? getUserDisplayName(
+                          (draft.approvedProvider as Record<string, unknown>)
+                            .user as Record<string, unknown>,
+                        )
+                      : "") || getUserDisplayName(providerUser);
+                  return (
+                    <div key={key} className={styles.field}>
+                      <span>Approved provider</span>
+                      {providerId ? (
+                        <button
+                          type="button"
+                          className={styles.addressLink}
+                          onClick={() => {
+                            setEntity("providers");
+                            setSelectedId(providerId);
+                            setSelectedItem(null);
+                            setDraft({});
+                          }}
+                        >
+                          {providerName || `Provider ${providerId}`}
+                        </button>
+                      ) : (
+                        <div className={styles.addressEmpty}>No approved provider</div>
+                      )}
+                    </div>
+                  );
+                }
+
+                const isOrderAddressIdField =
+                  entity === "orders" &&
+                  /addressId$/i.test(key) &&
+                  typeof value === "string";
+                if (isOrderAddressIdField) {
+                  const addressId = value.trim();
+                  const address = addressId ? addressesById[addressId] : null;
+                  return (
+                    <div key={key} className={styles.field}>
+                      <span>{prettyTitle(key)}</span>
+                      {addressId ? (
+                        <button
+                          type="button"
+                          className={styles.addressLink}
+                          onClick={() => {
+                            setEntity("addresses");
+                            setSelectedId(addressId);
+                            setSelectedItem(null);
+                            setDraft({});
+                          }}
+                        >
+                          {formatAddressLabel(address ?? {}, addressId)}
+                        </button>
+                      ) : (
+                        <div className={styles.addressEmpty}>No address</div>
+                      )}
+                    </div>
+                  );
+                }
+
+                const isOrderApprovedProviderUserIdField =
+                  entity === "orders" &&
+                  key === "approvedProviderUserId" &&
+                  typeof value === "string";
+                if (isOrderApprovedProviderUserIdField) {
+                  const providerUserId = value.trim();
+                  const providerUser = providerUserId
+                    ? linkedUsersById[providerUserId]
+                    : null;
+                  const providerName = getUserDisplayName(providerUser);
+                  return (
+                    <div key={key} className={styles.field}>
+                      <span>Approved provider user</span>
+                      {providerUserId ? (
+                        <button
+                          type="button"
+                          className={styles.addressLink}
+                          onClick={() => openUserObject("providers", providerUserId)}
+                        >
+                          {providerName || `User ${providerUserId}`}
+                        </button>
+                      ) : (
+                        <div className={styles.addressEmpty}>No approved provider user</div>
+                      )}
+                    </div>
+                  );
+                }
+
+                const isOrderChildrenField =
+                  entity === "orders" &&
+                  (key === "childrenIds" || key === "childIds") &&
+                  Array.isArray(value);
+                if (isOrderChildrenField) {
+                  const ids = value.filter(
+                    (item): item is string =>
+                      typeof item === "string" && item.length > 0,
+                  );
+                  return (
+                    <div key={key} className={styles.field}>
+                      <span>Children</span>
+                      <div className={styles.addressList}>
+                        {ids.length === 0 && (
+                          <div className={styles.addressEmpty}>No children</div>
+                        )}
+                        {ids.map((childId) => {
+                          const child = childrenById[childId];
+                          return (
+                            <button
+                              key={childId}
+                              type="button"
+                              className={styles.addressLink}
+                              onClick={() => {
+                                setEntity("children");
+                                setSelectedId(childId);
+                                setSelectedItem(null);
+                                setDraft({});
+                              }}
+                            >
+                              {formatChildLabel(child ?? {}, childId)}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 }

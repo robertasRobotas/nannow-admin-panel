@@ -21,6 +21,8 @@ import {
   getOrderInvoice,
   getOrderProviderInvoice,
   getOrderProviderReceipt,
+  payoutCancelFeeByOrderId,
+  refundOrderById,
   releaseFundsByOrderId,
 } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
@@ -53,6 +55,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isInvoiceLoading, setIsInvoiceLoading] = useState(false);
   const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
     useState(false);
+  const [isRefunding, setIsRefunding] = useState(false);
+  const [isPayingCancelFee, setIsPayingCancelFee] = useState(false);
   const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
@@ -210,6 +214,36 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     }
   };
 
+  const refundParent = async () => {
+    if (isRefunding) return;
+    try {
+      setIsRefunding(true);
+      const response = await refundOrderById(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to refund order", error);
+    } finally {
+      setIsRefunding(false);
+    }
+  };
+
+  const payoutCancelFee = async () => {
+    if (isPayingCancelFee) return;
+    try {
+      setIsPayingCancelFee(true);
+      const response = await payoutCancelFeeByOrderId(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to payout cancel fee", error);
+    } finally {
+      setIsPayingCancelFee(false);
+    }
+  };
+
   const closeConfirmModal = () => setIsConfirmModalOpen(false);
 
   const openOrderInvoice = async () => {
@@ -314,6 +348,19 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       })
     : "-";
 
+  const refundedAmountValue =
+    typeof order?.refundedAmount === "number"
+      ? order.refundedAmount
+      : typeof order?.refundedAmountCents === "number"
+        ? order.refundedAmountCents / 100
+        : null;
+  const cancelFeeAmountValue =
+    typeof order?.cancelFeeAmount === "number"
+      ? order.cancelFeeAmount
+      : typeof order?.cancelFeeAmountCents === "number"
+        ? order.cancelFeeAmountCents / 100
+        : null;
+
   const getProviderName = (fullName: string) => {
     const isProviderNotSelected = order.approvedProviderId === null;
     return isProviderNotSelected ? "Not selected yet" : fullName;
@@ -322,9 +369,40 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const hasProviderActivityNumber = Boolean(
     order?.approvedProvider?.activityNumber || order?.approvedProvider?.activityNo,
   );
+  const isCanceledOrder = String(order?.status ?? "").includes("CANCELED");
+  const isPartialCancelOrder =
+    isCanceledOrder && !!order?.isOrderCancelBefore12hToStart;
+  const shouldShowInvoiceCards =
+    order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" || isPartialCancelOrder;
   const shouldShowProviderDocumentCard =
-    order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" &&
+    shouldShowInvoiceCards &&
     !!order?.approvedProviderId;
+  const isRefundDone = !!order?.refundedAt;
+  const isCancelFeeDone = !!order?.isCancelFeePaidToProvider;
+  const areCanceledFinancialActionsDone =
+    isRefundDone && (!isPartialCancelOrder || isCancelFeeDone);
+  const refundedAtText = order?.refundedAt
+    ? new Date(order.refundedAt).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "-";
+  const cancelFeePaidAtText = order?.cancelFeePaidToProviderAt
+    ? new Date(order.cancelFeePaidToProviderAt).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "-";
 
   return (
     <div className={styles.main}>
@@ -393,7 +471,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             type={isMobile ? "SPAN2" : "SPAN2"}
             info={childrenNames}
           />
-          {order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" && (
+          {shouldShowInvoiceCards && (
             <InfoCard
               title="Invoice from nannow"
               iconImgUrl={documentImg.src}
@@ -496,26 +574,45 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           Order process
         </div>
         <div className={styles.processCards}>
-          {!order?.provider_markedAsServiceInProgressAt && (
-            <ProcessCard
-              imgUrl={""}
-              process="Service not started yet"
-              date={providerMarkedServiceInProgressAt}
-            />
-          )}
-          {order?.provider_markedAsServiceInProgressAt && (
-            <ProcessCard
-              imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
-              process="Provider marked service in progress"
-              date={providerMarkedServiceInProgressAt}
-            />
-          )}
-          {order?.provider_markedAsServiceEndedAt && (
-            <ProcessCard
-              imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
-              process="Provider marked service ended"
-              date={providerMarkedServiceEndedAt}
-            />
+          {isCanceledOrder ? (
+            <>
+              <ProcessCard
+                imgUrl={getUserImage(parentUser?.imgUrl)}
+                process="Order canceled"
+                date={refundedAtText !== "-" ? refundedAtText : "-"}
+              />
+              {isPartialCancelOrder && (
+                <ProcessCard
+                  imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
+                  process="Cancel fee paid to sitter"
+                  date={cancelFeePaidAtText}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {!order?.provider_markedAsServiceInProgressAt && (
+                <ProcessCard
+                  imgUrl={""}
+                  process="Service not started yet"
+                  date={providerMarkedServiceInProgressAt}
+                />
+              )}
+              {order?.provider_markedAsServiceInProgressAt && (
+                <ProcessCard
+                  imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
+                  process="Provider marked service in progress"
+                  date={providerMarkedServiceInProgressAt}
+                />
+              )}
+              {order?.provider_markedAsServiceEndedAt && (
+                <ProcessCard
+                  imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
+                  process="Provider marked service ended"
+                  date={providerMarkedServiceEndedAt}
+                />
+              )}
+            </>
           )}
         </div>
 
@@ -652,17 +749,31 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       <div className={`${styles.finalPrice} ${nunito.className}`}>
         <div>
           <span className={styles.finalPriceTitle}>
-            Final price to pay the sitter
+            {isCanceledOrder
+              ? isRefundDone
+                ? "Refunded to parent"
+                : "Refund to parent"
+              : "Final price to pay the sitter"}
           </span>
-          <span className={styles.finalPriceValue}>{`€${
-            order?.totalProviderPrice?.toFixed(2) ?? "-"
-          }`}</span>
+          <span className={styles.finalPriceValue}>
+            {isCanceledOrder
+              ? refundedAmountValue != null
+                ? `€${refundedAmountValue.toFixed(2)}`
+                : "—"
+              : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`}
+          </span>
+          {isCanceledOrder && isPartialCancelOrder && cancelFeeAmountValue != null && (
+            <span className={styles.paidText}>
+              {`Cancel fee to sitter: €${cancelFeeAmountValue.toFixed(2)}`}
+            </span>
+          )}
         </div>
-        {order?.isReleasedFundsToProvider ? (
+        {!isCanceledOrder && order?.isReleasedFundsToProvider && (
           <span className={`${styles.paidText} ${nunito.className}`}>
             {`Sitter was paid at ${releasedFundsAt}`}
           </span>
-        ) : (
+        )}
+        {!isCanceledOrder && !order?.isReleasedFundsToProvider && (
           <Button
             title={isReleasingFunds ? "Paying..." : "Pay the sitter"}
             type="BLACK"
@@ -671,6 +782,38 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             }
             onClick={payOrderHandler}
           />
+        )}
+        {isCanceledOrder && areCanceledFinancialActionsDone && (
+          <div className={styles.finalActionsColumn}>
+            <span className={`${styles.paidText} ${nunito.className}`}>
+              {`Parent refunded at ${refundedAtText}`}
+            </span>
+            {isPartialCancelOrder && (
+              <span className={`${styles.paidText} ${nunito.className}`}>
+                {`Sitter cancel fee paid at ${cancelFeePaidAtText}`}
+              </span>
+            )}
+          </div>
+        )}
+        {isCanceledOrder && !areCanceledFinancialActionsDone && (
+          <div className={styles.finalActionsRow}>
+            {!isRefundDone && (
+              <Button
+                title={isRefunding ? "Refunding..." : "Refund the parent"}
+                type="BLACK"
+                isDisabled={isRefunding || isPayingCancelFee}
+                onClick={refundParent}
+              />
+            )}
+            {isPartialCancelOrder && !isCancelFeeDone && (
+              <Button
+                title={isPayingCancelFee ? "Paying..." : "Pay the sitter"}
+                type="OUTLINED"
+                isDisabled={isRefunding || isPayingCancelFee}
+                onClick={payoutCancelFee}
+              />
+            )}
+          </div>
         )}
       </div>
       {isConfirmModalOpen && (
