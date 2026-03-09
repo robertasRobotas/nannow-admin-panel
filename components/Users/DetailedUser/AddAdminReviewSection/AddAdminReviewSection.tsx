@@ -207,7 +207,9 @@ const AddAdminReviewSection = ({
         <Button
           title={loading ? "Submitting..." : "Submit Review"}
           onClick={handleSubmit}
-          type="FILLED"
+          type="BLACK"
+          isLoading={loading}
+          isDisabled={loading}
         />
       </div>
     </div>
