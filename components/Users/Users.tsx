@@ -1,7 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
 import { useCallback } from "react";
-import Button from "../Button/Button";
 import SearchBar from "../SearchBar/SearchBar";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import Cards from "./Cards/Cards";
@@ -15,6 +14,7 @@ import { User } from "@/types/Client";
 import {
   GetOnboardingNotFinishedUsersResponse,
   OnboardingNotFinishedUser,
+  OnboardingMode,
   OnboardingStep,
 } from "@/types/OnboardingUser";
 import defaultUserImg from "@/assets/images/default-avatar.png";
@@ -35,31 +35,53 @@ const formatRemainingSteps = (steps: OnboardingStep[]) =>
     .map((step) => onboardingStepLabels[step] ?? step)
     .join(", ");
 
-const onboardingModeOptions = [
-  { title: "All", value: "" },
-  { title: "Client", value: "CLIENT" },
-  { title: "Provider", value: "PROVIDER" },
-];
+type UsersViewMode =
+  | "CLIENTS"
+  | "PROVIDERS"
+  | "ONBOARDING_CLIENTS"
+  | "ONBOARDING_PROVIDERS";
+type UsersViewOption = {
+  title: string;
+  value: UsersViewMode;
+  attentionNumber?: number;
+};
 
 const Users = () => {
-  const [isSelectedClients, setSelectedClients] = useState(true);
-  const [isOnboardingSelected, setOnboardingSelected] = useState(false);
+  const [selectedViewOption, setSelectedViewOption] = useState(0);
   const [searchText, setSearchText] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [onboardingUsers, setOnboardingUsers] = useState<
     OnboardingNotFinishedUser[]
   >([]);
-  const [selectedOnboardingModeOption, setSelectedOnboardingModeOption] =
-    useState(0);
   const router = useRouter();
 
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [onboardingNotFinishedCount, setOnboardingNotFinishedCount] =
-    useState(0);
+  const [clientOnboardingCount, setClientOnboardingCount] = useState(0);
+  const [providerOnboardingCount, setProviderOnboardingCount] = useState(0);
   const [modeReady, setModeReady] = useState(false);
+
+  const viewOptions: UsersViewOption[] = [
+    { title: "Clients", value: "CLIENTS" },
+    { title: "Providers", value: "PROVIDERS" },
+    {
+      title: "Clients with not finished onboarding",
+      value: "ONBOARDING_CLIENTS",
+      attentionNumber: clientOnboardingCount,
+    },
+    {
+      title: "Providers with not finished onboarding",
+      value: "ONBOARDING_PROVIDERS",
+      attentionNumber: providerOnboardingCount,
+    },
+  ] as const;
+  const currentView = viewOptions[selectedViewOption]?.value as UsersViewMode;
+  const isOnboardingSelected =
+    currentView === "ONBOARDING_CLIENTS" ||
+    currentView === "ONBOARDING_PROVIDERS";
+  const isSelectedClients = currentView === "CLIENTS";
 
   // Sync selected mode with URL query (?mode=clients|providers)
   useEffect(() => {
@@ -67,24 +89,39 @@ const Users = () => {
     const mode =
       typeof router.query.mode === "string" ? router.query.mode : undefined;
     if (mode === "providers") {
-      setSelectedClients(false);
+      setSelectedViewOption(1);
     } else {
       // default to clients
-      setSelectedClients(true);
+      setSelectedViewOption(0);
     }
     setModeReady(true);
-  }, [router.isReady, router.query.mode, isSelectedClients]);
+  }, [router.isReady, router.query.mode]);
 
   const fetchOnboardingNotFinishedCount = useCallback(async () => {
     try {
-      const response = await getNotFinishedOnboardingUsers({ pageSize: 1 });
-      const payload = response.data as
+      const [clientResponse, providerResponse] = await Promise.all([
+        getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
+        getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
+      ]);
+
+      const clientPayload = clientResponse.data as
         | GetOnboardingNotFinishedUsersResponse
         | { result?: GetOnboardingNotFinishedUsersResponse };
-      const result =
-        (payload as { result?: GetOnboardingNotFinishedUsersResponse }).result ??
-        (payload as GetOnboardingNotFinishedUsersResponse);
-      setOnboardingNotFinishedCount(Number(result.total ?? 0));
+      const clientResult =
+        (
+          clientPayload as { result?: GetOnboardingNotFinishedUsersResponse }
+        ).result ?? (clientPayload as GetOnboardingNotFinishedUsersResponse);
+
+      const providerPayload = providerResponse.data as
+        | GetOnboardingNotFinishedUsersResponse
+        | { result?: GetOnboardingNotFinishedUsersResponse };
+      const providerResult =
+        (
+          providerPayload as { result?: GetOnboardingNotFinishedUsersResponse }
+        ).result ?? (providerPayload as GetOnboardingNotFinishedUsersResponse);
+
+      setClientOnboardingCount(Number(clientResult.total ?? 0));
+      setProviderOnboardingCount(Number(providerResult.total ?? 0));
     } catch (err) {
       console.log(err);
     }
@@ -116,13 +153,17 @@ const Users = () => {
   const fetchOnboardingUsers = useCallback(async () => {
     try {
       setOnboardingUsers([]);
+      const mode: OnboardingMode | undefined =
+        currentView === "ONBOARDING_CLIENTS"
+          ? "CLIENT"
+          : currentView === "ONBOARDING_PROVIDERS"
+            ? "PROVIDER"
+            : undefined;
       const response = await getNotFinishedOnboardingUsers({
         startIndex: itemOffset,
         pageSize: itemsPerPage,
         search: searchText || undefined,
-        mode:
-          (onboardingModeOptions[selectedOnboardingModeOption]
-            ?.value as "CLIENT" | "PROVIDER" | "") || undefined,
+        mode,
       });
       const payload = response.data as
         | GetOnboardingNotFinishedUsersResponse
@@ -145,7 +186,7 @@ const Users = () => {
         }
       }
     }
-  }, [itemOffset, itemsPerPage, router, searchText, selectedOnboardingModeOption]);
+  }, [currentView, itemOffset, itemsPerPage, router, searchText]);
 
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
@@ -166,7 +207,7 @@ const Users = () => {
   }, [
     router.isReady,
     modeReady,
-    isSelectedClients,
+    currentView,
     isOnboardingSelected,
     itemOffset,
     fetchOnboardingUsers,
@@ -186,66 +227,18 @@ const Users = () => {
     <div className={styles.main}>
       <div className={styles.heading}>
         <div className={styles.headingLeftSide}>
-          <Button
-            onClick={() => {
-              setSelectedClients(true);
-              setOnboardingSelected(false);
+          <DropDownButton
+            options={viewOptions.map((option) => ({
+              title: option.title,
+              value: option.value,
+              attentionNumber: option.attentionNumber,
+            }))}
+            selectedOption={selectedViewOption}
+            setSelectedOption={setSelectedViewOption}
+            onClickOption={() => {
               setItemOffset(0);
-              router.replace(
-                {
-                  pathname: router.pathname,
-                  query: { ...router.query, mode: "clients" },
-                },
-                undefined,
-                { shallow: true },
-              );
             }}
-            title="Clients"
-            type="PLAIN"
-            isSelected={isSelectedClients}
           />
-          <Button
-            onClick={() => {
-              setSelectedClients(false);
-              setOnboardingSelected(false);
-              setItemOffset(0);
-              router.replace(
-                {
-                  pathname: router.pathname,
-                  query: { ...router.query, mode: "providers" },
-                },
-                undefined,
-                { shallow: true },
-              );
-            }}
-            title="Providers"
-            type="PLAIN"
-            isSelected={!isSelectedClients}
-          />
-          {onboardingNotFinishedCount > 0 && (
-            <div className={styles.onboardingBtnWrap}>
-              <Button
-                onClick={() => {
-                  setOnboardingSelected(true);
-                  setItemOffset(0);
-                }}
-                title="Onboarding not finished"
-                type="PLAIN"
-                isSelected={isOnboardingSelected}
-                attentionNumber={onboardingNotFinishedCount}
-              />
-            </div>
-          )}
-          {isOnboardingSelected && (
-            <DropDownButton
-              options={onboardingModeOptions}
-              selectedOption={selectedOnboardingModeOption}
-              setSelectedOption={setSelectedOnboardingModeOption}
-              onClickOption={() => {
-                setItemOffset(0);
-              }}
-            />
-          )}
         </div>
         <div>
           <SearchBar

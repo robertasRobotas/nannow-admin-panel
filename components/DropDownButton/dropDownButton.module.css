@@ -65,3 +65,20 @@
 .dropDownItem:active {
   background: rgba(0, 0, 0, 0.1);
 }
+
+.attentionBubble {
+  display: flex;
+  padding: 4px 5px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+  text-align: center;
+  font-family: Inter, sans-serif;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+}

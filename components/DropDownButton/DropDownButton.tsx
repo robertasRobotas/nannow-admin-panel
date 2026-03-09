@@ -13,6 +13,7 @@ type DropDownButtonProps = {
     title: string;
     icon?: string;
     value: string;
+    attentionNumber?: number;
   }[];
   selectedOption: number;
   setSelectedOption: Dispatch<SetStateAction<number>>;
@@ -63,6 +64,12 @@ const DropDownButton = ({
               )}
 
               <span>{options[selectedOption].title}</span>
+              {typeof options[selectedOption].attentionNumber === "number" &&
+                options[selectedOption].attentionNumber >= 0 && (
+                  <span className={styles.attentionBubble}>
+                    {options[selectedOption].attentionNumber}
+                  </span>
+                )}
             </div>
             <img
               className={styles.downArrow}
@@ -92,6 +99,12 @@ const DropDownButton = ({
                 />
               )}
               <span>{option.title}</span>
+              {typeof option.attentionNumber === "number" &&
+                option.attentionNumber >= 0 && (
+                  <span className={styles.attentionBubble}>
+                    {option.attentionNumber}
+                  </span>
+                )}
             </div>
           ))}
         </div>
