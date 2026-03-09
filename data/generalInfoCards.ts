@@ -16,6 +16,7 @@ export type InfoCard = {
   title: string;
   icon: StaticImageData;
   value: string | number;
+  hideValue?: boolean;
   link?: string;
   actionButton?: {
     title: string;
@@ -92,6 +93,7 @@ export const getInfoCards = (
       title: "Suspended status",
       icon: isSuspended ? suspendedRedImg : suspendedGreenImg,
       value: isSuspended ? "Suspended" : "Not suspended",
+      hideValue: true,
       booleanSwitch: options?.suspendedSwitch,
     },
   ];

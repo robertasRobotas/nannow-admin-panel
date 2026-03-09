@@ -165,9 +165,11 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             <img src={c.icon.src} alt="Icon" />
 
             <span className={styles.cardTitle}>{c.title}</span>
-            <span className={`${styles.cardValue} ${nunito.className}`}>
-              {c.value}
-            </span>
+            {!c.hideValue && (
+              <span className={`${styles.cardValue} ${nunito.className}`}>
+                {c.value}
+              </span>
+            )}
             {c.booleanSwitch && (
               <button
                 type="button"

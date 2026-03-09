@@ -77,7 +77,7 @@
 .suspendSwitchUi {
   width: 56px;
   height: 30px;
-  background: rgba(0, 0, 0, 0.08);
+  background: #40c914;
   border-radius: 999px;
   position: relative;
   flex-shrink: 0;
@@ -96,7 +96,7 @@
 }
 
 .suspendSwitchUiActive {
-  background: #40c914;
+  background: #ff3b30;
 }
 
 .suspendSwitchUiActive::after {
