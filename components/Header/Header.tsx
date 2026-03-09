@@ -12,6 +12,7 @@ import Cookies from "js-cookie";
 import {
   getCanceledPendingFinancialOrdersCount,
   getCurrentAdminRolesFromJwt,
+  getNotFinishedOnboardingUsers,
   getNotEndedOrdersCount,
   getNotPaidOrdersCount,
   setupAdminTotp,
@@ -24,6 +25,8 @@ const Header = () => {
   const [notEndedOrdersCount, setNotEndedOrdersCount] = useState(0);
   const [notPaidOrdersCount, setNotPaidOrdersCount] = useState(0);
   const [canceledPendingFinancialCount, setCanceledPendingFinancialCount] =
+    useState(0);
+  const [notFinishedOnboardingCount, setNotFinishedOnboardingCount] =
     useState(0);
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
   const [isTotpSetupLoading, setIsTotpSetupLoading] = useState(false);
@@ -91,10 +94,21 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchNotFinishedOnboardingCount = async () => {
+      try {
+        const response = await getNotFinishedOnboardingUsers({ pageSize: 1 });
+        const result = response.data?.result ?? response.data;
+        const count = result?.total ?? 0;
+        setNotFinishedOnboardingCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
 
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
     fetchCanceledPendingFinancialOrdersCount();
+    fetchNotFinishedOnboardingCount();
   }, [router]);
 
   const ordersAttentionNumber =
@@ -171,9 +185,14 @@ const Header = () => {
                     title={l.title}
                     isActive={`/${pathname.split("/")[1]}` === l.link}
                     attentionNumber={
-                      l.link === "/orders" && ordersAttentionNumber > 0
-                        ? ordersAttentionNumber
-                        : undefined
+                      l.link === "/orders"
+                        ? ordersAttentionNumber > 0
+                          ? ordersAttentionNumber
+                          : undefined
+                        : l.link === "/users" &&
+                            notFinishedOnboardingCount > 0
+                          ? notFinishedOnboardingCount
+                          : undefined
                     }
                   />
                 </Link>
@@ -203,6 +222,7 @@ const Header = () => {
           links={visibleLinks}
           onClose={() => setMenuDisplayed(false)}
           ordersAttentionNumber={ordersAttentionNumber}
+          usersAttentionNumber={notFinishedOnboardingCount}
         />
       )}
       {isTotpModalOpen && (

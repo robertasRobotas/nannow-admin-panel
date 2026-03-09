@@ -502,6 +502,30 @@ export const getInvoices = async (params?: {
   return response;
 };
 
+export const getNotFinishedOnboardingUsers = async (params?: {
+  mode?: "CLIENT" | "PROVIDER";
+  search?: string;
+  startIndex?: number;
+  pageSize?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/onboarding/not-finished`,
+    {
+      params: {
+        mode: params?.mode,
+        search: params?.search,
+        startIndex: params?.startIndex ?? 0,
+        pageSize: params?.pageSize ?? 20,
+      },
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const refreshPayoutByOrderId = async (orderId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(

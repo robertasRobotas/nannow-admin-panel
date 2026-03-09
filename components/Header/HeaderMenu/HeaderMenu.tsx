@@ -12,12 +12,14 @@ type HeaderMenuProps = {
   links: HeaderLink[];
   onClose: () => void;
   ordersAttentionNumber?: number;
+  usersAttentionNumber?: number;
 };
 
 const HeaderMenu = ({
   links,
   onClose,
   ordersAttentionNumber,
+  usersAttentionNumber,
 }: HeaderMenuProps) => {
   const [isClosing, setClosing] = useState(false);
   const { pathname } = useRouter();
@@ -49,9 +51,13 @@ const HeaderMenu = ({
                   isActive={pathname === l.link}
                   justify="JUSTIFY-START"
                   attentionNumber={
-                    l.link === "/orders" && (ordersAttentionNumber ?? 0) > 0
-                      ? ordersAttentionNumber
-                      : undefined
+                    l.link === "/orders"
+                      ? (ordersAttentionNumber ?? 0) > 0
+                        ? ordersAttentionNumber
+                        : undefined
+                      : l.link === "/users" && (usersAttentionNumber ?? 0) > 0
+                        ? usersAttentionNumber
+                        : undefined
                   }
                 />
               </Link>

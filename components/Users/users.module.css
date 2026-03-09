@@ -13,6 +13,97 @@
 
 .headingLeftSide {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.onboardingBtnWrap {
+  margin-left: 12px;
+}
+
+.onboardingList {
+  margin-top: 8px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
+    0 2px 10px 0 rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.onboardingRow {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboardingRow:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.onboardingRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.onboardingAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.onboardingName {
+  color: #000;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.onboardingMeta {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.onboardingRight {
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.stepsTitle {
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stepsText {
+  color: rgba(0, 0, 0, 0.68);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.emptyState {
+  margin-top: 8px;
+  border-radius: 20px;
+  background: #fff;
+  padding: 24px;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 16px;
+  font-weight: 600;
 }
 
 @media (max-width: 936px) {
@@ -29,5 +120,18 @@
     gap: 20px;
     align-items: normal;
     padding-bottom: 20px;
+  }
+
+  .onboardingRow {
+    flex-direction: column;
+  }
+
+  .onboardingRight {
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .stepsText {
+    text-align: left;
   }
 }
