@@ -477,6 +477,31 @@ export const getClientPayments = async (params: {
   return response;
 };
 
+export const getInvoices = async (params?: {
+  startIndex?: number;
+  pageSize?: number;
+  ownerUserId?: string;
+  ownerRole?: "CLIENT" | "PROVIDER";
+  orderId?: string;
+  kind?: "PLATFORM_FEE_INVOICE" | "PROVIDER_INVOICE" | "PROVIDER_RECEIPT";
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/invoices`, {
+    params: {
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+      ownerUserId: params?.ownerUserId,
+      ownerRole: params?.ownerRole,
+      orderId: params?.orderId,
+      kind: params?.kind,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
 export const refreshPayoutByOrderId = async (orderId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
