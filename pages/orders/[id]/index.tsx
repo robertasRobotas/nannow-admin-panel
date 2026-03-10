@@ -10,6 +10,7 @@ const DetailedOrderPage = () => {
 
   const fetchOrder = async (id: string) => {
     const response = await getOrderById(id);
+    console.log("Fetched order:", response.data.result);
     setOrder(response.data.result);
   };
 

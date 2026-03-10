@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import styles from "./orders.module.css";
 import { nunito } from "@/helpers/fonts";
 import {
+  getCanceledPendingFinancialOrders,
+  getCanceledPendingFinancialOrdersCount,
   getNotEndedOrdersCount,
   getNotPaidOrders,
   getNotPaidOrdersCount,
@@ -19,14 +21,24 @@ import { OrderType } from "@/types/Order";
 import Button from "../Button/Button";
 
 const Orders = () => {
+  type ActiveOrdersFilter =
+    | "DEFAULT"
+    | "NOT_ENDED"
+    | "NOT_PAID"
+    | "CANCELED_NOT_PAID";
   const [selectedOption, setSelectedOption] = useState<number>(0);
 
   const [orders, setOrders] = useState<OrderType[]>([]);
+  const [activeFilter, setActiveFilter] = useState<ActiveOrdersFilter>(
+    "DEFAULT",
+  );
   const [notEndedOrdersQTY, setNotEndedOrdersQTY] = useState<number>(0);
   const [notPaidOrdersQTY, setNotPaidOrdersQTY] = useState<number>(0);
+  const [canceledNotPaidOrdersQTY, setCanceledNotPaidOrdersQTY] =
+    useState<number>(0);
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [itemOffset, setItemOffset] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(null);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(0);
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const router = useRouter();
@@ -63,6 +75,33 @@ const Orders = () => {
           Math.ceil(response.data.result.total / response.data.result.pageSize),
         );
         setTotalUsers(response.data.result.total);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    },
+    [router],
+  );
+
+  const fetchCanceledNotPaidOrders = useCallback(
+    async (startIndex: number) => {
+      try {
+        const response = await getCanceledPendingFinancialOrders(startIndex, 20);
+        const result = response.data.result as {
+          items: OrderType[];
+          total: number;
+          pageSize: number;
+        };
+        setOrders(result.items);
+        setItemsPerPage(result.pageSize);
+        setPageCount(
+          Math.ceil(result.total / result.pageSize),
+        );
+        setTotalUsers(result.total);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -113,9 +152,43 @@ const Orders = () => {
     }
   }, [router]);
 
+  const fetchCanceledNotPaidOrdersCount = useCallback(async () => {
+    try {
+      const response = await getCanceledPendingFinancialOrdersCount();
+      const count = response.data?.count ?? 0;
+      setCanceledNotPaidOrdersQTY(Number(count) || 0);
+    } catch (err) {
+      console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/");
+        }
+      }
+    }
+  }, [router]);
+
   useEffect(() => {
+    if (activeFilter === "NOT_ENDED") {
+      fetchOrders("NOT_ENDED_IN_TIME", itemOffset);
+      return;
+    }
+    if (activeFilter === "NOT_PAID") {
+      fetchNotPaidOrders("NOT_PAID", itemOffset);
+      return;
+    }
+    if (activeFilter === "CANCELED_NOT_PAID") {
+      fetchCanceledNotPaidOrders(itemOffset);
+      return;
+    }
     fetchOrders(options[selectedOption].value, itemOffset);
-  }, [selectedOption, itemOffset, fetchOrders]);
+  }, [
+    activeFilter,
+    selectedOption,
+    itemOffset,
+    fetchOrders,
+    fetchNotPaidOrders,
+    fetchCanceledNotPaidOrders,
+  ]);
 
   useEffect(() => {
     fetchNotEndedOrdersCount();
@@ -123,6 +196,9 @@ const Orders = () => {
   useEffect(() => {
     fetchNotPaidOrdersCount();
   }, [fetchNotPaidOrdersCount]);
+  useEffect(() => {
+    fetchCanceledNotPaidOrdersCount();
+  }, [fetchCanceledNotPaidOrdersCount]);
 
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
@@ -130,11 +206,18 @@ const Orders = () => {
   };
 
   const handleIgnoredOrdersClick = () => {
-    fetchOrders("NOT_ENDED_IN_TIME", itemOffset);
+    setActiveFilter("NOT_ENDED");
+    setItemOffset(0);
   };
 
   const handleNotPaidOrdersClick = () => {
-    fetchNotPaidOrders("NOT_PAID", itemOffset);
+    setActiveFilter("NOT_PAID");
+    setItemOffset(0);
+  };
+
+  const handleCanceledNotPaidOrdersClick = () => {
+    setActiveFilter("CANCELED_NOT_PAID");
+    setItemOffset(0);
   };
 
   const normalizedQuery = orderIdQuery.trim().toLowerCase();
@@ -154,7 +237,11 @@ const Orders = () => {
         <DropDownButton
           options={options}
           selectedOption={selectedOption}
-          setSelectedOption={setSelectedOption}
+          setSelectedOption={(option) => {
+            setSelectedOption(option);
+            setActiveFilter("DEFAULT");
+            setItemOffset(0);
+          }}
         />
         {notEndedOrdersQTY > 0 && (
           <div style={{ marginLeft: 12 }}>
@@ -176,6 +263,18 @@ const Orders = () => {
               attentionNumber={notPaidOrdersQTY}
               onClick={() => {
                 handleNotPaidOrdersClick();
+              }}
+            />
+          </div>
+        )}
+        {canceledNotPaidOrdersQTY > 0 && (
+          <div style={{ marginLeft: 12 }}>
+            <Button
+              title="Canceled not paid"
+              type="PLAIN"
+              attentionNumber={canceledNotPaidOrdersQTY}
+              onClick={() => {
+                handleCanceledNotPaidOrdersClick();
               }}
             />
           </div>

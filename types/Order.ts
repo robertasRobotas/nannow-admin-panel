@@ -66,7 +66,8 @@ export type OrderType = {
   // Optional: present on list responses for display/search convenience
   orderPrettyId?: string;
   isProviderIgnoredEndNotification?: boolean;
-  isOrderCancelBefore12hToStart?: boolean;
+  isOrderCanceledLessThan12hBeforeStart?: boolean;
+  isOrderCanceledLessThan2hBeforeStart?: boolean;
   refundedAt?: string | null;
   refundedAmount?: number | null;
   refundedAmountCents?: number | null;

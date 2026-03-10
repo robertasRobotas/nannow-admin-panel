@@ -1,5 +1,3 @@
-import { title } from "process";
-
 export const options = [
   { title: "All", value: "" },
   { title: "ORDER_CREATED (DIRECT ORDER TO PROVIDER)", value: "ORDER_CREATED" },
@@ -17,7 +15,10 @@ export const options = [
     title: "PROVIDER_MARKED_AS_SERVICE_ENDED",
     value: "PROVIDER_MARKED_AS_SERVICE_ENDED",
   },
+  { title: "CANCELED_BY_CLIENT", value: "CANCELED_BY_CLIENT" },
+  { title: "CANCELED_BY_PROVIDER", value: "CANCELED_BY_PROVIDER" },
   { title: "CLIENT_CANCELED", value: "CLIENT_CANCELED" },
+  { title: "PROVIDER_CANCELED", value: "PROVIDER_CANCELED" },
   { title: "Not started in time", value: "NOT_STARTED_IN_TIME" },
   { title: "Not Ended in time", value: "NOT_ENDED_IN_TIME" },
 ];

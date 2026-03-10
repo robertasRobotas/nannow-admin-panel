@@ -369,18 +369,38 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const hasProviderActivityNumber = Boolean(
     order?.approvedProvider?.activityNumber || order?.approvedProvider?.activityNo,
   );
-  const isCanceledOrder = String(order?.status ?? "").includes("CANCELED");
-  const isPartialCancelOrder =
-    isCanceledOrder && !!order?.isOrderCancelBefore12hToStart;
+  const orderStatusUpper = String(order?.status ?? "").toUpperCase();
+  const isCanceledOrder = orderStatusUpper.includes("CANCELED");
+  const isCanceledByClient =
+    orderStatusUpper === "CANCELED_BY_CLIENT" ||
+    orderStatusUpper === "CLIENT_CANCELED";
+  const isCanceledLate2h =
+    isCanceledByClient && !!order?.isOrderCanceledLessThan2hBeforeStart;
+  const isCanceledLate12h =
+    isCanceledByClient &&
+    !!order?.isOrderCanceledLessThan12hBeforeStart &&
+    !isCanceledLate2h;
+  const cancelTimingStatus = isCanceledLate2h
+    ? "Canceled less than 2h before start"
+    : isCanceledLate12h
+      ? "Canceled less than 12h before start"
+      : null;
+  const requiresRefund = isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h;
+  const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
   const shouldShowInvoiceCards =
-    order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" || isPartialCancelOrder;
+    order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" || requiresCancelFeePayout;
   const shouldShowProviderDocumentCard =
     shouldShowInvoiceCards &&
     !!order?.approvedProviderId;
   const isRefundDone = !!order?.refundedAt;
   const isCancelFeeDone = !!order?.isCancelFeePaidToProvider;
-  const areCanceledFinancialActionsDone =
-    isRefundDone && (!isPartialCancelOrder || isCancelFeeDone);
+  const areCanceledFinancialActionsDone = !isCanceledByClient
+    ? true
+    : isCanceledLate2h
+      ? isCancelFeeDone
+      : isCanceledLate12h
+        ? isRefundDone && isCancelFeeDone
+        : isRefundDone;
   const refundedAtText = order?.refundedAt
     ? new Date(order.refundedAt).toLocaleString("en-US", {
         year: "numeric",
@@ -447,6 +467,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               </>
             }
           />
+          {cancelTimingStatus && (
+            <InfoCard
+              title="Canceled timing"
+              iconImgUrl={flashImg.src}
+              type={isMobile ? "SPAN1" : "SPAN2"}
+              info={cancelTimingStatus}
+            />
+          )}
           <InfoCard
             title="Parent location"
             iconImgUrl={locationPinImg.src}
@@ -581,7 +609,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 process="Order canceled"
                 date={refundedAtText !== "-" ? refundedAtText : "-"}
               />
-              {isPartialCancelOrder && (
+              {requiresCancelFeePayout && (
                 <ProcessCard
                   imgUrl={getUserImage(sitterUser?.user?.imgUrl)}
                   process="Cancel fee paid to sitter"
@@ -750,19 +778,31 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         <div>
           <span className={styles.finalPriceTitle}>
             {isCanceledOrder
-              ? isRefundDone
-                ? "Refunded to parent"
-                : "Refund to parent"
+              ? isCanceledByClient
+                ? requiresRefund || isCanceledLate12h
+                  ? isRefundDone
+                    ? "Refunded to parent"
+                    : "Refund to parent"
+                  : "Cancel fee to sitter"
+                : "Canceled order payments"
               : "Final price to pay the sitter"}
           </span>
           <span className={styles.finalPriceValue}>
             {isCanceledOrder
-              ? refundedAmountValue != null
-                ? `€${refundedAmountValue.toFixed(2)}`
-                : "—"
+              ? isCanceledByClient
+                ? requiresRefund || isCanceledLate12h
+                  ? refundedAmountValue != null
+                    ? `€${refundedAmountValue.toFixed(2)}`
+                    : "—"
+                  : cancelFeeAmountValue != null
+                    ? `€${cancelFeeAmountValue.toFixed(2)}`
+                    : "—"
+                : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
               : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`}
           </span>
-          {isCanceledOrder && isPartialCancelOrder && cancelFeeAmountValue != null && (
+          {isCanceledByClient &&
+            requiresCancelFeePayout &&
+            cancelFeeAmountValue != null && (
             <span className={styles.paidText}>
               {`Cancel fee to sitter: €${cancelFeeAmountValue.toFixed(2)}`}
             </span>
@@ -783,21 +823,23 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             onClick={payOrderHandler}
           />
         )}
-        {isCanceledOrder && areCanceledFinancialActionsDone && (
+        {isCanceledByClient && areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsColumn}>
-            <span className={`${styles.paidText} ${nunito.className}`}>
-              {`Parent refunded at ${refundedAtText}`}
-            </span>
-            {isPartialCancelOrder && (
+            {(requiresRefund || isCanceledLate12h) && (
+              <span className={`${styles.paidText} ${nunito.className}`}>
+                {`Parent refunded at ${refundedAtText}`}
+              </span>
+            )}
+            {requiresCancelFeePayout && (
               <span className={`${styles.paidText} ${nunito.className}`}>
                 {`Sitter cancel fee paid at ${cancelFeePaidAtText}`}
               </span>
             )}
           </div>
         )}
-        {isCanceledOrder && !areCanceledFinancialActionsDone && (
+        {isCanceledByClient && !areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsRow}>
-            {!isRefundDone && (
+            {(requiresRefund || isCanceledLate12h) && !isRefundDone && (
               <Button
                 title={isRefunding ? "Refunding..." : "Refund the parent"}
                 type="BLACK"
@@ -805,7 +847,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 onClick={refundParent}
               />
             )}
-            {isPartialCancelOrder && !isCancelFeeDone && (
+            {requiresCancelFeePayout && !isCancelFeeDone && (
               <Button
                 title={isPayingCancelFee ? "Paying..." : "Pay the sitter"}
                 type="OUTLINED"

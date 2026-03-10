@@ -671,7 +671,7 @@ export const payoutCancelFeeByOrderId = async (id: string) => {
 
 export const getCanceledPendingFinancialOrdersCount = async () => {
   const jwt = Cookies.get("@user_jwt");
-  const statuses = ["CLIENT_CANCELED", "PROVIDER_CANCELED"];
+  const statuses = ["CLIENT_CANCELED", "CANCELED_BY_CLIENT"];
   const counted = new Set<string>();
   let count = 0;
 
@@ -699,11 +699,24 @@ export const getCanceledPendingFinancialOrdersCount = async () => {
         const orderId = String(order?.id ?? "");
         if (!orderId || counted.has(orderId)) continue;
 
-        const needsRefund = !order?.refundedAt;
-        const needsCancelFee =
-          !!order?.isOrderCancelBefore12hToStart &&
-          !order?.isCancelFeePaidToProvider;
-        if (needsRefund || needsCancelFee) {
+        const status = String(order?.status ?? "").toUpperCase();
+        const isCanceledByClient =
+          status === "CANCELED_BY_CLIENT" || status === "CLIENT_CANCELED";
+        if (!isCanceledByClient) continue;
+
+        const isLate2 = !!order?.isOrderCanceledLessThan2hBeforeStart;
+        const isLate12 =
+          !!order?.isOrderCanceledLessThan12hBeforeStart && !isLate2;
+        const isRefundDone = !!order?.refundedAt;
+        const isPayoutDone = !!order?.isCancelFeePaidToProvider;
+
+        const isFinancialPending = isLate2
+          ? !isPayoutDone
+          : isLate12
+            ? !isRefundDone || !isPayoutDone
+            : !isRefundDone;
+
+        if (isFinancialPending) {
           count += 1;
           counted.add(orderId);
         }
@@ -714,6 +727,90 @@ export const getCanceledPendingFinancialOrdersCount = async () => {
   }
 
   return { data: { count } };
+};
+
+export const getCanceledPendingFinancialOrders = async (
+  startIndex = 0,
+  pageSize = 20,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const statuses = ["CLIENT_CANCELED", "CANCELED_BY_CLIENT"];
+  const byId = new Map<string, unknown>();
+
+  for (const status of statuses) {
+    let cursor = 0;
+    let total = 0;
+    let apiPageSize = 100;
+
+    do {
+      const response = await axios.get(
+        `${BASE_URL}/admin/orders?startIndex=${cursor}&status=${status}`,
+        {
+          headers: {
+            Authorization: jwt,
+          },
+        },
+      );
+
+      const result = response.data?.result ?? {};
+      const items = Array.isArray(result.items) ? result.items : [];
+      total = Number(result.total ?? 0);
+      apiPageSize = Number(result.pageSize ?? apiPageSize);
+
+      for (const order of items) {
+        const orderId = String((order as { id?: unknown })?.id ?? "");
+        if (!orderId || byId.has(orderId)) continue;
+
+        const statusUpper = String(
+          (order as { status?: unknown })?.status ?? "",
+        ).toUpperCase();
+        const isCanceledByClient =
+          statusUpper === "CANCELED_BY_CLIENT" ||
+          statusUpper === "CLIENT_CANCELED";
+        if (!isCanceledByClient) continue;
+
+        const isLate2 = !!(
+          order as { isOrderCanceledLessThan2hBeforeStart?: unknown }
+        )?.isOrderCanceledLessThan2hBeforeStart;
+        const isLate12 =
+          !!(order as { isOrderCanceledLessThan12hBeforeStart?: unknown })
+            ?.isOrderCanceledLessThan12hBeforeStart && !isLate2;
+        const isRefundDone = !!(order as { refundedAt?: unknown })?.refundedAt;
+        const isPayoutDone = !!(
+          order as { isCancelFeePaidToProvider?: unknown }
+        )?.isCancelFeePaidToProvider;
+
+        const isFinancialPending = isLate2
+          ? !isPayoutDone
+          : isLate12
+            ? !isRefundDone || !isPayoutDone
+            : !isRefundDone;
+        if (!isFinancialPending) continue;
+
+        byId.set(orderId, order);
+      }
+
+      cursor += apiPageSize;
+    } while (cursor < total);
+  }
+
+  const allItems = Array.from(byId.values()).sort((a, b) => {
+    const aCreated = String((a as { createdAt?: unknown })?.createdAt ?? "");
+    const bCreated = String((b as { createdAt?: unknown })?.createdAt ?? "");
+    return bCreated.localeCompare(aCreated);
+  });
+
+  const pagedItems = allItems.slice(startIndex, startIndex + pageSize);
+  return {
+    data: {
+      result: {
+        items: pagedItems,
+        total: allItems.length,
+        pageSize,
+        startIndex,
+      },
+    },
+  };
 };
 
 export const finishOrderByAdmin = async (

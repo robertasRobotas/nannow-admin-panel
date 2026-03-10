@@ -50,6 +50,13 @@ const MENU_ITEMS: SuperMenuItem[] = [
 const ORDER_STATUSES = orderStatusOptions
   .map((item) => item.value)
   .filter((value) => value);
+const ORDER_STATUSES_SUPER = Array.from(
+  new Set([
+    ...ORDER_STATUSES,
+    "CANCELED_BY_CLIENT",
+    "CANCELED_BY_PROVIDER",
+  ]),
+);
 
 const extractArray = (value: unknown): EntityRecord[] => {
   if (Array.isArray(value)) {
@@ -188,16 +195,39 @@ const toDateLocal = (value: string) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
+const formatLocalOffset = (date: Date) => {
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absMinutes = Math.abs(offsetMinutes);
+  const hours = String(Math.floor(absMinutes / 60)).padStart(2, "0");
+  const minutes = String(absMinutes % 60).padStart(2, "0");
+  return `${sign}${hours}:${minutes}`;
+};
+
 const toIsoFromLocal = (value: string) => {
-  const date = new Date(value);
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/,
+  );
+  if (!match) return value;
+  const [, year, month, day, hour, minute] = match;
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+  );
   if (Number.isNaN(date.getTime())) return value;
-  return date.toISOString();
+  return `${year}-${month}-${day}T${hour}:${minute}:00${formatLocalOffset(date)}`;
 };
 
 const toIsoFromDateOnly = (value: string) => {
-  const date = new Date(`${value}T00:00`);
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day), 0, 0, 0);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toISOString();
+  return `${year}-${month}-${day}T00:00:00${formatLocalOffset(date)}`;
 };
 
 const openNativePicker = (inputId: string) => {
@@ -317,7 +347,10 @@ const pickFirstString = (...values: unknown[]) => {
 
 const withOrderFinancialFields = (item: EntityRecord): EntityRecord => ({
   ...item,
-  isOrderCancelBefore12hToStart: item.isOrderCancelBefore12hToStart ?? false,
+  isOrderCanceledLessThan12hBeforeStart:
+    item.isOrderCanceledLessThan12hBeforeStart ?? false,
+  isOrderCanceledLessThan2hBeforeStart:
+    item.isOrderCanceledLessThan2hBeforeStart ?? false,
   refundedAt: item.refundedAt ?? null,
   refundedAmount: item.refundedAmount ?? null,
   refundedAmountCents: item.refundedAmountCents ?? null,
@@ -465,12 +498,18 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setLinkedUsersById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [userId, user] of entries) {
           if (user) {
+            if (next[userId] !== user) hasChanges = true;
             next[userId] = user;
+          } else if (!next[userId]) {
+            // Cache failed lookups to prevent infinite retry loops on 404s.
+            next[userId] = { id: userId, __missing: true };
+            hasChanges = true;
           }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
 
@@ -509,10 +548,17 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setLinkedUsersById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [userId, user] of entries) {
-          if (user) next[userId] = user;
+          if (user) {
+            if (next[userId] !== user) hasChanges = true;
+            next[userId] = user;
+          } else if (!next[userId]) {
+            next[userId] = { id: userId, __missing: true };
+            hasChanges = true;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
 
@@ -574,10 +620,14 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setAddressesById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [addressId, address] of entries) {
-          if (address) next[addressId] = address;
+          if (address) {
+            if (next[addressId] !== address) hasChanges = true;
+            next[addressId] = address;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
 
@@ -616,10 +666,14 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setChildrenById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [childId, child] of entries) {
-          if (child) next[childId] = child;
+          if (child) {
+            if (next[childId] !== child) hasChanges = true;
+            next[childId] = child;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
 
@@ -657,10 +711,14 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setClientsById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [clientId, client] of entries) {
-          if (client) next[clientId] = client;
+          if (client) {
+            if (next[clientId] !== client) hasChanges = true;
+            next[clientId] = client;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
     fetchClients();
@@ -696,10 +754,17 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setLinkedUsersById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [userId, user] of entries) {
-          if (user) next[userId] = user;
+          if (user) {
+            if (next[userId] !== user) hasChanges = true;
+            next[userId] = user;
+          } else if (!next[userId]) {
+            next[userId] = { id: userId, __missing: true };
+            hasChanges = true;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
     fetchUsers();
@@ -735,10 +800,14 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setClientsById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [clientId, client] of entries) {
-          if (client) next[clientId] = client;
+          if (client) {
+            if (next[clientId] !== client) hasChanges = true;
+            next[clientId] = client;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
 
@@ -784,10 +853,14 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setProvidersById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [providerId, provider] of entries) {
-          if (provider) next[providerId] = provider;
+          if (provider) {
+            if (next[providerId] !== provider) hasChanges = true;
+            next[providerId] = provider;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
 
@@ -844,10 +917,17 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setLinkedUsersById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [userId, user] of entries) {
-          if (user) next[userId] = user;
+          if (user) {
+            if (next[userId] !== user) hasChanges = true;
+            next[userId] = user;
+          } else if (!next[userId]) {
+            next[userId] = { id: userId, __missing: true };
+            hasChanges = true;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
 
@@ -880,10 +960,14 @@ const SuperAccess = () => {
       if (!isMounted) return;
       setOrdersById((prev) => {
         const next = { ...prev };
+        let hasChanges = false;
         for (const [orderId, order] of entries) {
-          if (order) next[orderId] = order;
+          if (order) {
+            if (next[orderId] !== order) hasChanges = true;
+            next[orderId] = order;
+          }
         }
-        return next;
+        return hasChanges ? next : prev;
       });
     };
     fetchOrderDetails();
@@ -908,6 +992,40 @@ const SuperAccess = () => {
 
   const handleFieldChange = (key: string, value: unknown) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const invalidateEntityCaches = (targetEntity: SuperAccessEntity) => {
+    if (targetEntity === "orders") {
+      setOrdersById({});
+      return;
+    }
+    if (targetEntity === "users") {
+      setLinkedUsersById({});
+      return;
+    }
+    if (targetEntity === "clients") {
+      setClientsById({});
+      setLinkedUsersById({});
+      setChildrenById({});
+      setAddressesById({});
+      return;
+    }
+    if (targetEntity === "providers") {
+      setProvidersById({});
+      setLinkedUsersById({});
+      setAddressesById({});
+      return;
+    }
+    if (targetEntity === "children") {
+      setChildrenById({});
+      setClientsById({});
+      setLinkedUsersById({});
+      return;
+    }
+    if (targetEntity === "addresses") {
+      setAddressesById({});
+      setLinkedUsersById({});
+    }
   };
 
   const saveChanges = async () => {
@@ -941,6 +1059,7 @@ const SuperAccess = () => {
       } else {
         await updateSuperAccessItem(entity, selectedId, draft);
       }
+      invalidateEntityCaches(entity);
       await fetchItem();
       await fetchList();
     } catch (err) {
@@ -1424,6 +1543,10 @@ const SuperAccess = () => {
                 const hasOrderStatusDropdown =
                   entity === "orders" && key === "status" && typeof value === "string";
                 if (hasOrderStatusDropdown) {
+                  const currentStatus = String(value);
+                  const statusOptions = ORDER_STATUSES_SUPER.includes(currentStatus)
+                    ? ORDER_STATUSES_SUPER
+                    : [currentStatus, ...ORDER_STATUSES_SUPER];
                   return (
                     <label key={key} htmlFor={fieldId} className={styles.field}>
                       <span>{prettyTitle(key)}</span>
@@ -1432,7 +1555,7 @@ const SuperAccess = () => {
                         value={String(value)}
                         onChange={(e) => handleFieldChange(key, e.target.value)}
                       >
-                        {ORDER_STATUSES.map((statusValue) => (
+                        {statusOptions.map((statusValue) => (
                           <option key={statusValue} value={statusValue}>
                             {statusValue}
                           </option>

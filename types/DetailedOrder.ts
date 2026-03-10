@@ -171,7 +171,8 @@ export type DetailedOrderType = {
   providerIgnoredEndNotificationResolvedReason?: string;
   isReleasedFundsToProvider: boolean;
   releasedFundsToProviderAt: string | null;
-  isOrderCancelBefore12hToStart?: boolean;
+  isOrderCanceledLessThan12hBeforeStart?: boolean;
+  isOrderCanceledLessThan2hBeforeStart?: boolean;
   refundedAt?: string | null;
   refundedAmount?: number | null;
   refundedAmountCents?: number | null;
