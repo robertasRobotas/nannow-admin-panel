@@ -90,10 +90,9 @@ export const getInfoCards = (
       value: data?.user?.pushToken ?? "—",
     },
     {
-      title: "Suspended status",
+      title: "Profile suspension",
       icon: isSuspended ? suspendedRedImg : suspendedGreenImg,
       value: isSuspended ? "Suspended" : "Not suspended",
-      hideValue: true,
       booleanSwitch: options?.suspendedSwitch,
     },
   ];
