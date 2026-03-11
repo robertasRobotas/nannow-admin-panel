@@ -7,6 +7,7 @@ import { ReviewType } from "@/types/Reviews";
 import ReactPaginate from "react-paginate";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import { options } from "../../../data/reviewRatingOptions";
+import Nannow from "@/assets/images/nannow.png";
 
 type ReviewsListProps = {
   reviews: ReviewType[];
@@ -60,8 +61,16 @@ const ReviewsList = ({
             <Review
               key={r.id}
               rating={r.generalRating}
-              reviewedByImg={r?.reviewerImgUrl}
-              reviewedByName={`${r?.reviewerFirstName}\n${r?.reviewerSurname}`}
+              reviewedByImg={
+                r.reviewType === "ADDED_BY_ADMIN"
+                  ? Nannow.src
+                  : r?.reviewerImgUrl
+              }
+              reviewedByName={
+                r.reviewType === "ADDED_BY_ADMIN"
+                  ? "Nannow"
+                  : `${r?.reviewerFirstName}\n${r?.reviewerSurname}`
+              }
               reviewedImg={r?.revieweeImgUrl}
               reviewedName={`${r?.revieweeFirstName}\n${r?.revieweeSurname}`}
               date={r.createdAt}

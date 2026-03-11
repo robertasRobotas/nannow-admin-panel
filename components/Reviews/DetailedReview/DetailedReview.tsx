@@ -7,6 +7,7 @@ import { ReviewType } from "@/types/Reviews";
 import { Dispatch, SetStateAction } from "react";
 import avatarImg from "../../../assets/images/default-avatar.png";
 import Link from "next/link";
+import Nannow from "@/assets/images/nannow.png";
 
 type DetailedReview = {
   review: ReviewType;
@@ -19,16 +20,38 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
   const reviewType = review?.reviewType;
+  const isAddedByAdmin = reviewType === "ADDED_BY_ADMIN";
+  const reviewerFirstName = isAddedByAdmin
+    ? "Nannow"
+    : review.reviewerFirstName;
+  const reviewerSurname = isAddedByAdmin ? "" : review.reviewerSurname;
+  const reviewerImgUrl = isAddedByAdmin
+    ? Nannow.src
+    : (review?.reviewerImgUrl ?? avatarImg.src);
 
   const reviewerHref =
-    reviewType === "CLIENT_TO_PROVIDER"
-      ? `/client/${review.clientUserId}`
-      : `/provider/${review.providerUserId}`;
+    isAddedByAdmin
+      ? ""
+      : reviewType === "CLIENT_TO_PROVIDER"
+      ? review.clientUserId
+        ? `/client/${review.clientUserId}`
+        : ""
+      : review.providerUserId
+        ? `/provider/${review.providerUserId}`
+        : "";
 
   const revieweeHref =
-    reviewType === "CLIENT_TO_PROVIDER"
-      ? `/provider/${review.providerUserId}`
-      : `/client/${review.clientUserId}`;
+    isAddedByAdmin
+      ? review.providerUserId
+        ? `/provider/${review.providerUserId}`
+        : ""
+      : reviewType === "CLIENT_TO_PROVIDER"
+      ? review.providerUserId
+        ? `/provider/${review.providerUserId}`
+        : ""
+      : review.clientUserId
+        ? `/client/${review.clientUserId}`
+        : "";
 
   return (
     <div className={styles.main}>
@@ -38,31 +61,59 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
 
       <div className={styles.heading}>
         <div className={styles.reviewDetails}>
-          <Link href={revieweeHref} className={styles.profile}>
-            <img src={review?.revieweeImgUrl ?? avatarImg.src} alt="Profile" />
-            <div>
-              <span className={styles.title}>Has been reviewed</span>
-              <span className={styles.name}>
-                {review.revieweeFirstName}
-                <br />
-                {review.revieweeSurname}
-              </span>
+          {revieweeHref ? (
+            <Link href={revieweeHref} className={styles.profile}>
+              <img src={review?.revieweeImgUrl ?? avatarImg.src} alt="Profile" />
+              <div>
+                <span className={styles.title}>Has been reviewed</span>
+                <span className={styles.name}>
+                  {review.revieweeFirstName}
+                  <br />
+                  {review.revieweeSurname}
+                </span>
+              </div>
+            </Link>
+          ) : (
+            <div className={styles.profile}>
+              <img src={review?.revieweeImgUrl ?? avatarImg.src} alt="Profile" />
+              <div>
+                <span className={styles.title}>Has been reviewed</span>
+                <span className={styles.name}>
+                  {review.revieweeFirstName}
+                  <br />
+                  {review.revieweeSurname}
+                </span>
+              </div>
             </div>
-          </Link>
+          )}
 
           <img src={arrowImg.src} alt="Arrow" />
 
-          <Link href={reviewerHref} className={styles.profile}>
-            <img src={review?.reviewerImgUrl ?? avatarImg.src} alt="Profile" />
-            <div>
-              <span className={styles.title}>Reviewed by</span>
-              <span className={styles.name}>
-                {review.reviewerFirstName}
-                <br />
-                {review.reviewerSurname}
-              </span>
+          {reviewerHref ? (
+            <Link href={reviewerHref} className={styles.profile}>
+              <img src={reviewerImgUrl} alt="Profile" />
+              <div>
+                <span className={styles.title}>Reviewed by</span>
+                <span className={styles.name}>
+                  {reviewerFirstName}
+                  <br />
+                  {reviewerSurname}
+                </span>
+              </div>
+            </Link>
+          ) : (
+            <div className={styles.profile}>
+              <img src={reviewerImgUrl} alt="Profile" />
+              <div>
+                <span className={styles.title}>Reviewed by</span>
+                <span className={styles.name}>
+                  {reviewerFirstName}
+                  <br />
+                  {reviewerSurname}
+                </span>
+              </div>
             </div>
-          </Link>
+          )}
         </div>
 
         {isMobile && (
@@ -71,7 +122,7 @@ const DetailedReview = ({ review, onBackClick }: DetailedReview) => {
       </div>
 
       <div className={styles.review}>
-        <img src={review?.reviewerImgUrl ?? avatarImg.src} alt="Profile" />
+        <img src={reviewerImgUrl} alt="Profile" />
         <div className={styles.reviewBubble}>
           {review?.text?.trim() ? review.text : "no text was left"}
         </div>
