@@ -387,12 +387,39 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       : null;
   const requiresRefund = isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h;
   const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
+  const providerCostAmount =
+    typeof order?.totalProviderPrice === "number" ? order.totalProviderPrice : null;
+  const serviceFeeAmount =
+    typeof order?.platformFeePrice === "number" ? order.platformFeePrice : null;
+  const calculatedCancelFeeAmount = isCanceledLate12h
+    ? providerCostAmount != null
+      ? providerCostAmount * 0.2
+      : null
+    : isCanceledLate2h
+      ? providerCostAmount
+      : null;
   const cancelFeeDisplayAmount =
     cancelFeeAmountValue != null
       ? cancelFeeAmountValue
-      : requiresCancelFeePayout &&
-          typeof order?.totalProviderPrice === "number"
-        ? order.totalProviderPrice
+      : calculatedCancelFeeAmount;
+  const totalOrderAmount =
+    typeof order?.totalPrice === "number" ? order.totalPrice : null;
+  const refundDisplayAmount =
+    refundedAmountValue != null
+      ? refundedAmountValue
+      : isCanceledByClient
+        ? isCanceledLate12h
+          ? totalOrderAmount != null
+            ? Math.max(
+                totalOrderAmount -
+                  (serviceFeeAmount ?? 0) -
+                  (cancelFeeDisplayAmount ?? 0),
+                0,
+              )
+            : null
+          : requiresRefund
+            ? totalOrderAmount
+            : null
         : null;
   const shouldShowInvoiceCards =
     order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" || requiresCancelFeePayout;
@@ -430,6 +457,30 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         timeZoneName: "short",
       })
     : "-";
+  const finalPrimaryTitle = isCanceledOrder
+    ? isCanceledByClient
+      ? requiresRefund || isCanceledLate12h
+        ? isRefundDone
+          ? "Refunded to parent"
+          : "Refund to parent"
+        : "Cancel fee to sitter"
+      : "Canceled order payments"
+    : "Final price to pay the sitter";
+  const finalPrimaryValue = isCanceledOrder
+    ? isCanceledByClient
+      ? requiresRefund || isCanceledLate12h
+        ? refundDisplayAmount != null
+          ? `€${refundDisplayAmount.toFixed(2)}`
+          : "—"
+        : cancelFeeDisplayAmount != null
+          ? `€${cancelFeeDisplayAmount.toFixed(2)}`
+          : "—"
+      : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
+    : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`;
+  const showCanceledFeeBreakdown =
+    isCanceledByClient &&
+    (requiresRefund || isCanceledLate12h) &&
+    cancelFeeDisplayAmount != null;
 
   return (
     <div className={styles.main}>
@@ -783,37 +834,24 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       </div>
       <div className={`${styles.finalPrice} ${nunito.className}`}>
         <div>
-          <span className={styles.finalPriceTitle}>
-            {isCanceledOrder
-              ? isCanceledByClient
-                ? requiresRefund || isCanceledLate12h
-                  ? isRefundDone
-                    ? "Refunded to parent"
-                    : "Refund to parent"
-                  : "Cancel fee to sitter"
-                : "Canceled order payments"
-              : "Final price to pay the sitter"}
-          </span>
-          <span className={styles.finalPriceValue}>
-            {isCanceledOrder
-              ? isCanceledByClient
-                ? requiresRefund || isCanceledLate12h
-                  ? refundedAmountValue != null
-                    ? `€${refundedAmountValue.toFixed(2)}`
-                    : "—"
-                  : cancelFeeDisplayAmount != null
-                    ? `€${cancelFeeDisplayAmount.toFixed(2)}`
-                    : "—"
-                : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
-              : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`}
-          </span>
-          {isCanceledByClient &&
-            requiresCancelFeePayout &&
-            (requiresRefund || isCanceledLate12h) &&
-            cancelFeeDisplayAmount != null && (
-            <span className={styles.paidText}>
-              {`Cancel fee to sitter: €${cancelFeeDisplayAmount.toFixed(2)}`}
-            </span>
+          {showCanceledFeeBreakdown ? (
+            <>
+              <div className={styles.breakdownRow}>
+                <span className={styles.breakdownLabel}>{finalPrimaryTitle}</span>
+                <span className={styles.breakdownAmount}>{finalPrimaryValue}</span>
+              </div>
+              <div className={styles.breakdownRow}>
+                <span className={styles.breakdownLabel}>Cancel fee to sitter</span>
+                <span className={styles.breakdownAmount}>
+                  {`€${cancelFeeDisplayAmount.toFixed(2)}`}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className={styles.finalPriceTitle}>{finalPrimaryTitle}</span>
+              <span className={styles.finalPriceValue}>{finalPrimaryValue}</span>
+            </>
           )}
         </div>
         {!isCanceledOrder && order?.isReleasedFundsToProvider && (

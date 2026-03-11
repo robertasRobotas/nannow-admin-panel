@@ -46,6 +46,8 @@
   color: #000;
   font-size: 14px;
   font-weight: 600;
+  display: block;
+  margin-top: 4px;
 }
 
 .finalActionsRow {
@@ -76,6 +78,34 @@
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.48px;
+  display: block;
+}
+
+.breakdownRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breakdownRow + .breakdownRow {
+  margin-top: 6px;
+}
+
+.breakdownLabel {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 18px;
+  letter-spacing: -0.28px;
+}
+
+.breakdownAmount {
+  color: #000;
+  font-family: Nunito;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.3px;
 }
 
 .processCards {
