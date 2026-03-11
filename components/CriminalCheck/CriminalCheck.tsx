@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import styles from "./criminalCheck.module.css";
 import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
-import { getUsersByCriminalRecordStatus } from "@/pages/api/fetch";
+import {
+  getPendingCriminalRecordCount,
+  getUsersByCriminalRecordStatus,
+} from "@/pages/api/fetch";
 import ProfilesList from "./ProfilesList/ProfilesList";
 import ReactPaginate from "react-paginate";
 import paginateStyles from "../../styles/paginate.module.css";
@@ -21,6 +24,7 @@ const CriminalCheck = () => {
   const [itemsPerPage, setItemsPerPage] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
   const router = useRouter();
 
   const fetchUsers = useCallback(
@@ -56,6 +60,18 @@ const CriminalCheck = () => {
   useEffect(() => {
     fetchUsers(selected === "ALL" ? "" : selected, itemOffset);
   }, [selected, itemOffset, fetchUsers]);
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const response = await getPendingCriminalRecordCount();
+        setPendingCount(Number(response.data?.total ?? 0) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchPendingCount();
+  }, []);
 
   const normalizedSearch = searchText.trim().toLowerCase();
   const displayedUsers =
@@ -96,6 +112,7 @@ const CriminalCheck = () => {
           title="Pending"
           type="PLAIN"
           isSelected={selected === "PENDING"}
+          attentionNumber={pendingCount}
         />
         <Button
           onClick={() => setSelected("APPROVED")}

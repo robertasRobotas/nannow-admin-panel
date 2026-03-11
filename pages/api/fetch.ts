@@ -2,8 +2,8 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-const BASE_URL = "https://nannow-api.com/v1";
-// const BASE_URL = "http://192.168.1.192:8080/v1";
+// const BASE_URL = "https://nannow-api.com/v1";
+const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export type AdminRole = "ADMIN" | "SUPER_ADMIN";
@@ -140,6 +140,39 @@ export const getCriminalCheckById = async (id: string) => {
       },
     },
   );
+  return response;
+};
+
+export const getPendingCriminalRecordCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/criminal-record-status/pending/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getNotReviewedDocumentsCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/documents/not-reviewed/count`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getNotResolvedReportsCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/reports/not-resolved/count`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
   return response;
 };
 

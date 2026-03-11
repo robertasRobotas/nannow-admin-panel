@@ -6,7 +6,11 @@ import { options as documentsStatusOptions } from "@/data/documentsStatusOptions
 import paginateStyles from "@/styles/paginate.module.css";
 import Button from "@/components/Button/Button";
 import ReactPaginate from "react-paginate";
-import { getDocuments, toggleDocumentReviewed } from "@/pages/api/fetch";
+import {
+  getDocuments,
+  getNotReviewedDocumentsCount,
+  toggleDocumentReviewed,
+} from "@/pages/api/fetch";
 import axios from "axios";
 import { useRouter } from "next/router";
 import fileIcon from "@/assets/images/doc.svg";
@@ -92,6 +96,7 @@ const Documents = () => {
 
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
+  const [notReviewedCount, setNotReviewedCount] = useState(0);
 
   const selectedStatus = useMemo(() => {
     const value = documentsStatusOptions[selectedOption]?.value ?? "";
@@ -99,6 +104,20 @@ const Documents = () => {
       ? (value as "REVIEWED" | "NOT_REVIEWED")
       : undefined;
   }, [selectedOption]);
+
+  const statusOptionsWithCounters = useMemo(
+    () =>
+      documentsStatusOptions.map((option) =>
+        option.value === "NOT_REVIEWED"
+          ? {
+              ...option,
+              attentionNumber:
+                notReviewedCount > 0 ? notReviewedCount : undefined,
+            }
+          : option,
+      ),
+    [notReviewedCount],
+  );
 
   const fetchDocuments = async () => {
     try {
@@ -137,6 +156,18 @@ const Documents = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemOffset, selectedStatus]);
 
+  useEffect(() => {
+    const fetchNotReviewedCount = async () => {
+      try {
+        const response = await getNotReviewedDocumentsCount();
+        setNotReviewedCount(Number(response.data?.count ?? 0) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchNotReviewedCount();
+  }, []);
+
   const handlePageClick = (event: { selected: number }) => {
     const newOffset =
       (event.selected * (itemsPerPage ?? 0)) % (totalItems ?? 0);
@@ -150,7 +181,7 @@ const Documents = () => {
       <div className={styles.toolbar}>
         <div className={styles.title}>Documents</div>
         <DropDownButton
-          options={documentsStatusOptions}
+          options={statusOptionsWithCounters}
           selectedOption={selectedOption}
           setSelectedOption={(idx) => {
             setSelectedOption(idx);

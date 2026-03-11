@@ -13,6 +13,9 @@ type HeaderMenuProps = {
   onClose: () => void;
   ordersAttentionNumber?: number;
   usersAttentionNumber?: number;
+  criminalCheckAttentionNumber?: number;
+  documentsAttentionNumber?: number;
+  reportsAttentionNumber?: number;
 };
 
 const HeaderMenu = ({
@@ -20,6 +23,9 @@ const HeaderMenu = ({
   onClose,
   ordersAttentionNumber,
   usersAttentionNumber,
+  criminalCheckAttentionNumber,
+  documentsAttentionNumber,
+  reportsAttentionNumber,
 }: HeaderMenuProps) => {
   const [isClosing, setClosing] = useState(false);
   const { pathname } = useRouter();
@@ -57,6 +63,15 @@ const HeaderMenu = ({
                         : undefined
                       : l.link === "/users" && (usersAttentionNumber ?? 0) > 0
                         ? usersAttentionNumber
+                        : l.link === "/criminal-check" &&
+                            (criminalCheckAttentionNumber ?? 0) > 0
+                          ? criminalCheckAttentionNumber
+                        : l.link === "/documents" &&
+                            (documentsAttentionNumber ?? 0) > 0
+                          ? documentsAttentionNumber
+                        : l.link === "/reports" &&
+                            (reportsAttentionNumber ?? 0) > 0
+                          ? reportsAttentionNumber
                         : undefined
                   }
                 />

@@ -14,7 +14,10 @@ import {
   getCurrentAdminRolesFromJwt,
   getNotFinishedOnboardingUsers,
   getNotEndedOrdersCount,
+  getNotResolvedReportsCount,
+  getNotReviewedDocumentsCount,
   getNotPaidOrdersCount,
+  getPendingCriminalRecordCount,
   setupAdminTotp,
   verifyAdminTotpSetup,
 } from "@/pages/api/fetch";
@@ -28,6 +31,10 @@ const Header = () => {
     useState(0);
   const [notFinishedOnboardingCount, setNotFinishedOnboardingCount] =
     useState(0);
+  const [pendingCriminalChecksCount, setPendingCriminalChecksCount] =
+    useState(0);
+  const [notReviewedDocumentsCount, setNotReviewedDocumentsCount] = useState(0);
+  const [notResolvedReportsCount, setNotResolvedReportsCount] = useState(0);
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
   const [isTotpSetupLoading, setIsTotpSetupLoading] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
@@ -104,11 +111,41 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchPendingCriminalChecksCount = async () => {
+      try {
+        const response = await getPendingCriminalRecordCount();
+        const total = response.data?.total ?? 0;
+        setPendingCriminalChecksCount(Number(total) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    const fetchNotReviewedDocumentsCount = async () => {
+      try {
+        const response = await getNotReviewedDocumentsCount();
+        const count = response.data?.count ?? 0;
+        setNotReviewedDocumentsCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    const fetchNotResolvedReportsCount = async () => {
+      try {
+        const response = await getNotResolvedReportsCount();
+        const count = response.data?.count ?? 0;
+        setNotResolvedReportsCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
 
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
     fetchCanceledPendingFinancialOrdersCount();
     fetchNotFinishedOnboardingCount();
+    fetchPendingCriminalChecksCount();
+    fetchNotReviewedDocumentsCount();
+    fetchNotResolvedReportsCount();
   }, [router]);
 
   const ordersAttentionNumber =
@@ -192,6 +229,15 @@ const Header = () => {
                         : l.link === "/users" &&
                             notFinishedOnboardingCount > 0
                           ? notFinishedOnboardingCount
+                        : l.link === "/criminal-check" &&
+                              pendingCriminalChecksCount > 0
+                            ? pendingCriminalChecksCount
+                          : l.link === "/documents" &&
+                              notReviewedDocumentsCount > 0
+                            ? notReviewedDocumentsCount
+                          : l.link === "/reports" &&
+                              notResolvedReportsCount > 0
+                            ? notResolvedReportsCount
                           : undefined
                     }
                   />
@@ -223,6 +269,9 @@ const Header = () => {
           onClose={() => setMenuDisplayed(false)}
           ordersAttentionNumber={ordersAttentionNumber}
           usersAttentionNumber={notFinishedOnboardingCount}
+          criminalCheckAttentionNumber={pendingCriminalChecksCount}
+          documentsAttentionNumber={notReviewedDocumentsCount}
+          reportsAttentionNumber={notResolvedReportsCount}
         />
       )}
       {isTotpModalOpen && (
