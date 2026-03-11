@@ -316,6 +316,46 @@ export const setUserSuspendedStatus = async (
   return response;
 };
 
+export const setUserBanStatus = async (
+  userId: string,
+  isBanned: boolean,
+  bannedReason?: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/users/${userId}/ban`,
+    {
+      isBanned,
+      bannedReason,
+    },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getBannedUsers = async (params?: {
+  search?: string;
+  startIndex?: number;
+  pageSize?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/banned`, {
+    params: {
+      search: params?.search,
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
 export const deleteProviderStripeAccount = async (userId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.delete(

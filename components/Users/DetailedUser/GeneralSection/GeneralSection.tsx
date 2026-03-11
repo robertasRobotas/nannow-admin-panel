@@ -8,6 +8,7 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import {
   deleteProviderStripeAccount,
+  setUserBanStatus,
   setUserSuspendedStatus,
   updateProviderFields,
 } from "@/pages/api/fetch";
@@ -30,6 +31,10 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   );
   const [isDeleteStripeModalOpen, setIsDeleteStripeModalOpen] = useState(false);
   const [isDeletingStripeAccount, setIsDeletingStripeAccount] = useState(false);
+  const [isBanModalOpen, setIsBanModalOpen] = useState(false);
+  const [banReason, setBanReason] = useState("");
+  const [banReasonError, setBanReasonError] = useState<string | null>(null);
+  const [isSavingBanStatus, setIsSavingBanStatus] = useState(false);
   const [isBasePriceModalOpen, setIsBasePriceModalOpen] = useState(false);
   const [basePriceInput, setBasePriceInput] = useState(
     typeof user?.provider?.baseProviderRate === "number"
@@ -102,6 +107,50 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     );
     setBasePriceError(null);
     setIsBasePriceModalOpen(true);
+  };
+
+  const openBanModal = () => {
+    setBanReason("");
+    setBanReasonError(null);
+    setIsBanModalOpen(true);
+  };
+
+  const closeBanModal = () => {
+    if (isSavingBanStatus) return;
+    setIsBanModalOpen(false);
+    setBanReasonError(null);
+  };
+
+  const confirmBanStatusChange = async () => {
+    if (!user?.user?.id || isSavingBanStatus) return;
+    const isCurrentlyBanned = !!user?.user?.isBannedByAdmin;
+    const isBanning = !isCurrentlyBanned;
+
+    if (isBanning && banReason.trim().length === 0) {
+      setBanReasonError("Reason is required.");
+      return;
+    }
+
+    try {
+      setIsSavingBanStatus(true);
+      await setUserBanStatus(
+        user.user.id,
+        isBanning,
+        isBanning ? banReason.trim() : undefined,
+      );
+      toast.success(isBanning ? "User was banned" : "User was unbanned");
+      setIsBanModalOpen(false);
+      if (isBanning) {
+        await router.replace("/users?view=banned");
+        return;
+      }
+      router.reload();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to change user ban status");
+    } finally {
+      setIsSavingBanStatus(false);
+    }
   };
 
   const closeBasePriceModal = () => {
@@ -206,6 +255,13 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                   onClick={openBasePriceModal}
                 />
               )}
+            {c.actionButton?.action === "BAN_USER" && (
+              <Button
+                title={c.actionButton.title}
+                type="OUTLINED"
+                onClick={openBanModal}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -282,6 +338,56 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 type="BLACK"
                 onClick={confirmChangeBasePrice}
                 isDisabled={isUpdatingBasePrice}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBanModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>
+              {user?.user?.isBannedByAdmin ? "Unban user?" : "Ban user?"}
+            </h2>
+            {!user?.user?.isBannedByAdmin && (
+              <div className={styles.inputBlock}>
+                <label className={styles.inputLabel} htmlFor="ban-reason-input">
+                  Reason
+                </label>
+                <input
+                  id="ban-reason-input"
+                  type="text"
+                  value={banReason}
+                  onChange={(e) => {
+                    setBanReason(e.target.value);
+                    setBanReasonError(null);
+                  }}
+                  className={styles.textInput}
+                  placeholder="Enter reason..."
+                  disabled={isSavingBanStatus}
+                />
+                {banReasonError && (
+                  <span className={styles.inputError}>{banReasonError}</span>
+                )}
+              </div>
+            )}
+            <p className={styles.confirmationBody}>
+              Banned users are visible in the Users page under the{" "}
+              <b>Banned users</b> list.
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeBanModal}
+                isDisabled={isSavingBanStatus}
+              />
+              <Button
+                title={isSavingBanStatus ? "Saving..." : "Confirm"}
+                type="BLACK"
+                onClick={confirmBanStatusChange}
+                isDisabled={isSavingBanStatus}
               />
             </div>
           </div>

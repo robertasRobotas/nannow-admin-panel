@@ -20,7 +20,7 @@ export type InfoCard = {
   link?: string;
   actionButton?: {
     title: string;
-    action: "DELETE_STRIPE" | "CHANGE_BASE_PRICE";
+    action: "DELETE_STRIPE" | "CHANGE_BASE_PRICE" | "BAN_USER";
   };
   booleanSwitch?: {
     value: boolean;
@@ -94,6 +94,15 @@ export const getInfoCards = (
       icon: isSuspended ? suspendedRedImg : suspendedGreenImg,
       value: isSuspended ? "Suspended" : "Not suspended",
       booleanSwitch: options?.suspendedSwitch,
+    },
+    {
+      title: "Ban user",
+      icon: suspendedRedImg,
+      value: data?.user?.isBannedByAdmin ? "Banned" : "Not banned",
+      actionButton: {
+        title: data?.user?.isBannedByAdmin ? "Unban user" : "Ban user",
+        action: "BAN_USER",
+      },
     },
   ];
 
