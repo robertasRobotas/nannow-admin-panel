@@ -387,6 +387,13 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       : null;
   const requiresRefund = isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h;
   const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
+  const cancelFeeDisplayAmount =
+    cancelFeeAmountValue != null
+      ? cancelFeeAmountValue
+      : requiresCancelFeePayout &&
+          typeof order?.totalProviderPrice === "number"
+        ? order.totalProviderPrice
+        : null;
   const shouldShowInvoiceCards =
     order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" || requiresCancelFeePayout;
   const shouldShowProviderDocumentCard =
@@ -794,17 +801,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                   ? refundedAmountValue != null
                     ? `€${refundedAmountValue.toFixed(2)}`
                     : "—"
-                  : cancelFeeAmountValue != null
-                    ? `€${cancelFeeAmountValue.toFixed(2)}`
+                  : cancelFeeDisplayAmount != null
+                    ? `€${cancelFeeDisplayAmount.toFixed(2)}`
                     : "—"
                 : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
               : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`}
           </span>
           {isCanceledByClient &&
             requiresCancelFeePayout &&
-            cancelFeeAmountValue != null && (
+            (requiresRefund || isCanceledLate12h) &&
+            cancelFeeDisplayAmount != null && (
             <span className={styles.paidText}>
-              {`Cancel fee to sitter: €${cancelFeeAmountValue.toFixed(2)}`}
+              {`Cancel fee to sitter: €${cancelFeeDisplayAmount.toFixed(2)}`}
             </span>
           )}
         </div>
