@@ -13,6 +13,12 @@ export type AdminEvent =
       applicationId: string;
       userName: string;
     }
+  | {
+      type: "ADMIN_ALERT";
+      text: string;
+      adminId: string;
+      createdAt: string;
+    }
   | { type: "FEEDBACK_CREATED"; feedbackId: string }
   | { type: "FEEDBACK_RESOLVED"; feedbackId: string; userId: string }
   | { type: "USER_REPORTED"; reportId: string }

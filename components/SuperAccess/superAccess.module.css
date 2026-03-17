@@ -194,6 +194,54 @@
   font-weight: 600;
 }
 
+.alertInfoCard,
+.alertFormCard {
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+
+.alertInfoCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.alertInfoTitle,
+.alertFormTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #000;
+}
+
+.alertInfoText,
+.alertFormText {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.alertInlineCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.alertFormCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alertTextarea {
+  min-height: 220px !important;
+  resize: vertical;
+}
+
 .form {
   display: flex;
   flex-direction: column;

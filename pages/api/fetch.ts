@@ -1088,6 +1088,20 @@ export const getAllAdmins = async () => {
   return response;
 };
 
+export const sendAdminAlert = async (text: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/alerts`,
+    { text },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const createAdminUser = async (payload: {
   email: string;
   firstName: string;

@@ -8,6 +8,7 @@ import calendarImg from "../../assets/images/calendar.svg";
 import {
   AdminRole,
   createAdminUser,
+  sendAdminAlert,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
   getSuperAccessItem,
@@ -34,11 +35,12 @@ type EntityRecord = {
 
 type SuperMenuItem = {
   title: string;
-  key: SuperAccessEntity;
+  key: SuperAccessEntity | "alerts";
 };
 
 const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Admins", key: "admins" },
+  { title: "Alert to admins", key: "alerts" },
   { title: "Users", key: "users" },
   { title: "Clients", key: "clients" },
   { title: "Providers", key: "providers" },
@@ -362,7 +364,7 @@ const withOrderFinancialFields = (item: EntityRecord): EntityRecord => ({
 
 const SuperAccess = () => {
   const router = useRouter();
-  const [entity, setEntity] = useState<SuperAccessEntity>("users");
+  const [entity, setEntity] = useState<SuperAccessEntity | "alerts">("users");
   const [list, setList] = useState<EntityRecord[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [selectedItem, setSelectedItem] = useState<EntityRecord | null>(
@@ -386,6 +388,8 @@ const SuperAccess = () => {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminRoles, setNewAdminRoles] = useState<AdminRole[]>(["ADMIN"]);
+  const [adminAlertText, setAdminAlertText] = useState("");
+  const [isSendingAlert, setIsSendingAlert] = useState(false);
   const [linkedUsersById, setLinkedUsersById] = useState<Record<string, EntityRecord>>({});
   const [addressesById, setAddressesById] = useState<Record<string, EntityRecord>>({});
   const [childrenById, setChildrenById] = useState<Record<string, EntityRecord>>({});
@@ -403,6 +407,11 @@ const SuperAccess = () => {
   }, [router]);
 
   const fetchList = useCallback(async () => {
+    if (entity === "alerts") {
+      setList([]);
+      setTotal(0);
+      return;
+    }
     try {
       setLoadingList(true);
       setError("");
@@ -430,6 +439,11 @@ const SuperAccess = () => {
   }, [appliedSearch, entity, pageSize, router, selectedId, startIndex]);
 
   const fetchItem = useCallback(async () => {
+    if (entity === "alerts") {
+      setSelectedItem(null);
+      setDraft({});
+      return;
+    }
     if (!selectedId) return;
     if (entity === "admins") {
       const listItem = list.find((item) => pickId(item) === selectedId) ?? null;
@@ -1029,6 +1043,7 @@ const SuperAccess = () => {
   };
 
   const saveChanges = async () => {
+    if (entity === "alerts") return;
     if (!selectedId || isSaving) return;
     try {
       setIsSaving(true);
@@ -1073,6 +1088,28 @@ const SuperAccess = () => {
       setError("Failed to update item.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const submitAdminAlert = async () => {
+    const text = adminAlertText.trim();
+    if (!text || isSendingAlert) return;
+    try {
+      setIsSendingAlert(true);
+      setError("");
+      await sendAdminAlert(text);
+      setAdminAlertText("");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to send alert.",
+        );
+        return;
+      }
+      setError("Failed to send alert.");
+    } finally {
+      setIsSendingAlert(false);
     }
   };
 
@@ -1196,348 +1233,406 @@ const SuperAccess = () => {
         <section className={styles.listPane}>
           <div className={styles.listHeader}>
             <div>
-              <h2>{prettyTitle(entity)}</h2>
+              <h2>
+                {entity === "alerts" ? "Alert to admins" : prettyTitle(entity)}
+              </h2>
               <span>
-                {total} total, page {currentPage}/{totalPages}
+                {entity === "alerts"
+                  ? "Broadcast a modal alert to all connected admins."
+                  : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
-            <SearchBar
-              placeholder="Type to search"
-              searchText={searchText}
-              setSearchText={setSearchText}
-              onButtonClick={() => {
-                setStartIndex(0);
-                setAppliedSearch(searchText);
-              }}
-            />
-          </div>
-          <div
-            className={`${styles.itemsGrid} ${
-              entity === "orders" ? styles.itemsGridOrders : ""
-            }`}
-          >
-            {list.map((item) => {
-              const id = pickId(item);
-              const orderItem =
-                entity === "orders" ? ordersById[id] ?? item : item;
-              const linkedUser =
-                entity === "clients" || entity === "providers"
-                  ? linkedUsersById[pickLinkedUserId(item)]
-                  : null;
-              const childClientId =
-                entity === "children" ? String(item.clientId ?? "") : "";
-              const childClient = childClientId ? clientsById[childClientId] : null;
-              const childParentUserId = childClient
-                ? String(childClient.userId ?? "")
-                : "";
-              const childParentUser = childParentUserId
-                ? linkedUsersById[childParentUserId]
-                : null;
-              const childParentName = childParentUser
-                ? `${String(childParentUser.firstName ?? "")} ${String(
-                    childParentUser.lastName ?? "",
-                  )}`.trim()
-                : "";
-              const fullName = `${
-                linkedUser?.firstName ?? item.firstName ?? ""
-              } ${linkedUser?.lastName ?? item.lastName ?? ""}`.trim();
-              const title =
-                entity === "children"
-                  ? String(item.name ?? `Child ${id || "—"}`)
-                  :
-                fullName ||
-                String(
-                  linkedUser?.title ??
-                    item.title ??
-                    linkedUser?.email ??
-                    item.email ??
-                    item.orderNo ??
-                    item.id ??
-                    "Item",
-                );
-              const email = String(linkedUser?.email ?? item.email ?? "");
-              const addressUserId =
-                entity === "addresses" ? String(item.userId ?? "") : "";
-              const addressUser = addressUserId
-                ? linkedUsersById[addressUserId]
-                : null;
-              const addressUserName = getUserDisplayName(addressUser);
-              const addressText =
-                entity === "addresses" ? formatAddressLabel(item, id || "—") : "";
-              const imageUrl = String(
-                linkedUser?.imgUrl ??
-                  linkedUser?.imageUrl ??
-                  addressUser?.imgUrl ??
-                  addressUser?.imageUrl ??
-                  item.imgUrl ??
-                  item.imageUrl ??
-                  defaultUserImg.src,
-              );
-              const childSummary =
-                entity === "children" ? formatChildSummary(item, id || "—") : "";
-              const orderClientUserId = String(
-                orderItem.clientUserId ??
-                  orderItem.clientUser?.id ??
-                  orderItem.client?.userId ??
-                  orderItem.client?.user?.id ??
-                  clientsById[
-                    String(orderItem.clientId ?? orderItem.client?.id ?? "")
-                  ]?.userId ??
-                  "",
-              );
-              const orderProviderUserId = String(
-                orderItem.approvedProviderUserId ??
-                  orderItem.approvedProvider?.userId ??
-                  orderItem.approvedProvider?.user?.id ??
-                  providersById[
-                    String(
-                      orderItem.approvedProviderId ?? orderItem.approvedProvider?.id ?? "",
-                    )
-                  ]?.userId ??
-                  orderItem.requiredProviderId ??
-                  "",
-              );
-              const orderClientUser = orderClientUserId
-                ? linkedUsersById[orderClientUserId]
-                : null;
-              const orderProviderUser = orderProviderUserId
-                ? linkedUsersById[orderProviderUserId]
-                : null;
-              const orderClientName = getUserDisplayName(orderClientUser) || "Client";
-              const orderClientNameFromItem = pickFirstString(
-                orderItem.clientName,
-                orderItem.clientUserName,
-                orderItem.clientUser?.firstName
-                  ? `${String(orderItem.clientUser?.firstName ?? "")} ${String(
-                      orderItem.clientUser?.lastName ?? "",
-                    )}`.trim()
-                  : "",
-                orderItem.client?.user?.firstName
-                  ? `${String(orderItem.client?.user?.firstName ?? "")} ${String(
-                      orderItem.client?.user?.lastName ?? "",
-                    )}`.trim()
-                  : "",
-              );
-              const orderProviderName =
-                String(
-                  orderItem.approvedProvider?.user?.firstName
-                    ? `${String(orderItem.approvedProvider?.user?.firstName ?? "")} ${String(
-                        orderItem.approvedProvider?.user?.lastName ?? "",
-                      )}`.trim()
-                    : getUserDisplayName(orderProviderUser) || "Provider",
-                );
-              const orderClientImg = pickFirstString(
-                orderItem.clientImgUrl,
-                orderItem.clientImgURI,
-                orderItem.clientImgUri,
-                orderItem.clientImageUrl,
-                orderItem.clientImageURI,
-                orderItem.clientImageUri,
-                orderItem.clientUser?.imgUrl,
-                orderItem.clientUser?.imageUrl,
-                orderItem.client?.user?.imgUrl,
-                orderItem.client?.user?.imageUrl,
-                orderClientUser?.imgUrl,
-                orderClientUser?.imageUrl,
-                defaultUserImg.src,
-              );
-              const orderProviderImg = pickFirstString(
-                orderItem.approvedProvider?.user?.imgUrl,
-                orderItem.approvedProvider?.user?.imageUrl,
-                orderItem.approvedProviderImgUrl,
-                orderItem.approvedProviderImageUrl,
-                orderItem.providerImgUrl,
-                orderItem.providerImageUrl,
-                orderProviderUser?.imgUrl,
-                orderProviderUser?.imageUrl,
-                defaultUserImg.src,
-              );
-              return (
-                <button
-                  key={id || title}
-                  type="button"
-                  className={`${styles.itemCard} ${
-                    selectedId === id ? styles.itemCardActive : ""
-                  }`}
-                  onClick={() => setSelectedId(id)}
-                >
-                  {entity === "orders" ? (
-                    <div className={styles.orderRow}>
-                      <div className={styles.orderRowTop}>
-                        <div className={styles.orderRowUsers}>
-                          <img
-                            src={orderProviderImg}
-                            alt="provider"
-                            className={styles.orderProviderImg}
-                          />
-                          <img
-                            src={orderClientImg}
-                            alt="client"
-                            className={styles.orderClientImg}
-                          />
-                            <div className={styles.orderRowNames}>
-                              {orderProviderName} |{" "}
-                              {orderClientNameFromItem || orderClientName}
-                            </div>
-                        </div>
-                      </div>
-                      <div className={styles.orderRowTime}>
-                        Starts: {formatDateTimeShort(orderItem.startsAt)}
-                      </div>
-                      <div className={styles.orderRowTime}>
-                        Ends: {formatDateTimeShort(orderItem.endsAt)}
-                      </div>
-                      <div className={styles.orderRowStatus}>
-                        {String(orderItem.status ?? "—")}
-                      </div>
-                      <div className={styles.orderRowPrettyId}>
-                        {String(orderItem.orderPrettyId ?? id)}
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <img src={imageUrl} alt="avatar" className={styles.avatar} />
-                      <div className={styles.itemTitle}>
-                        {entity === "addresses" ? addressText : title}
-                      </div>
-                      {entity === "children" ? (
-                        <>
-                          <div className={styles.itemSub}>{childSummary}</div>
-                          <div className={styles.itemSub}>
-                            Parent: {childParentName || "—"}
-                          </div>
-                        </>
-                      ) : entity === "addresses" ? (
-                        <div className={styles.itemSub}>
-                          User: {addressUserName || "—"}
-                        </div>
-                      ) : (
-                        email && <div className={styles.itemSub}>{email}</div>
-                      )}
-                      <div className={styles.itemSub}>ID: {id || "—"}</div>
-                    </>
-                  )}
-                </button>
-              );
-            })}
-            {!loadingList && list.length === 0 && (
-              <div className={styles.empty}>No items found.</div>
+            {entity !== "alerts" && (
+              <SearchBar
+                placeholder="Type to search"
+                searchText={searchText}
+                setSearchText={setSearchText}
+                onButtonClick={() => {
+                  setStartIndex(0);
+                  setAppliedSearch(searchText);
+                }}
+              />
             )}
           </div>
+          {entity === "alerts" ? (
+            <div className={styles.alertInfoCard}>
+              <div className={styles.alertInfoTitle}>Broadcast modal alert</div>
+              <div className={styles.alertInfoText}>
+                Connected admins will receive a blocking modal through
+                <code className={styles.alertInlineCode}> ADMIN_EVENT </code>
+                with type
+                <code className={styles.alertInlineCode}> ADMIN_ALERT </code>.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div
+                className={`${styles.itemsGrid} ${
+                  entity === "orders" ? styles.itemsGridOrders : ""
+                }`}
+              >
+                {list.map((item) => {
+                  const id = pickId(item);
+                  const orderItem =
+                    entity === "orders" ? ordersById[id] ?? item : item;
+                  const linkedUser =
+                    entity === "clients" || entity === "providers"
+                      ? linkedUsersById[pickLinkedUserId(item)]
+                      : null;
+                  const childClientId =
+                    entity === "children" ? String(item.clientId ?? "") : "";
+                  const childClient = childClientId ? clientsById[childClientId] : null;
+                  const childParentUserId = childClient
+                    ? String(childClient.userId ?? "")
+                    : "";
+                  const childParentUser = childParentUserId
+                    ? linkedUsersById[childParentUserId]
+                    : null;
+                  const childParentName = childParentUser
+                    ? `${String(childParentUser.firstName ?? "")} ${String(
+                        childParentUser.lastName ?? "",
+                      )}`.trim()
+                    : "";
+                  const fullName = `${
+                    linkedUser?.firstName ?? item.firstName ?? ""
+                  } ${linkedUser?.lastName ?? item.lastName ?? ""}`.trim();
+                  const title =
+                    entity === "children"
+                      ? String(item.name ?? `Child ${id || "—"}`)
+                      : fullName ||
+                        String(
+                          linkedUser?.title ??
+                            item.title ??
+                            linkedUser?.email ??
+                            item.email ??
+                            item.orderNo ??
+                            item.id ??
+                            "Item",
+                        );
+                  const email = String(linkedUser?.email ?? item.email ?? "");
+                  const addressUserId =
+                    entity === "addresses" ? String(item.userId ?? "") : "";
+                  const addressUser = addressUserId
+                    ? linkedUsersById[addressUserId]
+                    : null;
+                  const addressUserName = getUserDisplayName(addressUser);
+                  const addressText =
+                    entity === "addresses" ? formatAddressLabel(item, id || "—") : "";
+                  const imageUrl = String(
+                    linkedUser?.imgUrl ??
+                      linkedUser?.imageUrl ??
+                      addressUser?.imgUrl ??
+                      addressUser?.imageUrl ??
+                      item.imgUrl ??
+                      item.imageUrl ??
+                      defaultUserImg.src,
+                  );
+                  const childSummary =
+                    entity === "children" ? formatChildSummary(item, id || "—") : "";
+                  const orderClientUserId = String(
+                    orderItem.clientUserId ??
+                      orderItem.clientUser?.id ??
+                      orderItem.client?.userId ??
+                      orderItem.client?.user?.id ??
+                      clientsById[
+                        String(orderItem.clientId ?? orderItem.client?.id ?? "")
+                      ]?.userId ??
+                      "",
+                  );
+                  const orderProviderUserId = String(
+                    orderItem.approvedProviderUserId ??
+                      orderItem.approvedProvider?.userId ??
+                      orderItem.approvedProvider?.user?.id ??
+                      providersById[
+                        String(
+                          orderItem.approvedProviderId ??
+                            orderItem.approvedProvider?.id ??
+                            "",
+                        )
+                      ]?.userId ??
+                      orderItem.requiredProviderId ??
+                      "",
+                  );
+                  const orderClientUser = orderClientUserId
+                    ? linkedUsersById[orderClientUserId]
+                    : null;
+                  const orderProviderUser = orderProviderUserId
+                    ? linkedUsersById[orderProviderUserId]
+                    : null;
+                  const orderClientName =
+                    getUserDisplayName(orderClientUser) || "Client";
+                  const orderClientNameFromItem = pickFirstString(
+                    orderItem.clientName,
+                    orderItem.clientUserName,
+                    orderItem.clientUser?.firstName
+                      ? `${String(orderItem.clientUser?.firstName ?? "")} ${String(
+                          orderItem.clientUser?.lastName ?? "",
+                        )}`.trim()
+                      : "",
+                    orderItem.client?.user?.firstName
+                      ? `${String(orderItem.client?.user?.firstName ?? "")} ${String(
+                          orderItem.client?.user?.lastName ?? "",
+                        )}`.trim()
+                      : "",
+                  );
+                  const orderProviderName = String(
+                    orderItem.approvedProvider?.user?.firstName
+                      ? `${String(
+                          orderItem.approvedProvider?.user?.firstName ?? "",
+                        )} ${String(
+                          orderItem.approvedProvider?.user?.lastName ?? "",
+                        )}`.trim()
+                      : getUserDisplayName(orderProviderUser) || "Provider",
+                  );
+                  const orderClientImg = pickFirstString(
+                    orderItem.clientImgUrl,
+                    orderItem.clientImgURI,
+                    orderItem.clientImgUri,
+                    orderItem.clientImageUrl,
+                    orderItem.clientImageURI,
+                    orderItem.clientImageUri,
+                    orderItem.clientUser?.imgUrl,
+                    orderItem.clientUser?.imageUrl,
+                    orderItem.client?.user?.imgUrl,
+                    orderItem.client?.user?.imageUrl,
+                    orderClientUser?.imgUrl,
+                    orderClientUser?.imageUrl,
+                    defaultUserImg.src,
+                  );
+                  const orderProviderImg = pickFirstString(
+                    orderItem.approvedProvider?.user?.imgUrl,
+                    orderItem.approvedProvider?.user?.imageUrl,
+                    orderItem.approvedProviderImgUrl,
+                    orderItem.approvedProviderImageUrl,
+                    orderItem.providerImgUrl,
+                    orderItem.providerImageUrl,
+                    orderProviderUser?.imgUrl,
+                    orderProviderUser?.imageUrl,
+                    defaultUserImg.src,
+                  );
+                  return (
+                    <button
+                      key={id || title}
+                      type="button"
+                      className={`${styles.itemCard} ${
+                        selectedId === id ? styles.itemCardActive : ""
+                      }`}
+                      onClick={() => setSelectedId(id)}
+                    >
+                      {entity === "orders" ? (
+                        <div className={styles.orderRow}>
+                          <div className={styles.orderRowTop}>
+                            <div className={styles.orderRowUsers}>
+                              <img
+                                src={orderProviderImg}
+                                alt="provider"
+                                className={styles.orderProviderImg}
+                              />
+                              <img
+                                src={orderClientImg}
+                                alt="client"
+                                className={styles.orderClientImg}
+                              />
+                              <div className={styles.orderRowNames}>
+                                {orderProviderName} |{" "}
+                                {orderClientNameFromItem || orderClientName}
+                              </div>
+                            </div>
+                          </div>
+                          <div className={styles.orderRowTime}>
+                            Starts: {formatDateTimeShort(orderItem.startsAt)}
+                          </div>
+                          <div className={styles.orderRowTime}>
+                            Ends: {formatDateTimeShort(orderItem.endsAt)}
+                          </div>
+                          <div className={styles.orderRowStatus}>
+                            {String(orderItem.status ?? "—")}
+                          </div>
+                          <div className={styles.orderRowPrettyId}>
+                            {String(orderItem.orderPrettyId ?? id)}
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <img src={imageUrl} alt="avatar" className={styles.avatar} />
+                          <div className={styles.itemTitle}>
+                            {entity === "addresses" ? addressText : title}
+                          </div>
+                          {entity === "children" ? (
+                            <>
+                              <div className={styles.itemSub}>{childSummary}</div>
+                              <div className={styles.itemSub}>
+                                Parent: {childParentName || "—"}
+                              </div>
+                            </>
+                          ) : entity === "addresses" ? (
+                            <div className={styles.itemSub}>
+                              User: {addressUserName || "—"}
+                            </div>
+                          ) : (
+                            email && <div className={styles.itemSub}>{email}</div>
+                          )}
+                          <div className={styles.itemSub}>ID: {id || "—"}</div>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+                {!loadingList && list.length === 0 && (
+                  <div className={styles.empty}>No items found.</div>
+                )}
+              </div>
 
-          <div className={styles.pagination}>
-            <Button
-              title="Prev"
-              type="OUTLINED"
-              onClick={() => setStartIndex((prev) => Math.max(0, prev - pageSize))}
-              isDisabled={startIndex === 0 || loadingList}
-            />
-            <Button
-              title="Next"
-              type="OUTLINED"
-              onClick={() =>
-                setStartIndex((prev) =>
-                  prev + pageSize >= total ? prev : prev + pageSize,
-                )
-              }
-              isDisabled={startIndex + pageSize >= total || loadingList}
-            />
-          </div>
+              <div className={styles.pagination}>
+                <Button
+                  title="Prev"
+                  type="OUTLINED"
+                  onClick={() =>
+                    setStartIndex((prev) => Math.max(0, prev - pageSize))
+                  }
+                  isDisabled={startIndex === 0 || loadingList}
+                />
+                <Button
+                  title="Next"
+                  type="OUTLINED"
+                  onClick={() =>
+                    setStartIndex((prev) =>
+                      prev + pageSize >= total ? prev : prev + pageSize,
+                    )
+                  }
+                  isDisabled={startIndex + pageSize >= total || loadingList}
+                />
+              </div>
+            </>
+          )}
         </section>
 
         <section className={styles.detailPane}>
           <div className={styles.detailHeader}>
-            <h2>Detail</h2>
+            <h2>{entity === "alerts" ? "Send alert" : "Detail"}</h2>
             <Button
-              title={isSaving ? "Saving..." : "Save"}
+              title={
+                entity === "alerts"
+                  ? isSendingAlert
+                    ? "Sending..."
+                    : "Send alert"
+                  : isSaving
+                    ? "Saving..."
+                    : "Save"
+              }
               type="BLACK"
-              onClick={saveChanges}
-              isDisabled={!selectedId || loadingItem || isSaving}
-              isLoading={isSaving}
+              onClick={entity === "alerts" ? submitAdminAlert : saveChanges}
+              isDisabled={
+                entity === "alerts"
+                  ? !adminAlertText.trim() || isSendingAlert
+                  : !selectedId || loadingItem || isSaving
+              }
+              isLoading={entity === "alerts" ? isSendingAlert : isSaving}
             />
           </div>
 
-          {!selectedId && <div className={styles.empty}>Select an item.</div>}
-          {selectedId && loadingItem && <div className={styles.empty}>Loading...</div>}
-
-          {entity === "admins" && (
-            <div className={styles.adminCreateCard}>
-              <h3>Create admin</h3>
-              <div className={styles.inlineFields}>
-                <input
-                  type="text"
-                  placeholder="First name"
-                  value={newAdminFirstName}
-                  onChange={(e) => setNewAdminFirstName(e.target.value)}
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                />
-                <input
-                  type="password"
-                  placeholder="Password (optional)"
-                  value={newAdminPassword}
-                  onChange={(e) => setNewAdminPassword(e.target.value)}
-                />
+          {entity === "alerts" ? (
+            <div className={styles.alertFormCard}>
+              <div className={styles.alertFormTitle}>Alert text</div>
+              <div className={styles.alertFormText}>
+                This will open a modal for every connected admin. Keep the text
+                short enough to be understood immediately.
               </div>
-              <div className={styles.rolesMultiSelect}>
-                {["ADMIN", "SUPER_ADMIN"].map((role) => (
-                  <label key={role} className={styles.roleToggle}>
-                    <input
-                      type="checkbox"
-                      checked={newAdminRoles.includes(role as AdminRole)}
-                      onChange={(e) => {
-                        const typedRole = role as AdminRole;
-                        const nextRoles = e.target.checked
-                          ? [...newAdminRoles, typedRole]
-                          : newAdminRoles.filter((item) => item !== typedRole);
-                        if (nextRoles.length > 0) {
-                          setNewAdminRoles(nextRoles);
-                        }
-                      }}
-                    />
-                    {role}
-                  </label>
-                ))}
-              </div>
-              <Button
-                title={isCreatingAdmin ? "Creating..." : "Add admin"}
-                type="OUTLINED"
-                onClick={createAdmin}
-                isDisabled={isCreatingAdmin}
-                isLoading={isCreatingAdmin}
-              />
+              <label className={styles.field}>
+                <span>Message</span>
+                <textarea
+                  value={adminAlertText}
+                  onChange={(e) => setAdminAlertText(e.target.value)}
+                  placeholder="Type alert text"
+                  className={styles.alertTextarea}
+                />
+              </label>
             </div>
-          )}
+          ) : (
+            <>
+              {!selectedId && <div className={styles.empty}>Select an item.</div>}
+              {selectedId && loadingItem && (
+                <div className={styles.empty}>Loading...</div>
+              )}
 
-          {selectedId && !loadingItem && selectedItem && (
-            <div className={styles.form}>
               {entity === "admins" && (
-                <>
-                  <label className={styles.field}>
-                    <span>New password</span>
+                <div className={styles.adminCreateCard}>
+                  <h3>Create admin</h3>
+                  <div className={styles.inlineFields}>
+                    <input
+                      type="text"
+                      placeholder="First name"
+                      value={newAdminFirstName}
+                      onChange={(e) => setNewAdminFirstName(e.target.value)}
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                    />
                     <input
                       type="password"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      placeholder="Leave empty to keep current"
-                      disabled={removeAdminPassword}
+                      placeholder="Password (optional)"
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
                     />
-                  </label>
-                  <label className={styles.fieldCheckbox}>
-                    <input
-                      type="checkbox"
-                      checked={removeAdminPassword}
-                      onChange={(e) => setRemoveAdminPassword(e.target.checked)}
-                    />
-                    <span>Remove password login</span>
-                  </label>
-                </>
+                  </div>
+                  <div className={styles.rolesMultiSelect}>
+                    {["ADMIN", "SUPER_ADMIN"].map((role) => (
+                      <label key={role} className={styles.roleToggle}>
+                        <input
+                          type="checkbox"
+                          checked={newAdminRoles.includes(role as AdminRole)}
+                          onChange={(e) => {
+                            const typedRole = role as AdminRole;
+                            const nextRoles = e.target.checked
+                              ? [...newAdminRoles, typedRole]
+                              : newAdminRoles.filter((item) => item !== typedRole);
+                            if (nextRoles.length > 0) {
+                              setNewAdminRoles(nextRoles);
+                            }
+                          }}
+                        />
+                        {role}
+                      </label>
+                    ))}
+                  </div>
+                  <Button
+                    title={isCreatingAdmin ? "Creating..." : "Add admin"}
+                    type="OUTLINED"
+                    onClick={createAdmin}
+                    isDisabled={isCreatingAdmin}
+                    isLoading={isCreatingAdmin}
+                  />
+                </div>
               )}
-              {fields.map(([key, value]) => {
+
+              {selectedId && !loadingItem && selectedItem && (
+                <div className={styles.form}>
+                  {entity === "admins" && (
+                    <>
+                      <label className={styles.field}>
+                        <span>New password</span>
+                        <input
+                          type="password"
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          placeholder="Leave empty to keep current"
+                          disabled={removeAdminPassword}
+                        />
+                      </label>
+                      <label className={styles.fieldCheckbox}>
+                        <input
+                          type="checkbox"
+                          checked={removeAdminPassword}
+                          onChange={(e) => setRemoveAdminPassword(e.target.checked)}
+                        />
+                        <span>Remove password login</span>
+                      </label>
+                    </>
+                  )}
+                  {fields.map(([key, value]) => {
                 const fieldId = `field-${key}`;
 
                 const hasOrderStatusDropdown =
@@ -2070,8 +2165,10 @@ const SuperAccess = () => {
                     />
                   </label>
                 );
-              })}
-            </div>
+                  })}
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>
