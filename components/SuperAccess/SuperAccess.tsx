@@ -428,9 +428,10 @@ const SuperAccess = () => {
           : [];
         setList(items);
         setTotal(items.length);
-        setPageSize(Math.max(items.length, 1));
-        if (items.length > 0 && !selectedId) {
-          setSelectedId(String(items[0].adminId ?? items[0].id ?? ""));
+        if (items.length > 0) {
+          setSelectedId((prev) =>
+            prev || String(items[0].adminId ?? items[0].id ?? ""),
+          );
         }
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -467,7 +468,7 @@ const SuperAccess = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [appliedSearch, entity, pageSize, router, selectedId, startIndex]);
+  }, [appliedSearch, entity, pageSize, router, startIndex]);
 
   const fetchItem = useCallback(async () => {
     if (entity === "alerts") {
