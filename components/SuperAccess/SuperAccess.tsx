@@ -8,6 +8,7 @@ import calendarImg from "../../assets/images/calendar.svg";
 import {
   AdminRole,
   createAdminUser,
+  getConnectedAdmins,
   sendAdminAlert,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
@@ -17,6 +18,7 @@ import {
 } from "@/pages/api/fetch";
 import { options as orderStatusOptions } from "@/data/orderStatusOptions";
 import { useRouter } from "next/router";
+import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 
 type EntityRecord = {
   [key: string]: unknown;
@@ -35,7 +37,7 @@ type EntityRecord = {
 
 type SuperMenuItem = {
   title: string;
-  key: SuperAccessEntity | "alerts";
+  key: SuperAccessEntity | "alerts" | "connected-admins";
 };
 
 const MENU_ITEMS: SuperMenuItem[] = [
@@ -47,6 +49,7 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Children", key: "children" },
   { title: "Addresses", key: "addresses" },
   { title: "Orders", key: "orders" },
+  { title: "WS connected Admins", key: "connected-admins" },
 ];
 
 const ORDER_STATUSES = orderStatusOptions
@@ -364,7 +367,10 @@ const withOrderFinancialFields = (item: EntityRecord): EntityRecord => ({
 
 const SuperAccess = () => {
   const router = useRouter();
-  const [entity, setEntity] = useState<SuperAccessEntity | "alerts">("users");
+  const { lastEvent } = useAdminSocket();
+  const [entity, setEntity] = useState<
+    SuperAccessEntity | "alerts" | "connected-admins"
+  >("users");
   const [list, setList] = useState<EntityRecord[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [selectedItem, setSelectedItem] = useState<EntityRecord | null>(
@@ -412,6 +418,31 @@ const SuperAccess = () => {
       setTotal(0);
       return;
     }
+    if (entity === "connected-admins") {
+      try {
+        setLoadingList(true);
+        setError("");
+        const response = await getConnectedAdmins();
+        const items = Array.isArray(response.data?.items)
+          ? (response.data.items as EntityRecord[])
+          : [];
+        setList(items);
+        setTotal(items.length);
+        setPageSize(Math.max(items.length, 1));
+        if (items.length > 0 && !selectedId) {
+          setSelectedId(String(items[0].adminId ?? items[0].id ?? ""));
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          router.push("/");
+          return;
+        }
+        setError("Failed to load connected admins.");
+      } finally {
+        setLoadingList(false);
+      }
+      return;
+    }
     try {
       setLoadingList(true);
       setError("");
@@ -442,6 +473,16 @@ const SuperAccess = () => {
     if (entity === "alerts") {
       setSelectedItem(null);
       setDraft({});
+      return;
+    }
+    if (entity === "connected-admins") {
+      const listItem =
+        list.find(
+          (item) =>
+            String(item.adminId ?? item.id ?? item._id ?? "") === selectedId,
+        ) ?? null;
+      setSelectedItem(listItem);
+      setDraft(listItem ?? {});
       return;
     }
     if (!selectedId) return;
@@ -995,6 +1036,55 @@ const SuperAccess = () => {
     fetchItem();
   }, [fetchItem, selectedId]);
 
+  useEffect(() => {
+    if (entity !== "connected-admins") return;
+    setTotal(list.length);
+  }, [entity, list.length]);
+
+  useEffect(() => {
+    if (entity !== "connected-admins" || !lastEvent) return;
+
+    if (lastEvent.type === "ADMIN_CONNECTED") {
+      setList((prev) => {
+        const next = [...prev];
+        const existingIndex = next.findIndex(
+          (item) =>
+            String(item.adminId ?? item.id ?? item._id ?? "") ===
+            lastEvent.adminId,
+        );
+        const nextItem: EntityRecord = {
+          adminId: lastEvent.adminId,
+          fullName: lastEvent.fullName,
+          email: lastEvent.email,
+        };
+        if (existingIndex >= 0) {
+          next[existingIndex] = { ...next[existingIndex], ...nextItem };
+          return next;
+        }
+        return [nextItem, ...next];
+      });
+      if (!selectedId) {
+        setSelectedId(lastEvent.adminId);
+      }
+      return;
+    }
+
+    if (lastEvent.type === "ADMIN_DISCONNECTED") {
+      setList((prev) =>
+        prev.filter(
+          (item) =>
+            String(item.adminId ?? item.id ?? item._id ?? "") !==
+            lastEvent.adminId,
+        ),
+      );
+      if (selectedId === lastEvent.adminId) {
+        setSelectedId("");
+        setSelectedItem(null);
+        setDraft({});
+      }
+    }
+  }, [entity, lastEvent, selectedId]);
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.floor(startIndex / pageSize) + 1;
 
@@ -1043,7 +1133,7 @@ const SuperAccess = () => {
   };
 
   const saveChanges = async () => {
-    if (entity === "alerts") return;
+    if (entity === "alerts" || entity === "connected-admins") return;
     if (!selectedId || isSaving) return;
     try {
       setIsSaving(true);
@@ -1234,15 +1324,21 @@ const SuperAccess = () => {
           <div className={styles.listHeader}>
             <div>
               <h2>
-                {entity === "alerts" ? "Alert to admins" : prettyTitle(entity)}
+                {entity === "alerts"
+                  ? "Alert to admins"
+                  : entity === "connected-admins"
+                    ? "WS connected Admins"
+                    : prettyTitle(entity)}
               </h2>
               <span>
                 {entity === "alerts"
                   ? "Broadcast a modal alert to all connected admins."
+                  : entity === "connected-admins"
+                    ? `${total} admins connected right now.`
                   : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
-            {entity !== "alerts" && (
+            {entity !== "alerts" && entity !== "connected-admins" && (
               <SearchBar
                 placeholder="Type to search"
                 searchText={searchText}
@@ -1263,6 +1359,34 @@ const SuperAccess = () => {
                 with type
                 <code className={styles.alertInlineCode}> ADMIN_ALERT </code>.
               </div>
+            </div>
+          ) : entity === "connected-admins" ? (
+            <div className={styles.itemsGrid}>
+              {list.map((item) => {
+                const id = String(item.adminId ?? item.id ?? item._id ?? "");
+                const imageUrl = defaultUserImg.src;
+                const title = String(item.fullName ?? item.firstName ?? "Admin");
+                const email = String(item.email ?? "");
+
+                return (
+                  <button
+                    key={id || title}
+                    type="button"
+                    className={`${styles.itemCard} ${
+                      selectedId === id ? styles.itemCardActive : ""
+                    }`}
+                    onClick={() => setSelectedId(id)}
+                  >
+                    <img src={imageUrl} alt="avatar" className={styles.avatar} />
+                    <div className={styles.itemTitle}>{title}</div>
+                    {email && <div className={styles.itemSub}>{email}</div>}
+                    <div className={styles.itemSub}>ID: {id || "—"}</div>
+                  </button>
+                );
+              })}
+              {!loadingList && list.length === 0 && (
+                <div className={styles.empty}>No admins connected.</div>
+              )}
             </div>
           ) : (
             <>
@@ -1509,13 +1633,21 @@ const SuperAccess = () => {
 
         <section className={styles.detailPane}>
           <div className={styles.detailHeader}>
-            <h2>{entity === "alerts" ? "Send alert" : "Detail"}</h2>
+            <h2>
+              {entity === "alerts"
+                ? "Send alert"
+                : entity === "connected-admins"
+                  ? "Connected admin"
+                  : "Detail"}
+            </h2>
             <Button
               title={
                 entity === "alerts"
                   ? isSendingAlert
                     ? "Sending..."
                     : "Send alert"
+                  : entity === "connected-admins"
+                    ? "Read only"
                   : isSaving
                     ? "Saving..."
                     : "Save"
@@ -1525,9 +1657,13 @@ const SuperAccess = () => {
               isDisabled={
                 entity === "alerts"
                   ? !adminAlertText.trim() || isSendingAlert
+                  : entity === "connected-admins"
+                    ? true
                   : !selectedId || loadingItem || isSaving
               }
-              isLoading={entity === "alerts" ? isSendingAlert : isSaving}
+              isLoading={
+                entity === "alerts" ? isSendingAlert : isSaving && entity !== "connected-admins"
+              }
             />
           </div>
 
@@ -1548,6 +1684,45 @@ const SuperAccess = () => {
                 />
               </label>
             </div>
+          ) : entity === "connected-admins" ? (
+            <>
+              {!selectedId && (
+                <div className={styles.empty}>Select a connected admin.</div>
+              )}
+              {selectedId && selectedItem && (
+                <div className={styles.form}>
+                  <label className={styles.field}>
+                    <span>Admin ID</span>
+                    <input
+                      type="text"
+                      value={String(
+                        selectedItem.adminId ??
+                          selectedItem.id ??
+                          selectedItem._id ??
+                          "",
+                      )}
+                      disabled
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Full name</span>
+                    <input
+                      type="text"
+                      value={String(selectedItem.fullName ?? "")}
+                      disabled
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Email</span>
+                    <input
+                      type="text"
+                      value={String(selectedItem.email ?? "")}
+                      disabled
+                    />
+                  </label>
+                </div>
+              )}
+            </>
           ) : (
             <>
               {!selectedId && <div className={styles.empty}>Select an item.</div>}

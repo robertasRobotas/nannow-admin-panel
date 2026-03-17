@@ -1,4 +1,16 @@
 export type AdminEvent =
+  | {
+      type: "ADMIN_CONNECTED";
+      adminId: string;
+      fullName: string;
+      email: string;
+    }
+  | {
+      type: "ADMIN_DISCONNECTED";
+      adminId: string;
+      fullName: string;
+      email: string;
+    }
   | { type: "ORDER_CREATED"; orderId: string }
   | { type: "ORDER_CONFIRMED"; orderId: string }
   | { type: "ORDER_CANCELED"; orderId: string }

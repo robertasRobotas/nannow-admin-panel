@@ -2,7 +2,7 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-const BASE_URL = "https://nannow-api.com/v1";
+export const BASE_URL = "https://nannow-api.com/v1";
 // export const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
@@ -1081,6 +1081,16 @@ export const deleteUser = async (userId: string) => {
 export const getAllAdmins = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin-user`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getConnectedAdmins = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/connected-admins`, {
     headers: {
       Authorization: jwt,
     },

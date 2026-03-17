@@ -49,6 +49,34 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
 
   const parsed = parsedPayload as Record<string, unknown>;
 
+  if (
+    parsed.type === "ADMIN_CONNECTED" &&
+    typeof parsed.adminId === "string" &&
+    typeof parsed.fullName === "string" &&
+    typeof parsed.email === "string"
+  ) {
+    return {
+      type: "ADMIN_CONNECTED",
+      adminId: parsed.adminId,
+      fullName: parsed.fullName,
+      email: parsed.email,
+    };
+  }
+
+  if (
+    parsed.type === "ADMIN_DISCONNECTED" &&
+    typeof parsed.adminId === "string" &&
+    typeof parsed.fullName === "string" &&
+    typeof parsed.email === "string"
+  ) {
+    return {
+      type: "ADMIN_DISCONNECTED",
+      adminId: parsed.adminId,
+      fullName: parsed.fullName,
+      email: parsed.email,
+    };
+  }
+
   if (parsed.type === "ORDER_CREATED" && typeof parsed.orderId === "string") {
     return { type: "ORDER_CREATED", orderId: parsed.orderId };
   }
@@ -152,6 +180,18 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
 
 const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
   switch (event.type) {
+    case "ADMIN_CONNECTED":
+      return {
+        ...event,
+        title: "Admin connected",
+        description: event.fullName || event.email,
+      };
+    case "ADMIN_DISCONNECTED":
+      return {
+        ...event,
+        title: "Admin disconnected",
+        description: event.fullName || event.email,
+      };
     case "ORDER_CREATED":
       return {
         ...event,
@@ -255,6 +295,9 @@ export const AdminSocketProvider = ({
 
   const getEventKey = (event: AdminEvent) => {
     switch (event.type) {
+      case "ADMIN_CONNECTED":
+      case "ADMIN_DISCONNECTED":
+        return `${event.type}:${event.adminId}`;
       case "ORDER_CREATED":
       case "ORDER_CONFIRMED":
       case "ORDER_CANCELED":
@@ -317,6 +360,13 @@ export const AdminSocketProvider = ({
       const normalizedEvent = mapAdminEvent(parsedEvent);
       setLastEvent(normalizedEvent);
       listenersRef.current.forEach((listener) => listener(normalizedEvent));
+
+      if (
+        normalizedEvent.type === "ADMIN_CONNECTED" ||
+        normalizedEvent.type === "ADMIN_DISCONNECTED"
+      ) {
+        return;
+      }
 
       if (normalizedEvent.type === "ADMIN_ALERT") {
         setActiveAlert(normalizedEvent);
