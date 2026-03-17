@@ -156,6 +156,10 @@
   align-items: center;
 }
 
+.pageSizeWrap {
+  min-width: 180px;
+}
+
 .resultsMeta {
   margin-top: 6px;
   color: rgba(0, 0, 0, 0.58);
@@ -272,5 +276,9 @@
 
   .resultActions {
     justify-content: flex-start;
+  }
+
+  .pageSizeWrap {
+    width: 100%;
   }
 }

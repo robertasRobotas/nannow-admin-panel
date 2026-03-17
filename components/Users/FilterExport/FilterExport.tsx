@@ -7,6 +7,8 @@ import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import Button from "@/components/Button/Button";
 import { useRouter } from "next/router";
 import defaultUserImg from "@/assets/images/default-avatar.png";
+import ReactPaginate from "react-paginate";
+import paginateStyles from "../../../styles/paginate.module.css";
 
 type FilterMode = "CLIENT" | "PROVIDER";
 
@@ -82,6 +84,13 @@ type ExtendedUser = UserDetails["user"] & {
 const modeOptions = [
   { title: "Clients", value: "CLIENT" },
   { title: "Providers", value: "PROVIDER" },
+];
+
+const pageSizeOptions = [
+  { title: "10 per page", value: "10" },
+  { title: "20 per page", value: "20" },
+  { title: "50 per page", value: "50" },
+  { title: "100 per page", value: "100" },
 ];
 
 const extractNumericRating = (
@@ -257,6 +266,7 @@ const downloadCsv = (rows: EnrichedUser[]) => {
 const FilterExport = () => {
   const router = useRouter();
   const [selectedModeOption, setSelectedModeOption] = useState(0);
+  const [selectedPageSizeOption, setSelectedPageSizeOption] = useState(1);
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -268,8 +278,12 @@ const FilterExport = () => {
   const [notFinishedFields, setNotFinishedFields] = useState<OnboardingField[]>(
     [],
   );
+  const [currentPage, setCurrentPage] = useState(0);
 
   const selectedMode = modeOptions[selectedModeOption]?.value as FilterMode;
+  const itemsPerPage = Number(
+    pageSizeOptions[selectedPageSizeOption]?.value ?? "20",
+  );
   const availableFields =
     selectedMode === "CLIENT" ? CLIENT_FIELDS : PROVIDER_FIELDS;
 
@@ -280,6 +294,7 @@ const FilterExport = () => {
     setNotFinishedFields((prev) =>
       prev.filter((field) => availableFields.includes(field)),
     );
+    setCurrentPage(0);
   }, [selectedMode]);
 
   useEffect(() => {
@@ -368,6 +383,35 @@ const FilterExport = () => {
     }
     return true;
   });
+  const pageCount = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    currentPage * itemsPerPage,
+    currentPage * itemsPerPage + itemsPerPage,
+  );
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [
+    minimumReviews,
+    hasProfileVideoOnly,
+    ratingFrom,
+    ratingTo,
+    finishedFields,
+    notFinishedFields,
+    selectedPageSizeOption,
+  ]);
+
+  useEffect(() => {
+    if (pageCount === 0) {
+      if (currentPage !== 0) {
+        setCurrentPage(0);
+      }
+      return;
+    }
+    if (currentPage > pageCount - 1) {
+      setCurrentPage(pageCount - 1);
+    }
+  }, [currentPage, pageCount]);
 
   const toggleField = (
     field: OnboardingField,
@@ -379,6 +423,10 @@ const FilterExport = () => {
         ? prev.filter((item) => item !== field)
         : [...prev, field],
     );
+  };
+
+  const handlePageClick = (event: { selected: number }) => {
+    setCurrentPage(event.selected);
   };
 
   return (
@@ -556,10 +604,18 @@ const FilterExport = () => {
                   : `${filteredUsers.length} of ${users.length} users match filters`}
               </div>
             </div>
+            <div className={styles.pageSizeWrap}>
+              <div className={styles.label}>Items on page</div>
+              <DropDownButton
+                options={pageSizeOptions}
+                selectedOption={selectedPageSizeOption}
+                setSelectedOption={setSelectedPageSizeOption}
+              />
+            </div>
           </div>
 
           <div className={styles.resultsList}>
-            {filteredUsers.map((user) => (
+            {paginatedUsers.map((user) => (
               <div key={user.userId} className={styles.resultRow}>
                 <div className={styles.resultMain}>
                   <img
@@ -612,6 +668,27 @@ const FilterExport = () => {
               <div className={styles.emptyState}>No users match current filters.</div>
             )}
           </div>
+          {!isLoading && pageCount > 1 && (
+            <ReactPaginate
+              breakLabel="..."
+              nextLabel=""
+              onPageChange={handlePageClick}
+              forcePage={currentPage}
+              pageRangeDisplayed={5}
+              pageCount={pageCount}
+              previousLabel=""
+              renderOnZeroPageCount={null}
+              containerClassName={paginateStyles.paginateWrapper}
+              pageClassName={paginateStyles.pageBtn}
+              pageLinkClassName={paginateStyles.pageLink}
+              activeClassName={paginateStyles.activePage}
+              nextClassName={paginateStyles.nextPageBtn}
+              nextLinkClassName={paginateStyles.nextLink}
+              previousClassName={paginateStyles.prevPageBtn}
+              previousLinkClassName={paginateStyles.prevLink}
+              breakClassName={paginateStyles.break}
+            />
+          )}
         </div>
       </div>
     </div>
