@@ -349,6 +349,11 @@ const Users = () => {
               setItemOffset(0);
             }}
           />
+          <Button
+            title="Filter and export"
+            type="OUTLINED"
+            onClick={() => router.push("/users/filter-export")}
+          />
         </div>
         <div>
           <SearchBar
