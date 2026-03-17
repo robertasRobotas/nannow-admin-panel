@@ -13,6 +13,7 @@ type HeaderMenuProps = {
   onClose: () => void;
   ordersAttentionNumber?: number;
   usersAttentionNumber?: number;
+  feedbackAttentionNumber?: number;
   criminalCheckAttentionNumber?: number;
   documentsAttentionNumber?: number;
   reportsAttentionNumber?: number;
@@ -23,6 +24,7 @@ const HeaderMenu = ({
   onClose,
   ordersAttentionNumber,
   usersAttentionNumber,
+  feedbackAttentionNumber,
   criminalCheckAttentionNumber,
   documentsAttentionNumber,
   reportsAttentionNumber,
@@ -63,6 +65,9 @@ const HeaderMenu = ({
                         : undefined
                       : l.link === "/users" && (usersAttentionNumber ?? 0) > 0
                         ? usersAttentionNumber
+                      : l.link === "/feedback" &&
+                          (feedbackAttentionNumber ?? 0) > 0
+                        ? feedbackAttentionNumber
                         : l.link === "/criminal-check" &&
                             (criminalCheckAttentionNumber ?? 0) > 0
                           ? criminalCheckAttentionNumber

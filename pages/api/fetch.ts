@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://nannow-api.com/v1";
-// const BASE_URL = "http://192.168.1.192:8080/v1";
+// export const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export type AdminRole = "ADMIN" | "SUPER_ADMIN";
@@ -173,6 +173,19 @@ export const getNotResolvedReportsCount = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
     `${BASE_URL}/admin/reports/not-resolved/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getNotResolvedFeedbackCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/feedback/not-resolved/count`,
     {
       headers: {
         Authorization: jwt,

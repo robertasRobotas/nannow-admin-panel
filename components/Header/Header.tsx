@@ -14,6 +14,7 @@ import {
   getCurrentAdminRolesFromJwt,
   getNotFinishedOnboardingUsers,
   getNotEndedOrdersCount,
+  getNotResolvedFeedbackCount,
   getNotResolvedReportsCount,
   getNotReviewedDocumentsCount,
   getNotPaidOrdersCount,
@@ -22,6 +23,8 @@ import {
   verifyAdminTotpSetup,
 } from "@/pages/api/fetch";
 import axios from "axios";
+import { disconnectAdminSocket } from "@/helpers/adminSocket";
+import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
@@ -33,6 +36,7 @@ const Header = () => {
     useState(0);
   const [pendingCriminalChecksCount, setPendingCriminalChecksCount] =
     useState(0);
+  const [notSolvedFeedbackCount, setNotSolvedFeedbackCount] = useState(0);
   const [notReviewedDocumentsCount, setNotReviewedDocumentsCount] = useState(0);
   const [notResolvedReportsCount, setNotResolvedReportsCount] = useState(0);
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
@@ -45,6 +49,7 @@ const Header = () => {
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { pathname } = useRouter();
+  const { lastEvent } = useAdminSocket();
 
   const router = useRouter();
 
@@ -120,6 +125,15 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchNotSolvedFeedback = async () => {
+      try {
+        const response = await getNotResolvedFeedbackCount();
+        const count = response.data?.count ?? 0;
+        setNotSolvedFeedbackCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
     const fetchNotReviewedDocumentsCount = async () => {
       try {
         const response = await getNotReviewedDocumentsCount();
@@ -144,9 +158,38 @@ const Header = () => {
     fetchCanceledPendingFinancialOrdersCount();
     fetchNotFinishedOnboardingCount();
     fetchPendingCriminalChecksCount();
+    fetchNotSolvedFeedback();
     fetchNotReviewedDocumentsCount();
     fetchNotResolvedReportsCount();
   }, [router]);
+
+  useEffect(() => {
+    if (!lastEvent) return;
+
+    if (lastEvent.type === "FEEDBACK_CREATED") {
+      setNotSolvedFeedbackCount((prev) => prev + 1);
+    }
+
+    if (lastEvent.type === "FEEDBACK_RESOLVED") {
+      setNotSolvedFeedbackCount((prev) => Math.max(prev - 1, 0));
+    }
+
+    if (lastEvent.type === "USER_REPORTED") {
+      setNotResolvedReportsCount((prev) => prev + 1);
+    }
+
+    if (lastEvent.type === "REPORT_RESOLVED") {
+      setNotResolvedReportsCount((prev) => Math.max(prev - 1, 0));
+    }
+
+    if (lastEvent.type === "CRIMINAL_CHECK_SUBMITTED") {
+      setPendingCriminalChecksCount((prev) => prev + 1);
+    }
+
+    if (lastEvent.type === "CRIMINAL_CHECK_APPROVED") {
+      setPendingCriminalChecksCount((prev) => Math.max(prev - 1, 0));
+    }
+  }, [lastEvent]);
 
   const ordersAttentionNumber =
     notEndedOrdersCount + notPaidOrdersCount + canceledPendingFinancialCount;
@@ -229,6 +272,9 @@ const Header = () => {
                         : l.link === "/users" &&
                             notFinishedOnboardingCount > 0
                           ? notFinishedOnboardingCount
+                        : l.link === "/feedback" &&
+                            notSolvedFeedbackCount > 0
+                          ? notSolvedFeedbackCount
                         : l.link === "/criminal-check" &&
                               pendingCriminalChecksCount > 0
                             ? pendingCriminalChecksCount
@@ -255,6 +301,7 @@ const Header = () => {
           />
           <Button
             onClick={() => {
+              disconnectAdminSocket();
               Cookies.remove("@user_jwt");
               router.push("/");
             }}
@@ -269,6 +316,7 @@ const Header = () => {
           onClose={() => setMenuDisplayed(false)}
           ordersAttentionNumber={ordersAttentionNumber}
           usersAttentionNumber={notFinishedOnboardingCount}
+          feedbackAttentionNumber={notSolvedFeedbackCount}
           criminalCheckAttentionNumber={pendingCriminalChecksCount}
           documentsAttentionNumber={notReviewedDocumentsCount}
           reportsAttentionNumber={notResolvedReportsCount}
