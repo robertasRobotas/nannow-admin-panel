@@ -19,6 +19,7 @@ import {
   getNotReviewedDocumentsCount,
   getNotPaidOrdersCount,
   getPendingCriminalRecordCount,
+  sendAdminAlert,
   setupAdminTotp,
   verifyAdminTotpSetup,
 } from "@/pages/api/fetch";
@@ -41,6 +42,10 @@ const Header = () => {
   const [notResolvedReportsCount, setNotResolvedReportsCount] = useState(0);
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
   const [isTotpSetupLoading, setIsTotpSetupLoading] = useState(false);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [alertText, setAlertText] = useState("");
+  const [alertError, setAlertError] = useState("");
+  const [isAlertSending, setIsAlertSending] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [otpauthUrl, setOtpauthUrl] = useState("");
   const [totpCode, setTotpCode] = useState("");
@@ -246,6 +251,33 @@ const Header = () => {
     }
   };
 
+  const submitAdminAlert = async () => {
+    if (isAlertSending) return;
+    const text = alertText.trim();
+    if (!text) {
+      setAlertError("Enter alert text.");
+      return;
+    }
+    try {
+      setIsAlertSending(true);
+      setAlertError("");
+      await sendAdminAlert(text);
+      setAlertText("");
+      setIsAlertModalOpen(false);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setAlertError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to send alert.",
+        );
+        return;
+      }
+      setAlertError("Failed to send alert.");
+    } finally {
+      setIsAlertSending(false);
+    }
+  };
+
   return (
     <>
       <div className={styles.main}>
@@ -293,6 +325,16 @@ const Header = () => {
           </ul>
         </nav>
         <div className={styles.logOutBtn}>
+          <button
+            type="button"
+            className={styles.alertHeaderBtn}
+            onClick={() => {
+              setAlertError("");
+              setIsAlertModalOpen(true);
+            }}
+          >
+            Alert to admins
+          </button>
           <Button
             onClick={openTotpSetupModal}
             title={isTotpSetupLoading ? "Loading..." : "2FA setup"}
@@ -365,6 +407,41 @@ const Header = () => {
                 type="BLACK"
                 isDisabled={isTotpVerifying}
                 isLoading={isTotpVerifying}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isAlertModalOpen && (
+        <div className={styles.totpBackdrop}>
+          <div className={styles.totpModal}>
+            <h2 className={styles.alertModalTitle}>Alert to admins</h2>
+            <p className={styles.totpText}>
+              This will open an alert modal for all connected admins.
+            </p>
+            <textarea
+              value={alertText}
+              onChange={(e) => {
+                setAlertText(e.target.value);
+                setAlertError("");
+              }}
+              className={styles.alertTextarea}
+              placeholder="Type alert text"
+            />
+            {alertError && <p className={styles.totpError}>{alertError}</p>}
+            <div className={styles.totpActions}>
+              <Button
+                onClick={() => setIsAlertModalOpen(false)}
+                title="Close"
+                type="OUTLINED"
+                isDisabled={isAlertSending}
+              />
+              <Button
+                onClick={submitAdminAlert}
+                title={isAlertSending ? "Sending..." : "Send alert"}
+                type="BLACK"
+                isDisabled={isAlertSending}
+                isLoading={isAlertSending}
               />
             </div>
           </div>

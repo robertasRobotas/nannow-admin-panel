@@ -42,7 +42,6 @@ type SuperMenuItem = {
 
 const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Admins", key: "admins" },
-  { title: "Alert to admins", key: "alerts" },
   { title: "Users", key: "users" },
   { title: "Clients", key: "clients" },
   { title: "Providers", key: "providers" },

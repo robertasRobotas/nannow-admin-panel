@@ -36,6 +36,19 @@
   gap: 10px;
 }
 
+.alertHeaderBtn {
+  all: unset;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  background: #fff;
+  color: #ff3b30;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .totpBackdrop {
   position: fixed;
   inset: 0;
@@ -61,6 +74,13 @@
 
 .totpTitle {
   color: #000;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.alertModalTitle {
+  color: #ff3b30;
   font-size: 24px;
   font-weight: 800;
   margin: 0;
@@ -97,6 +117,20 @@
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 1px;
+}
+
+.alertTextarea {
+  width: 100%;
+  min-height: 180px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  resize: vertical;
+  color: #000;
+  background: #fff;
 }
 
 .totpError {
