@@ -18,6 +18,7 @@ export type InfoCard = {
   value: string | number;
   hideValue?: boolean;
   link?: string;
+  linkButtonTitle?: string;
   actionButton?: {
     title: string;
     action: "DELETE_STRIPE" | "CHANGE_BASE_PRICE" | "BAN_USER";
@@ -107,6 +108,9 @@ export const getInfoCards = (
   ];
 
   if (mode === "provider") {
+    const providerVideoUrl =
+      data?.provider?.videoUrl?.trim() || data?.user?.videoUrl?.trim();
+
     return [
       ...baseCards,
       {
@@ -143,6 +147,17 @@ export const getInfoCards = (
             ? `€ ${data.provider.finalPrice.toFixed(2)}`
             : "—",
       },
+      ...(providerVideoUrl
+        ? [
+            {
+              title: "Profile video",
+              icon: profileImg,
+              value: providerVideoUrl,
+              link: providerVideoUrl,
+              linkButtonTitle: "Open video",
+            } satisfies InfoCard,
+          ]
+        : []),
       {
         title: "City",
         icon: locationPinImg,

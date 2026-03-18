@@ -55,6 +55,7 @@ type UsersViewMode =
   | "ONBOARDING_CLIENTS"
   | "ONBOARDING_PROVIDERS"
   | "BANNED_USERS";
+type ProviderVideoFilter = "ALL" | "WITH_VIDEO" | "WITHOUT_VIDEO";
 type UsersViewOption = {
   title: string;
   value: UsersViewMode;
@@ -99,6 +100,17 @@ const Users = () => {
   const [banTargetUser, setBanTargetUser] = useState<BannedUser | null>(null);
   const [isUpdatingBan, setIsUpdatingBan] = useState(false);
   const [modeReady, setModeReady] = useState(false);
+  const [providerVideoFilter, setProviderVideoFilter] =
+    useState<ProviderVideoFilter>("ALL");
+
+  const providerVideoFilterOptions: {
+    title: string;
+    value: ProviderVideoFilter;
+  }[] = [
+    { title: "All providers", value: "ALL" },
+    { title: "With video", value: "WITH_VIDEO" },
+    { title: "Without video", value: "WITHOUT_VIDEO" },
+  ];
 
   const viewOptions: UsersViewOption[] = [
     { title: "Clients", value: "CLIENTS" },
@@ -124,6 +136,7 @@ const Users = () => {
     currentView === "ONBOARDING_PROVIDERS";
   const isBannedUsersSelected = currentView === "BANNED_USERS";
   const isSelectedClients = currentView === "CLIENTS";
+  const isProvidersSelected = currentView === "PROVIDERS";
 
   // Sync selected mode with URL query (?mode=clients|providers)
   useEffect(() => {
@@ -182,9 +195,22 @@ const Users = () => {
   const fetchUsers = useCallback(async () => {
     try {
       setUsers([]);
+      const searchParams = new URLSearchParams({
+        startIndex: String(itemOffset),
+        search: searchText,
+      });
+
+      if (!isSelectedClients) {
+        if (providerVideoFilter === "WITH_VIDEO") {
+          searchParams.set("hasVideo", "true");
+        } else if (providerVideoFilter === "WITHOUT_VIDEO") {
+          searchParams.set("hasVideo", "false");
+        }
+      }
+
       const url = isSelectedClients
-        ? `admin/users?type=client&startIndex=${itemOffset}&search=${searchText}`
-        : `admin/users?type=provider&startIndex=${itemOffset}&search=${searchText}`;
+        ? `admin/users?type=client&${searchParams.toString()}`
+        : `admin/users?type=provider&${searchParams.toString()}`;
       const response = await getAllUsers(url);
       setUsers(response.data.users.items);
       setItemsPerPage(response.data.users.pageSize);
@@ -200,7 +226,7 @@ const Users = () => {
         }
       }
     }
-  }, [isSelectedClients, itemOffset, router, searchText]);
+  }, [isSelectedClients, itemOffset, providerVideoFilter, router, searchText]);
 
   const fetchOnboardingUsers = useCallback(async () => {
     try {
@@ -354,6 +380,23 @@ const Users = () => {
             type="OUTLINED"
             onClick={() => router.push("/users/filter-export")}
           />
+          {isProvidersSelected && (
+            <DropDownButton
+              options={providerVideoFilterOptions}
+              selectedOption={providerVideoFilterOptions.findIndex(
+                (option) => option.value === providerVideoFilter,
+              )}
+              setSelectedOption={(nextSelectedOption) => {
+                const option =
+                  providerVideoFilterOptions[nextSelectedOption as number];
+                if (!option) return;
+                setProviderVideoFilter(option.value);
+              }}
+              onClickOption={() => {
+                setItemOffset(0);
+              }}
+            />
+          )}
         </div>
         <div>
           <SearchBar

@@ -1,6 +1,6 @@
 export const options = [
   { title: "All", value: "" },
-  { title: "ORDER_CREATED (DIRECT ORDER TO PROVIDER)", value: "ORDER_CREATED" },
+  { title: "ORDER_CREATED (WITHOUT DIRECT BOOKING)", value: "ORDER_CREATED" },
   { title: "PROVIDER_OFFERED_SERVICE", value: "PROVIDER_OFFERED_SERVICE" },
   {
     title: "PROVIDER_ACCEPTED_DIRECT_OFFER",

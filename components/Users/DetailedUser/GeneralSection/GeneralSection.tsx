@@ -43,6 +43,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   );
   const [basePriceError, setBasePriceError] = useState<string | null>(null);
   const [isUpdatingBasePrice, setIsUpdatingBasePrice] = useState(false);
+  const [openedVideoUrl, setOpenedVideoUrl] = useState<string | null>(null);
 
   console.log(user.provider);
   const [isSuspendedSaving, setIsSuspendedSaving] = useState(false);
@@ -235,9 +236,19 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             )}
             {c.link && (
               <Button
-                title="Details"
+                title={c.linkButtonTitle ?? "Details"}
                 type="OUTLINED"
-                onClick={() => router.push(c.link!)}
+                onClick={() => {
+                  if (c.linkButtonTitle === "Open video" && c.link) {
+                    setOpenedVideoUrl(c.link);
+                    return;
+                  }
+                  if (c.link?.startsWith("http")) {
+                    window.open(c.link, "_blank", "noopener,noreferrer");
+                    return;
+                  }
+                  router.push(c.link!);
+                }}
               />
             )}
             {c.actionButton?.action === "DELETE_STRIPE" && mode === "provider" && (
@@ -390,6 +401,43 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 isDisabled={isSavingBanStatus}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {openedVideoUrl && (
+        <div
+          className={styles.videoOverlay}
+          onClick={() => setOpenedVideoUrl(null)}
+        >
+          <div
+            className={styles.videoModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.videoHeader}>
+              <h2 className={styles.videoTitle}>Profile video</h2>
+              <Button
+                title="Close"
+                type="OUTLINED"
+                onClick={() => setOpenedVideoUrl(null)}
+              />
+            </div>
+            <video
+              className={styles.videoPlayer}
+              controls
+              playsInline
+              preload="metadata"
+            >
+              <source src={openedVideoUrl} />
+            </video>
+            <a
+              className={styles.videoFallbackLink}
+              href={openedVideoUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open source URL
+            </a>
           </div>
         </div>
       )}

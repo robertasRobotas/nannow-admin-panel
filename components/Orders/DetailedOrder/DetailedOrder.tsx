@@ -428,6 +428,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     !!order?.approvedProviderId;
   const isRefundDone = !!order?.refundedAt;
   const isCancelFeeDone = !!order?.isCancelFeePaidToProvider;
+  const statusTitle =
+    problemStatus === "ORDER_CREATED" && order?.isDirectOrderToProvider
+      ? "ORDER_CREATED (DIRECT ORDER TO PROVIDER)"
+      : options.find((o) => o.value === problemStatus)?.title ?? "-";
   const areCanceledFinancialActionsDone = !isCanceledByClient
     ? true
     : isCanceledLate2h
@@ -514,9 +518,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             type={isMobile ? "SPAN1" : "SPAN3"}
             info={
               <>
-                <div>
-                  {options.find((o) => o.value === problemStatus)?.title ?? "-"}
-                </div>
+                <div>{statusTitle}</div>
                 {order?.isProviderIgnoredEndNotification && (
                   <div className={styles.statusAttention}>
                     Provider ignored end notification

@@ -5,6 +5,7 @@ import { OrderStatus } from "@/types/Order";
 
 type OrderProps = {
   status: OrderStatus;
+  isDirectOrderToProvider?: boolean;
   providerName: string;
   providerImgUrl: string;
   clientName: string;
@@ -18,6 +19,7 @@ type OrderProps = {
 
 const Order = ({
   status,
+  isDirectOrderToProvider = false,
   providerName,
   providerImgUrl,
   clientName,
@@ -29,6 +31,10 @@ const Order = ({
   pendingProvidersCount,
 }: OrderProps) => {
   const router = useRouter();
+  const statusTitle =
+    status === "ORDER_CREATED" && isDirectOrderToProvider
+      ? "ORDER_CREATED (DIRECT ORDER TO PROVIDER)"
+      : options.find((o) => o.value === status)?.title;
 
   const formatDateTime = (iso: string) =>
     new Date(iso).toLocaleString(undefined, {
@@ -70,7 +76,7 @@ const Order = ({
         </div>
       </div>
       <div className={styles.orderStatus}>
-        {options.find((o) => o.value === status)?.title}
+        {statusTitle}
         {isProviderIgnoredEndNotification && (
           <div className={styles.isProviderIgnoredEndNotification}>
             (Provider ignored end notification)

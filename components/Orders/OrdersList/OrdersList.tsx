@@ -36,6 +36,7 @@ const OrdersList = ({ orders }: OrdersListProps) => {
             id={u.id}
             startsAt={u.startsAt}
             endsAt={u.endsAt}
+            isDirectOrderToProvider={u.isDirectOrderToProvider}
             providerName={getProviderName(
               getUserName(providerUser?.firstName, providerUser?.lastName),
               u.approvedProviderId,
