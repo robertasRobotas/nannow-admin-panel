@@ -2253,6 +2253,8 @@ const SuperAccess = () => {
                 }
 
                 if (typeof value === "number") {
+                  const isReadOnlyProviderFinalPrice =
+                    entity === "providers" && key === "finalPrice";
                   return (
                     <label key={key} htmlFor={fieldId} className={styles.field}>
                       <span>{prettyTitle(key)}</span>
@@ -2260,7 +2262,10 @@ const SuperAccess = () => {
                         id={fieldId}
                         type="number"
                         value={String(value)}
-                        onChange={(e) => handleFieldChange(key, Number(e.target.value))}
+                        onChange={(e) =>
+                          handleFieldChange(key, Number(e.target.value))
+                        }
+                        disabled={isReadOnlyProviderFinalPrice}
                       />
                     </label>
                   );

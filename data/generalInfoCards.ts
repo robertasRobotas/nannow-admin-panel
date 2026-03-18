@@ -136,6 +136,14 @@ export const getInfoCards = (
         },
       },
       {
+        title: "Final price",
+        icon: walletImg,
+        value:
+          typeof data?.provider?.finalPrice === "number"
+            ? `€ ${data.provider.finalPrice.toFixed(2)}`
+            : "—",
+      },
+      {
         title: "City",
         icon: locationPinImg,
         value: data?.defaultAddress?.city ?? "—",

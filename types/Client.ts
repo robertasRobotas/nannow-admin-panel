@@ -47,6 +47,7 @@ export type UserDetails = {
     isAvailableStatusChangedAt?: string;
     isAvailableStatus?: boolean;
     baseProviderRate: number;
+    finalPrice?: number;
     unavailablePeriods?: {
       endsAt: Date;
       startsAt: Date;
