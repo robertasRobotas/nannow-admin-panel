@@ -1098,11 +1098,68 @@ export const getConnectedAdmins = async () => {
   return response;
 };
 
-export const sendAdminAlert = async (text: string) => {
+export const postAdminMessage = async (text: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
-    `${BASE_URL}/admin/alerts`,
+    `${BASE_URL}/admin/messages`,
     { text },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getAdminMessages = async ({
+  startIndex = 0,
+  pageSize = 20,
+}: {
+  startIndex?: number;
+  pageSize?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/messages?startIndex=${startIndex}&pageSize=${pageSize}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getUnreadAdminMessagesCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/messages/unread-count`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const markAdminMessageRead = async (messageId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/messages/${messageId}/read`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const markAllAdminMessagesRead = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/messages/read-all`,
+    {},
     {
       headers: {
         Authorization: jwt,

@@ -9,7 +9,7 @@ import {
   AdminRole,
   createAdminUser,
   getConnectedAdmins,
-  sendAdminAlert,
+  postAdminMessage,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
   getSuperAccessItem,
@@ -1187,7 +1187,7 @@ const SuperAccess = () => {
     try {
       setIsSendingAlert(true);
       setError("");
-      await sendAdminAlert(text);
+      await postAdminMessage(text);
       setAdminAlertText("");
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -1325,14 +1325,14 @@ const SuperAccess = () => {
             <div>
               <h2>
                 {entity === "alerts"
-                  ? "Alert to admins"
+                  ? "Admin messages"
                   : entity === "connected-admins"
                     ? "WS connected Admins"
                     : prettyTitle(entity)}
               </h2>
               <span>
                 {entity === "alerts"
-                  ? "Broadcast a modal alert to all connected admins."
+                  ? "Send a message to all admins."
                   : entity === "connected-admins"
                     ? `${total} admins connected right now.`
                   : `${total} total, page ${currentPage}/${totalPages}`}
@@ -1352,12 +1352,12 @@ const SuperAccess = () => {
           </div>
           {entity === "alerts" ? (
             <div className={styles.alertInfoCard}>
-              <div className={styles.alertInfoTitle}>Broadcast modal alert</div>
+              <div className={styles.alertInfoTitle}>Broadcast admin message</div>
               <div className={styles.alertInfoText}>
-                Connected admins will receive a blocking modal through
+                Connected admins will receive the message through
                 <code className={styles.alertInlineCode}> ADMIN_EVENT </code>
                 with type
-                <code className={styles.alertInlineCode}> ADMIN_ALERT </code>.
+                <code className={styles.alertInlineCode}> ADMIN_MESSAGE </code>.
               </div>
             </div>
           ) : entity === "connected-admins" ? (
@@ -1635,7 +1635,7 @@ const SuperAccess = () => {
           <div className={styles.detailHeader}>
             <h2>
               {entity === "alerts"
-                ? "Send alert"
+                ? "Send message"
                 : entity === "connected-admins"
                   ? "Connected admin"
                   : "Detail"}
@@ -1669,10 +1669,9 @@ const SuperAccess = () => {
 
           {entity === "alerts" ? (
             <div className={styles.alertFormCard}>
-              <div className={styles.alertFormTitle}>Alert text</div>
+              <div className={styles.alertFormTitle}>Message text</div>
               <div className={styles.alertFormText}>
-                This will open a modal for every connected admin. Keep the text
-                short enough to be understood immediately.
+                This sends a new admin message to all connected admins.
               </div>
               <label className={styles.field}>
                 <span>Message</span>

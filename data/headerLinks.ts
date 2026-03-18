@@ -12,4 +12,5 @@ export const links: HeaderLink[] = [
   { title: "Feedback", link: "/feedback" },
   { title: "Reported", link: "/reports" },
   { title: "Reviews", link: "/reviews" },
+  { title: "Messages", link: "/messages" },
 ];

@@ -16,6 +16,7 @@ type HeaderMenuProps = {
   feedbackAttentionNumber?: number;
   criminalCheckAttentionNumber?: number;
   documentsAttentionNumber?: number;
+  messagesAttentionNumber?: number;
   reportsAttentionNumber?: number;
 };
 
@@ -27,6 +28,7 @@ const HeaderMenu = ({
   feedbackAttentionNumber,
   criminalCheckAttentionNumber,
   documentsAttentionNumber,
+  messagesAttentionNumber,
   reportsAttentionNumber,
 }: HeaderMenuProps) => {
   const [isClosing, setClosing] = useState(false);
@@ -74,6 +76,9 @@ const HeaderMenu = ({
                         : l.link === "/documents" &&
                             (documentsAttentionNumber ?? 0) > 0
                           ? documentsAttentionNumber
+                        : l.link === "/messages" &&
+                            (messagesAttentionNumber ?? 0) > 0
+                          ? messagesAttentionNumber
                         : l.link === "/reports" &&
                             (reportsAttentionNumber ?? 0) > 0
                           ? reportsAttentionNumber

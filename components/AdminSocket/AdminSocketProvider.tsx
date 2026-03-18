@@ -124,15 +124,19 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
   }
 
   if (
-    parsed.type === "ADMIN_ALERT" &&
+    parsed.type === "ADMIN_MESSAGE" &&
+    typeof parsed.id === "string" &&
     typeof parsed.text === "string" &&
-    typeof parsed.adminId === "string" &&
+    typeof parsed.senderAdminId === "string" &&
+    typeof parsed.senderName === "string" &&
     typeof parsed.createdAt === "string"
   ) {
     return {
-      type: "ADMIN_ALERT",
+      type: "ADMIN_MESSAGE",
+      id: parsed.id,
       text: parsed.text,
-      adminId: parsed.adminId,
+      senderAdminId: parsed.senderAdminId,
+      senderName: parsed.senderName,
       createdAt: parsed.createdAt,
     };
   }
@@ -232,11 +236,13 @@ const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
         linkHref: `/criminal-check/${event.userId}`,
         linkLabel: "Open criminal check",
       };
-    case "ADMIN_ALERT":
+    case "ADMIN_MESSAGE":
       return {
         ...event,
-        title: "Alert to admins",
+        title: `Message from ${event.senderName}`,
         description: event.text,
+        linkHref: "/messages",
+        linkLabel: "Open messages",
       };
     case "FEEDBACK_CREATED":
       return {
@@ -284,8 +290,6 @@ export const AdminSocketProvider = ({
   const recentEventsRef = useRef(new Map<string, number>());
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<AdminSocketEvent | null>(null);
-  const [activeAlert, setActiveAlert] = useState<AdminSocketEvent | null>(null);
-
   const subscribe = (listener: AdminSocketListener) => {
     listenersRef.current.add(listener);
     return () => {
@@ -306,8 +310,8 @@ export const AdminSocketProvider = ({
         return `${event.type}:${event.userId}:${event.applicationId ?? ""}`;
       case "CRIMINAL_CHECK_APPROVED":
         return `${event.type}:${event.userId}:${event.applicationId}`;
-      case "ADMIN_ALERT":
-        return `${event.type}:${event.adminId}:${event.createdAt}:${event.text}`;
+      case "ADMIN_MESSAGE":
+        return `${event.type}:${event.id}`;
       case "FEEDBACK_CREATED":
         return `${event.type}:${event.feedbackId}`;
       case "FEEDBACK_RESOLVED":
@@ -365,11 +369,6 @@ export const AdminSocketProvider = ({
         normalizedEvent.type === "ADMIN_CONNECTED" ||
         normalizedEvent.type === "ADMIN_DISCONNECTED"
       ) {
-        return;
-      }
-
-      if (normalizedEvent.type === "ADMIN_ALERT") {
-        setActiveAlert(normalizedEvent);
         return;
       }
 
@@ -433,75 +432,6 @@ export const AdminSocketProvider = ({
       }}
     >
       {children}
-      {activeAlert?.type === "ADMIN_ALERT" && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.45)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-            zIndex: 3000,
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "620px",
-              borderRadius: "24px",
-              background: "#fff",
-              border: "2px solid #ff3b30",
-              padding: "32px",
-              boxShadow: "0 24px 80px rgba(0, 0, 0, 0.24)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "18px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "16px",
-                fontWeight: 800,
-                textTransform: "uppercase",
-                color: "#ff3b30",
-              }}
-            >
-              Alert to admins
-            </div>
-            <div
-              style={{
-                fontSize: "34px",
-                lineHeight: 1.15,
-                fontWeight: 800,
-                color: "#000",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {activeAlert.text}
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                onClick={() => setActiveAlert(null)}
-                style={{
-                  borderRadius: "999px",
-                  border: "1px solid rgba(0, 0, 0, 0.2)",
-                  background: "#fff",
-                  color: "#000",
-                  fontSize: "16px",
-                  fontWeight: 700,
-                  padding: "12px 24px",
-                  cursor: "pointer",
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminSocketContext.Provider>
   );
 };

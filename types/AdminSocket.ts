@@ -26,9 +26,11 @@ export type AdminEvent =
       userName: string;
     }
   | {
-      type: "ADMIN_ALERT";
+      type: "ADMIN_MESSAGE";
+      id: string;
       text: string;
-      adminId: string;
+      senderAdminId: string;
+      senderName: string;
       createdAt: string;
     }
   | { type: "FEEDBACK_CREATED"; feedbackId: string }

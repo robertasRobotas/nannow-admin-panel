@@ -11,6 +11,7 @@ import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import {
   getCanceledPendingFinancialOrdersCount,
+  getUnreadAdminMessagesCount,
   getCurrentAdminRolesFromJwt,
   getNotFinishedOnboardingUsers,
   getNotEndedOrdersCount,
@@ -19,7 +20,7 @@ import {
   getNotReviewedDocumentsCount,
   getNotPaidOrdersCount,
   getPendingCriminalRecordCount,
-  sendAdminAlert,
+  postAdminMessage,
   setupAdminTotp,
   verifyAdminTotpSetup,
 } from "@/pages/api/fetch";
@@ -40,12 +41,13 @@ const Header = () => {
   const [notSolvedFeedbackCount, setNotSolvedFeedbackCount] = useState(0);
   const [notReviewedDocumentsCount, setNotReviewedDocumentsCount] = useState(0);
   const [notResolvedReportsCount, setNotResolvedReportsCount] = useState(0);
+  const [unreadAdminMessagesCount, setUnreadAdminMessagesCount] = useState(0);
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
   const [isTotpSetupLoading, setIsTotpSetupLoading] = useState(false);
-  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
-  const [alertText, setAlertText] = useState("");
-  const [alertError, setAlertError] = useState("");
-  const [isAlertSending, setIsAlertSending] = useState(false);
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [messageError, setMessageError] = useState("");
+  const [isMessageSending, setIsMessageSending] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [otpauthUrl, setOtpauthUrl] = useState("");
   const [totpCode, setTotpCode] = useState("");
@@ -157,6 +159,15 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchUnreadAdminMessagesCount = async () => {
+      try {
+        const response = await getUnreadAdminMessagesCount();
+        const count = response.data?.count ?? 0;
+        setUnreadAdminMessagesCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
 
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
@@ -166,7 +177,30 @@ const Header = () => {
     fetchNotSolvedFeedback();
     fetchNotReviewedDocumentsCount();
     fetchNotResolvedReportsCount();
+    fetchUnreadAdminMessagesCount();
   }, [router]);
+
+  useEffect(() => {
+    const handleMessagesCountUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ count?: number }>;
+      const count = customEvent.detail?.count;
+      if (typeof count === "number") {
+        setUnreadAdminMessagesCount(Math.max(count, 0));
+      }
+    };
+
+    window.addEventListener(
+      "admin-messages-count-update",
+      handleMessagesCountUpdate as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "admin-messages-count-update",
+        handleMessagesCountUpdate as EventListener,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (!lastEvent) return;
@@ -193,6 +227,10 @@ const Header = () => {
 
     if (lastEvent.type === "CRIMINAL_CHECK_APPROVED") {
       setPendingCriminalChecksCount((prev) => Math.max(prev - 1, 0));
+    }
+
+    if (lastEvent.type === "ADMIN_MESSAGE") {
+      setUnreadAdminMessagesCount((prev) => prev + 1);
     }
   }, [lastEvent]);
 
@@ -251,30 +289,30 @@ const Header = () => {
     }
   };
 
-  const submitAdminAlert = async () => {
-    if (isAlertSending) return;
-    const text = alertText.trim();
+  const submitAdminMessage = async () => {
+    if (isMessageSending) return;
+    const text = messageText.trim();
     if (!text) {
-      setAlertError("Enter alert text.");
+      setMessageError("Enter message text.");
       return;
     }
     try {
-      setIsAlertSending(true);
-      setAlertError("");
-      await sendAdminAlert(text);
-      setAlertText("");
-      setIsAlertModalOpen(false);
+      setIsMessageSending(true);
+      setMessageError("");
+      await postAdminMessage(text);
+      setMessageText("");
+      setIsMessageModalOpen(false);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        setAlertError(
+        setMessageError(
           (err.response?.data as { error?: string })?.error ??
-            "Failed to send alert.",
+            "Failed to send message.",
         );
         return;
       }
-      setAlertError("Failed to send alert.");
+      setMessageError("Failed to send message.");
     } finally {
-      setIsAlertSending(false);
+      setIsMessageSending(false);
     }
   };
 
@@ -310,9 +348,12 @@ const Header = () => {
                         : l.link === "/criminal-check" &&
                               pendingCriminalChecksCount > 0
                             ? pendingCriminalChecksCount
-                          : l.link === "/documents" &&
+                        : l.link === "/documents" &&
                               notReviewedDocumentsCount > 0
                             ? notReviewedDocumentsCount
+                          : l.link === "/messages" &&
+                              unreadAdminMessagesCount > 0
+                            ? unreadAdminMessagesCount
                           : l.link === "/reports" &&
                               notResolvedReportsCount > 0
                             ? notResolvedReportsCount
@@ -329,11 +370,11 @@ const Header = () => {
             type="button"
             className={styles.alertHeaderBtn}
             onClick={() => {
-              setAlertError("");
-              setIsAlertModalOpen(true);
+              setMessageError("");
+              setIsMessageModalOpen(true);
             }}
           >
-            Alert to admins
+            New message
           </button>
           <Button
             onClick={openTotpSetupModal}
@@ -361,6 +402,7 @@ const Header = () => {
           feedbackAttentionNumber={notSolvedFeedbackCount}
           criminalCheckAttentionNumber={pendingCriminalChecksCount}
           documentsAttentionNumber={notReviewedDocumentsCount}
+          messagesAttentionNumber={unreadAdminMessagesCount}
           reportsAttentionNumber={notResolvedReportsCount}
         />
       )}
@@ -412,36 +454,36 @@ const Header = () => {
           </div>
         </div>
       )}
-      {isAlertModalOpen && (
+      {isMessageModalOpen && (
         <div className={styles.totpBackdrop}>
           <div className={styles.totpModal}>
-            <h2 className={styles.alertModalTitle}>Alert to admins</h2>
+            <h2 className={styles.alertModalTitle}>New admin message</h2>
             <p className={styles.totpText}>
-              This will open an alert modal for all connected admins.
+              Send a message to all admins.
             </p>
             <textarea
-              value={alertText}
+              value={messageText}
               onChange={(e) => {
-                setAlertText(e.target.value);
-                setAlertError("");
+                setMessageText(e.target.value);
+                setMessageError("");
               }}
               className={styles.alertTextarea}
-              placeholder="Type alert text"
+              placeholder="Type message text"
             />
-            {alertError && <p className={styles.totpError}>{alertError}</p>}
+            {messageError && <p className={styles.totpError}>{messageError}</p>}
             <div className={styles.totpActions}>
               <Button
-                onClick={() => setIsAlertModalOpen(false)}
+                onClick={() => setIsMessageModalOpen(false)}
                 title="Close"
                 type="OUTLINED"
-                isDisabled={isAlertSending}
+                isDisabled={isMessageSending}
               />
               <Button
-                onClick={submitAdminAlert}
-                title={isAlertSending ? "Sending..." : "Send alert"}
+                onClick={submitAdminMessage}
+                title={isMessageSending ? "Sending..." : "Send message"}
                 type="BLACK"
-                isDisabled={isAlertSending}
-                isLoading={isAlertSending}
+                isDisabled={isMessageSending}
+                isLoading={isMessageSending}
               />
             </div>
           </div>
