@@ -63,6 +63,13 @@
   font-weight: 800;
 }
 
+.listHeaderActions,
+.detailHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .listHeader span {
   color: rgba(0, 0, 0, 0.6);
   font-size: 13px;
@@ -249,6 +256,68 @@
   max-height: calc(100dvh - 250px);
   overflow: auto;
   padding-right: 4px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modalTitle {
+  margin: 0;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.modalText {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.modalInlineFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modalError {
+  color: #ff3b30;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .field,
@@ -451,6 +520,10 @@
   }
 
   .itemsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modalInlineFields {
     grid-template-columns: 1fr;
   }
 }

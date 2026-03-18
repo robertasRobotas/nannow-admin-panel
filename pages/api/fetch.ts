@@ -115,6 +115,43 @@ export const getProviderById = async (id: string) => {
   return response;
 };
 
+export const regenerateAddressPublicLocation = async (
+  id: string,
+  payload: {
+    minDistanceMeters: number;
+    maxDistanceMeters: number;
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/addresses/${id}/regenerate-public-location`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const regenerateAllAddressesPublicLocation = async (payload: {
+  minDistanceMeters: number;
+  maxDistanceMeters: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/addresses/regenerate-public-location`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getUsersByCriminalRecordStatus = async (
   status: string,
   startIndex: number,

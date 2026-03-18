@@ -136,6 +136,10 @@ export type UserDetails = {
       type: string;
       coordinates: [number, number];
     };
+    publicLocation?: {
+      type: string;
+      coordinates: [number, number];
+    };
     country: string;
     city: string;
     street: string;
@@ -199,6 +203,10 @@ export type UserDetails = {
     latitude: number;
     longitude: number;
     location: {
+      type: string;
+      coordinates: [number, number];
+    };
+    publicLocation?: {
       type: string;
       coordinates: [number, number];
     };

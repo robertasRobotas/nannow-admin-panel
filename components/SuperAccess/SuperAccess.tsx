@@ -10,6 +10,8 @@ import {
   createAdminUser,
   getConnectedAdmins,
   postAdminMessage,
+  regenerateAddressPublicLocation,
+  regenerateAllAddressesPublicLocation,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
   getSuperAccessItem,
@@ -380,6 +382,17 @@ const SuperAccess = () => {
   const [loadingList, setLoadingList] = useState(false);
   const [loadingItem, setLoadingItem] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRegeneratingAddress, setIsRegeneratingAddress] = useState(false);
+  const [isRegeneratingAllAddresses, setIsRegeneratingAllAddresses] =
+    useState(false);
+  const [isRegenerateAddressModalOpen, setIsRegenerateAddressModalOpen] =
+    useState(false);
+  const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
+    "ONE",
+  );
+  const [minDistanceMeters, setMinDistanceMeters] = useState("60");
+  const [maxDistanceMeters, setMaxDistanceMeters] = useState("200");
+  const [regenerateDistanceError, setRegenerateDistanceError] = useState("");
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
@@ -1181,6 +1194,158 @@ const SuperAccess = () => {
     }
   };
 
+  const formatPointValue = (value: unknown) => {
+    if (!value || typeof value !== "object") return "—";
+    const point = value as { coordinates?: unknown };
+    if (!Array.isArray(point.coordinates) || point.coordinates.length < 2) {
+      return "—";
+    }
+    const [longitude, latitude] = point.coordinates;
+    if (typeof longitude !== "number" || typeof latitude !== "number") {
+      return "—";
+    }
+    return `${latitude}, ${longitude}`;
+  };
+
+  const handleRegenerateSelectedAddressPublicLocation = async () => {
+    if (entity !== "addresses" || !selectedId || isRegeneratingAddress) return;
+    const parsed = parseRegenerateDistances();
+    if (!parsed.ok) {
+      setRegenerateDistanceError(parsed.error);
+      return;
+    }
+    try {
+      setIsRegeneratingAddress(true);
+      setError("");
+      const response = await regenerateAddressPublicLocation(selectedId, {
+        minDistanceMeters: parsed.minDistanceMeters,
+        maxDistanceMeters: parsed.maxDistanceMeters,
+      });
+      const result = response.data?.result as
+        | {
+            id?: string;
+            publicLocation?: {
+              type: string;
+              coordinates: [number, number];
+            };
+          }
+        | undefined;
+
+      if (result?.publicLocation) {
+        const nextId = String(result.id ?? selectedId);
+        setSelectedItem((prev) =>
+          prev ? { ...prev, publicLocation: result.publicLocation } : prev,
+        );
+        setDraft((prev) => ({ ...prev, publicLocation: result.publicLocation }));
+        setList((prev) =>
+          prev.map((item) =>
+            pickId(item) === nextId
+              ? { ...item, publicLocation: result.publicLocation }
+              : item,
+          ),
+        );
+        setAddressesById((prev) => ({
+          ...prev,
+          [nextId]: {
+            ...(prev[nextId] ?? {}),
+            publicLocation: result.publicLocation,
+          },
+        }));
+      } else {
+        invalidateEntityCaches("addresses");
+        await fetchItem();
+        await fetchList();
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const message =
+          (err.response?.data as { error?: string })?.error ??
+          "Failed to regenerate public location.";
+        setError(message);
+        return;
+      }
+      setError("Failed to regenerate public location.");
+    } finally {
+      setIsRegeneratingAddress(false);
+      setIsRegenerateAddressModalOpen(false);
+    }
+  };
+
+  const handleRegenerateAllAddressesPublicLocation = async () => {
+    if (entity !== "addresses" || isRegeneratingAllAddresses) return;
+    const parsed = parseRegenerateDistances();
+    if (!parsed.ok) {
+      setRegenerateDistanceError(parsed.error);
+      return;
+    }
+    try {
+      setIsRegeneratingAllAddresses(true);
+      setError("");
+      await regenerateAllAddressesPublicLocation({
+        minDistanceMeters: parsed.minDistanceMeters,
+        maxDistanceMeters: parsed.maxDistanceMeters,
+      });
+      invalidateEntityCaches("addresses");
+      await fetchList();
+      if (selectedId) {
+        await fetchItem();
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const message =
+          (err.response?.data as { error?: string })?.error ??
+          "Failed to regenerate public locations.";
+        setError(message);
+        return;
+      }
+      setError("Failed to regenerate public locations.");
+    } finally {
+      setIsRegeneratingAllAddresses(false);
+      setIsRegenerateAddressModalOpen(false);
+    }
+  };
+
+  const openRegenerateModal = (target: "ONE" | "ALL") => {
+    setRegenerateTarget(target);
+    setMinDistanceMeters("60");
+    setMaxDistanceMeters("200");
+    setRegenerateDistanceError("");
+    setIsRegenerateAddressModalOpen(true);
+  };
+
+  const closeRegenerateModal = () => {
+    if (isRegeneratingAddress || isRegeneratingAllAddresses) return;
+    setIsRegenerateAddressModalOpen(false);
+    setRegenerateDistanceError("");
+  };
+
+  const parseRegenerateDistances = () => {
+    const min = Number(minDistanceMeters);
+    const max = Number(maxDistanceMeters);
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      return { ok: false as const, error: "Distances must be numeric." };
+    }
+    if (min < 0 || max < 0) {
+      return {
+        ok: false as const,
+        error: "Distances must be non-negative.",
+      };
+    }
+    if (min > max) {
+      return {
+        ok: false as const,
+        error: "Min distance cannot be greater than max distance.",
+      };
+    }
+
+    return {
+      ok: true as const,
+      minDistanceMeters: min,
+      maxDistanceMeters: max,
+    };
+  };
+
   const submitAdminAlert = async () => {
     const text = adminAlertText.trim();
     if (!text || isSendingAlert) return;
@@ -1339,15 +1504,30 @@ const SuperAccess = () => {
               </span>
             </div>
             {entity !== "alerts" && entity !== "connected-admins" && (
-              <SearchBar
-                placeholder="Type to search"
-                searchText={searchText}
-                setSearchText={setSearchText}
-                onButtonClick={() => {
-                  setStartIndex(0);
-                  setAppliedSearch(searchText);
-                }}
-              />
+              <div className={styles.listHeaderActions}>
+                {entity === "addresses" && (
+                  <Button
+                    title={
+                      isRegeneratingAllAddresses
+                        ? "Regenerating..."
+                        : "Regenerate public"
+                    }
+                    type="OUTLINED"
+                    onClick={() => openRegenerateModal("ALL")}
+                    isDisabled={isRegeneratingAllAddresses}
+                    isLoading={isRegeneratingAllAddresses}
+                  />
+                )}
+                <SearchBar
+                  placeholder="Type to search"
+                  searchText={searchText}
+                  setSearchText={setSearchText}
+                  onButtonClick={() => {
+                    setStartIndex(0);
+                    setAppliedSearch(searchText);
+                  }}
+                />
+              </div>
             )}
           </div>
           {entity === "alerts" ? (
@@ -1640,31 +1820,48 @@ const SuperAccess = () => {
                   ? "Connected admin"
                   : "Detail"}
             </h2>
-            <Button
-              title={
-                entity === "alerts"
-                  ? isSendingAlert
-                    ? "Sending..."
-                    : "Send alert"
-                  : entity === "connected-admins"
-                    ? "Read only"
-                  : isSaving
-                    ? "Saving..."
-                    : "Save"
-              }
-              type="BLACK"
-              onClick={entity === "alerts" ? submitAdminAlert : saveChanges}
-              isDisabled={
-                entity === "alerts"
-                  ? !adminAlertText.trim() || isSendingAlert
-                  : entity === "connected-admins"
-                    ? true
-                  : !selectedId || loadingItem || isSaving
-              }
-              isLoading={
-                entity === "alerts" ? isSendingAlert : isSaving && entity !== "connected-admins"
-              }
-            />
+            <div className={styles.detailHeaderActions}>
+              {entity === "addresses" && selectedId && (
+                <Button
+                  title={
+                    isRegeneratingAddress
+                      ? "Regenerating..."
+                      : "Regenerate public"
+                  }
+                  type="OUTLINED"
+                  onClick={() => openRegenerateModal("ONE")}
+                  isDisabled={loadingItem || isRegeneratingAddress}
+                  isLoading={isRegeneratingAddress}
+                />
+              )}
+              <Button
+                title={
+                  entity === "alerts"
+                    ? isSendingAlert
+                      ? "Sending..."
+                      : "Send alert"
+                    : entity === "connected-admins"
+                      ? "Read only"
+                    : isSaving
+                      ? "Saving..."
+                      : "Save"
+                }
+                type="BLACK"
+                onClick={entity === "alerts" ? submitAdminAlert : saveChanges}
+                isDisabled={
+                  entity === "alerts"
+                    ? !adminAlertText.trim() || isSendingAlert
+                    : entity === "connected-admins"
+                      ? true
+                    : !selectedId || loadingItem || isSaving
+                }
+                isLoading={
+                  entity === "alerts"
+                    ? isSendingAlert
+                    : isSaving && entity !== "connected-admins"
+                }
+              />
+            </div>
           </div>
 
           {entity === "alerts" ? (
@@ -2069,6 +2266,40 @@ const SuperAccess = () => {
                   );
                 }
 
+                const isAddressLocationField =
+                  entity === "addresses" && key === "location";
+                if (isAddressLocationField) {
+                  return (
+                    <div key={key} className={styles.fieldGroup}>
+                      <label htmlFor={fieldId} className={styles.field}>
+                        <span>{prettyTitle(key)}</span>
+                        <input
+                          id={fieldId}
+                          type="text"
+                          value={formatPointValue(value)}
+                          disabled
+                        />
+                      </label>
+                      <label
+                        htmlFor={`${fieldId}-public`}
+                        className={styles.field}
+                      >
+                        <span>Public location</span>
+                        <input
+                          id={`${fieldId}-public`}
+                          type="text"
+                          value={formatPointValue(draft.publicLocation)}
+                          disabled
+                        />
+                      </label>
+                    </div>
+                  );
+                }
+
+                if (entity === "addresses" && key === "publicLocation") {
+                  return null;
+                }
+
                 const isOrderClientUserIdField =
                   entity === "orders" &&
                   key === "clientUserId" &&
@@ -2351,6 +2582,75 @@ const SuperAccess = () => {
           )}
         </section>
       </div>
+      {isRegenerateAddressModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>
+              {regenerateTarget === "ALL"
+                ? "Regenerate all public locations?"
+                : "Regenerate public location?"}
+            </h3>
+            <p className={styles.modalText}>
+              This operation cannot be reverted. Public coordinates will be
+              recalculated with a random distance range.
+            </p>
+            <div className={styles.modalInlineFields}>
+              <label className={styles.field}>
+                <span>Min distance meters</span>
+                <input
+                  type="number"
+                  value={minDistanceMeters}
+                  onChange={(e) => {
+                    setMinDistanceMeters(e.target.value);
+                    setRegenerateDistanceError("");
+                  }}
+                />
+              </label>
+              <label className={styles.field}>
+                <span>Max distance meters</span>
+                <input
+                  type="number"
+                  value={maxDistanceMeters}
+                  onChange={(e) => {
+                    setMaxDistanceMeters(e.target.value);
+                    setRegenerateDistanceError("");
+                  }}
+                />
+              </label>
+            </div>
+            {regenerateDistanceError && (
+              <div className={styles.modalError}>{regenerateDistanceError}</div>
+            )}
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeRegenerateModal}
+                isDisabled={isRegeneratingAddress || isRegeneratingAllAddresses}
+              />
+              <Button
+                title={
+                  regenerateTarget === "ALL"
+                    ? isRegeneratingAllAddresses
+                      ? "Regenerating..."
+                      : "Regenerate all"
+                    : isRegeneratingAddress
+                      ? "Regenerating..."
+                      : "Regenerate"
+                }
+                type="BLACK"
+                onClick={
+                  regenerateTarget === "ALL"
+                    ? handleRegenerateAllAddressesPublicLocation
+                    : handleRegenerateSelectedAddressPublicLocation
+                }
+                isDisabled={isRegeneratingAddress || isRegeneratingAllAddresses}
+                isLoading={isRegeneratingAddress || isRegeneratingAllAddresses}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
