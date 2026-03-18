@@ -241,7 +241,6 @@ const AdminMessages = () => {
                 <div className={styles.meta}>
                   Sent: {formatDateTime(message.createdAt)}
                 </div>
-                <div className={styles.meta}>Message ID: {message.id}</div>
               </div>
 
               <div className={styles.right}>

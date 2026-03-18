@@ -2,6 +2,7 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
+// export const BASE_URL = "https://nannow-api-test.com/v1";
 export const BASE_URL = "https://nannow-api.com/v1";
 // export const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
