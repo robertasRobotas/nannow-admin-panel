@@ -27,6 +27,7 @@ import {
 import axios from "axios";
 import { disconnectAdminSocket } from "@/helpers/adminSocket";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
+import MessagesIcon from "@/components/Icons/MessagesIcon";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
@@ -334,6 +335,12 @@ const Header = () => {
                   <HeaderButton
                     title={l.title}
                     isActive={`/${pathname.split("/")[1]}` === l.link}
+                    icon={
+                      l.link === "/messages" ? (
+                        <MessagesIcon className={styles.headerMessagesIcon} />
+                      ) : undefined
+                    }
+                    hideTitle={l.link === "/messages"}
                     attentionNumber={
                       l.link === "/orders"
                         ? ordersAttentionNumber > 0
@@ -374,7 +381,8 @@ const Header = () => {
               setIsMessageModalOpen(true);
             }}
           >
-            New message
+            <span>New</span>
+            <MessagesIcon className={styles.alertHeaderIcon} />
           </button>
           <Button
             onClick={openTotpSetupModal}

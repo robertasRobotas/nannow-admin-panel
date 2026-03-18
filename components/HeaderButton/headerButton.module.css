@@ -17,6 +17,13 @@
   display: inline-flex;
 }
 
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
 .JUSTIFY-CENTER {
   justify-content: center;
 }

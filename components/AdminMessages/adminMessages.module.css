@@ -9,11 +9,52 @@
   gap: 16px;
 }
 
+.titlePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .title {
   margin: 0;
   color: #000;
-  font-size: 42px;
+  font-size: 28px;
   font-weight: 800;
+}
+
+.titleIcon {
+  color: #000;
+  flex-shrink: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.newMessageBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  background: #fff;
+  color: #ff3b30;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.newMessageIcon {
+  color: currentColor;
+  flex-shrink: 0;
 }
 
 .summaryRow {
@@ -108,18 +149,86 @@
   font-weight: 700;
 }
 
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999999;
+  padding: 20px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modalIcon {
+  color: #ff3b30;
+}
+
+.modalTitle {
+  margin: 0;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 180px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  resize: vertical;
+  color: #000;
+  background: #fff;
+}
+
+.errorText {
+  margin: 0;
+  color: #ff3b30;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 @media (max-width: 936px) {
   .main {
     padding: 18px 16px 28px;
   }
 
-  .title {
-    font-size: 34px;
-  }
-
   .headerRow,
   .row {
     flex-direction: column;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .right {

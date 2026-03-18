@@ -12,8 +12,10 @@ import {
   getUnreadAdminMessagesCount,
   markAdminMessageRead,
   markAllAdminMessagesRead,
+  postAdminMessage,
 } from "@/pages/api/fetch";
 import { AdminMessage, GetAdminMessagesResponse } from "@/types/AdminMessage";
+import MessagesIcon from "@/components/Icons/MessagesIcon";
 
 const PAGE_SIZE = 20;
 
@@ -46,6 +48,10 @@ const AdminMessages = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isReadAllLoading, setIsReadAllLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [draftError, setDraftError] = useState("");
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
   const [error, setError] = useState("");
 
@@ -196,98 +202,181 @@ const AdminMessages = () => {
     }
   };
 
+  const handleSendMessage = async () => {
+    const text = draftMessage.trim();
+    if (text.length === 0) {
+      setDraftError("Enter message text.");
+      return;
+    }
+
+    try {
+      setIsSendingMessage(true);
+      setDraftError("");
+      await postAdminMessage(text);
+      setDraftMessage("");
+      setIsModalOpen(false);
+      fetchMessages();
+      fetchUnreadCount();
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      setDraftError("Failed to send message.");
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
   return (
-    <div className={styles.main}>
-      <div className={styles.headerRow}>
-        <h2 className={`${styles.title} ${nunito.className}`}>Messages</h2>
-        <Button
-          title={isReadAllLoading ? "Updating..." : "Read all"}
-          type="OUTLINED"
-          onClick={handleReadAll}
-          isDisabled={isReadAllLoading || unreadCount === 0}
-          isLoading={isReadAllLoading}
+    <>
+      <div className={styles.main}>
+        <div className={styles.headerRow}>
+          <div className={styles.titlePill}>
+            <MessagesIcon className={styles.titleIcon} />
+            <h2 className={`${styles.title} ${nunito.className}`}>Messages</h2>
+          </div>
+          <div className={styles.headerActions}>
+            <Button
+              title={isReadAllLoading ? "Updating..." : "Read all"}
+              type="OUTLINED"
+              onClick={handleReadAll}
+              isDisabled={isReadAllLoading || unreadCount === 0}
+              isLoading={isReadAllLoading}
+            />
+            <button
+              type="button"
+              className={styles.newMessageBtn}
+              onClick={() => {
+                setDraftError("");
+                setIsModalOpen(true);
+              }}
+            >
+              <span>New</span>
+              <MessagesIcon className={styles.newMessageIcon} />
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.summaryRow}>
+          <div className={styles.summaryItem}>Total: {total}</div>
+          <div className={styles.summaryItem}>Unread: {unreadCount}</div>
+          <div className={styles.summaryItem}>
+            Unread on this page: {unreadInCurrentPage}
+          </div>
+        </div>
+
+        <div className={styles.list}>
+          {loading && <div className={styles.empty}>Loading...</div>}
+          {!loading && error && <div className={styles.empty}>{error}</div>}
+          {!loading && !error && items.length === 0 && (
+            <div className={styles.empty}>No messages found</div>
+          )}
+
+          {!loading &&
+            !error &&
+            items.map((message) => (
+              <div
+                key={message.id}
+                className={`${styles.row} ${
+                  message.isRead ? "" : styles.rowUnread
+                }`}
+              >
+                <div className={styles.left}>
+                  <div className={styles.messageText}>{message.text}</div>
+                  <div className={styles.meta}>
+                    Sender: {message.senderName || "Unknown admin"}
+                  </div>
+                  <div className={styles.meta}>
+                    Sent: {formatDateTime(message.createdAt)}
+                  </div>
+                </div>
+
+                <div className={styles.right}>
+                  <div
+                    className={`${styles.status} ${
+                      message.isRead ? styles.statusRead : styles.statusUnread
+                    }`}
+                  >
+                    {message.isRead ? "Read" : "Unread"}
+                  </div>
+                  <div className={styles.meta}>
+                    Read at: {formatDateTime(message.readAt)}
+                  </div>
+                  {!message.isRead && (
+                    <Button
+                      title={
+                        updatingId === message.id ? "Updating..." : "Mark read"
+                      }
+                      type="OUTLINED"
+                      onClick={() => handleMarkRead(message.id)}
+                      isDisabled={updatingId.length > 0}
+                      isLoading={updatingId === message.id}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+
+        <ReactPaginate
+          breakLabel="..."
+          nextLabel=""
+          onPageChange={handlePageClick}
+          pageRangeDisplayed={5}
+          pageCount={pageCount}
+          previousLabel=""
+          renderOnZeroPageCount={null}
+          forcePage={Math.floor(itemOffset / PAGE_SIZE)}
+          containerClassName={paginateStyles.paginateWrapper}
+          pageClassName={paginateStyles.pageBtn}
+          pageLinkClassName={paginateStyles.pageLink}
+          activeClassName={paginateStyles.activePage}
+          nextClassName={paginateStyles.nextPageBtn}
+          nextLinkClassName={paginateStyles.nextLink}
+          previousClassName={paginateStyles.prevPageBtn}
+          previousLinkClassName={paginateStyles.prevLink}
+          breakClassName={paginateStyles.break}
         />
       </div>
-
-      <div className={styles.summaryRow}>
-        <div className={styles.summaryItem}>Total: {total}</div>
-        <div className={styles.summaryItem}>Unread: {unreadCount}</div>
-        <div className={styles.summaryItem}>
-          Unread on this page: {unreadInCurrentPage}
-        </div>
-      </div>
-
-      <div className={styles.list}>
-        {loading && <div className={styles.empty}>Loading...</div>}
-        {!loading && error && <div className={styles.empty}>{error}</div>}
-        {!loading && !error && items.length === 0 && (
-          <div className={styles.empty}>No messages found</div>
-        )}
-
-        {!loading &&
-          !error &&
-          items.map((message) => (
-            <div
-              key={message.id}
-              className={`${styles.row} ${
-                message.isRead ? "" : styles.rowUnread
-              }`}
-            >
-              <div className={styles.left}>
-                <div className={styles.messageText}>{message.text}</div>
-                <div className={styles.meta}>
-                  Sender: {message.senderName || "Unknown admin"}
-                </div>
-                <div className={styles.meta}>
-                  Sent: {formatDateTime(message.createdAt)}
-                </div>
-              </div>
-
-              <div className={styles.right}>
-                <div
-                  className={`${styles.status} ${
-                    message.isRead ? styles.statusRead : styles.statusUnread
-                  }`}
-                >
-                  {message.isRead ? "Read" : "Unread"}
-                </div>
-                <div className={styles.meta}>
-                  Read at: {formatDateTime(message.readAt)}
-                </div>
-                {!message.isRead && (
-                  <Button
-                    title={updatingId === message.id ? "Updating..." : "Mark read"}
-                    type="OUTLINED"
-                    onClick={() => handleMarkRead(message.id)}
-                    isDisabled={updatingId.length > 0}
-                    isLoading={updatingId === message.id}
-                  />
-                )}
-              </div>
+      {isModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <MessagesIcon className={styles.modalIcon} />
+              <h3 className={`${styles.modalTitle} ${nunito.className}`}>
+                New message
+              </h3>
             </div>
-          ))}
-      </div>
-
-      <ReactPaginate
-        breakLabel="..."
-        nextLabel=""
-        onPageChange={handlePageClick}
-        pageRangeDisplayed={5}
-        pageCount={pageCount}
-        previousLabel=""
-        renderOnZeroPageCount={null}
-        forcePage={Math.floor(itemOffset / PAGE_SIZE)}
-        containerClassName={paginateStyles.paginateWrapper}
-        pageClassName={paginateStyles.pageBtn}
-        pageLinkClassName={paginateStyles.pageLink}
-        activeClassName={paginateStyles.activePage}
-        nextClassName={paginateStyles.nextPageBtn}
-        nextLinkClassName={paginateStyles.nextLink}
-        previousClassName={paginateStyles.prevPageBtn}
-        previousLinkClassName={paginateStyles.prevLink}
-        breakClassName={paginateStyles.break}
-      />
-    </div>
+            <textarea
+              value={draftMessage}
+              onChange={(event) => {
+                setDraftMessage(event.target.value);
+                setDraftError("");
+              }}
+              className={styles.textarea}
+              placeholder="Type message text"
+            />
+            {draftError && <div className={styles.errorText}>{draftError}</div>}
+            <div className={styles.modalActions}>
+              <Button
+                title="Close"
+                type="OUTLINED"
+                onClick={() => setIsModalOpen(false)}
+                isDisabled={isSendingMessage}
+              />
+              <Button
+                title={isSendingMessage ? "Sending..." : "Send"}
+                type="BLACK"
+                onClick={handleSendMessage}
+                isDisabled={isSendingMessage}
+                isLoading={isSendingMessage}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

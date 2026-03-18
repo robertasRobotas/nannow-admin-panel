@@ -15,10 +15,38 @@ import paginateStyles from "../../styles/paginate.module.css";
 import axios from "axios";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import OrdersList from "./OrdersList/OrdersList";
-import { options } from "@/data/orderStatusOptions";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import { OrderType } from "@/types/Order";
 import Button from "../Button/Button";
+
+const orderFilterOptions = [
+  { title: "All", value: "" },
+  { title: "ORDER_CREATED (WITHOUT DIRECT BOOKING)", value: "ORDER_CREATED" },
+  {
+    title: "ORDER_CREATED (DIRECT ORDER TO PROVIDER)",
+    value: "ORDER_CREATED_DIRECT",
+  },
+  { title: "PROVIDER_OFFERED_SERVICE", value: "PROVIDER_OFFERED_SERVICE" },
+  {
+    title: "PROVIDER_ACCEPTED_DIRECT_OFFER",
+    value: "PROVIDER_ACCEPTED_DIRECT_OFFER",
+  },
+  { title: "BOTH_APPROVED", value: "BOTH_APPROVED" },
+  {
+    title: "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
+    value: "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
+  },
+  {
+    title: "PROVIDER_MARKED_AS_SERVICE_ENDED",
+    value: "PROVIDER_MARKED_AS_SERVICE_ENDED",
+  },
+  { title: "CANCELED_BY_CLIENT", value: "CANCELED_BY_CLIENT" },
+  { title: "CANCELED_BY_PROVIDER", value: "CANCELED_BY_PROVIDER" },
+  { title: "CLIENT_CANCELED", value: "CLIENT_CANCELED" },
+  { title: "PROVIDER_CANCELED", value: "PROVIDER_CANCELED" },
+  { title: "Not started in time", value: "NOT_STARTED_IN_TIME" },
+  { title: "Not Ended in time", value: "NOT_ENDED_IN_TIME" },
+] as const;
 
 const Orders = () => {
   type ActiveOrdersFilter =
@@ -53,6 +81,50 @@ const Orders = () => {
           Math.ceil(response.data.result.total / response.data.result.pageSize),
         );
         setTotalUsers(response.data.result.total);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    },
+    [router],
+  );
+
+  const fetchCreatedOrdersByBookingType = useCallback(
+    async (isDirectOrderToProvider: boolean, startIndex: number) => {
+      try {
+        const matchingOrders: OrderType[] = [];
+        let nextStartIndex = 0;
+        let total = 0;
+        let pageSize = 20;
+
+        do {
+          const response = await getOrders("ORDER_CREATED", nextStartIndex);
+          const result = response.data.result as {
+            items: OrderType[];
+            total: number;
+            pageSize: number;
+          };
+
+          total = result.total;
+          pageSize = result.pageSize;
+          matchingOrders.push(
+            ...result.items.filter(
+              (order) =>
+                Boolean(order.isDirectOrderToProvider) ===
+                isDirectOrderToProvider,
+            ),
+          );
+          nextStartIndex += result.pageSize;
+        } while (nextStartIndex < total);
+
+        setItemsPerPage(pageSize);
+        setPageCount(Math.ceil(matchingOrders.length / pageSize));
+        setTotalUsers(matchingOrders.length);
+        setOrders(matchingOrders.slice(startIndex, startIndex + pageSize));
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -180,12 +252,22 @@ const Orders = () => {
       fetchCanceledNotPaidOrders(itemOffset);
       return;
     }
-    fetchOrders(options[selectedOption].value, itemOffset);
+    const selectedFilterValue = orderFilterOptions[selectedOption].value;
+    if (selectedFilterValue === "ORDER_CREATED_DIRECT") {
+      fetchCreatedOrdersByBookingType(true, itemOffset);
+      return;
+    }
+    if (selectedFilterValue === "ORDER_CREATED") {
+      fetchCreatedOrdersByBookingType(false, itemOffset);
+      return;
+    }
+    fetchOrders(selectedFilterValue, itemOffset);
   }, [
     activeFilter,
     selectedOption,
     itemOffset,
     fetchOrders,
+    fetchCreatedOrdersByBookingType,
     fetchNotPaidOrders,
     fetchCanceledNotPaidOrders,
   ]);
@@ -235,7 +317,12 @@ const Orders = () => {
       </div>
       <div className={styles.categoryBtns}>
         <DropDownButton
-          options={options}
+          options={orderFilterOptions as unknown as {
+            title: string;
+            icon?: string;
+            value: string;
+            attentionNumber?: number;
+          }[]}
           selectedOption={selectedOption}
           setSelectedOption={(option) => {
             setSelectedOption(option);
