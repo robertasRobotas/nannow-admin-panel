@@ -194,6 +194,19 @@ export const getPendingCriminalRecordCount = async () => {
   return response;
 };
 
+export const getPendingProviderSpecialSkillsCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/provider-special-skills/pending/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getNotReviewedDocumentsCount = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(

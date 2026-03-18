@@ -19,6 +19,7 @@ import {
   getNotResolvedReportsCount,
   getNotReviewedDocumentsCount,
   getNotPaidOrdersCount,
+  getPendingProviderSpecialSkillsCount,
   getPendingCriminalRecordCount,
   postAdminMessage,
   setupAdminTotp,
@@ -38,6 +39,8 @@ const Header = () => {
   const [notFinishedOnboardingCount, setNotFinishedOnboardingCount] =
     useState(0);
   const [pendingCriminalChecksCount, setPendingCriminalChecksCount] =
+    useState(0);
+  const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
   const [notSolvedFeedbackCount, setNotSolvedFeedbackCount] = useState(0);
   const [notReviewedDocumentsCount, setNotReviewedDocumentsCount] = useState(0);
@@ -67,6 +70,15 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    const fetchPendingProviderSpecialSkills = async () => {
+      try {
+        const response = await getPendingProviderSpecialSkillsCount();
+        const count = response.data?.total ?? response.data?.result?.total ?? 0;
+        setPendingProviderSpecialSkillsCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
     const fetchNotEndedOrdersCount = async () => {
       try {
         const response = await getNotEndedOrdersCount();
@@ -170,6 +182,7 @@ const Header = () => {
       }
     };
 
+    fetchPendingProviderSpecialSkills();
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
     fetchCanceledPendingFinancialOrdersCount();
@@ -180,6 +193,30 @@ const Header = () => {
     fetchNotResolvedReportsCount();
     fetchUnreadAdminMessagesCount();
   }, [router]);
+
+  useEffect(() => {
+    const handlePendingProviderSpecialSkillsRefresh = async () => {
+      try {
+        const response = await getPendingProviderSpecialSkillsCount();
+        const count = response.data?.total ?? response.data?.result?.total ?? 0;
+        setPendingProviderSpecialSkillsCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    window.addEventListener(
+      "pending-provider-special-skills-count-refresh",
+      handlePendingProviderSpecialSkillsRefresh,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "pending-provider-special-skills-count-refresh",
+        handlePendingProviderSpecialSkillsRefresh,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const handleMessagesCountUpdate = (event: Event) => {
@@ -237,6 +274,8 @@ const Header = () => {
 
   const ordersAttentionNumber =
     notEndedOrdersCount + notPaidOrdersCount + canceledPendingFinancialCount;
+  const usersAttentionNumber =
+    notFinishedOnboardingCount + pendingProviderSpecialSkillsCount;
   const visibleLinks = isSuperAdmin
     ? [{ title: "Super Access", link: "/super-access" }, ...links]
     : links;
@@ -347,8 +386,8 @@ const Header = () => {
                           ? ordersAttentionNumber
                           : undefined
                         : l.link === "/users" &&
-                            notFinishedOnboardingCount > 0
-                          ? notFinishedOnboardingCount
+                            usersAttentionNumber > 0
+                          ? usersAttentionNumber
                         : l.link === "/feedback" &&
                             notSolvedFeedbackCount > 0
                           ? notSolvedFeedbackCount
@@ -406,7 +445,7 @@ const Header = () => {
           links={visibleLinks}
           onClose={() => setMenuDisplayed(false)}
           ordersAttentionNumber={ordersAttentionNumber}
-          usersAttentionNumber={notFinishedOnboardingCount}
+          usersAttentionNumber={usersAttentionNumber}
           feedbackAttentionNumber={notSolvedFeedbackCount}
           criminalCheckAttentionNumber={pendingCriminalChecksCount}
           documentsAttentionNumber={notReviewedDocumentsCount}

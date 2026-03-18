@@ -10,6 +10,7 @@ import {
   getAllUsers,
   getBannedUsers,
   getNotFinishedOnboardingUsers,
+  getPendingProviderSpecialSkillsCount,
   setUserBanStatus,
 } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
@@ -56,6 +57,7 @@ type UsersViewMode =
   | "ONBOARDING_PROVIDERS"
   | "BANNED_USERS";
 type ProviderVideoFilter = "ALL" | "WITH_VIDEO" | "WITHOUT_VIDEO";
+type ProviderSpecialSkillsFilter = "ALL" | "PENDING_SPECIAL_SKILLS";
 type UsersViewOption = {
   title: string;
   value: UsersViewMode;
@@ -96,12 +98,16 @@ const Users = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [clientOnboardingCount, setClientOnboardingCount] = useState(0);
   const [providerOnboardingCount, setProviderOnboardingCount] = useState(0);
+  const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
+    useState(0);
   const [isBanConfirmModalOpen, setIsBanConfirmModalOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<BannedUser | null>(null);
   const [isUpdatingBan, setIsUpdatingBan] = useState(false);
   const [modeReady, setModeReady] = useState(false);
   const [providerVideoFilter, setProviderVideoFilter] =
     useState<ProviderVideoFilter>("ALL");
+  const [providerSpecialSkillsFilter, setProviderSpecialSkillsFilter] =
+    useState<ProviderSpecialSkillsFilter>("ALL");
 
   const providerVideoFilterOptions: {
     title: string;
@@ -114,7 +120,11 @@ const Users = () => {
 
   const viewOptions: UsersViewOption[] = [
     { title: "Clients", value: "CLIENTS" },
-    { title: "Providers", value: "PROVIDERS" },
+    {
+      title: "Providers",
+      value: "PROVIDERS",
+      attentionNumber: pendingProviderSpecialSkillsCount,
+    },
     {
       title: "Clients with not finished onboarding",
       value: "ONBOARDING_CLIENTS",
@@ -192,6 +202,16 @@ const Users = () => {
     }
   }, []);
 
+  const fetchPendingProviderSpecialSkills = useCallback(async () => {
+    try {
+      const response = await getPendingProviderSpecialSkillsCount();
+      const total = response.data?.total ?? response.data?.result?.total ?? 0;
+      setPendingProviderSpecialSkillsCount(Number(total) || 0);
+    } catch (err) {
+      console.log(err);
+    }
+  }, []);
+
   const fetchUsers = useCallback(async () => {
     try {
       setUsers([]);
@@ -205,6 +225,10 @@ const Users = () => {
           searchParams.set("hasVideo", "true");
         } else if (providerVideoFilter === "WITHOUT_VIDEO") {
           searchParams.set("hasVideo", "false");
+        }
+
+        if (providerSpecialSkillsFilter === "PENDING_SPECIAL_SKILLS") {
+          searchParams.set("hasPendingSpecialSkills", "true");
         }
       }
 
@@ -226,7 +250,14 @@ const Users = () => {
         }
       }
     }
-  }, [isSelectedClients, itemOffset, providerVideoFilter, router, searchText]);
+  }, [
+    isSelectedClients,
+    itemOffset,
+    providerSpecialSkillsFilter,
+    providerVideoFilter,
+    router,
+    searchText,
+  ]);
 
   const fetchOnboardingUsers = useCallback(async () => {
     try {
@@ -298,7 +329,26 @@ const Users = () => {
 
   useEffect(() => {
     fetchOnboardingNotFinishedCount();
-  }, [fetchOnboardingNotFinishedCount]);
+    fetchPendingProviderSpecialSkills();
+  }, [fetchOnboardingNotFinishedCount, fetchPendingProviderSpecialSkills]);
+
+  useEffect(() => {
+    const handlePendingProviderSpecialSkillsRefresh = () => {
+      fetchPendingProviderSpecialSkills();
+    };
+
+    window.addEventListener(
+      "pending-provider-special-skills-count-refresh",
+      handlePendingProviderSpecialSkillsRefresh,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "pending-provider-special-skills-count-refresh",
+        handlePendingProviderSpecialSkillsRefresh,
+      );
+    };
+  }, [fetchPendingProviderSpecialSkills]);
 
   useEffect(() => {
     if (!router.isReady || !modeReady) return;
@@ -381,21 +431,39 @@ const Users = () => {
             onClick={() => router.push("/users/filter-export")}
           />
           {isProvidersSelected && (
-            <DropDownButton
-              options={providerVideoFilterOptions}
-              selectedOption={providerVideoFilterOptions.findIndex(
-                (option) => option.value === providerVideoFilter,
-              )}
-              setSelectedOption={(nextSelectedOption) => {
-                const option =
-                  providerVideoFilterOptions[nextSelectedOption as number];
-                if (!option) return;
-                setProviderVideoFilter(option.value);
-              }}
-              onClickOption={() => {
-                setItemOffset(0);
-              }}
-            />
+            <>
+              <DropDownButton
+                options={providerVideoFilterOptions}
+                selectedOption={providerVideoFilterOptions.findIndex(
+                  (option) => option.value === providerVideoFilter,
+                )}
+                setSelectedOption={(nextSelectedOption) => {
+                  const option =
+                    providerVideoFilterOptions[nextSelectedOption as number];
+                  if (!option) return;
+                  setProviderVideoFilter(option.value);
+                }}
+                onClickOption={() => {
+                  setItemOffset(0);
+                }}
+              />
+              <Button
+                title="Pending special skills"
+                type="OUTLINED"
+                isSelected={
+                  providerSpecialSkillsFilter === "PENDING_SPECIAL_SKILLS"
+                }
+                attentionNumber={pendingProviderSpecialSkillsCount}
+                onClick={() => {
+                  setItemOffset(0);
+                  setProviderSpecialSkillsFilter((prev) =>
+                    prev === "PENDING_SPECIAL_SKILLS"
+                      ? "ALL"
+                      : "PENDING_SPECIAL_SKILLS",
+                  );
+                }}
+              />
+            </>
           )}
         </div>
         <div>

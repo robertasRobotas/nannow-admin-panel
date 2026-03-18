@@ -355,6 +355,9 @@ const StatusDropdown = ({
     try {
       await reviewSpecialSkill(providerId, toEnumKey(skillKey), status);
       onChangedStatus(status);
+      window.dispatchEvent(
+        new Event("pending-provider-special-skills-count-refresh"),
+      );
     } catch (e) {
       console.log(e);
     } finally {
