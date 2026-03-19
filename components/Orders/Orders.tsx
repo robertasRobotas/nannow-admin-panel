@@ -4,6 +4,7 @@ import { nunito } from "@/helpers/fonts";
 import {
   getCanceledPendingFinancialOrders,
   getCanceledPendingFinancialOrdersCount,
+  getClosedOrders,
   getNotEndedOrdersCount,
   getNotPaidOrders,
   getNotPaidOrdersCount,
@@ -46,6 +47,7 @@ const orderFilterOptions = [
   { title: "PROVIDER_CANCELED", value: "PROVIDER_CANCELED" },
   { title: "Not started in time", value: "NOT_STARTED_IN_TIME" },
   { title: "Not Ended in time", value: "NOT_ENDED_IN_TIME" },
+  { title: "Closed by admins", value: "CLOSED_BY_ADMINS" },
 ] as const;
 
 const Orders = () => {
@@ -53,7 +55,8 @@ const Orders = () => {
     | "DEFAULT"
     | "NOT_ENDED"
     | "NOT_PAID"
-    | "CANCELED_NOT_PAID";
+    | "CANCELED_NOT_PAID"
+    | "CLOSED_BY_ADMINS";
   const [selectedOption, setSelectedOption] = useState<number>(0);
 
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -186,6 +189,31 @@ const Orders = () => {
     [router],
   );
 
+  const fetchClosedOrders = useCallback(
+    async (startIndex: number) => {
+      try {
+        const response = await getClosedOrders(startIndex);
+        const result = response.data.result as {
+          items: OrderType[];
+          total: number;
+          pageSize: number;
+        };
+        setOrders(result.items);
+        setItemsPerPage(result.pageSize);
+        setPageCount(Math.ceil(result.total / result.pageSize));
+        setTotalUsers(result.total);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    },
+    [router],
+  );
+
   const fetchNotEndedOrdersCount = useCallback(async () => {
     try {
       const response = await getNotEndedOrdersCount();
@@ -252,7 +280,15 @@ const Orders = () => {
       fetchCanceledNotPaidOrders(itemOffset);
       return;
     }
+    if (activeFilter === "CLOSED_BY_ADMINS") {
+      fetchClosedOrders(itemOffset);
+      return;
+    }
     const selectedFilterValue = orderFilterOptions[selectedOption].value;
+    if (selectedFilterValue === "CLOSED_BY_ADMINS") {
+      fetchClosedOrders(itemOffset);
+      return;
+    }
     if (selectedFilterValue === "ORDER_CREATED_DIRECT") {
       fetchCreatedOrdersByBookingType(true, itemOffset);
       return;
@@ -270,6 +306,7 @@ const Orders = () => {
     fetchCreatedOrdersByBookingType,
     fetchNotPaidOrders,
     fetchCanceledNotPaidOrders,
+    fetchClosedOrders,
   ]);
 
   useEffect(() => {

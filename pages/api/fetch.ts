@@ -730,6 +730,19 @@ export const getOrderById = async (id: string) => {
   return response;
 };
 
+export const getClosedOrders = async (startIndex = 0) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/closed?startIndex=${startIndex}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getOrderInvoice = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/orders/${id}/invoice`, {
@@ -814,62 +827,15 @@ export const payoutCancelFeeByOrderId = async (id: string) => {
 
 export const getCanceledPendingFinancialOrdersCount = async () => {
   const jwt = Cookies.get("@user_jwt");
-  const statuses = ["CLIENT_CANCELED", "CANCELED_BY_CLIENT"];
-  const counted = new Set<string>();
-  let count = 0;
-
-  for (const status of statuses) {
-    let startIndex = 0;
-    let total = 0;
-    let pageSize = 20;
-
-    do {
-      const response = await axios.get(
-        `${BASE_URL}/admin/orders?startIndex=${startIndex}&status=${status}`,
-        {
-          headers: {
-            Authorization: jwt,
-          },
-        },
-      );
-
-      const result = response.data?.result ?? {};
-      const items = Array.isArray(result.items) ? result.items : [];
-      total = Number(result.total ?? 0);
-      pageSize = Number(result.pageSize ?? pageSize);
-
-      for (const order of items) {
-        const orderId = String(order?.id ?? "");
-        if (!orderId || counted.has(orderId)) continue;
-
-        const status = String(order?.status ?? "").toUpperCase();
-        const isCanceledByClient =
-          status === "CANCELED_BY_CLIENT" || status === "CLIENT_CANCELED";
-        if (!isCanceledByClient) continue;
-
-        const isLate2 = !!order?.isOrderCanceledLessThan2hBeforeStart;
-        const isLate12 =
-          !!order?.isOrderCanceledLessThan12hBeforeStart && !isLate2;
-        const isRefundDone = !!order?.refundedAt;
-        const isPayoutDone = !!order?.isCancelFeePaidToProvider;
-
-        const isFinancialPending = isLate2
-          ? !isPayoutDone
-          : isLate12
-            ? !isRefundDone || !isPayoutDone
-            : !isRefundDone;
-
-        if (isFinancialPending) {
-          count += 1;
-          counted.add(orderId);
-        }
-      }
-
-      startIndex += pageSize;
-    } while (startIndex < total);
-  }
-
-  return { data: { count } };
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/canceled-financial-pending/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
 };
 
 export const getCanceledPendingFinancialOrders = async (
@@ -907,10 +873,14 @@ export const getCanceledPendingFinancialOrders = async (
         const statusUpper = String(
           (order as { status?: unknown })?.status ?? "",
         ).toUpperCase();
+        const paymentStatusUpper = String(
+          (order as { paymentStatus?: unknown })?.paymentStatus ?? "",
+        ).toUpperCase();
         const isCanceledByClient =
           statusUpper === "CANCELED_BY_CLIENT" ||
           statusUpper === "CLIENT_CANCELED";
         if (!isCanceledByClient) continue;
+        if (paymentStatusUpper === "PAID") continue;
 
         const isLate2 = !!(
           order as { isOrderCanceledLessThan2hBeforeStart?: unknown }
@@ -964,6 +934,34 @@ export const finishOrderByAdmin = async (
   const response = await axios.put(
     `${BASE_URL}/admin/orders/${id}/finish`,
     { resolvedReason },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const closeOrderByAdmin = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/close`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const openOrderByAdmin = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/open`,
+    {},
     {
       headers: {
         Authorization: jwt,

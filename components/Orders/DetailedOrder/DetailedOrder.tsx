@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import { DetailedOrderType } from "@/types/DetailedOrder";
 import styles from "./detailedOrder.module.css";
 import { nunito } from "@/helpers/fonts";
@@ -17,10 +18,12 @@ import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
 import {
   cancelOrderByAdmin,
+  closeOrderByAdmin,
   finishOrderByAdmin,
   getOrderInvoice,
   getOrderProviderInvoice,
   getOrderProviderReceipt,
+  openOrderByAdmin,
   payoutCancelFeeByOrderId,
   refundOrderById,
   releaseFundsByOrderId,
@@ -36,9 +39,11 @@ type DetailedOrderProps = {
 };
 
 const DetailedOrder = ({ order }: DetailedOrderProps) => {
+  const router = useRouter();
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isReleaseFundsErrorModalOpen, setIsReleaseFundsErrorModalOpen] =
     useState(false);
+  const [isCloseOrderModalOpen, setIsCloseOrderModalOpen] = useState(false);
   const [releaseFundsErrorMessage, setReleaseFundsErrorMessage] =
     useState<string>("");
   const [releaseFundsErrorDetails, setReleaseFundsErrorDetails] = useState<
@@ -52,6 +57,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isProblemMenuOpen, setIsProblemMenuOpen] = useState(false);
   const [isFinishingOrder, setIsFinishingOrder] = useState(false);
   const [isCancelingOrder, setIsCancelingOrder] = useState(false);
+  const [isTogglingClosedByAdmin, setIsTogglingClosedByAdmin] = useState(false);
   const [isInvoiceLoading, setIsInvoiceLoading] = useState(false);
   const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
     useState(false);
@@ -245,6 +251,25 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   };
 
   const closeConfirmModal = () => setIsConfirmModalOpen(false);
+  const closeOrderModal = () => setIsCloseOrderModalOpen(false);
+
+  const toggleClosedByAdmin = async () => {
+    if (isTogglingClosedByAdmin) return;
+    try {
+      setIsTogglingClosedByAdmin(true);
+      const response = order?.isClosedByAdmin
+        ? await openOrderByAdmin(order.id)
+        : await closeOrderByAdmin(order.id);
+      if (response.status === 200) {
+        router.push("/orders");
+      }
+    } catch (error) {
+      console.error("Failed to toggle order closed state", error);
+    } finally {
+      setIsTogglingClosedByAdmin(false);
+      setIsCloseOrderModalOpen(false);
+    }
+  };
 
   const openOrderInvoice = async () => {
     if (isInvoiceLoading) return;
@@ -426,6 +451,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const shouldShowProviderDocumentCard =
     shouldShowInvoiceCards &&
     !!order?.approvedProviderId;
+  const isOrderPaid = String(order?.paymentStatus ?? "").toUpperCase() === "PAID";
   const isRefundDone = !!order?.refundedAt;
   const isCancelFeeDone = !!order?.isCancelFeePaidToProvider;
   const statusTitle =
@@ -861,7 +887,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             {`Sitter was paid at ${releasedFundsAt}`}
           </span>
         )}
-        {!isCanceledOrder && !order?.isReleasedFundsToProvider && (
+        {!isCanceledOrder && isOrderPaid && !order?.isReleasedFundsToProvider && (
           <Button
             title={isReleasingFunds ? "Paying..." : "Pay the sitter"}
             type="BLACK"
@@ -885,7 +911,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             )}
           </div>
         )}
-        {isCanceledByClient && !areCanceledFinancialActionsDone && (
+        {isCanceledByClient && isOrderPaid && !areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsRow}>
             {(requiresRefund || isCanceledLate12h) && !isRefundDone && (
               <Button
@@ -905,6 +931,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             )}
           </div>
         )}
+      </div>
+      <div className={styles.closeOrderRow}>
+        <Button
+          title={order?.isClosedByAdmin ? "Open order" : "Close order"}
+          type={order?.isClosedByAdmin ? "OUTLINED" : "DELETE"}
+          isDisabled={isTogglingClosedByAdmin}
+          onClick={() => setIsCloseOrderModalOpen(true)}
+        />
       </div>
       {isConfirmModalOpen && (
         <div className={styles.confirmationBackdrop}>
@@ -945,6 +979,42 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 title="Close"
                 type="OUTLINED"
                 onClick={() => setIsReleaseFundsErrorModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isCloseOrderModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>
+              {order?.isClosedByAdmin ? "Open order?" : "Close order?"}
+            </h2>
+            <p className={styles.confirmationBody}>
+              {order?.isClosedByAdmin
+                ? "Are you sure you want to open this order again?"
+                : "Are you sure you want to close this order?"}
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeOrderModal}
+                isDisabled={isTogglingClosedByAdmin}
+              />
+              <Button
+                title={
+                  isTogglingClosedByAdmin
+                    ? order?.isClosedByAdmin
+                      ? "Opening..."
+                      : "Closing..."
+                    : order?.isClosedByAdmin
+                      ? "Confirm open"
+                      : "Confirm close"
+                }
+                type={order?.isClosedByAdmin ? "BLACK" : "DELETE"}
+                onClick={toggleClosedByAdmin}
+                isDisabled={isTogglingClosedByAdmin}
               />
             </div>
           </div>

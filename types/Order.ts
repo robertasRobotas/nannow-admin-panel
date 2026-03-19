@@ -75,4 +75,6 @@ export type OrderType = {
   cancelFeePaidToProviderAt?: string | null;
   cancelFeeAmount?: number | null;
   cancelFeeAmountCents?: number | null;
+  isClosedByAdmin?: boolean;
+  closedByAdminId?: string | null;
 };

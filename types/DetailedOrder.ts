@@ -180,6 +180,8 @@ export type DetailedOrderType = {
   cancelFeePaidToProviderAt?: string | null;
   cancelFeeAmount?: number | null;
   cancelFeeAmountCents?: number | null;
+  isClosedByAdmin?: boolean;
+  closedByAdminId?: string | null;
   reviews?: ReviewType[];
   invoiceDate?: string;
 };
