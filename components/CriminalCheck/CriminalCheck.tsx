@@ -73,6 +73,30 @@ const CriminalCheck = () => {
     fetchPendingCount();
   }, []);
 
+  useEffect(() => {
+    const handleCriminalCheckStatusUpdated = async () => {
+      try {
+        const response = await getPendingCriminalRecordCount();
+        setPendingCount(Number(response.data?.total ?? 0) || 0);
+        fetchUsers(selected === "ALL" ? "" : selected, itemOffset);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    window.addEventListener(
+      "criminal-check-status-updated",
+      handleCriminalCheckStatusUpdated,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "criminal-check-status-updated",
+        handleCriminalCheckStatusUpdated,
+      );
+    };
+  }, [fetchUsers, itemOffset, selected]);
+
   const normalizedSearch = searchText.trim().toLowerCase();
   const displayedUsers =
     normalizedSearch.length > 0

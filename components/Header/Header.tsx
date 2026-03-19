@@ -219,6 +219,37 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    const handleCriminalCheckStatusUpdated = async () => {
+      try {
+        const [criminalResponse, documentsResponse] = await Promise.all([
+          getPendingCriminalRecordCount(),
+          getNotReviewedDocumentsCount(),
+        ]);
+        setPendingCriminalChecksCount(
+          Number(criminalResponse.data?.total ?? 0) || 0,
+        );
+        setNotReviewedDocumentsCount(
+          Number(documentsResponse.data?.count ?? 0) || 0,
+        );
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    window.addEventListener(
+      "criminal-check-status-updated",
+      handleCriminalCheckStatusUpdated,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "criminal-check-status-updated",
+        handleCriminalCheckStatusUpdated,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     const handleMessagesCountUpdate = (event: Event) => {
       const customEvent = event as CustomEvent<{ count?: number }>;
       const count = customEvent.detail?.count;

@@ -189,6 +189,7 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
         documentIds: application.source?.documentIds ?? [],
       });
 
+      window.dispatchEvent(new Event("criminal-check-status-updated"));
       toast("Application decision applied.");
       window.location.reload();
     } catch (err) {
