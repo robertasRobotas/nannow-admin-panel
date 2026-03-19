@@ -1,3 +1,4 @@
+import { AdminApiMode } from "@/pages/api/fetch";
 import { HeaderLink } from "@/types/HeaderLink";
 import styles from "./headerMenu.module.css";
 import crossImg from "../../../assets/images/cross.svg";
@@ -18,6 +19,8 @@ type HeaderMenuProps = {
   documentsAttentionNumber?: number;
   messagesAttentionNumber?: number;
   reportsAttentionNumber?: number;
+  apiMode?: AdminApiMode;
+  onToggleApiMode?: () => void;
 };
 
 const HeaderMenu = ({
@@ -30,6 +33,8 @@ const HeaderMenu = ({
   documentsAttentionNumber,
   messagesAttentionNumber,
   reportsAttentionNumber,
+  apiMode,
+  onToggleApiMode,
 }: HeaderMenuProps) => {
   const [isClosing, setClosing] = useState(false);
   const { pathname } = useRouter();
@@ -91,6 +96,16 @@ const HeaderMenu = ({
         </ul>
       </nav>
       <div className={styles.logOutBtn}>
+        {onToggleApiMode && (
+          <Button
+            onClick={onToggleApiMode}
+            title={
+              apiMode === "test" ? "Use Production API" : "Use Test API"
+            }
+            type="OUTLINED"
+            isDisabled={false}
+          />
+        )}
         <Button
           onClick={() => console.log("wip")}
           title="Logout"

@@ -2,10 +2,47 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 
-// export const BASE_URL = "https://nannow-api-test.com/v1";
-export const BASE_URL = "https://nannow-api.com/v1";
+export type AdminApiMode = "production" | "test";
+
+const ADMIN_API_MODE_STORAGE_KEY = "admin_api_mode";
+
+const API_CONFIG = {
+  production: {
+    baseUrl: "https://nannow-api.com/v1",
+    wsTransports: ["websocket"] as const,
+  },
+  test: {
+    baseUrl: "https://nannow-api-test.com/v1",
+    wsTransports: ["polling", "websocket"] as const,
+  },
+} as const;
+
+const getStoredAdminApiMode = (): AdminApiMode => {
+  if (typeof window === "undefined") return "production";
+  const storedMode = window.localStorage.getItem(ADMIN_API_MODE_STORAGE_KEY);
+  return storedMode === "test" ? "test" : "production";
+};
+
+let currentAdminApiMode: AdminApiMode = getStoredAdminApiMode();
+
+export let BASE_URL = API_CONFIG[currentAdminApiMode].baseUrl;
 // export const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
+
+export const getAdminApiMode = () => currentAdminApiMode;
+
+export const getAdminWsTransports = () => [
+  ...API_CONFIG[currentAdminApiMode].wsTransports,
+];
+
+export const setAdminApiMode = (mode: AdminApiMode) => {
+  currentAdminApiMode = mode;
+  BASE_URL = API_CONFIG[mode].baseUrl;
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(ADMIN_API_MODE_STORAGE_KEY, mode);
+  }
+};
 
 export type AdminRole = "ADMIN" | "SUPER_ADMIN";
 export type SuperAccessEntity =

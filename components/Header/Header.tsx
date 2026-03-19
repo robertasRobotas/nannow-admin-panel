@@ -10,6 +10,8 @@ import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import {
+  AdminApiMode,
+  getAdminApiMode,
   getCanceledPendingFinancialOrdersCount,
   getUnreadAdminMessagesCount,
   getCurrentAdminRolesFromJwt,
@@ -22,6 +24,7 @@ import {
   getPendingProviderSpecialSkillsCount,
   getPendingCriminalRecordCount,
   postAdminMessage,
+  setAdminApiMode,
   setupAdminTotp,
   verifyAdminTotpSetup,
 } from "@/pages/api/fetch";
@@ -59,6 +62,7 @@ const Header = () => {
   const [totpSuccess, setTotpSuccess] = useState("");
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [apiMode, setApiMode] = useState<AdminApiMode>("production");
   const { pathname } = useRouter();
   const { lastEvent } = useAdminSocket();
 
@@ -67,7 +71,17 @@ const Header = () => {
   useEffect(() => {
     const roles = getCurrentAdminRolesFromJwt();
     setIsSuperAdmin(roles.includes("SUPER_ADMIN"));
+    setApiMode(getAdminApiMode());
   }, []);
+
+  const toggleApiMode = () => {
+    const nextMode: AdminApiMode =
+      apiMode === "test" ? "production" : "test";
+    setAdminApiMode(nextMode);
+    setApiMode(nextMode);
+    disconnectAdminSocket();
+    router.reload();
+  };
 
   useEffect(() => {
     const fetchPendingProviderSpecialSkills = async () => {
@@ -443,6 +457,13 @@ const Header = () => {
           </ul>
         </nav>
         <div className={styles.logOutBtn}>
+          <Button
+            onClick={toggleApiMode}
+            title={
+              apiMode === "test" ? "Use Production API" : "Use Test API"
+            }
+            type="OUTLINED"
+          />
           <button
             type="button"
             className={styles.alertHeaderBtn}
@@ -482,6 +503,8 @@ const Header = () => {
           documentsAttentionNumber={notReviewedDocumentsCount}
           messagesAttentionNumber={unreadAdminMessagesCount}
           reportsAttentionNumber={notResolvedReportsCount}
+          apiMode={apiMode}
+          onToggleApiMode={toggleApiMode}
         />
       )}
       {isTotpModalOpen && (

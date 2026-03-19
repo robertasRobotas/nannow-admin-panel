@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client";
-import { BASE_URL } from "@/pages/api/fetch";
+import { BASE_URL, getAdminWsTransports } from "@/pages/api/fetch";
 
 let adminSocket: Socket | null = null;
 
@@ -16,7 +16,7 @@ export const getOrCreateAdminSocket = (token: string) => {
   if (!adminSocket) {
     adminSocket = io(normalizeSocketBaseUrl(), {
       path: "/socket.io",
-      transports: ["websocket"],
+      transports: getAdminWsTransports(),
       autoConnect: false,
       auth: {
         token,
