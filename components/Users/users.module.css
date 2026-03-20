@@ -169,6 +169,21 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.testUserInfo {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.testUserMeta {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .testUserActions {
   display: flex;
   gap: 10px;

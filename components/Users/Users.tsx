@@ -15,6 +15,7 @@ import {
   getPendingProviderSpecialSkillsCount,
   getTestUsers,
   setUserBanStatus,
+  syncTestUsersAcrossApis,
   updateTestUser,
 } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
@@ -30,6 +31,7 @@ import {
 import defaultUserImg from "@/assets/images/default-avatar.png";
 import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
+import { toast } from "react-toastify";
 
 const onboardingStepLabels: Record<OnboardingStep, string> = {
   USER_VERIFIED: "User verified",
@@ -87,6 +89,12 @@ type BannedUser = {
   currentMode?: "CLIENT" | "PROVIDER";
 };
 
+type TestUser = {
+  email: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 const Users = () => {
   const [selectedViewOption, setSelectedViewOption] = useState(0);
   const [searchText, setSearchText] = useState("");
@@ -95,7 +103,7 @@ const Users = () => {
     OnboardingNotFinishedUser[]
   >([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
-  const [testUsers, setTestUsers] = useState<string[]>([]);
+  const [testUsers, setTestUsers] = useState<TestUser[]>([]);
   const router = useRouter();
 
   const [itemOffset, setItemOffset] = useState(0);
@@ -111,8 +119,9 @@ const Users = () => {
   const [isUpdatingBan, setIsUpdatingBan] = useState(false);
   const [isDeleteTestUserModalOpen, setIsDeleteTestUserModalOpen] =
     useState(false);
-  const [testUserToDelete, setTestUserToDelete] = useState<string | null>(null);
+  const [testUserToDelete, setTestUserToDelete] = useState<TestUser | null>(null);
   const [isSavingTestUser, setIsSavingTestUser] = useState(false);
+  const [isSyncingTestUsers, setIsSyncingTestUsers] = useState(false);
   const [modeReady, setModeReady] = useState(false);
   const [providerVideoFilter, setProviderVideoFilter] =
     useState<ProviderVideoFilter>("ALL");
@@ -199,39 +208,42 @@ const Users = () => {
     setModeReady(true);
   }, [router.isReady, router.query.mode, router.query.view]);
 
-  const normalizeTestUsersPayload = (payload: unknown): string[] => {
-    if (Array.isArray(payload)) {
-      return payload.filter((item): item is string => typeof item === "string");
+  const normalizeTestUsersPayload = (
+    payload: unknown,
+  ): {
+    items: TestUser[];
+    total: number;
+    pageSize: number;
+  } => {
+    if (typeof payload !== "object" || payload === null) {
+      return { items: [], total: 0, pageSize: 20 };
     }
 
-    if (typeof payload === "object" && payload !== null) {
-      const record = payload as Record<string, unknown>;
-      const result = record.result;
-      if (Array.isArray(result)) {
-        return result.filter((item): item is string => typeof item === "string");
-      }
-      if (typeof result === "object" && result !== null) {
-        const resultRecord = result as Record<string, unknown>;
-        if (Array.isArray(resultRecord.items)) {
-          return resultRecord.items.filter(
-            (item): item is string => typeof item === "string",
-          );
-        }
-        if (Array.isArray(resultRecord.emails)) {
-          return resultRecord.emails.filter(
-            (item): item is string => typeof item === "string",
-          );
-        }
-      }
-      if (Array.isArray(record.items)) {
-        return record.items.filter((item): item is string => typeof item === "string");
-      }
-      if (Array.isArray(record.emails)) {
-        return record.emails.filter((item): item is string => typeof item === "string");
-      }
-    }
+    const record = payload as Record<string, unknown>;
+    const collection =
+      typeof record.testUsers === "object" && record.testUsers !== null
+        ? (record.testUsers as Record<string, unknown>)
+        : record;
 
-    return [];
+    const rawItems = Array.isArray(collection.items) ? collection.items : [];
+    const items = rawItems
+      .filter(
+        (item): item is TestUser =>
+          typeof item === "object" &&
+          item !== null &&
+          typeof (item as TestUser).email === "string",
+      )
+      .map((item) => ({
+        email: item.email,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      }));
+
+    return {
+      items,
+      total: Number(collection.total ?? items.length ?? 0),
+      pageSize: Number(collection.pageSize ?? 20),
+    };
   };
 
   const fetchOnboardingNotFinishedCount = useCallback(async () => {
@@ -386,18 +398,25 @@ const Users = () => {
 
   const fetchTestUsers = useCallback(async () => {
     try {
-      const response = await getTestUsers();
-      const items = normalizeTestUsersPayload(response.data);
+      const response = await getTestUsers({
+        search: searchText || undefined,
+        startIndex: itemOffset,
+        pageSize: itemsPerPage || 20,
+      });
+      const result = normalizeTestUsersPayload(response.data);
+      const items = result.items;
       setTestUsers(items);
       setTestUserEditValues(
-        items.reduce<Record<string, string>>((acc, email) => {
-          acc[email] = email;
+        items.reduce<Record<string, string>>((acc, item) => {
+          acc[item.email] = item.email;
           return acc;
         }, {}),
       );
-      setItemsPerPage(items.length || 20);
-      setPageCount(0);
-      setTotalUsers(items.length);
+      setItemsPerPage(result.pageSize > 0 ? result.pageSize : 20);
+      setPageCount(
+        Math.ceil(result.total / (result.pageSize > 0 ? result.pageSize : 20)),
+      );
+      setTotalUsers(result.total);
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -406,7 +425,7 @@ const Users = () => {
         }
       }
     }
-  }, [router]);
+  }, [itemOffset, itemsPerPage, router, searchText]);
 
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
@@ -501,8 +520,8 @@ const Users = () => {
     }
   };
 
-  const openDeleteTestUserModal = (email: string) => {
-    setTestUserToDelete(email);
+  const openDeleteTestUserModal = (user: TestUser) => {
+    setTestUserToDelete(user);
     setIsDeleteTestUserModalOpen(true);
   };
 
@@ -518,9 +537,12 @@ const Users = () => {
 
     try {
       setIsSavingTestUser(true);
-      await createTestUser(email);
+      const result = await createTestUser(email);
       setNewTestUserEmail("");
       await fetchTestUsers();
+      if (result.warnings.length > 0) {
+        toast.warning(result.warnings.join(" | "));
+      }
     } catch (err) {
       console.log(err);
     } finally {
@@ -528,14 +550,17 @@ const Users = () => {
     }
   };
 
-  const handleUpdateTestUser = async (originalEmail: string) => {
-    const nextEmail = (testUserEditValues[originalEmail] ?? "").trim();
-    if (!nextEmail || nextEmail === originalEmail || isSavingTestUser) return;
+  const handleUpdateTestUser = async (user: TestUser) => {
+    const nextEmail = (testUserEditValues[user.email] ?? "").trim();
+    if (!nextEmail || nextEmail === user.email || isSavingTestUser) return;
 
     try {
       setIsSavingTestUser(true);
-      await updateTestUser(originalEmail, nextEmail);
+      const result = await updateTestUser(nextEmail, user.email);
       await fetchTestUsers();
+      if (result.warnings.length > 0) {
+        toast.warning(result.warnings.join(" | "));
+      }
     } catch (err) {
       console.log(err);
     } finally {
@@ -544,14 +569,17 @@ const Users = () => {
   };
 
   const confirmDeleteTestUser = async () => {
-    if (!testUserToDelete || isSavingTestUser) return;
+    if (!testUserToDelete?.email || isSavingTestUser) return;
 
     try {
       setIsSavingTestUser(true);
-      await deleteTestUser(testUserToDelete);
+      const result = await deleteTestUser(testUserToDelete.email);
       setIsDeleteTestUserModalOpen(false);
       setTestUserToDelete(null);
       await fetchTestUsers();
+      if (result.warnings.length > 0) {
+        toast.warning(result.warnings.join(" | "));
+      }
     } catch (err) {
       console.log(err);
     } finally {
@@ -559,12 +587,24 @@ const Users = () => {
     }
   };
 
-  const filteredTestUsers =
-    searchText.trim().length > 0
-      ? testUsers.filter((email) =>
-          email.toLowerCase().includes(searchText.trim().toLowerCase()),
-        )
-      : testUsers;
+  const handleSyncTestUsers = async () => {
+    if (isSyncingTestUsers) return;
+    try {
+      setIsSyncingTestUsers(true);
+      const result = await syncTestUsersAcrossApis();
+      await fetchTestUsers();
+      if (result.warnings.length > 0) {
+        toast.warning(result.warnings.join(" | "));
+      } else {
+        toast.success("Test users synced");
+      }
+    } catch (err) {
+      console.log(err);
+      toast.error("Failed to sync test users");
+    } finally {
+      setIsSyncingTestUsers(false);
+    }
+  };
 
   return (
     <div className={styles.main}>
@@ -759,40 +799,55 @@ const Users = () => {
               onClick={handleAddTestUser}
               isDisabled={isSavingTestUser || newTestUserEmail.trim().length === 0}
             />
+            <Button
+              title={isSyncingTestUsers ? "Syncing..." : "Sync"}
+              type="OUTLINED"
+              onClick={handleSyncTestUsers}
+              isDisabled={isSyncingTestUsers || isSavingTestUser}
+            />
           </div>
-          {filteredTestUsers.length > 0 ? (
+          {testUsers.length > 0 ? (
             <div className={styles.onboardingList}>
-              {filteredTestUsers.map((email) => {
-                const editedEmail = testUserEditValues[email] ?? email;
+              {testUsers.map((user) => {
+                const editedEmail =
+                  testUserEditValues[user.email] ?? user.email;
                 return (
-                  <div key={email} className={styles.testUserRow}>
-                    <input
-                      type="email"
-                      className={styles.testUsersInput}
-                      value={editedEmail}
-                      onChange={(e) =>
-                        setTestUserEditValues((prev) => ({
-                          ...prev,
-                          [email]: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingTestUser}
-                    />
+                  <div key={user.email} className={styles.testUserRow}>
+                    <div className={styles.testUserInfo}>
+                      <input
+                        type="email"
+                        className={styles.testUsersInput}
+                        value={editedEmail}
+                        onChange={(e) =>
+                          setTestUserEditValues((prev) => ({
+                            ...prev,
+                            [user.email]: e.target.value,
+                          }))
+                        }
+                        disabled={isSavingTestUser}
+                      />
+                      <div className={styles.testUserMeta}>
+                        {`Created: ${formatDateTime(user.createdAt)}`}
+                      </div>
+                      <div className={styles.testUserMeta}>
+                        {`Updated: ${formatDateTime(user.updatedAt)}`}
+                      </div>
+                    </div>
                     <div className={styles.testUserActions}>
                       <Button
                         title="Save"
                         type="OUTLINED"
-                        onClick={() => handleUpdateTestUser(email)}
+                        onClick={() => handleUpdateTestUser(user)}
                         isDisabled={
                           isSavingTestUser ||
                           editedEmail.trim().length === 0 ||
-                          editedEmail.trim() === email
+                          editedEmail.trim() === user.email
                         }
                       />
                       <Button
                         title="Delete"
                         type="DELETE"
-                        onClick={() => openDeleteTestUserModal(email)}
+                        onClick={() => openDeleteTestUserModal(user)}
                         isDisabled={isSavingTestUser}
                       />
                     </div>
@@ -808,26 +863,24 @@ const Users = () => {
         <Cards users={users} mode={isSelectedClients ? "client" : "provider"} />
       )}
 
-      {!isTestUsersSelected && (
-        <ReactPaginate
-          breakLabel="..."
-          nextLabel=""
-          onPageChange={handlePageClick}
-          pageRangeDisplayed={5}
-          pageCount={pageCount}
-          previousLabel=""
-          renderOnZeroPageCount={null}
-          containerClassName={paginateStyles.paginateWrapper}
-          pageClassName={paginateStyles.pageBtn}
-          pageLinkClassName={paginateStyles.pageLink}
-          activeClassName={paginateStyles.activePage}
-          nextClassName={paginateStyles.nextPageBtn}
-          nextLinkClassName={paginateStyles.nextLink}
-          previousClassName={paginateStyles.prevPageBtn}
-          previousLinkClassName={paginateStyles.prevLink}
-          breakClassName={paginateStyles.break}
-        />
-      )}
+      <ReactPaginate
+        breakLabel="..."
+        nextLabel=""
+        onPageChange={handlePageClick}
+        pageRangeDisplayed={5}
+        pageCount={pageCount}
+        previousLabel=""
+        renderOnZeroPageCount={null}
+        containerClassName={paginateStyles.paginateWrapper}
+        pageClassName={paginateStyles.pageBtn}
+        pageLinkClassName={paginateStyles.pageLink}
+        activeClassName={paginateStyles.activePage}
+        nextClassName={paginateStyles.nextPageBtn}
+        nextLinkClassName={paginateStyles.nextLink}
+        previousClassName={paginateStyles.prevPageBtn}
+        previousLinkClassName={paginateStyles.prevLink}
+        breakClassName={paginateStyles.break}
+      />
 
       {isBanConfirmModalOpen && (
         <div className={styles.confirmationBackdrop}>
@@ -858,7 +911,9 @@ const Users = () => {
           <div className={`${styles.confirmationModal} ${nunito.className}`}>
             <h2 className={styles.confirmationTitle}>Delete test user?</h2>
             <p className={styles.confirmationBody}>
-              {`This will remove ${testUserToDelete ?? "this email"} from test users.`}
+              {`This will remove ${
+                testUserToDelete?.email ?? "this email"
+              } from test users.`}
             </p>
             <div className={styles.confirmationActions}>
               <Button

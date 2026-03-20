@@ -17,6 +17,16 @@ const API_CONFIG = {
   },
 } as const;
 
+const ALL_ADMIN_API_BASE_URLS = [
+  API_CONFIG.production.baseUrl,
+  API_CONFIG.test.baseUrl,
+] as const;
+
+type MirroredWriteResult<T = unknown> = {
+  result?: T;
+  warnings: string[];
+};
+
 const getStoredAdminApiMode = (): AdminApiMode => {
   if (typeof window === "undefined") return "production";
   const storedMode = window.localStorage.getItem(ADMIN_API_MODE_STORAGE_KEY);
@@ -457,9 +467,18 @@ export const getBannedUsers = async (params?: {
   return response;
 };
 
-export const getTestUsers = async () => {
+export const getTestUsers = async (params?: {
+  search?: string;
+  startIndex?: number;
+  pageSize?: number;
+}) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/test-users`, {
+    params: {
+      search: params?.search,
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+    },
     headers: {
       Authorization: jwt,
     },
@@ -467,45 +486,218 @@ export const getTestUsers = async () => {
   return response;
 };
 
-export const createTestUser = async (email: string) => {
+const getTestUsersFromBaseUrl = async (
+  baseUrl: string,
+  params?: {
+    search?: string;
+    startIndex?: number;
+    pageSize?: number;
+  },
+) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.post(
-    `${BASE_URL}/admin/test-users`,
-    { email },
-    {
-      headers: {
-        Authorization: jwt,
-      },
+  return axios.get(`${baseUrl}/admin/test-users`, {
+    params: {
+      search: params?.search,
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 200,
     },
-  );
-  return response;
+    headers: {
+      Authorization: jwt,
+    },
+  });
 };
 
-export const updateTestUser = async (id: string, email: string) => {
-  const jwt = Cookies.get("@user_jwt");
-  const response = await axios.put(
-    `${BASE_URL}/admin/test-users/${encodeURIComponent(id)}`,
-    { email },
-    {
-      headers: {
-        Authorization: jwt,
-      },
-    },
+const getTestUserItemsFromResponse = (
+  data: unknown,
+): { email: string }[] => {
+  if (typeof data !== "object" || data === null) return [];
+  const record = data as Record<string, unknown>;
+  const collection =
+    typeof record.testUsers === "object" && record.testUsers !== null
+      ? (record.testUsers as Record<string, unknown>)
+      : record;
+  const items = Array.isArray(collection.items) ? collection.items : [];
+  return items.filter(
+    (item): item is { email: string } =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as { email?: unknown }).email === "string",
   );
-  return response;
 };
 
-export const deleteTestUser = async (id: string) => {
+const getMirroredWriteErrorMessage = (reason: unknown) => {
+  if (
+    typeof reason === "object" &&
+    reason !== null &&
+    "response" in reason &&
+    typeof (reason as { response?: { data?: { error?: unknown } } }).response
+      ?.data?.error === "string"
+  ) {
+    return (reason as { response?: { data?: { error?: string } } }).response
+      ?.data?.error as string;
+  }
+
+  if (reason instanceof Error) return reason.message;
+  return "request failed";
+};
+
+type MirroredTestUsersResult = {
+  warnings: string[];
+};
+
+export const createTestUser = async (
+  email: string,
+): Promise<MirroredTestUsersResult> => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.delete(
-    `${BASE_URL}/admin/test-users/${encodeURIComponent(id)}`,
-    {
-      headers: {
-        Authorization: jwt,
-      },
-    },
+  const settled = await Promise.allSettled(
+    ALL_ADMIN_API_BASE_URLS.map((baseUrl) =>
+      axios.post(
+        `${baseUrl}/admin/test-users`,
+        { email },
+        {
+          headers: {
+            Authorization: jwt,
+          },
+        },
+      ),
+    ),
   );
-  return response;
+
+  const warnings = settled
+    .map((result, index) => ({ result, baseUrl: ALL_ADMIN_API_BASE_URLS[index] }))
+    .filter(
+      (
+        item,
+      ): item is {
+        result: PromiseRejectedResult;
+        baseUrl: (typeof ALL_ADMIN_API_BASE_URLS)[number];
+      } => item.result.status === "rejected",
+    )
+    .map(({ result, baseUrl }) => `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`);
+
+  return { warnings };
+};
+
+export const updateTestUser = async (
+  email: string,
+  currentEmail: string,
+): Promise<MirroredTestUsersResult> => {
+  const jwt = Cookies.get("@user_jwt");
+  const settled = await Promise.allSettled(
+    ALL_ADMIN_API_BASE_URLS.map(async (baseUrl) => {
+      return axios.put(
+        `${baseUrl}/admin/test-users`,
+        { currentEmail, email },
+        {
+          headers: {
+            Authorization: jwt,
+          },
+        },
+      );
+    }),
+  );
+
+  const warnings = settled
+    .map((result, index) => ({ result, baseUrl: ALL_ADMIN_API_BASE_URLS[index] }))
+    .filter(
+      (
+        item,
+      ): item is {
+        result: PromiseRejectedResult;
+        baseUrl: (typeof ALL_ADMIN_API_BASE_URLS)[number];
+      } => item.result.status === "rejected",
+    )
+    .map(({ result, baseUrl }) => `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`);
+
+  return { warnings };
+};
+
+export const deleteTestUser = async (
+  currentEmail: string,
+): Promise<MirroredTestUsersResult> => {
+  const jwt = Cookies.get("@user_jwt");
+  const settled = await Promise.allSettled(
+    ALL_ADMIN_API_BASE_URLS.map((baseUrl) =>
+      axios.delete(`${baseUrl}/admin/test-users`, {
+        data: { email: currentEmail },
+        headers: {
+          Authorization: jwt,
+        },
+      }),
+    ),
+  );
+
+  const warnings = settled
+    .map((result, index) => ({ result, baseUrl: ALL_ADMIN_API_BASE_URLS[index] }))
+    .filter(
+      (
+        item,
+      ): item is {
+        result: PromiseRejectedResult;
+        baseUrl: (typeof ALL_ADMIN_API_BASE_URLS)[number];
+      } => item.result.status === "rejected",
+    )
+    .map(({ result, baseUrl }) => `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`);
+
+  return { warnings };
+};
+
+export const syncTestUsersAcrossApis = async (): Promise<
+  MirroredTestUsersResult & { emails: string[] }
+> => {
+  const jwt = Cookies.get("@user_jwt");
+  const settledReads = await Promise.allSettled(
+    ALL_ADMIN_API_BASE_URLS.map((baseUrl) =>
+      getTestUsersFromBaseUrl(baseUrl, { startIndex: 0, pageSize: 500 }),
+    ),
+  );
+
+  const warnings: string[] = [];
+  const byBaseUrl = new Map<string, { email: string }[]>();
+
+  settledReads.forEach((result, index) => {
+    const baseUrl = ALL_ADMIN_API_BASE_URLS[index];
+    if (result.status === "fulfilled") {
+      byBaseUrl.set(baseUrl, getTestUserItemsFromResponse(result.value.data));
+      return;
+    }
+    warnings.push(`${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`);
+  });
+
+  const emails = Array.from(
+    new Set(
+      Array.from(byBaseUrl.values()).flatMap((items) =>
+        items.map((item) => item.email),
+      ),
+    ),
+  );
+
+  const settledWrites = await Promise.allSettled(
+    Array.from(byBaseUrl.entries()).flatMap(([baseUrl, items]) => {
+      const existingEmails = new Set(items.map((item) => item.email));
+      return emails
+        .filter((email) => !existingEmails.has(email))
+        .map((email) =>
+          axios.post(
+            `${baseUrl}/admin/test-users`,
+            { email },
+            {
+              headers: {
+                Authorization: jwt,
+              },
+            },
+          ),
+        );
+    }),
+  );
+
+  settledWrites.forEach((result) => {
+    if (result.status === "rejected") {
+      warnings.push(getMirroredWriteErrorMessage(result.reason));
+    }
+  });
+
+  return { emails, warnings };
 };
 
 export const deleteProviderStripeAccount = async (userId: string) => {
