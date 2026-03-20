@@ -9,7 +9,8 @@ export type OrderStatus =
   | "CLIENT_CANCELED"
   | "PROVIDER_CANCELED"
   | "NOT_STARTED_IN_TIME"
-  | "NOT_ENDED_IN_TIME";
+  | "NOT_ENDED_IN_TIME"
+  | "CLIENT_ORDER_CREATION_IN_PROCESS";
 
 export type Rating = {
   generalRating: number;

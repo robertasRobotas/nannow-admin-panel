@@ -27,6 +27,10 @@ const orderFilterOptions = [
     title: "ORDER_CREATED (DIRECT ORDER TO PROVIDER)",
     value: "ORDER_CREATED_DIRECT",
   },
+  {
+    title: "CLIENT_ORDER_CREATION_IN_PROCESS",
+    value: "CLIENT_ORDER_CREATION_IN_PROCESS",
+  },
   { title: "PROVIDER_OFFERED_SERVICE", value: "PROVIDER_OFFERED_SERVICE" },
   {
     title: "PROVIDER_ACCEPTED_DIRECT_OFFER",
