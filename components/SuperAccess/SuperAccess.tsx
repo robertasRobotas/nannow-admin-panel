@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Button from "@/components/Button/Button";
+import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import styles from "./superAccess.module.css";
 import defaultUserImg from "../../assets/images/default-avatar.png";
@@ -52,6 +53,12 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Orders", key: "orders" },
   { title: "WS connected Admins", key: "connected-admins" },
 ];
+
+const PAGE_SIZE_OPTIONS = [
+  { title: "20 / page", value: "20" },
+  { title: "50 / page", value: "50" },
+  { title: "100 / page", value: "100" },
+] as const;
 
 const ORDER_STATUSES = orderStatusOptions
   .map((item) => item.value)
@@ -1518,6 +1525,27 @@ const SuperAccess = () => {
                     }`}
                   />
                 </button>
+                {isCompactListView && (
+                  <DropDownButton
+                    options={PAGE_SIZE_OPTIONS.map((option) => ({
+                      title: option.title,
+                      value: option.value,
+                    }))}
+                    selectedOption={Math.max(
+                      0,
+                      PAGE_SIZE_OPTIONS.findIndex(
+                        (option) => Number(option.value) === pageSize,
+                      ),
+                    )}
+                    setSelectedOption={(selectedOption) => {
+                      const option =
+                        PAGE_SIZE_OPTIONS[selectedOption as number];
+                      if (!option) return;
+                      setStartIndex(0);
+                      setPageSize(Number(option.value));
+                    }}
+                  />
+                )}
                 {entity === "addresses" && (
                   <Button
                     title={

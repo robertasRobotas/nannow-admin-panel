@@ -45,6 +45,15 @@ const onboardingStepLabels: Record<OnboardingStep, string> = {
   KYC: "KYC",
 };
 
+const PAGE_SIZE_OPTIONS = [
+  { title: "20 / page", value: "20" },
+  { title: "50 / page", value: "50" },
+  { title: "100 / page", value: "100" },
+] as const;
+
+const USERS_COMPACT_STORAGE_KEY = "users:isCompactView";
+const USERS_PAGE_SIZE_STORAGE_KEY = "users:itemsPerPage";
+
 const formatRemainingSteps = (steps: OnboardingStep[]) =>
   steps
     .map((step) => onboardingStepLabels[step] ?? step)
@@ -133,6 +142,40 @@ const Users = () => {
     Record<string, string>
   >({});
   const [isCompactView, setIsCompactView] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedCompactView = window.localStorage.getItem(
+      USERS_COMPACT_STORAGE_KEY,
+    );
+    if (savedCompactView === "true" || savedCompactView === "false") {
+      setIsCompactView(savedCompactView === "true");
+    }
+
+    const savedPageSize = Number(
+      window.localStorage.getItem(USERS_PAGE_SIZE_STORAGE_KEY),
+    );
+    if (PAGE_SIZE_OPTIONS.some((option) => Number(option.value) === savedPageSize)) {
+      setItemsPerPage(savedPageSize);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      USERS_COMPACT_STORAGE_KEY,
+      String(isCompactView),
+    );
+  }, [isCompactView]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      USERS_PAGE_SIZE_STORAGE_KEY,
+      String(itemsPerPage),
+    );
+  }, [itemsPerPage]);
 
   const providerVideoFilterOptions: {
     title: string;
@@ -293,6 +336,7 @@ const Users = () => {
       setUsers([]);
       const searchParams = new URLSearchParams({
         startIndex: String(itemOffset),
+        pageSize: String(itemsPerPage),
         search: searchText,
       });
 
@@ -313,9 +357,8 @@ const Users = () => {
         : `admin/users?type=provider&${searchParams.toString()}`;
       const response = await getAllUsers(url);
       setUsers(response.data.users.items);
-      setItemsPerPage(response.data.users.pageSize);
       setPageCount(
-        Math.ceil(response.data.users.total / response.data.users.pageSize),
+        Math.ceil(response.data.users.total / itemsPerPage),
       );
       setTotalUsers(response.data.users.total);
     } catch (err) {
@@ -329,6 +372,7 @@ const Users = () => {
   }, [
     isSelectedClients,
     itemOffset,
+    itemsPerPage,
     providerSpecialSkillsFilter,
     providerVideoFilter,
     router,
@@ -667,18 +711,41 @@ const Users = () => {
           {!isOnboardingSelected &&
             !isBannedUsersSelected &&
             !isTestUsersSelected && (
-              <button
-                type="button"
-                className={styles.viewSwitchButton}
-                onClick={() => setIsCompactView((prev) => !prev)}
-              >
-                <span className={styles.viewSwitchLabel}>Show compact</span>
-                <span
-                  className={`${styles.viewSwitchUi} ${
-                    isCompactView ? styles.viewSwitchUiActive : ""
-                  }`}
-                />
-              </button>
+              <>
+                <button
+                  type="button"
+                  className={styles.viewSwitchButton}
+                  onClick={() => setIsCompactView((prev) => !prev)}
+                >
+                  <span className={styles.viewSwitchLabel}>Show compact</span>
+                  <span
+                    className={`${styles.viewSwitchUi} ${
+                      isCompactView ? styles.viewSwitchUiActive : ""
+                    }`}
+                  />
+                </button>
+                {isCompactView && (
+                  <DropDownButton
+                    options={PAGE_SIZE_OPTIONS.map((option) => ({
+                      title: option.title,
+                      value: option.value,
+                    }))}
+                    selectedOption={Math.max(
+                      0,
+                      PAGE_SIZE_OPTIONS.findIndex(
+                        (option) => Number(option.value) === itemsPerPage,
+                      ),
+                    )}
+                    setSelectedOption={(selectedOption) => {
+                      const option =
+                        PAGE_SIZE_OPTIONS[selectedOption as number];
+                      if (!option) return;
+                      setItemOffset(0);
+                      setItemsPerPage(Number(option.value));
+                    }}
+                  />
+                )}
+              </>
             )}
         </div>
         <div>
