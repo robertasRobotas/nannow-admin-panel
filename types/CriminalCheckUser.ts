@@ -8,9 +8,13 @@ export type CriminalCheckUser = {
   providerId: string;
   createdAt: string;
   criminalRecordStatus: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
+  currentChangedAt?: string | null;
+  criminalRecordChangedAt?: string | null;
   provider?: {
+    criminalRecordChangedAt?: string | null;
     criminalRecord?: {
       currentStatus?: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
+      currentChangedAt?: string | Date | null;
       applications?: {
         id: string;
       }[];

@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import SearchBar from "../SearchBar/SearchBar";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import Cards from "./Cards/Cards";
+import UsersList from "./UsersList/UsersList";
 import styles from "./users.module.css";
 import axios from "axios";
 import {
@@ -131,6 +132,7 @@ const Users = () => {
   const [testUserEditValues, setTestUserEditValues] = useState<
     Record<string, string>
   >({});
+  const [isCompactView, setIsCompactView] = useState(false);
 
   const providerVideoFilterOptions: {
     title: string;
@@ -662,6 +664,22 @@ const Users = () => {
               />
             </>
           )}
+          {!isOnboardingSelected &&
+            !isBannedUsersSelected &&
+            !isTestUsersSelected && (
+              <button
+                type="button"
+                className={styles.viewSwitchButton}
+                onClick={() => setIsCompactView((prev) => !prev)}
+              >
+                <span className={styles.viewSwitchLabel}>Show compact</span>
+                <span
+                  className={`${styles.viewSwitchUi} ${
+                    isCompactView ? styles.viewSwitchUiActive : ""
+                  }`}
+                />
+              </button>
+            )}
         </div>
         <div>
           <SearchBar
@@ -860,7 +878,14 @@ const Users = () => {
           )}
         </div>
       ) : (
-        <Cards users={users} mode={isSelectedClients ? "client" : "provider"} />
+        isCompactView ? (
+          <UsersList
+            users={users}
+            mode={isSelectedClients ? "client" : "provider"}
+          />
+        ) : (
+          <Cards users={users} mode={isSelectedClients ? "client" : "provider"} />
+        )
       )}
 
       <ReactPaginate

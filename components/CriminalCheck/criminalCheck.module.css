@@ -14,6 +14,23 @@
 .categoryBtns {
   padding-top: 12px;
   display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.statsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-left: 16px;
+}
+
+.statsItem {
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .profilesWrapper {
@@ -29,6 +46,10 @@
 
 @media (max-width: 936px) {
   .categoryBtns {
-    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .statsRow {
+    margin-left: 0;
   }
 }

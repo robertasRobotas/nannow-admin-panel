@@ -372,6 +372,7 @@ const SuperAccess = () => {
   const [entity, setEntity] = useState<
     SuperAccessEntity | "alerts" | "connected-admins"
   >("users");
+  const [isCompactListView, setIsCompactListView] = useState(false);
   const [list, setList] = useState<EntityRecord[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [selectedItem, setSelectedItem] = useState<EntityRecord | null>(
@@ -1505,6 +1506,18 @@ const SuperAccess = () => {
             </div>
             {entity !== "alerts" && entity !== "connected-admins" && (
               <div className={styles.listHeaderActions}>
+                <button
+                  type="button"
+                  className={styles.listViewSwitchButton}
+                  onClick={() => setIsCompactListView((prev) => !prev)}
+                >
+                  <span className={styles.listViewSwitchLabel}>Show compact</span>
+                  <span
+                    className={`${styles.listViewSwitchUi} ${
+                      isCompactListView ? styles.listViewSwitchUiActive : ""
+                    }`}
+                  />
+                </button>
                 {entity === "addresses" && (
                   <Button
                     title={
@@ -1573,6 +1586,10 @@ const SuperAccess = () => {
               <div
                 className={`${styles.itemsGrid} ${
                   entity === "orders" ? styles.itemsGridOrders : ""
+                } ${isCompactListView ? styles.itemsGridCompact : ""} ${
+                  isCompactListView && entity === "orders"
+                    ? styles.itemsGridOrdersCompact
+                    : ""
                 }`}
               >
                 {list.map((item) => {
@@ -1720,7 +1737,7 @@ const SuperAccess = () => {
                       type="button"
                       className={`${styles.itemCard} ${
                         selectedId === id ? styles.itemCardActive : ""
-                      }`}
+                      } ${isCompactListView ? styles.itemCardCompact : ""}`}
                       onClick={() => setSelectedId(id)}
                     >
                       {entity === "orders" ? (

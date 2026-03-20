@@ -241,6 +241,19 @@ export const getPendingCriminalRecordCount = async () => {
   return response;
 };
 
+export const getCriminalRecordStats = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/criminal-record-status/stats`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getPendingProviderSpecialSkillsCount = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(

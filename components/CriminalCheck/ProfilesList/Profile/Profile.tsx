@@ -11,9 +11,10 @@ type ProfileProps = {
   imgUrl: string;
   name: string;
   id: string;
+  changedAt?: string | Date | null;
 };
 
-const Profile = ({ status, imgUrl, name, id }: ProfileProps) => {
+const Profile = ({ status, imgUrl, name, id, changedAt }: ProfileProps) => {
   const icons = {
     APPROVED: checkmarkImg.src,
     REJECTED: crossImg.src,
@@ -23,6 +24,20 @@ const Profile = ({ status, imgUrl, name, id }: ProfileProps) => {
 
   const router = useRouter();
 
+  const changedAtText = (() => {
+    if (!changedAt) return null;
+    const date = new Date(changedAt);
+    if (Number.isNaN(date.getTime())) return String(changedAt);
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  })();
+
   return (
     <div
       onClick={() => {
@@ -30,7 +45,7 @@ const Profile = ({ status, imgUrl, name, id }: ProfileProps) => {
       }}
       className={styles.main}
     >
-      <img src={icons[status] ?? questionImg.src} />
+      <img className={styles.statusIcon} src={icons[status] ?? questionImg.src} />
       <div className={styles.profile}>
         <img src={imgUrl} />
         <div className={styles.profileDetails}>
@@ -42,6 +57,12 @@ const Profile = ({ status, imgUrl, name, id }: ProfileProps) => {
           <span className={styles.id}>{id}</span>
         </div>
       </div>
+      {changedAtText && (
+        <div className={styles.changedAtWrap}>
+          <span className={styles.changedAtLabel}>Last changed</span>
+          <span className={styles.changedAtValue}>{changedAtText}</span>
+        </div>
+      )}
     </div>
   );
 };

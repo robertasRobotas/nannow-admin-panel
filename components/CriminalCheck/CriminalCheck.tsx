@@ -3,6 +3,7 @@ import styles from "./criminalCheck.module.css";
 import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
 import {
+  getCriminalRecordStats,
   getPendingCriminalRecordCount,
   getUsersByCriminalRecordStatus,
 } from "@/pages/api/fetch";
@@ -25,6 +26,14 @@ const CriminalCheck = () => {
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [stats, setStats] = useState({
+    todayApplied: 0,
+    yesterdayApplied: 0,
+    weekApplied: 0,
+    lastWeekApplied: 0,
+    monthApplied: 0,
+    lastMonthApplied: 0,
+  });
   const router = useRouter();
 
   const fetchUsers = useCallback(
@@ -71,6 +80,26 @@ const CriminalCheck = () => {
       }
     };
     fetchPendingCount();
+  }, []);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await getCriminalRecordStats();
+        setStats({
+          todayApplied: Number(response.data?.todayApplied ?? 0) || 0,
+          yesterdayApplied: Number(response.data?.yesterdayApplied ?? 0) || 0,
+          weekApplied: Number(response.data?.weekApplied ?? 0) || 0,
+          lastWeekApplied: Number(response.data?.lastWeekApplied ?? 0) || 0,
+          monthApplied: Number(response.data?.monthApplied ?? 0) || 0,
+          lastMonthApplied: Number(response.data?.lastMonthApplied ?? 0) || 0,
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -150,6 +179,26 @@ const CriminalCheck = () => {
           type="PLAIN"
           isSelected={selected === "REJECTED"}
         />
+        <div className={styles.statsRow}>
+          <span className={styles.statsItem}>
+            Today applied: {stats.todayApplied}
+          </span>
+          <span className={styles.statsItem}>
+            Yesterday: {stats.yesterdayApplied}
+          </span>
+          <span className={styles.statsItem}>
+            This week: {stats.weekApplied}
+          </span>
+          <span className={styles.statsItem}>
+            Last week: {stats.lastWeekApplied}
+          </span>
+          <span className={styles.statsItem}>
+            This month: {stats.monthApplied}
+          </span>
+          <span className={styles.statsItem}>
+            Last month: {stats.lastMonthApplied}
+          </span>
+        </div>
         <div style={{ marginLeft: "auto" }}>
           <SearchBar
             searchText={searchText}

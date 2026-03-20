@@ -41,6 +41,13 @@ const ProfilesList = ({ users }: ProfilesListProps) => {
           imgUrl={u.imgUrl !== "" ? u.imgUrl : defaultUserImg.src}
           name={`${u.firstName} ${u.lastName}`}
           id={u.id}
+          changedAt={
+            u.currentChangedAt ??
+            u?.provider?.criminalRecord?.currentChangedAt ??
+            u?.provider?.criminalRecordChangedAt ??
+            u?.criminalRecordChangedAt ??
+            null
+          }
         />
       ))}
     </div>
