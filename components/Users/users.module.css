@@ -149,6 +149,50 @@
   font-weight: 600;
 }
 
+.testUsersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.testUsersAddRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.testUserRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.testUserActions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.testUsersInput {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  padding: 0 12px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.testUsersInput:focus {
+  outline: none;
+  border-color: #000;
+}
+
 .confirmationBackdrop {
   position: fixed;
   inset: 0;
@@ -221,5 +265,16 @@
 
   .stepsText {
     text-align: left;
+  }
+
+  .testUsersAddRow,
+  .testUserRow,
+  .testUserActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .testUserActions {
+    margin-left: 0;
   }
 }

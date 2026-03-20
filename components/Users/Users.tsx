@@ -7,11 +7,15 @@ import Cards from "./Cards/Cards";
 import styles from "./users.module.css";
 import axios from "axios";
 import {
+  createTestUser,
+  deleteTestUser,
   getAllUsers,
   getBannedUsers,
   getNotFinishedOnboardingUsers,
   getPendingProviderSpecialSkillsCount,
+  getTestUsers,
   setUserBanStatus,
+  updateTestUser,
 } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import paginateStyles from "../../styles/paginate.module.css";
@@ -55,7 +59,8 @@ type UsersViewMode =
   | "PROVIDERS"
   | "ONBOARDING_CLIENTS"
   | "ONBOARDING_PROVIDERS"
-  | "BANNED_USERS";
+  | "BANNED_USERS"
+  | "TEST_USERS";
 type ProviderVideoFilter = "ALL" | "WITH_VIDEO" | "WITHOUT_VIDEO";
 type ProviderSpecialSkillsFilter = "ALL" | "PENDING_SPECIAL_SKILLS";
 type UsersViewOption = {
@@ -90,6 +95,7 @@ const Users = () => {
     OnboardingNotFinishedUser[]
   >([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
+  const [testUsers, setTestUsers] = useState<string[]>([]);
   const router = useRouter();
 
   const [itemOffset, setItemOffset] = useState(0);
@@ -103,11 +109,19 @@ const Users = () => {
   const [isBanConfirmModalOpen, setIsBanConfirmModalOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<BannedUser | null>(null);
   const [isUpdatingBan, setIsUpdatingBan] = useState(false);
+  const [isDeleteTestUserModalOpen, setIsDeleteTestUserModalOpen] =
+    useState(false);
+  const [testUserToDelete, setTestUserToDelete] = useState<string | null>(null);
+  const [isSavingTestUser, setIsSavingTestUser] = useState(false);
   const [modeReady, setModeReady] = useState(false);
   const [providerVideoFilter, setProviderVideoFilter] =
     useState<ProviderVideoFilter>("ALL");
   const [providerSpecialSkillsFilter, setProviderSpecialSkillsFilter] =
     useState<ProviderSpecialSkillsFilter>("ALL");
+  const [newTestUserEmail, setNewTestUserEmail] = useState("");
+  const [testUserEditValues, setTestUserEditValues] = useState<
+    Record<string, string>
+  >({});
 
   const providerVideoFilterOptions: {
     title: string;
@@ -139,12 +153,17 @@ const Users = () => {
       title: "Banned users",
       value: "BANNED_USERS",
     },
+    {
+      title: "Test users",
+      value: "TEST_USERS",
+    },
   ] as const;
   const currentView = viewOptions[selectedViewOption]?.value as UsersViewMode;
   const isOnboardingSelected =
     currentView === "ONBOARDING_CLIENTS" ||
     currentView === "ONBOARDING_PROVIDERS";
   const isBannedUsersSelected = currentView === "BANNED_USERS";
+  const isTestUsersSelected = currentView === "TEST_USERS";
   const isSelectedClients = currentView === "CLIENTS";
   const isProvidersSelected = currentView === "PROVIDERS";
 
@@ -161,6 +180,14 @@ const Users = () => {
       setModeReady(true);
       return;
     }
+    if (view === "test-users") {
+      const testUsersIndex = viewOptions.findIndex(
+        (option) => option.value === "TEST_USERS",
+      );
+      setSelectedViewOption(testUsersIndex >= 0 ? testUsersIndex : 0);
+      setModeReady(true);
+      return;
+    }
     const mode =
       typeof router.query.mode === "string" ? router.query.mode : undefined;
     if (mode === "providers") {
@@ -171,6 +198,41 @@ const Users = () => {
     }
     setModeReady(true);
   }, [router.isReady, router.query.mode, router.query.view]);
+
+  const normalizeTestUsersPayload = (payload: unknown): string[] => {
+    if (Array.isArray(payload)) {
+      return payload.filter((item): item is string => typeof item === "string");
+    }
+
+    if (typeof payload === "object" && payload !== null) {
+      const record = payload as Record<string, unknown>;
+      const result = record.result;
+      if (Array.isArray(result)) {
+        return result.filter((item): item is string => typeof item === "string");
+      }
+      if (typeof result === "object" && result !== null) {
+        const resultRecord = result as Record<string, unknown>;
+        if (Array.isArray(resultRecord.items)) {
+          return resultRecord.items.filter(
+            (item): item is string => typeof item === "string",
+          );
+        }
+        if (Array.isArray(resultRecord.emails)) {
+          return resultRecord.emails.filter(
+            (item): item is string => typeof item === "string",
+          );
+        }
+      }
+      if (Array.isArray(record.items)) {
+        return record.items.filter((item): item is string => typeof item === "string");
+      }
+      if (Array.isArray(record.emails)) {
+        return record.emails.filter((item): item is string => typeof item === "string");
+      }
+    }
+
+    return [];
+  };
 
   const fetchOnboardingNotFinishedCount = useCallback(async () => {
     try {
@@ -322,6 +384,30 @@ const Users = () => {
     }
   }, [itemOffset, itemsPerPage, router, searchText]);
 
+  const fetchTestUsers = useCallback(async () => {
+    try {
+      const response = await getTestUsers();
+      const items = normalizeTestUsersPayload(response.data);
+      setTestUsers(items);
+      setTestUserEditValues(
+        items.reduce<Record<string, string>>((acc, email) => {
+          acc[email] = email;
+          return acc;
+        }, {}),
+      );
+      setItemsPerPage(items.length || 20);
+      setPageCount(0);
+      setTotalUsers(items.length);
+    } catch (err) {
+      console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/");
+        }
+      }
+    }
+  }, [router]);
+
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
     setItemOffset(newOffset);
@@ -360,6 +446,10 @@ const Users = () => {
       fetchBannedUsers();
       return;
     }
+    if (isTestUsersSelected) {
+      fetchTestUsers();
+      return;
+    }
     fetchUsers();
   }, [
     router.isReady,
@@ -367,9 +457,11 @@ const Users = () => {
     currentView,
     isOnboardingSelected,
     isBannedUsersSelected,
+    isTestUsersSelected,
     itemOffset,
     fetchBannedUsers,
     fetchOnboardingUsers,
+    fetchTestUsers,
     fetchUsers,
   ]);
 
@@ -408,6 +500,71 @@ const Users = () => {
       setIsUpdatingBan(false);
     }
   };
+
+  const openDeleteTestUserModal = (email: string) => {
+    setTestUserToDelete(email);
+    setIsDeleteTestUserModalOpen(true);
+  };
+
+  const closeDeleteTestUserModal = () => {
+    if (isSavingTestUser) return;
+    setIsDeleteTestUserModalOpen(false);
+    setTestUserToDelete(null);
+  };
+
+  const handleAddTestUser = async () => {
+    const email = newTestUserEmail.trim();
+    if (!email || isSavingTestUser) return;
+
+    try {
+      setIsSavingTestUser(true);
+      await createTestUser(email);
+      setNewTestUserEmail("");
+      await fetchTestUsers();
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsSavingTestUser(false);
+    }
+  };
+
+  const handleUpdateTestUser = async (originalEmail: string) => {
+    const nextEmail = (testUserEditValues[originalEmail] ?? "").trim();
+    if (!nextEmail || nextEmail === originalEmail || isSavingTestUser) return;
+
+    try {
+      setIsSavingTestUser(true);
+      await updateTestUser(originalEmail, nextEmail);
+      await fetchTestUsers();
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsSavingTestUser(false);
+    }
+  };
+
+  const confirmDeleteTestUser = async () => {
+    if (!testUserToDelete || isSavingTestUser) return;
+
+    try {
+      setIsSavingTestUser(true);
+      await deleteTestUser(testUserToDelete);
+      setIsDeleteTestUserModalOpen(false);
+      setTestUserToDelete(null);
+      await fetchTestUsers();
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsSavingTestUser(false);
+    }
+  };
+
+  const filteredTestUsers =
+    searchText.trim().length > 0
+      ? testUsers.filter((email) =>
+          email.toLowerCase().includes(searchText.trim().toLowerCase()),
+        )
+      : testUsers;
 
   return (
     <div className={styles.main}>
@@ -477,6 +634,8 @@ const Users = () => {
                 fetchOnboardingUsers();
               } else if (isBannedUsersSelected) {
                 fetchBannedUsers();
+              } else if (isTestUsersSelected) {
+                fetchTestUsers();
               } else {
                 fetchUsers();
               }
@@ -583,28 +742,92 @@ const Users = () => {
         ) : (
           <div className={styles.emptyState}>No banned users</div>
         )
+      ) : isTestUsersSelected ? (
+        <div className={styles.testUsersSection}>
+          <div className={styles.testUsersAddRow}>
+            <input
+              type="email"
+              className={styles.testUsersInput}
+              placeholder="Add test user email"
+              value={newTestUserEmail}
+              onChange={(e) => setNewTestUserEmail(e.target.value)}
+              disabled={isSavingTestUser}
+            />
+            <Button
+              title={isSavingTestUser ? "Saving..." : "Add"}
+              type="BLACK"
+              onClick={handleAddTestUser}
+              isDisabled={isSavingTestUser || newTestUserEmail.trim().length === 0}
+            />
+          </div>
+          {filteredTestUsers.length > 0 ? (
+            <div className={styles.onboardingList}>
+              {filteredTestUsers.map((email) => {
+                const editedEmail = testUserEditValues[email] ?? email;
+                return (
+                  <div key={email} className={styles.testUserRow}>
+                    <input
+                      type="email"
+                      className={styles.testUsersInput}
+                      value={editedEmail}
+                      onChange={(e) =>
+                        setTestUserEditValues((prev) => ({
+                          ...prev,
+                          [email]: e.target.value,
+                        }))
+                      }
+                      disabled={isSavingTestUser}
+                    />
+                    <div className={styles.testUserActions}>
+                      <Button
+                        title="Save"
+                        type="OUTLINED"
+                        onClick={() => handleUpdateTestUser(email)}
+                        isDisabled={
+                          isSavingTestUser ||
+                          editedEmail.trim().length === 0 ||
+                          editedEmail.trim() === email
+                        }
+                      />
+                      <Button
+                        title="Delete"
+                        type="DELETE"
+                        onClick={() => openDeleteTestUserModal(email)}
+                        isDisabled={isSavingTestUser}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={styles.emptyState}>No test users</div>
+          )}
+        </div>
       ) : (
         <Cards users={users} mode={isSelectedClients ? "client" : "provider"} />
       )}
 
-      <ReactPaginate
-        breakLabel="..."
-        nextLabel=""
-        onPageChange={handlePageClick}
-        pageRangeDisplayed={5}
-        pageCount={pageCount}
-        previousLabel=""
-        renderOnZeroPageCount={null}
-        containerClassName={paginateStyles.paginateWrapper}
-        pageClassName={paginateStyles.pageBtn}
-        pageLinkClassName={paginateStyles.pageLink}
-        activeClassName={paginateStyles.activePage}
-        nextClassName={paginateStyles.nextPageBtn}
-        nextLinkClassName={paginateStyles.nextLink}
-        previousClassName={paginateStyles.prevPageBtn}
-        previousLinkClassName={paginateStyles.prevLink}
-        breakClassName={paginateStyles.break}
-      />
+      {!isTestUsersSelected && (
+        <ReactPaginate
+          breakLabel="..."
+          nextLabel=""
+          onPageChange={handlePageClick}
+          pageRangeDisplayed={5}
+          pageCount={pageCount}
+          previousLabel=""
+          renderOnZeroPageCount={null}
+          containerClassName={paginateStyles.paginateWrapper}
+          pageClassName={paginateStyles.pageBtn}
+          pageLinkClassName={paginateStyles.pageLink}
+          activeClassName={paginateStyles.activePage}
+          nextClassName={paginateStyles.nextPageBtn}
+          nextLinkClassName={paginateStyles.nextLink}
+          previousClassName={paginateStyles.prevPageBtn}
+          previousLinkClassName={paginateStyles.prevLink}
+          breakClassName={paginateStyles.break}
+        />
+      )}
 
       {isBanConfirmModalOpen && (
         <div className={styles.confirmationBackdrop}>
@@ -625,6 +848,30 @@ const Users = () => {
                 type="BLACK"
                 onClick={confirmUnban}
                 isDisabled={isUpdatingBan}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isDeleteTestUserModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Delete test user?</h2>
+            <p className={styles.confirmationBody}>
+              {`This will remove ${testUserToDelete ?? "this email"} from test users.`}
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeDeleteTestUserModal}
+                isDisabled={isSavingTestUser}
+              />
+              <Button
+                title={isSavingTestUser ? "Deleting..." : "Delete"}
+                type="DELETE"
+                onClick={confirmDeleteTestUser}
+                isDisabled={isSavingTestUser}
               />
             </div>
           </div>

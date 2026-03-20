@@ -457,6 +457,57 @@ export const getBannedUsers = async (params?: {
   return response;
 };
 
+export const getTestUsers = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/test-users`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const createTestUser = async (email: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/test-users`,
+    { email },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const updateTestUser = async (id: string, email: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/test-users/${encodeURIComponent(id)}`,
+    { email },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const deleteTestUser = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.delete(
+    `${BASE_URL}/admin/test-users/${encodeURIComponent(id)}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const deleteProviderStripeAccount = async (userId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.delete(
