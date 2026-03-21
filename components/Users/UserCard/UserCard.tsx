@@ -14,6 +14,8 @@ const UserCard = ({ user, mode }: UserCardProps) => {
   const router = useRouter();
 
   const openProfile = () => {
+    const selectedText = window.getSelection?.()?.toString().trim() ?? "";
+    if (selectedText.length > 0) return;
     router.push(`/${mode}/${user.userId}`);
   };
 
