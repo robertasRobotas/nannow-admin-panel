@@ -962,6 +962,16 @@ export const getNotFinishedOnboardingUsers = async (params?: {
   return response;
 };
 
+export const getOnboardingStats = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/onboarding/stats`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
 export const refreshPayoutByOrderId = async (orderId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(

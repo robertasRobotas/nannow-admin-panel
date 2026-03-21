@@ -14,6 +14,7 @@ import {
   getBannedUsers,
   getClientById,
   getNotFinishedOnboardingUsers,
+  getOnboardingStats,
   getPendingProviderSpecialSkillsCount,
   getProviderById,
   getTestUsers,
@@ -135,6 +136,12 @@ const Users = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [clientOnboardingCount, setClientOnboardingCount] = useState(0);
   const [providerOnboardingCount, setProviderOnboardingCount] = useState(0);
+  const [onboardingStats, setOnboardingStats] = useState({
+    totalUsers: 0,
+    finishedClientOnboarding: 0,
+    finishedProviderOnboarding: 0,
+    finishedClientOrProviderOnboarding: 0,
+  });
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
   const [isBanConfirmModalOpen, setIsBanConfirmModalOpen] = useState(false);
@@ -306,9 +313,10 @@ const Users = () => {
 
   const fetchOnboardingNotFinishedCount = useCallback(async () => {
     try {
-      const [clientResponse, providerResponse] = await Promise.all([
+      const [clientResponse, providerResponse, statsResponse] = await Promise.all([
         getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
         getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
+        getOnboardingStats(),
       ]);
 
       const clientPayload = clientResponse.data as
@@ -329,6 +337,16 @@ const Users = () => {
 
       setClientOnboardingCount(Number(clientResult.total ?? 0));
       setProviderOnboardingCount(Number(providerResult.total ?? 0));
+      const statsResult = statsResponse.data?.result ?? statsResponse.data ?? {};
+      setOnboardingStats({
+        totalUsers: Number(statsResult.totalUsers ?? 0) || 0,
+        finishedClientOnboarding:
+          Number(statsResult.finishedClientOnboarding ?? 0) || 0,
+        finishedProviderOnboarding:
+          Number(statsResult.finishedProviderOnboarding ?? 0) || 0,
+        finishedClientOrProviderOnboarding:
+          Number(statsResult.finishedClientOrProviderOnboarding ?? 0) || 0,
+      });
     } catch (err) {
       console.log(err);
     }
@@ -789,6 +807,16 @@ const Users = () => {
                 )}
               </>
             )}
+        </div>
+        <div className={styles.headingCenter}>
+          <div className={styles.statLine}>
+            <span>{`Users: ${onboardingStats.totalUsers}`}</span>
+            <span>{`Client done: ${onboardingStats.finishedClientOnboarding}`}</span>
+            <span>{`Provider done: ${onboardingStats.finishedProviderOnboarding}`}</span>
+            <span>
+              {`Client or provider done: ${onboardingStats.finishedClientOrProviderOnboarding}`}
+            </span>
+          </div>
         </div>
         <div>
           <SearchBar
