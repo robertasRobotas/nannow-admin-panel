@@ -12,8 +12,10 @@ import {
   deleteTestUser,
   getAllUsers,
   getBannedUsers,
+  getClientById,
   getNotFinishedOnboardingUsers,
   getPendingProviderSpecialSkillsCount,
+  getProviderById,
   getTestUsers,
   setUserBanStatus,
   syncTestUsersAcrossApis,
@@ -22,7 +24,7 @@ import {
 import { useRouter } from "next/router";
 import paginateStyles from "../../styles/paginate.module.css";
 import ReactPaginate from "react-paginate";
-import { User } from "@/types/Client";
+import { User, UserDetails } from "@/types/Client";
 import {
   GetOnboardingNotFinishedUsersResponse,
   OnboardingNotFinishedUser,
@@ -103,6 +105,17 @@ type TestUser = {
   email: string;
   createdAt?: string;
   updatedAt?: string;
+};
+
+const hasRoleForMode = (
+  detail: UserDetails,
+  mode: "CLIENT" | "PROVIDER",
+) => {
+  const roles = Array.isArray(detail.user?.roles)
+    ? detail.user.roles.map((role) => String(role).toUpperCase())
+    : [];
+
+  return roles.includes(mode);
 };
 
 const Users = () => {
@@ -356,7 +369,31 @@ const Users = () => {
         ? `admin/users?type=client&${searchParams.toString()}`
         : `admin/users?type=provider&${searchParams.toString()}`;
       const response = await getAllUsers(url);
-      setUsers(response.data.users.items);
+      const baseUsers = Array.isArray(response.data?.users?.items)
+        ? (response.data.users.items as User[])
+        : [];
+      const nextMode = isSelectedClients ? "CLIENT" : "PROVIDER";
+      const filteredUsers = (
+        await Promise.all(
+          baseUsers.map(async (baseUser) => {
+            try {
+              const detailResponse = isSelectedClients
+                ? await getClientById(baseUser.userId)
+                : await getProviderById(baseUser.userId);
+              const detail = isSelectedClients
+                ? (detailResponse.data?.clientDetails as UserDetails)
+                : (detailResponse.data?.providerDetails as UserDetails);
+
+              return hasRoleForMode(detail, nextMode) ? baseUser : null;
+            } catch (error) {
+              console.log(error);
+              return null;
+            }
+          }),
+        )
+      ).filter((user): user is User => user !== null);
+
+      setUsers(filteredUsers);
       setPageCount(
         Math.ceil(response.data.users.total / itemsPerPage),
       );
