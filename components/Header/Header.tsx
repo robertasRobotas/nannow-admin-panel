@@ -410,7 +410,16 @@ const Header = () => {
         >
           <img src={burgerBtn.src} alt="Burger button" />
         </button>
-        <img className={styles.logoImg} src={logoImg.src} alt="Logo" />
+        <div className={styles.logoWrap}>
+          <img className={styles.logoImg} src={logoImg.src} alt="Logo" />
+          <span
+            className={`${styles.apiModeLabel} ${
+              apiMode === "test" ? styles.apiModeLabelTest : styles.apiModeLabelProd
+            }`}
+          >
+            {apiMode === "test" ? "TEST" : "PROD"}
+          </span>
+        </div>
         <nav className={styles.nav}>
           <ul>
             {visibleLinks.map((l) => (
