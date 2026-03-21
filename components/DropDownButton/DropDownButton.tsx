@@ -65,7 +65,7 @@ const DropDownButton = ({
 
               <span>{options[selectedOption].title}</span>
               {typeof options[selectedOption].attentionNumber === "number" &&
-                options[selectedOption].attentionNumber >= 0 && (
+                options[selectedOption].attentionNumber > 0 && (
                   <span className={styles.attentionBubble}>
                     {options[selectedOption].attentionNumber}
                   </span>
@@ -100,7 +100,7 @@ const DropDownButton = ({
               )}
               <span>{option.title}</span>
               {typeof option.attentionNumber === "number" &&
-                option.attentionNumber >= 0 && (
+                option.attentionNumber > 0 && (
                   <span className={styles.attentionBubble}>
                     {option.attentionNumber}
                   </span>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import axios from "axios";
 import Button from "@/components/Button/Button";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
@@ -422,6 +422,16 @@ const SuperAccess = () => {
   const [clientsById, setClientsById] = useState<Record<string, EntityRecord>>({});
   const [providersById, setProvidersById] = useState<Record<string, EntityRecord>>({});
   const [ordersById, setOrdersById] = useState<Record<string, EntityRecord>>({});
+
+  const handleItemCardKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    id: string,
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setSelectedId(id);
+    }
+  };
 
   useEffect(() => {
     const roles = getCurrentAdminRolesFromJwt();
@@ -1590,19 +1600,21 @@ const SuperAccess = () => {
                 const email = String(item.email ?? "");
 
                 return (
-                  <button
+                  <div
                     key={id || title}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     className={`${styles.itemCard} ${
                       selectedId === id ? styles.itemCardActive : ""
                     }`}
                     onClick={() => setSelectedId(id)}
+                    onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                   >
                     <img src={imageUrl} alt="avatar" className={styles.avatar} />
                     <div className={styles.itemTitle}>{title}</div>
                     {email && <div className={styles.itemSub}>{email}</div>}
                     <div className={styles.itemSub}>ID: {id || "—"}</div>
-                  </button>
+                  </div>
                 );
               })}
               {!loadingList && list.length === 0 && (
@@ -1760,13 +1772,15 @@ const SuperAccess = () => {
                     defaultUserImg.src,
                   );
                   return (
-                    <button
+                    <div
                       key={id || title}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       className={`${styles.itemCard} ${
                         selectedId === id ? styles.itemCardActive : ""
                       } ${isCompactListView ? styles.itemCardCompact : ""}`}
                       onClick={() => setSelectedId(id)}
+                      onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
                       {entity === "orders" ? (
                         <div className={styles.orderRow}>
@@ -1824,7 +1838,7 @@ const SuperAccess = () => {
                           <div className={styles.itemSub}>ID: {id || "—"}</div>
                         </>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
                 {!loadingList && list.length === 0 && (

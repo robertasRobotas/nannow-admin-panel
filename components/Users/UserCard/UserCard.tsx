@@ -1,9 +1,9 @@
 import { User } from "@/types/Client";
 import styles from "./userCard.module.css";
-import Button from "@/components/Button/Button";
 import { useRouter } from "next/router";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
+import { type KeyboardEvent } from "react";
 
 type UserCardProps = {
   user: User;
@@ -13,12 +13,25 @@ type UserCardProps = {
 const UserCard = ({ user, mode }: UserCardProps) => {
   const router = useRouter();
 
-  const onButtonClick = () => {
+  const openProfile = () => {
     router.push(`/${mode}/${user.userId}`);
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openProfile();
+    }
+  };
+
   return (
-    <div className={styles.main}>
+    <div
+      role="button"
+      tabIndex={0}
+      className={styles.main}
+      onClick={openProfile}
+      onKeyDown={handleKeyDown}
+    >
       <div className={styles.profileWrapper}>
         <ProfileInfo
           name={`${user.firstName} ${user.lastName}`}
@@ -27,7 +40,6 @@ const UserCard = ({ user, mode }: UserCardProps) => {
           email={user.email}
         />
       </div>
-      <Button onClick={onButtonClick} title="View profile" type="OUTLINED" />
     </div>
   );
 };
