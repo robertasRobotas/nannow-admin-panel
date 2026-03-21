@@ -437,7 +437,12 @@ const Users = () => {
       const result =
         (payload as { result?: GetOnboardingNotFinishedUsersResponse }).result ??
         (payload as GetOnboardingNotFinishedUsersResponse);
-      const items = Array.isArray(result.items) ? result.items : [];
+      const items = Array.isArray(result.items)
+        ? result.items.filter(
+            (user) =>
+              String(user.currentMode ?? "").toUpperCase() === String(mode ?? "").toUpperCase(),
+          )
+        : [];
       const pageSize = Number(result.pageSize ?? itemsPerPage);
       const total = Number(result.total ?? 0);
       setOnboardingUsers(items);
