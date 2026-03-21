@@ -195,6 +195,14 @@ const mapDetailedUser = (
   };
 };
 
+const hasRoleForMode = (detail: UserDetails, mode: FilterMode) => {
+  const roles = Array.isArray(detail.user?.roles)
+    ? detail.user.roles.map((role) => String(role).toUpperCase())
+    : [];
+
+  return roles.includes(mode);
+};
+
 const fetchAllBaseUsers = async (mode: FilterMode): Promise<User[]> => {
   const collected: User[] = [];
   let startIndex = 0;
@@ -323,10 +331,16 @@ const FilterExport = () => {
                   ? (response.data?.clientDetails as UserDetails)
                   : (response.data?.providerDetails as UserDetails);
 
+              if (!hasRoleForMode(detail, selectedMode)) {
+                return null;
+              }
+
               return mapDetailedUser(baseUser, detail, selectedMode);
             }),
           );
-          nextUsers.push(...details);
+          nextUsers.push(
+            ...details.filter((detail): detail is EnrichedUser => detail !== null),
+          );
         }
 
         if (!isCancelled) {
