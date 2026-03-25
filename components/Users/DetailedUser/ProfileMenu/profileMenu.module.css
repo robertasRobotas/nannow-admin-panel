@@ -55,6 +55,10 @@
   gap: 16px;
 }
 
+.progressModal {
+  max-width: 640px;
+}
+
 .confirmationTitle {
   margin: 0;
   font-size: 24px;
@@ -75,6 +79,100 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: 8px;
+}
+
+.reasonTextarea {
+  width: 100%;
+  min-height: 120px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  padding: 12px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+  resize: vertical;
+}
+
+.reasonTextarea:focus {
+  outline: none;
+  border-color: #000;
+}
+
+.currentStepText {
+  margin: 0;
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.progressError {
+  margin: 0;
+  color: #ff3b30;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.warningsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.warningItem {
+  color: #8b5a00;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stepsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.stepRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 12px;
+}
+
+.stepKey {
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stepStatus {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stepStatusPENDING {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.stepStatusIN_PROGRESS {
+  color: #ff9500;
+}
+
+.stepStatusCOMPLETED {
+  color: #19ad3e;
+}
+
+.stepStatusFAILED {
+  color: #ff3b30;
+}
+
+.stepError {
+  color: #ff3b30;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 @media (max-width: 936px) {

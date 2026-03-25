@@ -1430,6 +1430,36 @@ export const deleteUser = async (userId: string) => {
   return response;
 };
 
+export const anonymizeUser = async (
+  userId: string,
+  deletionReason: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/users/${userId}/anonymize`,
+    { deletionReason },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getUserAnonymizationJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/anonymization-jobs/${jobId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getAllAdmins = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin-user`, {
