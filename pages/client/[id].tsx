@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import DetailedUser from "@/components/Users/DetailedUser/DetailedUser";
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
-import { getClientById } from "@/pages/api/fetch";
+import { getClientById, getUserChatsById } from "@/pages/api/fetch";
 
 const DetailedProfilePage = () => {
   const router = useRouter();
@@ -10,8 +10,14 @@ const DetailedProfilePage = () => {
 
   const fetchDetailedClient = async (id: string) => {
     try {
-      const response = await getClientById(id);
-      setUser(response.data.clientDetails);
+      const [clientResponse, chatsResponse] = await Promise.all([
+        getClientById(id),
+        getUserChatsById(id),
+      ]);
+      setUser({
+        ...clientResponse.data.clientDetails,
+        chats: chatsResponse.data?.result ?? [],
+      });
     } catch (err) {
       console.log(err);
     }

@@ -54,13 +54,6 @@ export const getButtonsData = (
       visibleFor: ["client"],
     },
     {
-      title: "Messages",
-      icon: MessagesIcon,
-      number: user?.chatCount ?? 0,
-      id: "messages",
-      visibleFor: ["client", "provider"],
-    },
-    {
       title: "Children",
       icon: ChildrenIcon,
       number: user?.children?.length ?? 0,
@@ -113,6 +106,13 @@ export const getButtonsData = (
       number: user?.provider?.badgesIds?.length ?? 0,
       id: "badges",
       visibleFor: ["provider", "client"],
+    },
+    {
+      title: "Chats",
+      icon: MessagesIcon,
+      number: user?.chats?.length ?? user?.chatCount ?? 0,
+      id: "messages",
+      visibleFor: ["client", "provider"],
     },
     // {
     //   title: "Profile completion",

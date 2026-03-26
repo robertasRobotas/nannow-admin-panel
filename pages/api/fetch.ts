@@ -12,8 +12,8 @@ const API_CONFIG = {
     wsTransports: ["websocket"] as const,
   },
   test: {
-    baseUrl: "https://nannow-api-test.com/v1",
-    wsTransports: ["polling", "websocket"] as const,
+    baseUrl: "https://nannow-api-test.com//v1",
+    wsTransports: ["websocket"] as const,
   },
 } as const;
 
@@ -520,9 +520,7 @@ const getTestUsersFromBaseUrl = async (
   });
 };
 
-const getTestUserItemsFromResponse = (
-  data: unknown,
-): { email: string }[] => {
+const getTestUserItemsFromResponse = (data: unknown): { email: string }[] => {
   if (typeof data !== "object" || data === null) return [];
   const record = data as Record<string, unknown>;
   const collection =
@@ -577,7 +575,10 @@ export const createTestUser = async (
   );
 
   const warnings = settled
-    .map((result, index) => ({ result, baseUrl: ALL_ADMIN_API_BASE_URLS[index] }))
+    .map((result, index) => ({
+      result,
+      baseUrl: ALL_ADMIN_API_BASE_URLS[index],
+    }))
     .filter(
       (
         item,
@@ -586,7 +587,10 @@ export const createTestUser = async (
         baseUrl: (typeof ALL_ADMIN_API_BASE_URLS)[number];
       } => item.result.status === "rejected",
     )
-    .map(({ result, baseUrl }) => `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`);
+    .map(
+      ({ result, baseUrl }) =>
+        `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`,
+    );
 
   return { warnings };
 };
@@ -611,7 +615,10 @@ export const updateTestUser = async (
   );
 
   const warnings = settled
-    .map((result, index) => ({ result, baseUrl: ALL_ADMIN_API_BASE_URLS[index] }))
+    .map((result, index) => ({
+      result,
+      baseUrl: ALL_ADMIN_API_BASE_URLS[index],
+    }))
     .filter(
       (
         item,
@@ -620,7 +627,10 @@ export const updateTestUser = async (
         baseUrl: (typeof ALL_ADMIN_API_BASE_URLS)[number];
       } => item.result.status === "rejected",
     )
-    .map(({ result, baseUrl }) => `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`);
+    .map(
+      ({ result, baseUrl }) =>
+        `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`,
+    );
 
   return { warnings };
 };
@@ -641,7 +651,10 @@ export const deleteTestUser = async (
   );
 
   const warnings = settled
-    .map((result, index) => ({ result, baseUrl: ALL_ADMIN_API_BASE_URLS[index] }))
+    .map((result, index) => ({
+      result,
+      baseUrl: ALL_ADMIN_API_BASE_URLS[index],
+    }))
     .filter(
       (
         item,
@@ -650,7 +663,10 @@ export const deleteTestUser = async (
         baseUrl: (typeof ALL_ADMIN_API_BASE_URLS)[number];
       } => item.result.status === "rejected",
     )
-    .map(({ result, baseUrl }) => `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`);
+    .map(
+      ({ result, baseUrl }) =>
+        `${baseUrl}: ${getMirroredWriteErrorMessage(result.reason)}`,
+    );
 
   return { warnings };
 };
@@ -766,6 +782,42 @@ export const updateFeedbackStatus = async (id: string, isSolved: boolean) => {
 export const getChatById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/chats/${id}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getUserChatsById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/${id}/chats`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getAdminChats = async ({
+  startIndex = 0,
+  pageSize = 20,
+  sort = "latest",
+  search,
+}: {
+  startIndex?: number;
+  pageSize?: number;
+  sort?: "latest" | "name";
+  search?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/chats`, {
+    params: {
+      startIndex,
+      pageSize,
+      sort,
+      search: search?.trim() || undefined,
+    },
     headers: {
       Authorization: jwt,
     },
@@ -1430,10 +1482,7 @@ export const deleteUser = async (userId: string) => {
   return response;
 };
 
-export const anonymizeUser = async (
-  userId: string,
-  deletionReason: string,
-) => {
+export const anonymizeUser = async (userId: string, deletionReason: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
     `${BASE_URL}/admin/users/${userId}/anonymize`,

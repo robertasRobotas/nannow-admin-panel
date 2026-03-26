@@ -2,6 +2,20 @@ import { ChatMessageType } from "@/types/Chats";
 import styles from "./chatMessages.module.css";
 import avatarImg from "../../../../../assets/images/default-avatar.png";
 
+const formatDateTime = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 type ChatMessagesProps = {
   messages: ChatMessageType[];
   userId: string;
@@ -40,6 +54,9 @@ const ChatMessages = ({
               }`}
             >
               <span>{m.content}</span>
+              <span className={styles.messageTimestamp}>
+                {formatDateTime(m.createdAt)}
+              </span>
             </div>
             {isFromUser && (
               <img

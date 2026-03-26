@@ -29,9 +29,9 @@ const Inbox = ({
           <Chat
             key={c.id}
             id={c.id}
-            imgUrl={c?.otherUser?.imgUrl ?? avatarImg.src}
-            name={`${c?.otherUser?.firstName ?? "Deleted"} ${
-              c?.otherUser?.lastName ?? "User"
+            imgUrl={c?.user2?.imgUrl ?? avatarImg.src}
+            name={`${c?.user2?.firstName ?? "Deleted"} ${
+              c?.user2?.lastName ?? "User"
             } `}
             onClick={() => {
               setMessages(null);

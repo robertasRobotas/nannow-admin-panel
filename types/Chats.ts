@@ -1,19 +1,12 @@
 export type ChatUserType = {
   id: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   imgUrl: string;
-};
-
-export type ChatType = {
-  id: string;
-  user1Id: string;
-  user2Id: string;
-  messagesCount: number;
-  lastMessageId: string;
-  user1: ChatUserType;
-  user2: ChatUserType;
-  otherUser: ChatUserType;
+  isVerified?: boolean;
+  badgesIds?: string[];
+  rating?: number;
+  positiveReviewsCount?: number;
 };
 
 export type ChatMessageType = {
@@ -24,4 +17,27 @@ export type ChatMessageType = {
   createdAt: string;
   chatId: string;
   isRead: boolean;
+};
+
+export type ChatType = {
+  id: string;
+  chatId?: string;
+  user1Id?: string;
+  user2Id?: string;
+  messagesCount?: number;
+  lastMessageId?: string;
+  lastMessageCreatedAt?: string;
+  unreadMessagesCount?: number;
+  user1: ChatUserType;
+  user2: ChatUserType;
+  participants?: ChatUserType[];
+  messages?: ChatMessageType[];
+};
+
+export type GetAdminChatsResponse = {
+  items: ChatType[];
+  total: number;
+  pageSize: number;
+  startIndex: number;
+  hasMore: boolean;
 };
