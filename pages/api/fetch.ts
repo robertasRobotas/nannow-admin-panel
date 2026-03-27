@@ -12,7 +12,7 @@ const API_CONFIG = {
     wsTransports: ["websocket"] as const,
   },
   test: {
-    baseUrl: "https://nannow-api-test.com//v1",
+    baseUrl: "https://nannow-api-test.com/v1",
     wsTransports: ["websocket"] as const,
   },
 } as const;
