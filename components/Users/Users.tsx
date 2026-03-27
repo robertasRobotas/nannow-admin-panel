@@ -13,6 +13,7 @@ import {
   getAllUsers,
   getBannedUsers,
   getClientById,
+  getConnectedUsers,
   getNotFinishedOnboardingUsers,
   getOnboardingStats,
   getPendingProviderSpecialSkillsCount,
@@ -72,6 +73,7 @@ const formatDateTime = (value?: string) => {
 type UsersViewMode =
   | "CLIENTS"
   | "PROVIDERS"
+  | "ACTIVE_USERS"
   | "ONBOARDING_CLIENTS"
   | "ONBOARDING_PROVIDERS"
   | "BANNED_USERS"
@@ -108,6 +110,14 @@ type TestUser = {
   updatedAt?: string;
 };
 
+type ConnectedUser = {
+  userId: string;
+  fullName: string;
+  imgUrl?: string;
+  connectedAt: string;
+  currentRole: "CLIENT" | "PROVIDER";
+};
+
 const hasRoleForMode = (
   detail: UserDetails,
   mode: "CLIENT" | "PROVIDER",
@@ -128,6 +138,7 @@ const Users = () => {
   >([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
   const [testUsers, setTestUsers] = useState<TestUser[]>([]);
+  const [connectedUsers, setConnectedUsers] = useState<ConnectedUser[]>([]);
   const router = useRouter();
 
   const [itemOffset, setItemOffset] = useState(0);
@@ -152,6 +163,7 @@ const Users = () => {
   const [testUserToDelete, setTestUserToDelete] = useState<TestUser | null>(null);
   const [isSavingTestUser, setIsSavingTestUser] = useState(false);
   const [isSyncingTestUsers, setIsSyncingTestUsers] = useState(false);
+  const [isLoadingConnectedUsers, setIsLoadingConnectedUsers] = useState(false);
   const [modeReady, setModeReady] = useState(false);
   const [providerVideoFilter, setProviderVideoFilter] =
     useState<ProviderVideoFilter>("ALL");
@@ -162,6 +174,14 @@ const Users = () => {
     Record<string, string>
   >({});
   const [isCompactView, setIsCompactView] = useState(false);
+  const [connectedUsersFilter, setConnectedUsersFilter] = useState<
+    "CLIENT" | "PROVIDER"
+  >("CLIENT");
+  const [connectedUsersCounts, setConnectedUsersCounts] = useState({
+    CLIENT: 0,
+    PROVIDER: 0,
+    total: 0,
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -214,6 +234,10 @@ const Users = () => {
       attentionNumber: pendingProviderSpecialSkillsCount,
     },
     {
+      title: "Active users",
+      value: "ACTIVE_USERS",
+    },
+    {
       title: "Clients with not finished onboarding",
       value: "ONBOARDING_CLIENTS",
       attentionNumber: clientOnboardingCount,
@@ -236,6 +260,7 @@ const Users = () => {
   const isOnboardingSelected =
     currentView === "ONBOARDING_CLIENTS" ||
     currentView === "ONBOARDING_PROVIDERS";
+  const isActiveUsersSelected = currentView === "ACTIVE_USERS";
   const isBannedUsersSelected = currentView === "BANNED_USERS";
   const isTestUsersSelected = currentView === "TEST_USERS";
   const isSelectedClients = currentView === "CLIENTS";
@@ -477,6 +502,57 @@ const Users = () => {
     }
   }, [currentView, itemOffset, itemsPerPage, router, searchText]);
 
+  const fetchConnectedUsersList = useCallback(async () => {
+    try {
+      setIsLoadingConnectedUsers(true);
+      const allItems: ConnectedUser[] = [];
+      let startIndex = 0;
+      let total = Number.MAX_SAFE_INTEGER;
+      let nextCounts = {
+        CLIENT: 0,
+        PROVIDER: 0,
+        total: 0,
+      };
+
+      while (startIndex < total) {
+        const response = await getConnectedUsers({
+          sort: "latest",
+          startIndex,
+          pageSize: 100,
+        });
+
+        const payload = response.data ?? {};
+        const items = Array.isArray(payload.items)
+          ? (payload.items as ConnectedUser[])
+          : [];
+        const pageSize = Number(payload.pageSize ?? items.length ?? 0);
+        total = Number(payload.total ?? items.length);
+        nextCounts = {
+          CLIENT: Number(payload.counts?.CLIENT ?? 0) || 0,
+          PROVIDER: Number(payload.counts?.PROVIDER ?? 0) || 0,
+          total: Number(payload.counts?.total ?? total) || 0,
+        };
+
+        allItems.push(...items);
+
+        if (items.length === 0 || pageSize <= 0) break;
+        startIndex += pageSize;
+      }
+
+      setConnectedUsers(allItems);
+      setConnectedUsersCounts(nextCounts);
+    } catch (err) {
+      console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/");
+        }
+      }
+    } finally {
+      setIsLoadingConnectedUsers(false);
+    }
+  }, [router]);
+
   const fetchBannedUsers = useCallback(async () => {
     try {
       const response = await getBannedUsers({
@@ -563,6 +639,10 @@ const Users = () => {
 
   useEffect(() => {
     if (!router.isReady || !modeReady) return;
+    if (isActiveUsersSelected) {
+      fetchConnectedUsersList();
+      return;
+    }
     if (isOnboardingSelected) {
       fetchOnboardingUsers();
       return;
@@ -580,15 +660,49 @@ const Users = () => {
     router.isReady,
     modeReady,
     currentView,
+    isActiveUsersSelected,
     isOnboardingSelected,
     isBannedUsersSelected,
     isTestUsersSelected,
     itemOffset,
+    fetchConnectedUsersList,
     fetchBannedUsers,
     fetchOnboardingUsers,
     fetchTestUsers,
     fetchUsers,
   ]);
+
+  useEffect(() => {
+    if (!isActiveUsersSelected) return;
+
+    const filteredCount = connectedUsers.filter(
+      (user) => user.currentRole === connectedUsersFilter,
+    ).length;
+
+    setTotalUsers(filteredCount);
+    setPageCount(Math.ceil(filteredCount / itemsPerPage) || 0);
+  }, [connectedUsers, connectedUsersFilter, isActiveUsersSelected, itemsPerPage]);
+
+  useEffect(() => {
+    if (!isActiveUsersSelected) return;
+    if (
+      connectedUsersFilter === "CLIENT" &&
+      connectedUsersCounts.CLIENT === 0 &&
+      connectedUsersCounts.PROVIDER > 0
+    ) {
+      setConnectedUsersFilter("PROVIDER");
+      setItemOffset(0);
+      return;
+    }
+    if (
+      connectedUsersFilter === "PROVIDER" &&
+      connectedUsersCounts.PROVIDER === 0 &&
+      connectedUsersCounts.CLIENT > 0
+    ) {
+      setConnectedUsersFilter("CLIENT");
+      setItemOffset(0);
+    }
+  }, [connectedUsersCounts, connectedUsersFilter, isActiveUsersSelected]);
 
   const openOnboardingUserProfile = (user: OnboardingNotFinishedUser) => {
     const normalizedMode = String(user.currentMode ?? "").toUpperCase();
@@ -712,6 +826,14 @@ const Users = () => {
     }
   };
 
+  const filteredConnectedUsers = connectedUsers.filter(
+    (user) => user.currentRole === connectedUsersFilter,
+  );
+  const paginatedConnectedUsers = filteredConnectedUsers.slice(
+    itemOffset,
+    itemOffset + itemsPerPage,
+  );
+
   return (
     <div className={styles.main}>
       <div className={styles.heading}>
@@ -769,7 +891,30 @@ const Users = () => {
                 />
               </>
             )}
+            {isActiveUsersSelected && (
+              <>
+                <Button
+                  title={`Clients (${connectedUsersCounts.CLIENT})`}
+                  type="OUTLINED"
+                  isSelected={connectedUsersFilter === "CLIENT"}
+                  onClick={() => {
+                    setItemOffset(0);
+                    setConnectedUsersFilter("CLIENT");
+                  }}
+                />
+                <Button
+                  title={`Providers (${connectedUsersCounts.PROVIDER})`}
+                  type="OUTLINED"
+                  isSelected={connectedUsersFilter === "PROVIDER"}
+                  onClick={() => {
+                    setItemOffset(0);
+                    setConnectedUsersFilter("PROVIDER");
+                  }}
+                />
+              </>
+            )}
             {!isOnboardingSelected &&
+              !isActiveUsersSelected &&
               !isBannedUsersSelected &&
               !isTestUsersSelected && (
                 <>
@@ -810,23 +955,25 @@ const Users = () => {
               )}
           </div>
           <div>
-            <SearchBar
-              searchText={searchText}
-              setSearchText={setSearchText}
-              placeholder="Type username, ID  or email"
-              onButtonClick={() => {
-                setItemOffset(0);
-                if (isOnboardingSelected) {
-                  fetchOnboardingUsers();
-                } else if (isBannedUsersSelected) {
-                  fetchBannedUsers();
-                } else if (isTestUsersSelected) {
-                  fetchTestUsers();
-                } else {
-                  fetchUsers();
-                }
-              }}
-            />
+            {!isActiveUsersSelected && (
+              <SearchBar
+                searchText={searchText}
+                setSearchText={setSearchText}
+                placeholder="Type username, ID  or email"
+                onButtonClick={() => {
+                  setItemOffset(0);
+                  if (isOnboardingSelected) {
+                    fetchOnboardingUsers();
+                  } else if (isBannedUsersSelected) {
+                    fetchBannedUsers();
+                  } else if (isTestUsersSelected) {
+                    fetchTestUsers();
+                  } else {
+                    fetchUsers();
+                  }
+                }}
+              />
+            )}
           </div>
         </div>
         <div className={styles.headingCenter}>
@@ -938,6 +1085,51 @@ const Users = () => {
           </div>
         ) : (
           <div className={styles.emptyState}>No banned users</div>
+        )
+      ) : isActiveUsersSelected ? (
+        isLoadingConnectedUsers ? (
+          <div className={styles.emptyState}>Loading active users...</div>
+        ) : paginatedConnectedUsers.length > 0 ? (
+          <div className={styles.onboardingList}>
+            {paginatedConnectedUsers.map((user) => (
+              <button
+                key={`${user.currentRole}-${user.userId}`}
+                type="button"
+                className={styles.onboardingRow}
+                onClick={() =>
+                  router.push(
+                    user.currentRole === "PROVIDER"
+                      ? `/provider/${user.userId}`
+                      : `/client/${user.userId}`,
+                  )
+                }
+              >
+                <div className={styles.onboardingRowLeft}>
+                  <img
+                    className={styles.onboardingAvatar}
+                    src={user.imgUrl || defaultUserImg.src}
+                    alt={user.fullName}
+                  />
+                  <div>
+                    <div className={styles.onboardingName}>
+                      {user.fullName || "Unknown user"}
+                    </div>
+                    <div className={styles.onboardingMeta}>
+                      {`${user.currentRole} • ${user.userId}`}
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.onboardingRight}>
+                  <div className={styles.stepsTitle}>Connected at</div>
+                  <div className={styles.stepsText}>
+                    {formatDateTime(user.connectedAt)}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.emptyState}>No active users</div>
         )
       ) : isTestUsersSelected ? (
         <div className={styles.testUsersSection}>

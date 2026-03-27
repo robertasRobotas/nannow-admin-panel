@@ -12,7 +12,7 @@ const API_CONFIG = {
     wsTransports: ["websocket"] as const,
   },
   test: {
-    baseUrl: "https://nannow-api-test.com/v1",
+    baseUrl: "http://192.168.1.192:8080/v1",
     wsTransports: ["websocket"] as const,
   },
 } as const;
@@ -1522,6 +1522,25 @@ export const getAllAdmins = async () => {
 export const getConnectedAdmins = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/users/connected-admins`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getConnectedUsers = async (params?: {
+  sort?: "latest" | "oldest";
+  startIndex?: number;
+  pageSize?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/connected-users`, {
+    params: {
+      sort: params?.sort ?? "latest",
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+    },
     headers: {
       Authorization: jwt,
     },
