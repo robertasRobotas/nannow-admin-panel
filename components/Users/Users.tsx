@@ -715,98 +715,119 @@ const Users = () => {
   return (
     <div className={styles.main}>
       <div className={styles.heading}>
-        <div className={styles.headingLeftSide}>
-          <DropDownButton
-            options={viewOptions.map((option) => ({
-              title: option.title,
-              value: option.value,
-              attentionNumber: option.attentionNumber,
-            }))}
-            selectedOption={selectedViewOption}
-            setSelectedOption={setSelectedViewOption}
-            onClickOption={() => {
-              setItemOffset(0);
-            }}
-          />
-          <Button
-            title="Filter and export"
-            type="OUTLINED"
-            onClick={() => router.push("/users/filter-export")}
-          />
-          {isProvidersSelected && (
-            <>
-              <DropDownButton
-                options={providerVideoFilterOptions}
-                selectedOption={providerVideoFilterOptions.findIndex(
-                  (option) => option.value === providerVideoFilter,
-                )}
-                setSelectedOption={(nextSelectedOption) => {
-                  const option =
-                    providerVideoFilterOptions[nextSelectedOption as number];
-                  if (!option) return;
-                  setProviderVideoFilter(option.value);
-                }}
-                onClickOption={() => {
-                  setItemOffset(0);
-                }}
-              />
-              <Button
-                title="Pending special skills"
-                type="OUTLINED"
-                isSelected={
-                  providerSpecialSkillsFilter === "PENDING_SPECIAL_SKILLS"
-                }
-                attentionNumber={pendingProviderSpecialSkillsCount}
-                onClick={() => {
-                  setItemOffset(0);
-                  setProviderSpecialSkillsFilter((prev) =>
-                    prev === "PENDING_SPECIAL_SKILLS"
-                      ? "ALL"
-                      : "PENDING_SPECIAL_SKILLS",
-                  );
-                }}
-              />
-            </>
-          )}
-          {!isOnboardingSelected &&
-            !isBannedUsersSelected &&
-            !isTestUsersSelected && (
+        <div className={styles.headingTopRow}>
+          <div className={styles.headingLeftSide}>
+            <DropDownButton
+              options={viewOptions.map((option) => ({
+                title: option.title,
+                value: option.value,
+                attentionNumber: option.attentionNumber,
+              }))}
+              selectedOption={selectedViewOption}
+              setSelectedOption={setSelectedViewOption}
+              onClickOption={() => {
+                setItemOffset(0);
+              }}
+            />
+            <Button
+              title="Filter and export"
+              type="OUTLINED"
+              onClick={() => router.push("/users/filter-export")}
+            />
+            {isProvidersSelected && (
               <>
-                <button
-                  type="button"
-                  className={styles.viewSwitchButton}
-                  onClick={() => setIsCompactView((prev) => !prev)}
-                >
-                  <span className={styles.viewSwitchLabel}>Show compact</span>
-                  <span
-                    className={`${styles.viewSwitchUi} ${
-                      isCompactView ? styles.viewSwitchUiActive : ""
-                    }`}
-                  />
-                </button>
-                {isCompactView && (
-                  <DropDownButton
-                    options={PAGE_SIZE_OPTIONS.map((option) => ({
-                      title: option.title,
-                      value: option.value,
-                    }))}
-                    selectedOption={Math.max(
-                      0,
-                      PAGE_SIZE_OPTIONS.findIndex(
-                        (option) => Number(option.value) === itemsPerPage,
-                      ),
-                    )}
-                    setSelectedOption={(selectedOption) => {
-                      const option =
-                        PAGE_SIZE_OPTIONS[selectedOption as number];
-                      if (!option) return;
-                      setItemOffset(0);
-                      setItemsPerPage(Number(option.value));
-                    }}
-                  />
-                )}
+                <DropDownButton
+                  options={providerVideoFilterOptions}
+                  selectedOption={providerVideoFilterOptions.findIndex(
+                    (option) => option.value === providerVideoFilter,
+                  )}
+                  setSelectedOption={(nextSelectedOption) => {
+                    const option =
+                      providerVideoFilterOptions[nextSelectedOption as number];
+                    if (!option) return;
+                    setProviderVideoFilter(option.value);
+                  }}
+                  onClickOption={() => {
+                    setItemOffset(0);
+                  }}
+                />
+                <Button
+                  title="Pending special skills"
+                  type="OUTLINED"
+                  isSelected={
+                    providerSpecialSkillsFilter === "PENDING_SPECIAL_SKILLS"
+                  }
+                  attentionNumber={pendingProviderSpecialSkillsCount}
+                  onClick={() => {
+                    setItemOffset(0);
+                    setProviderSpecialSkillsFilter((prev) =>
+                      prev === "PENDING_SPECIAL_SKILLS"
+                        ? "ALL"
+                        : "PENDING_SPECIAL_SKILLS",
+                    );
+                  }}
+                />
               </>
             )}
+            {!isOnboardingSelected &&
+              !isBannedUsersSelected &&
+              !isTestUsersSelected && (
+                <>
+                  <button
+                    type="button"
+                    className={styles.viewSwitchButton}
+                    onClick={() => setIsCompactView((prev) => !prev)}
+                  >
+                    <span className={styles.viewSwitchLabel}>Show compact</span>
+                    <span
+                      className={`${styles.viewSwitchUi} ${
+                        isCompactView ? styles.viewSwitchUiActive : ""
+                      }`}
+                    />
+                  </button>
+                  {isCompactView && (
+                    <DropDownButton
+                      options={PAGE_SIZE_OPTIONS.map((option) => ({
+                        title: option.title,
+                        value: option.value,
+                      }))}
+                      selectedOption={Math.max(
+                        0,
+                        PAGE_SIZE_OPTIONS.findIndex(
+                          (option) => Number(option.value) === itemsPerPage,
+                        ),
+                      )}
+                      setSelectedOption={(selectedOption) => {
+                        const option =
+                          PAGE_SIZE_OPTIONS[selectedOption as number];
+                        if (!option) return;
+                        setItemOffset(0);
+                        setItemsPerPage(Number(option.value));
+                      }}
+                    />
+                  )}
+                </>
+              )}
+          </div>
+          <div>
+            <SearchBar
+              searchText={searchText}
+              setSearchText={setSearchText}
+              placeholder="Type username, ID  or email"
+              onButtonClick={() => {
+                setItemOffset(0);
+                if (isOnboardingSelected) {
+                  fetchOnboardingUsers();
+                } else if (isBannedUsersSelected) {
+                  fetchBannedUsers();
+                } else if (isTestUsersSelected) {
+                  fetchTestUsers();
+                } else {
+                  fetchUsers();
+                }
+              }}
+            />
+          </div>
         </div>
         <div className={styles.headingCenter}>
           <div className={styles.statLine}>
@@ -817,25 +838,6 @@ const Users = () => {
               {`Client or provider done: ${onboardingStats.finishedClientOrProviderOnboarding}`}
             </span>
           </div>
-        </div>
-        <div>
-          <SearchBar
-            searchText={searchText}
-            setSearchText={setSearchText}
-            placeholder="Type username, ID  or email"
-            onButtonClick={() => {
-              setItemOffset(0);
-              if (isOnboardingSelected) {
-                fetchOnboardingUsers();
-              } else if (isBannedUsersSelected) {
-                fetchBannedUsers();
-              } else if (isTestUsersSelected) {
-                fetchTestUsers();
-              } else {
-                fetchUsers();
-              }
-            }}
-          />
         </div>
       </div>
 

@@ -6,9 +6,16 @@
 
 .heading {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding-bottom: 30px;
+}
+
+.headingTopRow {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 30px;
   gap: 16px;
 }
 
@@ -328,10 +335,13 @@
   }
 
   .heading {
+    padding-bottom: 20px;
+  }
+
+  .headingTopRow {
     flex-direction: column;
     gap: 20px;
     align-items: normal;
-    padding-bottom: 20px;
   }
 
   .headingCenter {
