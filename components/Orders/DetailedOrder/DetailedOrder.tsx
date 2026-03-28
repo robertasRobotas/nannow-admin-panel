@@ -29,6 +29,7 @@ import {
   releaseFundsByOrderId,
 } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
+import calendarImg from "../../../assets/images/calendar.svg";
 import Review from "@/components/Reviews/ReviewsList/Review/Review";
 import callImg from "../../../assets/images/call.svg";
 import closeImg from "../../../assets/images/close.svg";
@@ -110,6 +111,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const parentLocation = `${order?.address?.street ?? "Unknown"} ${
     order?.address?.houseNumber ?? ""
   }, ${order?.address?.city ?? ""}`;
+
+  const orderCreatedAt = order?.createdAt
+    ? new Date(order.createdAt).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "-";
 
   const arrivalTime = order?.startsAt
     ? new Date(order.startsAt).toLocaleString("en-US", {
@@ -532,6 +545,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           parentPhoneNo={parentUser?.phoneNumber}
         />
         <div className={styles.orderInfo}>
+          <InfoCard
+            title="Order created at"
+            iconImgUrl={calendarImg.src}
+            type={isMobile ? "SPAN2" : "SPAN2"}
+            info={orderCreatedAt}
+          />
           <InfoCard
             title="Order ID"
             iconImgUrl={documentImg.src}
