@@ -31,6 +31,82 @@ const AdminSocketContext = createContext<AdminSocketContextValue>({
   subscribe: () => () => undefined,
 });
 
+type ToneConfig = {
+  frequency: number;
+  durationMs: number;
+  delayMs?: number;
+};
+
+let sharedAudioContext: AudioContext | null = null;
+
+const getAudioContext = () => {
+  if (typeof window === "undefined") return null;
+
+  const browserWindow = window as Window &
+    typeof globalThis & {
+      webkitAudioContext?: typeof AudioContext;
+    };
+  const AudioContextCtor =
+    browserWindow.AudioContext ?? browserWindow.webkitAudioContext;
+
+  if (!AudioContextCtor) return null;
+
+  if (!sharedAudioContext) {
+    sharedAudioContext = new AudioContextCtor();
+  }
+
+  return sharedAudioContext;
+};
+
+const playToneSequence = async (tones: ToneConfig[]) => {
+  const context = getAudioContext();
+  if (!context) return;
+
+  try {
+    if (context.state === "suspended") {
+      await context.resume();
+    }
+  } catch (error) {
+    console.error("Failed to resume admin audio context", error);
+    return;
+  }
+
+  const startAt = context.currentTime + 0.01;
+
+  tones.forEach(({ frequency, durationMs, delayMs = 0 }) => {
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    const toneStart = startAt + delayMs / 1000;
+    const toneEnd = toneStart + durationMs / 1000;
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, toneStart);
+
+    gainNode.gain.setValueAtTime(0.0001, toneStart);
+    gainNode.gain.exponentialRampToValueAtTime(0.08, toneStart + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+
+    oscillator.start(toneStart);
+    oscillator.stop(toneEnd);
+  });
+};
+
+const playOrderCreatedSound = () => {
+  void playToneSequence([
+    { frequency: 880, durationMs: 170 },
+  ]);
+};
+
+const playOrderConfirmedSound = () => {
+  void playToneSequence([
+    { frequency: 660, durationMs: 120 },
+    { frequency: 880, durationMs: 160, delayMs: 140 },
+  ]);
+};
+
 const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
   let parsedPayload: unknown = payload;
 
@@ -364,6 +440,14 @@ export const AdminSocketProvider = ({
       const normalizedEvent = mapAdminEvent(parsedEvent);
       setLastEvent(normalizedEvent);
       listenersRef.current.forEach((listener) => listener(normalizedEvent));
+
+      if (normalizedEvent.type === "ORDER_CREATED") {
+        playOrderCreatedSound();
+      }
+
+      if (normalizedEvent.type === "ORDER_CONFIRMED") {
+        playOrderConfirmedSound();
+      }
 
       if (
         normalizedEvent.type === "ADMIN_CONNECTED" ||
