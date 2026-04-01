@@ -5,12 +5,21 @@
   text-align: center;
 }
 
+.profileImgButton {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: zoom-in;
+  border-radius: 50%;
+  margin-bottom: 8px;
+}
+
 .profileImg {
   width: 44px;
   height: 44px;
   object-fit: cover;
   border-radius: 50%;
-  margin-bottom: 8px;
 }
 
 .name {
@@ -31,4 +40,64 @@
   font-size: 12px;
   font-weight: 600;
   margin-top: 4px;
+}
+
+.imageModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.imageModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(90vw, 960px);
+  max-height: 90vh;
+  padding: 20px;
+  border-radius: 24px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.imageModalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.imageModalButton {
+  padding: 8px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.imageViewport {
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  max-height: calc(90vh - 96px);
+  padding: 24px;
+}
+
+.modalImage {
+  max-width: 100%;
+  max-height: calc(90vh - 160px);
+  transform-origin: center center;
+  transition: transform 0.2s ease;
+  object-fit: contain;
 }

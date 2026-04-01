@@ -1,5 +1,39 @@
 import { ReviewType } from "./Reviews";
 
+type DetailedOrderProvider = {
+  id: string;
+  userId: string;
+  activityNumber?: string;
+  activityNo?: string;
+  badgesIds: string[];
+  languages: string[];
+  operationCountry?: string;
+  currentOperationalRegion?: string;
+  isAvailableStatus: boolean;
+  rating:
+    | {
+        generalRating: number;
+        punctualityRating: number;
+        empathyRating: number;
+        communicationRating: number;
+        cleanlinessRating: number;
+      }
+    | null;
+  positiveReviewsCount: number;
+  defaultAddressId: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    imgUrl: string;
+    phoneNumber: string;
+  };
+  address: {
+    latitude: number;
+    longitude: number;
+  };
+  acactivityNumber?: string;
+};
+
 export type DetailedOrderType = {
   id: string;
   clientId: string;
@@ -31,7 +65,7 @@ export type DetailedOrderType = {
     addedAt: string;
     _id: string;
   }[];
-  approvedProviderId: string;
+  approvedProviderId: string | null;
   serviceProviderPricePerHour: number;
   finalPricePerHour: number;
   serviceDurationHours: number;
@@ -112,36 +146,8 @@ export type DetailedOrderType = {
     imgUrl: string;
     phoneNumber: string;
   };
-  approvedProvider: {
-    id: string;
-    userId: string;
-    activityNumber?: string;
-    activityNo?: string;
-    badgesIds: string[];
-    languages: string[];
-    operationCountry: string;
-    isAvailableStatus: boolean;
-    rating: {
-      generalRating: number;
-      punctualityRating: number;
-      empathyRating: number;
-      communicationRating: number;
-      cleanlinessRating: number;
-    };
-    positiveReviewsCount: number;
-    defaultAddressId: string;
-    user: {
-      firstName: string;
-      lastName: string;
-      imgUrl: string;
-      phoneNumber: string;
-    };
-    address: {
-      latitude: number;
-      longitude: number;
-    };
-    acactivityNumber: string;
-  };
+  approvedProvider: DetailedOrderProvider | null;
+  requiredProvider?: DetailedOrderProvider | null;
   pendingProviders: {
     id: string;
     userId: string;

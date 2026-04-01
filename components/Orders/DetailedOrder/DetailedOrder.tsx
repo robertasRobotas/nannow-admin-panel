@@ -99,13 +99,20 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     }
   };
 
-  const getUserImage = (imgUrl: string) =>
+  const getUserImage = (imgUrl?: string) =>
     imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
 
-  const getUserName = (name: string, lastName: string) =>
+  const getUserName = (name?: string, lastName?: string) =>
     `${name ?? "Deleted"} ${lastName ?? "User"}`;
 
-  const sitterUser = order?.approvedProvider;
+  const requiredDirectProvider =
+    order?.isDirectOrderToProvider &&
+    !!order?.requiredProvider &&
+    !order?.approvedProvider &&
+    !order?.approvedProviderId
+      ? order.requiredProvider
+      : null;
+  const sitterUser = order?.approvedProvider ?? requiredDirectProvider;
   const parentUser = order?.clientUser;
 
   const parentLocation = `${order?.address?.street ?? "Unknown"} ${
@@ -400,7 +407,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         : null;
 
   const getProviderName = (fullName: string) => {
-    const isProviderNotSelected = order.approvedProviderId === null;
+    const isProviderNotSelected = !sitterUser;
     return isProviderNotSelected ? "Not selected yet" : fullName;
   };
 
@@ -465,12 +472,21 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     shouldShowInvoiceCards &&
     !!order?.approvedProviderId;
   const isOrderPaid = String(order?.paymentStatus ?? "").toUpperCase() === "PAID";
+  const isRejectedDirectOffer =
+    orderStatusUpper === "PROVIDER_REJECTED_DIRECT_OFFER";
+  const isCanceledNotPaidByClient =
+    orderStatusUpper === "CANCELED_NOT_PAID_BY_CLIENT";
+  const hasSpecialProcessStatus =
+    isRejectedDirectOffer || isCanceledNotPaidByClient;
   const isRefundDone = !!order?.refundedAt;
   const isCancelFeeDone = !!order?.isCancelFeePaidToProvider;
   const statusTitle =
     problemStatus === "ORDER_CREATED" && order?.isDirectOrderToProvider
       ? "ORDER_CREATED (DIRECT ORDER TO PROVIDER)"
       : options.find((o) => o.value === problemStatus)?.title ?? "-";
+  const specialProcessImgUrl = isRejectedDirectOffer
+    ? getUserImage(sitterUser?.user?.imgUrl)
+    : getUserImage(parentUser?.imgUrl);
   const areCanceledFinancialActionsDone = !isCanceledByClient
     ? true
     : isCanceledLate2h
@@ -541,8 +557,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           sitterImgUrl={getUserImage(sitterUser?.user?.imgUrl)}
           parentName={getUserName(parentUser?.firstName, parentUser?.lastName)}
           parentImgUrl={getUserImage(parentUser?.imgUrl)}
-          sitterPhoneNo={sitterUser?.user?.phoneNumber}
-          parentPhoneNo={parentUser?.phoneNumber}
+          sitterPhoneNo={sitterUser?.user?.phoneNumber ?? ""}
+          parentPhoneNo={parentUser?.phoneNumber ?? ""}
+          sitterProfileHref={
+            sitterUser?.userId ? `/provider/${sitterUser.userId}` : undefined
+          }
+          parentProfileHref={
+            order?.clientUserId ? `/client/${order.clientUserId}` : undefined
+          }
         />
         <div className={styles.orderInfo}>
           <InfoCard
@@ -707,7 +729,13 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           Order process
         </div>
         <div className={styles.processCards}>
-          {isCanceledOrder ? (
+          {hasSpecialProcessStatus ? (
+            <ProcessCard
+              imgUrl={specialProcessImgUrl}
+              process={statusTitle}
+              date="-"
+            />
+          ) : isCanceledOrder ? (
             <>
               <ProcessCard
                 imgUrl={getUserImage(parentUser?.imgUrl)}

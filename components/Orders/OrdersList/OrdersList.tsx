@@ -14,18 +14,23 @@ const OrdersList = ({ orders }: OrdersListProps) => {
   const getUserName = (firstName?: string, lastName?: string) =>
     `${firstName ?? "Deleted"} ${lastName ?? "User"}`;
 
-  const getProviderName = (
-    fullName: string,
-    approvedProviderId: string | null,
-  ) => {
-    const isProviderNotSelected = approvedProviderId === null;
+  const getProviderName = (fullName: string, hasDisplayProvider: boolean) => {
+    const isProviderNotSelected = !hasDisplayProvider;
     return isProviderNotSelected ? "Not selected yet(Provider)" : fullName;
   };
 
   return (
     <div className={styles.main}>
       {orders.map((u) => {
-        const providerUser = u.approvedProvider?.user;
+        const requiredDirectProvider =
+          u.isDirectOrderToProvider &&
+          !!u.requiredProvider &&
+          !u.approvedProvider &&
+          !u.approvedProviderId
+            ? u.requiredProvider
+            : null;
+        const displayProvider = u.approvedProvider ?? requiredDirectProvider;
+        const providerUser = displayProvider?.user;
         const clientUser = u.clientUser;
 
         return (
@@ -39,7 +44,7 @@ const OrdersList = ({ orders }: OrdersListProps) => {
             isDirectOrderToProvider={u.isDirectOrderToProvider}
             providerName={getProviderName(
               getUserName(providerUser?.firstName, providerUser?.lastName),
-              u.approvedProviderId,
+              !!displayProvider,
             )}
             clientName={`${getUserName(
               clientUser?.firstName,

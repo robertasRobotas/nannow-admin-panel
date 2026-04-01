@@ -8,6 +8,8 @@ type ProfileHeadingProps = {
   parentName: string;
   sitterPhoneNo: string;
   parentPhoneNo: string;
+  sitterProfileHref?: string;
+  parentProfileHref?: string;
 };
 
 const ProfileHeading = ({
@@ -17,11 +19,19 @@ const ProfileHeading = ({
   parentName,
   sitterPhoneNo,
   parentPhoneNo,
+  sitterProfileHref,
+  parentProfileHref,
 }: ProfileHeadingProps) => {
   return (
     <div className={styles.main}>
       <div className={styles.profile}>
-        <img src={sitterImgUrl} />
+        {sitterProfileHref ? (
+          <a href={sitterProfileHref} className={styles.profileAvatarLink}>
+            <img src={sitterImgUrl} alt="Provider avatar" />
+          </a>
+        ) : (
+          <img src={sitterImgUrl} alt="Provider avatar" />
+        )}
         <div className={styles.profileInfo}>
           <div className={styles.role}>PROVIDER</div>
           <div className={`${styles.userName} ${nunito.className}`}>
@@ -31,7 +41,13 @@ const ProfileHeading = ({
         </div>
       </div>
       <div className={styles.profile}>
-        <img src={parentImgUrl} />
+        {parentProfileHref ? (
+          <a href={parentProfileHref} className={styles.profileAvatarLink}>
+            <img src={parentImgUrl} alt="Client avatar" />
+          </a>
+        ) : (
+          <img src={parentImgUrl} alt="Client avatar" />
+        )}
         <div className={styles.profileInfo}>
           <div className={styles.role}>CLIENT</div>
           <div className={`${styles.userName} ${nunito.className}`}>

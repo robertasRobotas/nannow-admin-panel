@@ -3,11 +3,13 @@ export type OrderStatus =
   | "ORDER_CREATED"
   | "PROVIDER_OFFERED_SERVICE"
   | "PROVIDER_ACCEPTED_DIRECT_OFFER"
+  | "PROVIDER_REJECTED_DIRECT_OFFER"
   | "BOTH_APPROVED"
   | "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS"
   | "PROVIDER_MARKED_AS_SERVICE_ENDED"
   | "CLIENT_CANCELED"
   | "PROVIDER_CANCELED"
+  | "CANCELED_NOT_PAID_BY_CLIENT"
   | "NOT_STARTED_IN_TIME"
   | "NOT_ENDED_IN_TIME"
   | "CLIENT_ORDER_CREATION_IN_PROCESS";
@@ -63,6 +65,11 @@ export type OrderType = {
   pendingProvidersCount: number;
   client: Client;
   approvedProvider?: ApprovedProvider; // may be missing if not approved
+  requiredProvider?: {
+    id: string;
+    userId: string;
+    user: User;
+  } | null;
   clientUser: ClientUser;
   // Optional: present on list responses for display/search convenience
   orderPrettyId?: string;

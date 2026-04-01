@@ -10,6 +10,10 @@ export const options = [
     title: "PROVIDER_ACCEPTED_DIRECT_OFFER",
     value: "PROVIDER_ACCEPTED_DIRECT_OFFER",
   },
+  {
+    title: "PROVIDER_REJECTED_DIRECT_OFFER",
+    value: "PROVIDER_REJECTED_DIRECT_OFFER",
+  },
   { title: "BOTH_APPROVED", value: "BOTH_APPROVED" },
   {
     title: "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
@@ -23,6 +27,10 @@ export const options = [
   { title: "CANCELED_BY_PROVIDER", value: "CANCELED_BY_PROVIDER" },
   { title: "CLIENT_CANCELED", value: "CLIENT_CANCELED" },
   { title: "PROVIDER_CANCELED", value: "PROVIDER_CANCELED" },
+  {
+    title: "CANCELED_NOT_PAID_BY_CLIENT",
+    value: "CANCELED_NOT_PAID_BY_CLIENT",
+  },
   { title: "Not started in time", value: "NOT_STARTED_IN_TIME" },
   { title: "Not Ended in time", value: "NOT_ENDED_IN_TIME" },
 ];

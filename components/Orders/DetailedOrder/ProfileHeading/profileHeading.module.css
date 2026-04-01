@@ -18,6 +18,11 @@
   border-radius: 50%;
 }
 
+.profileAvatarLink {
+  display: inline-flex;
+  border-radius: 50%;
+}
+
 .profileInfo {
   display: flex;
   flex-direction: column;
