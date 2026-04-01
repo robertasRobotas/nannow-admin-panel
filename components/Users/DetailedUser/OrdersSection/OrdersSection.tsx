@@ -10,7 +10,11 @@ import { useRouter } from "next/router";
 import { OrderType } from "@/types/Order";
 import Order from "@/components/Orders/OrdersList/Order/Order";
 import defaultUserImg from "@/assets/images/default-avatar.png";
-import { options as statusOptions } from "@/data/orderStatusOptions";
+import {
+  getOrderStatusTitle,
+  normalizeOrderStatus,
+  options as statusOptions,
+} from "@/data/orderStatusOptions";
 
 type OrdersSectionProps = {
   user: UserDetails;
@@ -93,7 +97,7 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
   const grouped = useMemo(() => {
     const map = new Map<string, OrderType[]>();
     for (const o of filteredOrders) {
-      const key = o.status ?? "UNKNOWN_STATUS";
+      const key = normalizeOrderStatus(o.status) || "UNKNOWN_STATUS";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(o);
     }
@@ -112,16 +116,11 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
     imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
   const getUserName = (firstName?: string, lastName?: string) =>
     `${firstName ?? "Deleted"} ${lastName ?? "User"}`;
-  const getProviderName = (fullName: string, status: string) => {
-    const isProviderNotSelected = [
-      "ORDER_CREATED",
-      "PROVIDER_SENT_OFFER_TO_CLIENT",
-    ].includes(status);
-    return isProviderNotSelected ? "Not selected yet(Provider)" : fullName;
+  const getProviderName = (fullName: string, hasDisplayProvider: boolean) => {
+    return hasDisplayProvider ? fullName : "Not selected yet(Provider)";
   };
 
-  const statusTitle = (status: string) =>
-    statusOptions.find((o) => o.value === status)?.title ?? status;
+  const statusTitle = (status: string) => getOrderStatusTitle(status) || status;
 
   return (
     <div className={styles.main}>
@@ -145,7 +144,15 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
               </div>
               <div className={styles.groupContent}>
                 {items.map((u) => {
-                  const providerUser = u.approvedProvider?.user;
+                  const requiredDirectProvider =
+                    u.isDirectOrderToProvider &&
+                    !!u.requiredProvider &&
+                    !u.approvedProvider &&
+                    !u.approvedProviderId
+                      ? u.requiredProvider
+                      : null;
+                  const displayProvider = u.approvedProvider ?? requiredDirectProvider;
+                  const providerUser = displayProvider?.user;
                   const clientUser = u.clientUser;
                   return (
                     <Order
@@ -155,12 +162,13 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
                       id={u.id}
                       startsAt={u.startsAt}
                       endsAt={u.endsAt}
+                      isDirectOrderToProvider={u.isDirectOrderToProvider}
                       providerName={getProviderName(
                         getUserName(
                           providerUser?.firstName,
                           providerUser?.lastName
                         ),
-                        u.status
+                        !!displayProvider
                       )}
                       clientName={`${getUserName(
                         clientUser?.firstName,
@@ -186,5 +194,4 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
 };
 
 export default OrdersSection;
-
 

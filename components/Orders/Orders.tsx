@@ -51,8 +51,6 @@ const orderFilterOptions = [
   },
   { title: "CANCELED_BY_CLIENT", value: "CANCELED_BY_CLIENT" },
   { title: "CANCELED_BY_PROVIDER", value: "CANCELED_BY_PROVIDER" },
-  { title: "CLIENT_CANCELED", value: "CLIENT_CANCELED" },
-  { title: "PROVIDER_CANCELED", value: "PROVIDER_CANCELED" },
   {
     title: "CANCELED_NOT_PAID_BY_CLIENT",
     value: "CANCELED_NOT_PAID_BY_CLIENT",

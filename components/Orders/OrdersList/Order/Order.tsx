@@ -1,6 +1,6 @@
 import styles from "./order.module.css";
 import { useRouter } from "next/router";
-import { options } from "@/data/orderStatusOptions";
+import { getOrderStatusTitle } from "@/data/orderStatusOptions";
 import { OrderStatus } from "@/types/Order";
 
 type OrderProps = {
@@ -31,10 +31,7 @@ const Order = ({
   pendingProvidersCount,
 }: OrderProps) => {
   const router = useRouter();
-  const statusTitle =
-    status === "ORDER_CREATED" && isDirectOrderToProvider
-      ? "ORDER_CREATED (DIRECT ORDER TO PROVIDER)"
-      : options.find((o) => o.value === status)?.title;
+  const statusTitle = getOrderStatusTitle(status, isDirectOrderToProvider);
 
   const formatDateTime = (iso: string) =>
     new Date(iso).toLocaleString(undefined, {

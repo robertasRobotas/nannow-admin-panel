@@ -908,15 +908,70 @@ export const getCriminalRecordInfo = async (code: string) => {
 
 export const getOrders = async (status: string, startIndex: number) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(
-    `${BASE_URL}/admin/orders?startIndex=${startIndex}&status=${status}`,
-    {
-      headers: {
-        Authorization: jwt,
+  const legacyStatusAliases: Record<string, string[]> = {
+    CANCELED_BY_CLIENT: ["CANCELED_BY_CLIENT", "CLIENT_CANCELED"],
+    CANCELED_BY_PROVIDER: ["CANCELED_BY_PROVIDER", "PROVIDER_CANCELED"],
+  };
+
+  const aliasedStatuses = legacyStatusAliases[status];
+  if (!aliasedStatuses) {
+    const response = await axios.get(
+      `${BASE_URL}/admin/orders?startIndex=${startIndex}&status=${status}`,
+      {
+        headers: {
+          Authorization: jwt,
+        },
+      },
+    );
+    return response;
+  }
+
+  const byId = new Map<string, unknown>();
+  let resolvedPageSize = 20;
+
+  for (const currentStatus of aliasedStatuses) {
+    let cursor = 0;
+    let total = 0;
+    let apiPageSize = resolvedPageSize;
+
+    do {
+      const response = await axios.get(
+        `${BASE_URL}/admin/orders?startIndex=${cursor}&status=${currentStatus}`,
+        {
+          headers: {
+            Authorization: jwt,
+          },
+        },
+      );
+
+      const result = response.data?.result ?? {};
+      const items = Array.isArray(result.items) ? result.items : [];
+      total = Number(result.total ?? 0);
+      apiPageSize = Number(result.pageSize ?? apiPageSize);
+      resolvedPageSize = apiPageSize;
+
+      for (const item of items) {
+        const itemId = String((item as { id?: unknown })?.id ?? "");
+        if (!itemId || byId.has(itemId)) continue;
+        byId.set(itemId, item);
+      }
+
+      cursor += apiPageSize;
+    } while (cursor < total);
+  }
+
+  const allItems = Array.from(byId.values());
+
+  return {
+    data: {
+      result: {
+        items: allItems.slice(startIndex, startIndex + resolvedPageSize),
+        total: allItems.length,
+        pageSize: resolvedPageSize,
+        startIndex,
       },
     },
-  );
-  return response;
+  };
 };
 
 export const getProviderPayouts = async (params: {

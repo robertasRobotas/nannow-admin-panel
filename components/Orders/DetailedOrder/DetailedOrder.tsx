@@ -6,7 +6,7 @@ import { nunito } from "@/helpers/fonts";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
 import ProfileHeading from "./ProfileHeading/ProfileHeading";
 import flashImg from "../../../assets/images/flash-gray.svg";
-import { options } from "@/data/orderStatusOptions";
+import { getOrderStatusTitle, normalizeOrderStatus } from "@/data/orderStatusOptions";
 import InfoCard from "./InfoCard/InfoCard";
 import locationPinImg from "../../../assets/images/location-gray.svg";
 import arriveImg from "../../../assets/images/arrival-gray.svg";
@@ -414,11 +414,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const hasProviderActivityNumber = Boolean(
     order?.approvedProvider?.activityNumber || order?.approvedProvider?.activityNo,
   );
-  const orderStatusUpper = String(order?.status ?? "").toUpperCase();
+  const orderStatusUpper = normalizeOrderStatus(order?.status);
   const isCanceledOrder = orderStatusUpper.includes("CANCELED");
-  const isCanceledByClient =
-    orderStatusUpper === "CANCELED_BY_CLIENT" ||
-    orderStatusUpper === "CLIENT_CANCELED";
+  const isCanceledByClient = orderStatusUpper === "CANCELED_BY_CLIENT";
   const isCanceledLate2h =
     isCanceledByClient && !!order?.isOrderCanceledLessThan2hBeforeStart;
   const isCanceledLate12h =
@@ -481,9 +479,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const isRefundDone = !!order?.refundedAt;
   const isCancelFeeDone = !!order?.isCancelFeePaidToProvider;
   const statusTitle =
-    problemStatus === "ORDER_CREATED" && order?.isDirectOrderToProvider
-      ? "ORDER_CREATED (DIRECT ORDER TO PROVIDER)"
-      : options.find((o) => o.value === problemStatus)?.title ?? "-";
+    getOrderStatusTitle(problemStatus, order?.isDirectOrderToProvider) || "-";
   const specialProcessImgUrl = isRejectedDirectOffer
     ? getUserImage(sitterUser?.user?.imgUrl)
     : getUserImage(parentUser?.imgUrl);

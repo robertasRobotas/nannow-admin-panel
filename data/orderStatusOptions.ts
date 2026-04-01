@@ -25,8 +25,6 @@ export const options = [
   },
   { title: "CANCELED_BY_CLIENT", value: "CANCELED_BY_CLIENT" },
   { title: "CANCELED_BY_PROVIDER", value: "CANCELED_BY_PROVIDER" },
-  { title: "CLIENT_CANCELED", value: "CLIENT_CANCELED" },
-  { title: "PROVIDER_CANCELED", value: "PROVIDER_CANCELED" },
   {
     title: "CANCELED_NOT_PAID_BY_CLIENT",
     value: "CANCELED_NOT_PAID_BY_CLIENT",
@@ -34,3 +32,33 @@ export const options = [
   { title: "Not started in time", value: "NOT_STARTED_IN_TIME" },
   { title: "Not Ended in time", value: "NOT_ENDED_IN_TIME" },
 ];
+
+export const normalizeOrderStatus = (status?: string | null) => {
+  const normalizedStatus = String(status ?? "").toUpperCase();
+
+  if (normalizedStatus === "CLIENT_CANCELED") {
+    return "CANCELED_BY_CLIENT";
+  }
+
+  if (normalizedStatus === "PROVIDER_CANCELED") {
+    return "CANCELED_BY_PROVIDER";
+  }
+
+  return normalizedStatus;
+};
+
+export const getOrderStatusTitle = (
+  status?: string | null,
+  isDirectOrderToProvider = false,
+) => {
+  const normalizedStatus = normalizeOrderStatus(status);
+
+  if (normalizedStatus === "ORDER_CREATED" && isDirectOrderToProvider) {
+    return "ORDER_CREATED (DIRECT ORDER TO PROVIDER)";
+  }
+
+  return (
+    options.find((option) => option.value === normalizedStatus)?.title ??
+    normalizedStatus
+  );
+};
