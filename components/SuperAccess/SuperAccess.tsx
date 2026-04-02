@@ -261,6 +261,49 @@ const prettyTitle = (raw: string) =>
     .replace(/_/g, " ")
     .replace(/^./, (char) => char.toUpperCase());
 
+const PROVIDER_PRIORITY_FIELDS = [
+  "baseProviderRate",
+  "finalPrice",
+  "providerPriceCalculationMethod",
+] as const;
+
+const orderDetailFields = (
+  entity: SuperAccessEntity | "alerts" | "connected-admins",
+  entries: [string, unknown][],
+) => {
+  if (entity !== "providers") {
+    return entries;
+  }
+
+  const indexedEntries = entries.map((entry, index) => ({ entry, index }));
+  const prioritized = PROVIDER_PRIORITY_FIELDS.map((fieldKey) =>
+    indexedEntries.find(({ entry }) => entry[0] === fieldKey),
+  ).filter(
+    (item): item is { entry: [string, unknown]; index: number } =>
+      item !== undefined,
+  );
+
+  if (prioritized.length === 0) {
+    return entries;
+  }
+
+  const prioritizedKeys = new Set(prioritized.map(({ entry }) => entry[0]));
+  const insertionIndex = Math.min(...prioritized.map(({ index }) => index));
+  const remaining = indexedEntries.filter(
+    ({ entry }) => !prioritizedKeys.has(entry[0]),
+  );
+
+  return [
+    ...remaining
+      .filter(({ index }) => index < insertionIndex)
+      .map(({ entry }) => entry),
+    ...prioritized.map(({ entry }) => entry),
+    ...remaining
+      .filter(({ index }) => index >= insertionIndex)
+      .map(({ entry }) => entry),
+  ];
+};
+
 const formatDateTimeShort = (value: unknown) => {
   if (typeof value !== "string" || !value) return "—";
   const date = parseDateString(value) ?? new Date(value);
@@ -1121,8 +1164,11 @@ const SuperAccess = () => {
 
   const fields = useMemo(
     () =>
-      Object.entries(draft).filter(([key]) => !["id", "_id"].includes(key)),
-    [draft],
+      orderDetailFields(
+        entity,
+        Object.entries(draft).filter(([key]) => !["id", "_id"].includes(key)),
+      ),
+    [draft, entity],
   );
 
   const handleFieldChange = (key: string, value: unknown) => {
@@ -2117,6 +2163,33 @@ const SuperAccess = () => {
                         ))}
                       </div>
                     </div>
+                  );
+                }
+
+                const hasProviderPriceCalculationMethodDropdown =
+                  entity === "providers" &&
+                  key === "providerPriceCalculationMethod" &&
+                  typeof value === "string";
+                if (hasProviderPriceCalculationMethodDropdown) {
+                  const allowedValues = ["DYNAMIC", "CUSTOM"];
+                  const optionValues = allowedValues.includes(value)
+                    ? allowedValues
+                    : [value, ...allowedValues];
+                  return (
+                    <label key={key} htmlFor={fieldId} className={styles.field}>
+                      <span>{prettyTitle(key)}</span>
+                      <select
+                        id={fieldId}
+                        value={value}
+                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                      >
+                        {optionValues.map((optionValue) => (
+                          <option key={optionValue} value={optionValue}>
+                            {optionValue}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   );
                 }
 

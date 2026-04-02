@@ -20,6 +20,8 @@ export type Client = {
 import { ChatType } from "./Chats";
 import { ReviewType } from "./Reviews";
 
+export type ProviderPriceCalculationMethod = "DYNAMIC" | "CUSTOM";
+
 export type User = {
   _id: string;
   id: string;
@@ -51,6 +53,7 @@ export type UserDetails = {
     isAvailableStatus?: boolean;
     baseProviderRate: number;
     finalPrice?: number;
+    providerPriceCalculationMethod?: ProviderPriceCalculationMethod;
     unavailablePeriods?: {
       endsAt: Date;
       startsAt: Date;

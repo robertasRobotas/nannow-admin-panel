@@ -147,6 +147,11 @@ export const getInfoCards = (
             ? `€ ${data.provider.finalPrice.toFixed(2)}`
             : "—",
       },
+      {
+        title: "Price calculation method",
+        icon: walletImg,
+        value: data?.provider?.providerPriceCalculationMethod ?? "—",
+      },
       ...(providerVideoUrl
         ? [
             {
