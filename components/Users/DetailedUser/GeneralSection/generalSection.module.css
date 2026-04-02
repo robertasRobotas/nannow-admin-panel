@@ -51,6 +51,12 @@
   letter-spacing: -0.32px;
 }
 
+.cardValueLink {
+  color: #000;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .suspendSwitch {
   display: flex;
   align-items: center;

@@ -18,6 +18,7 @@ export type InfoCard = {
   value: string | number;
   hideValue?: boolean;
   link?: string;
+  linkValueText?: string;
   linkButtonTitle?: string;
   actionButton?: {
     title: string;
@@ -159,6 +160,7 @@ export const getInfoCards = (
               icon: profileImg,
               value: providerVideoUrl,
               link: providerVideoUrl,
+              linkValueText: "Video link",
               linkButtonTitle: "Open video",
             } satisfies InfoCard,
           ]

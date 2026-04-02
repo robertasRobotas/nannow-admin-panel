@@ -215,10 +215,22 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             <img src={c.icon.src} alt="Icon" />
 
             <span className={styles.cardTitle}>{c.title}</span>
-            {!c.hideValue && (
+            {!c.hideValue && !c.linkValueText && (
               <span className={`${styles.cardValue} ${nunito.className}`}>
                 {c.value}
               </span>
+            )}
+            {!c.hideValue && c.link && c.linkValueText && (
+              <a
+                href={c.link}
+                target={c.link.startsWith("http") ? "_blank" : undefined}
+                rel={
+                  c.link.startsWith("http") ? "noopener noreferrer" : undefined
+                }
+                className={`${styles.cardValue} ${styles.cardValueLink} ${nunito.className}`}
+              >
+                {c.linkValueText}
+              </a>
             )}
             {c.booleanSwitch && (
               <button
