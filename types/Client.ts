@@ -54,6 +54,7 @@ export type UserDetails = {
     baseProviderRate: number;
     finalPrice?: number;
     providerPriceCalculationMethod?: ProviderPriceCalculationMethod;
+    isShownManageYourRate?: boolean;
     unavailablePeriods?: {
       endsAt: Date;
       startsAt: Date;

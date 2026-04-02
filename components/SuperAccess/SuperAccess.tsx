@@ -265,6 +265,7 @@ const PROVIDER_PRIORITY_FIELDS = [
   "baseProviderRate",
   "finalPrice",
   "providerPriceCalculationMethod",
+  "isShownManageYourRate",
 ] as const;
 
 const orderDetailFields = (
