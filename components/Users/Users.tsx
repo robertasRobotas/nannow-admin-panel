@@ -19,6 +19,7 @@ import {
   getPendingProviderSpecialSkillsCount,
   getProviderById,
   getTestUsers,
+  getUsersAppVersionStats,
   setUserBanStatus,
   syncTestUsersAcrossApis,
   updateTestUser,
@@ -152,6 +153,15 @@ const Users = () => {
     finishedClientOnboarding: 0,
     finishedProviderOnboarding: 0,
     finishedClientOrProviderOnboarding: 0,
+  });
+  const [appVersionStats, setAppVersionStats] = useState<{
+    items: { appVersion: string; count: number }[];
+    withoutAppVersionCount: number;
+    totalUsers: number;
+  }>({
+    items: [],
+    withoutAppVersionCount: 0,
+    totalUsers: 0,
   });
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
@@ -338,10 +348,16 @@ const Users = () => {
 
   const fetchOnboardingNotFinishedCount = useCallback(async () => {
     try {
-      const [clientResponse, providerResponse, statsResponse] = await Promise.all([
+      const [
+        clientResponse,
+        providerResponse,
+        statsResponse,
+        appVersionStatsResponse,
+      ] = await Promise.all([
         getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
         getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
         getOnboardingStats(),
+        getUsersAppVersionStats(),
       ]);
 
       const clientPayload = clientResponse.data as
@@ -372,10 +388,44 @@ const Users = () => {
         finishedClientOrProviderOnboarding:
           Number(statsResult.finishedClientOrProviderOnboarding ?? 0) || 0,
       });
+      const appVersionStatsResult =
+        appVersionStatsResponse.data?.result ?? appVersionStatsResponse.data ?? {};
+      const appVersionItems = Array.isArray(appVersionStatsResult.items)
+        ? appVersionStatsResult.items
+            .filter(
+              (
+                item: unknown,
+              ): item is {
+                appVersion: string;
+                count: number;
+              } =>
+                typeof item === "object" &&
+                item !== null &&
+                typeof (item as { appVersion?: unknown }).appVersion === "string",
+            )
+            .map((item: { appVersion: string; count: number }) => ({
+              appVersion: item.appVersion,
+              count: Number(item.count ?? 0) || 0,
+            }))
+        : [];
+      setAppVersionStats({
+        items: appVersionItems,
+        withoutAppVersionCount:
+          Number(appVersionStatsResult.withoutAppVersionCount ?? 0) || 0,
+        totalUsers: Number(appVersionStatsResult.totalUsers ?? 0) || 0,
+      });
     } catch (err) {
       console.log(err);
     }
   }, []);
+
+  const appVersionStatsLine = [
+    ...appVersionStats.items.map(
+      (item) => `${item.appVersion}: ${item.count}`,
+    ),
+    `No app version: ${appVersionStats.withoutAppVersionCount}`,
+    `Total: ${appVersionStats.totalUsers}`,
+  ].join(" · ");
 
   const fetchPendingProviderSpecialSkills = useCallback(async () => {
     try {
@@ -977,13 +1027,19 @@ const Users = () => {
           </div>
         </div>
         <div className={styles.headingCenter}>
-          <div className={styles.statLine}>
-            <span>{`Users: ${onboardingStats.totalUsers}`}</span>
-            <span>{`Client done: ${onboardingStats.finishedClientOnboarding}`}</span>
-            <span>{`Provider done: ${onboardingStats.finishedProviderOnboarding}`}</span>
-            <span>
-              {`Client or provider done: ${onboardingStats.finishedClientOrProviderOnboarding}`}
-            </span>
+          <div className={styles.statsBlock}>
+            <div className={styles.statLine}>
+              <span>{`Users: ${onboardingStats.totalUsers}`}</span>
+              <span>{`Client done: ${onboardingStats.finishedClientOnboarding}`}</span>
+              <span>{`Provider done: ${onboardingStats.finishedProviderOnboarding}`}</span>
+              <span>
+                {`Client or provider done: ${onboardingStats.finishedClientOrProviderOnboarding}`}
+              </span>
+            </div>
+            <div className={styles.appVersionStatLine}>
+              <span className={styles.appVersionStatTitle}>App version:</span>{" "}
+              {appVersionStatsLine}
+            </div>
           </div>
         </div>
       </div>

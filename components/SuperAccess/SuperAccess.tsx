@@ -268,16 +268,25 @@ const PROVIDER_PRIORITY_FIELDS = [
   "isShownManageYourRate",
 ] as const;
 
+const USER_PRIORITY_FIELDS = ["pushToken", "appVersion"] as const;
+
 const orderDetailFields = (
   entity: SuperAccessEntity | "alerts" | "connected-admins",
   entries: [string, unknown][],
 ) => {
-  if (entity !== "providers") {
+  const priorityFields =
+    entity === "providers"
+      ? PROVIDER_PRIORITY_FIELDS
+      : entity === "users"
+        ? USER_PRIORITY_FIELDS
+        : null;
+
+  if (!priorityFields) {
     return entries;
   }
 
   const indexedEntries = entries.map((entry, index) => ({ entry, index }));
-  const prioritized = PROVIDER_PRIORITY_FIELDS.map((fieldKey) =>
+  const prioritized = priorityFields.map((fieldKey) =>
     indexedEntries.find(({ entry }) => entry[0] === fieldKey),
   ).filter(
     (item): item is { entry: [string, unknown]; index: number } =>

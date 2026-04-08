@@ -92,6 +92,11 @@ export const getInfoCards = (
       value: data?.user?.pushToken ?? "—",
     },
     {
+      title: "App version",
+      icon: loginTypeImg,
+      value: data?.user?.appVersion ?? "—",
+    },
+    {
       title: "Profile suspension",
       icon: isSuspended ? suspendedRedImg : suspendedGreenImg,
       value: isSuspended ? "Suspended" : "Not suspended",
