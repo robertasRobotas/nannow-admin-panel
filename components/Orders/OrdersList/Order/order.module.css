@@ -10,8 +10,24 @@
   transition: background-color 0.3s ease;
 }
 
+.recentlyChanged {
+  animation: recentlyChangedOrderHighlight 8s ease forwards;
+}
+
 .main:hover {
   background-color: rgba(0, 0, 0, 0.05);
+}
+
+@keyframes recentlyChangedOrderHighlight {
+  0% {
+    background-color: rgba(255, 224, 102, 0.75);
+  }
+  35% {
+    background-color: rgba(255, 224, 102, 0.5);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 .orderUsers {

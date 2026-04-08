@@ -5,9 +5,10 @@ import Order from "./Order/Order";
 
 type OrdersListProps = {
   orders: OrderType[];
+  recentlyChangedOrderIds?: Record<string, true>;
 };
 
-const OrdersList = ({ orders }: OrdersListProps) => {
+const OrdersList = ({ orders, recentlyChangedOrderIds = {} }: OrdersListProps) => {
   const getUserImage = (imgUrl?: string) =>
     imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
 
@@ -55,6 +56,7 @@ const OrdersList = ({ orders }: OrdersListProps) => {
               u.isProviderIgnoredEndNotification
             }
             pendingProvidersCount={u.pendingProvidersCount}
+            isRecentlyChanged={!!recentlyChangedOrderIds[u.id]}
           />
         );
       })}

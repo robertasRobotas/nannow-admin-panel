@@ -15,6 +15,7 @@ type OrderProps = {
   endsAt: string;
   isProviderIgnoredEndNotification?: boolean;
   pendingProvidersCount?: number;
+  isRecentlyChanged?: boolean;
 };
 
 const Order = ({
@@ -29,6 +30,7 @@ const Order = ({
   endsAt,
   isProviderIgnoredEndNotification,
   pendingProvidersCount,
+  isRecentlyChanged = false,
 }: OrderProps) => {
   const router = useRouter();
   const statusTitle = getOrderStatusTitle(status, isDirectOrderToProvider);
@@ -48,7 +50,9 @@ const Order = ({
       onClick={() => {
         router.push(`/orders/${id}`);
       }}
-      className={styles.main}
+      className={`${styles.main} ${
+        isRecentlyChanged ? styles.recentlyChanged : ""
+      }`}
     >
       <div className={styles.orderUsers}>
         <div className={styles.profilePics}>

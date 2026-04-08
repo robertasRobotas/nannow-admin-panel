@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./orders.module.css";
 import { nunito } from "@/helpers/fonts";
 import {
@@ -19,6 +19,7 @@ import OrdersList from "./OrdersList/OrdersList";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import { OrderType } from "@/types/Order";
 import Button from "../Button/Button";
+import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 
 const orderFilterOptions = [
   { title: "All", value: "" },
@@ -82,7 +83,12 @@ const Orders = () => {
   const [itemsPerPage, setItemsPerPage] = useState<number>(0);
   const [pageCount, setPageCount] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [recentlyChangedOrderIds, setRecentlyChangedOrderIds] = useState<
+    Record<string, true>
+  >({});
+  const recentlyChangedTimeoutsRef = useRef<Record<string, number>>({});
   const router = useRouter();
+  const { lastEvent } = useAdminSocket();
 
   const fetchOrders = useCallback(
     async (status: string, startIndex: number) => {
@@ -277,7 +283,7 @@ const Orders = () => {
     }
   }, [router]);
 
-  useEffect(() => {
+  const refetchCurrentOrders = useCallback(() => {
     if (activeFilter === "NOT_ENDED") {
       fetchOrders("NOT_ENDED_IN_TIME", itemOffset);
       return;
@@ -313,11 +319,33 @@ const Orders = () => {
     selectedOption,
     itemOffset,
     fetchOrders,
-    fetchCreatedOrdersByBookingType,
     fetchNotPaidOrders,
     fetchCanceledNotPaidOrders,
     fetchClosedOrders,
+    fetchCreatedOrdersByBookingType,
   ]);
+
+  const markOrderAsRecentlyChanged = useCallback((orderId: string) => {
+    setRecentlyChangedOrderIds((prev) => ({ ...prev, [orderId]: true }));
+
+    const existingTimeout = recentlyChangedTimeoutsRef.current[orderId];
+    if (existingTimeout) {
+      window.clearTimeout(existingTimeout);
+    }
+
+    recentlyChangedTimeoutsRef.current[orderId] = window.setTimeout(() => {
+      setRecentlyChangedOrderIds((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      delete recentlyChangedTimeoutsRef.current[orderId];
+    }, 8000);
+  }, []);
+
+  useEffect(() => {
+    refetchCurrentOrders();
+  }, [refetchCurrentOrders]);
 
   useEffect(() => {
     fetchNotEndedOrdersCount();
@@ -328,6 +356,40 @@ const Orders = () => {
   useEffect(() => {
     fetchCanceledNotPaidOrdersCount();
   }, [fetchCanceledNotPaidOrdersCount]);
+
+  useEffect(() => {
+    if (!lastEvent) return;
+
+    if (
+      lastEvent.type !== "ORDER_CREATED" &&
+      lastEvent.type !== "ORDER_CONFIRMED" &&
+      lastEvent.type !== "ORDER_CANCELED"
+    ) {
+      return;
+    }
+
+    markOrderAsRecentlyChanged(lastEvent.orderId);
+    refetchCurrentOrders();
+    fetchNotEndedOrdersCount();
+    fetchNotPaidOrdersCount();
+    fetchCanceledNotPaidOrdersCount();
+  }, [
+    lastEvent,
+    markOrderAsRecentlyChanged,
+    refetchCurrentOrders,
+    fetchNotEndedOrdersCount,
+    fetchNotPaidOrdersCount,
+    fetchCanceledNotPaidOrdersCount,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(recentlyChangedTimeoutsRef.current).forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      recentlyChangedTimeoutsRef.current = {};
+    };
+  }, []);
 
   const handlePageClick = (event: { selected: number }) => {
     const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
@@ -426,7 +488,10 @@ const Orders = () => {
         </div>
       </div>
       <div className={styles.ordersWrapper}>
-        <OrdersList orders={displayedOrders} />
+        <OrdersList
+          orders={displayedOrders}
+          recentlyChangedOrderIds={recentlyChangedOrderIds}
+        />
       </div>
       <ReactPaginate
         breakLabel="..."
