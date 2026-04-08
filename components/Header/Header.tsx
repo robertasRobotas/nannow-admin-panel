@@ -79,7 +79,6 @@ const Header = () => {
       apiMode === "test" ? "production" : "test";
     setAdminApiMode(nextMode);
     setApiMode(nextMode);
-    disconnectAdminSocket();
     router.reload();
   };
 

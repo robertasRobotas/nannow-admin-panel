@@ -18,6 +18,7 @@ import {
   AdminSocketListener,
 } from "@/types/AdminSocket";
 import { Socket } from "socket.io-client";
+import { ADMIN_API_MODE_CHANGED_EVENT } from "@/pages/api/fetch";
 
 type AdminSocketContextValue = {
   isConnected: boolean;
@@ -366,6 +367,7 @@ export const AdminSocketProvider = ({
   const recentEventsRef = useRef(new Map<string, number>());
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<AdminSocketEvent | null>(null);
+  const [socketConnectionKey, setSocketConnectionKey] = useState(0);
   const subscribe = (listener: AdminSocketListener) => {
     listenersRef.current.add(listener);
     return () => {
@@ -398,6 +400,29 @@ export const AdminSocketProvider = ({
         return `${event.type}:${event.reportId}:${event.userId}`;
     }
   };
+
+  useEffect(() => {
+    const handleApiModeChanged = () => {
+      recentEventsRef.current.clear();
+      setLastEvent(null);
+      setIsConnected(false);
+      socketRef.current = null;
+      disconnectAdminSocket();
+      setSocketConnectionKey((prev) => prev + 1);
+    };
+
+    window.addEventListener(
+      ADMIN_API_MODE_CHANGED_EVENT,
+      handleApiModeChanged as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        ADMIN_API_MODE_CHANGED_EVENT,
+        handleApiModeChanged as EventListener,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -505,7 +530,7 @@ export const AdminSocketProvider = ({
       socket.off("connect_error", handleConnectError);
       socket.off("ADMIN_EVENT", handleAdminEvent);
     };
-  }, [router.isReady]);
+  }, [router.isReady, socketConnectionKey]);
 
   return (
     <AdminSocketContext.Provider

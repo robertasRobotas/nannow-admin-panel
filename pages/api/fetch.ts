@@ -5,21 +5,27 @@ import Cookies from "js-cookie";
 export type AdminApiMode = "production" | "test";
 
 const ADMIN_API_MODE_STORAGE_KEY = "admin_api_mode";
+export const ADMIN_API_MODE_CHANGED_EVENT = "admin-api-mode-changed";
 
 const API_CONFIG = {
   production: {
-    baseUrl: "https://nannow-api.com/v1",
+    origin: "https://nannow-api.com",
+    apiVersion: "/v1",
     wsTransports: ["websocket"] as const,
   },
   test: {
-    baseUrl: "https://nannow-api-test.com/v1",
+    origin: "https://nannow-api-test.com",
+    apiVersion: "/v1",
     wsTransports: ["websocket"] as const,
   },
 } as const;
 
+const buildApiBaseUrl = (mode: AdminApiMode) =>
+  `${API_CONFIG[mode].origin}${API_CONFIG[mode].apiVersion}`;
+
 const ALL_ADMIN_API_BASE_URLS = [
-  API_CONFIG.production.baseUrl,
-  API_CONFIG.test.baseUrl,
+  buildApiBaseUrl("production"),
+  buildApiBaseUrl("test"),
 ] as const;
 
 type MirroredWriteResult<T = unknown> = {
@@ -35,11 +41,15 @@ const getStoredAdminApiMode = (): AdminApiMode => {
 
 let currentAdminApiMode: AdminApiMode = getStoredAdminApiMode();
 
-export let BASE_URL = API_CONFIG[currentAdminApiMode].baseUrl;
+export let BASE_URL = buildApiBaseUrl(currentAdminApiMode);
 // export const BASE_URL = "http://192.168.1.192:8080/v1";
 // const BASE_URL = "http://localhost:8080";
 
 export const getAdminApiMode = () => currentAdminApiMode;
+
+export const getAdminApiBaseUrl = () => buildApiBaseUrl(currentAdminApiMode);
+
+export const getAdminWsBaseUrl = () => API_CONFIG[currentAdminApiMode].origin;
 
 export const getAdminWsTransports = () => [
   ...API_CONFIG[currentAdminApiMode].wsTransports,
@@ -47,10 +57,15 @@ export const getAdminWsTransports = () => [
 
 export const setAdminApiMode = (mode: AdminApiMode) => {
   currentAdminApiMode = mode;
-  BASE_URL = API_CONFIG[mode].baseUrl;
+  BASE_URL = buildApiBaseUrl(mode);
 
   if (typeof window !== "undefined") {
     window.localStorage.setItem(ADMIN_API_MODE_STORAGE_KEY, mode);
+    window.dispatchEvent(
+      new CustomEvent(ADMIN_API_MODE_CHANGED_EVENT, {
+        detail: { mode },
+      }),
+    );
   }
 };
 
