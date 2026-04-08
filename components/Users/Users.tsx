@@ -353,67 +353,85 @@ const Users = () => {
         providerResponse,
         statsResponse,
         appVersionStatsResponse,
-      ] = await Promise.all([
+      ] = await Promise.allSettled([
         getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
         getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
         getOnboardingStats(),
         getUsersAppVersionStats(),
       ]);
 
-      const clientPayload = clientResponse.data as
-        | GetOnboardingNotFinishedUsersResponse
-        | { result?: GetOnboardingNotFinishedUsersResponse };
-      const clientResult =
-        (
-          clientPayload as { result?: GetOnboardingNotFinishedUsersResponse }
-        ).result ?? (clientPayload as GetOnboardingNotFinishedUsersResponse);
+      if (clientResponse.status === "fulfilled") {
+        const clientPayload = clientResponse.value.data as
+          | GetOnboardingNotFinishedUsersResponse
+          | { result?: GetOnboardingNotFinishedUsersResponse };
+        const clientResult =
+          (
+            clientPayload as { result?: GetOnboardingNotFinishedUsersResponse }
+          ).result ?? (clientPayload as GetOnboardingNotFinishedUsersResponse);
+        setClientOnboardingCount(Number(clientResult.total ?? 0));
+      }
 
-      const providerPayload = providerResponse.data as
-        | GetOnboardingNotFinishedUsersResponse
-        | { result?: GetOnboardingNotFinishedUsersResponse };
-      const providerResult =
-        (
-          providerPayload as { result?: GetOnboardingNotFinishedUsersResponse }
-        ).result ?? (providerPayload as GetOnboardingNotFinishedUsersResponse);
+      if (providerResponse.status === "fulfilled") {
+        const providerPayload = providerResponse.value.data as
+          | GetOnboardingNotFinishedUsersResponse
+          | { result?: GetOnboardingNotFinishedUsersResponse };
+        const providerResult =
+          (
+            providerPayload as { result?: GetOnboardingNotFinishedUsersResponse }
+          ).result ?? (providerPayload as GetOnboardingNotFinishedUsersResponse);
+        setProviderOnboardingCount(Number(providerResult.total ?? 0));
+      }
 
-      setClientOnboardingCount(Number(clientResult.total ?? 0));
-      setProviderOnboardingCount(Number(providerResult.total ?? 0));
-      const statsResult = statsResponse.data?.result ?? statsResponse.data ?? {};
-      setOnboardingStats({
-        totalUsers: Number(statsResult.totalUsers ?? 0) || 0,
-        finishedClientOnboarding:
-          Number(statsResult.finishedClientOnboarding ?? 0) || 0,
-        finishedProviderOnboarding:
-          Number(statsResult.finishedProviderOnboarding ?? 0) || 0,
-        finishedClientOrProviderOnboarding:
-          Number(statsResult.finishedClientOrProviderOnboarding ?? 0) || 0,
-      });
-      const appVersionStatsResult =
-        appVersionStatsResponse.data?.result ?? appVersionStatsResponse.data ?? {};
-      const appVersionItems = Array.isArray(appVersionStatsResult.items)
-        ? appVersionStatsResult.items
-            .filter(
-              (
-                item: unknown,
-              ): item is {
-                appVersion: string;
-                count: number;
-              } =>
-                typeof item === "object" &&
-                item !== null &&
-                typeof (item as { appVersion?: unknown }).appVersion === "string",
-            )
-            .map((item: { appVersion: string; count: number }) => ({
-              appVersion: item.appVersion,
-              count: Number(item.count ?? 0) || 0,
-            }))
-        : [];
-      setAppVersionStats({
-        items: appVersionItems,
-        withoutAppVersionCount:
-          Number(appVersionStatsResult.withoutAppVersionCount ?? 0) || 0,
-        totalUsers: Number(appVersionStatsResult.totalUsers ?? 0) || 0,
-      });
+      if (statsResponse.status === "fulfilled") {
+        const statsResult =
+          statsResponse.value.data?.result ?? statsResponse.value.data ?? {};
+        setOnboardingStats({
+          totalUsers: Number(statsResult.totalUsers ?? 0) || 0,
+          finishedClientOnboarding:
+            Number(statsResult.finishedClientOnboarding ?? 0) || 0,
+          finishedProviderOnboarding:
+            Number(statsResult.finishedProviderOnboarding ?? 0) || 0,
+          finishedClientOrProviderOnboarding:
+            Number(statsResult.finishedClientOrProviderOnboarding ?? 0) || 0,
+        });
+      }
+
+      if (appVersionStatsResponse.status === "fulfilled") {
+        const appVersionStatsResult =
+          appVersionStatsResponse.value.data?.result ??
+          appVersionStatsResponse.value.data ??
+          {};
+        const appVersionItems = Array.isArray(appVersionStatsResult.items)
+          ? appVersionStatsResult.items
+              .filter(
+                (
+                  item: unknown,
+                ): item is {
+                  appVersion: string;
+                  count: number;
+                } =>
+                  typeof item === "object" &&
+                  item !== null &&
+                  typeof (item as { appVersion?: unknown }).appVersion === "string",
+              )
+              .map((item: { appVersion: string; count: number }) => ({
+                appVersion: item.appVersion,
+                count: Number(item.count ?? 0) || 0,
+              }))
+          : [];
+        setAppVersionStats({
+          items: appVersionItems,
+          withoutAppVersionCount:
+            Number(appVersionStatsResult.withoutAppVersionCount ?? 0) || 0,
+          totalUsers: Number(appVersionStatsResult.totalUsers ?? 0) || 0,
+        });
+      } else {
+        setAppVersionStats({
+          items: [],
+          withoutAppVersionCount: 0,
+          totalUsers: 0,
+        });
+      }
     } catch (err) {
       console.log(err);
     }
