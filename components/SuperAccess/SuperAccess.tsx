@@ -9,12 +9,16 @@ import calendarImg from "../../assets/images/calendar.svg";
 import {
   AdminRole,
   createAdminUser,
+  deleteFinancialLedgerOrders,
   getConnectedAdmins,
   postAdminMessage,
   regenerateAddressPublicLocation,
   regenerateAllAddressesPublicLocation,
+  rebuildAllFinancialLedgerOrders,
+  rebuildFinancialLedgerForOrder,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
+  getFinancialOrders,
   getSuperAccessItem,
   getSuperAccessList,
   updateSuperAccessItem,
@@ -22,6 +26,7 @@ import {
 import { options as orderStatusOptions } from "@/data/orderStatusOptions";
 import { useRouter } from "next/router";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
+import type { FinancialOrderRow, GetFinancialOrdersResponse } from "@/types/FinancialOrder";
 
 type EntityRecord = {
   [key: string]: unknown;
@@ -38,9 +43,15 @@ type EntityRecord = {
   user?: EntityRecord;
 };
 
+type SuperAccessViewEntity =
+  | SuperAccessEntity
+  | "alerts"
+  | "connected-admins"
+  | "financial-ledger";
+
 type SuperMenuItem = {
   title: string;
-  key: SuperAccessEntity | "alerts" | "connected-admins";
+  key: SuperAccessViewEntity;
 };
 
 const MENU_ITEMS: SuperMenuItem[] = [
@@ -51,6 +62,7 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Children", key: "children" },
   { title: "Addresses", key: "addresses" },
   { title: "Orders", key: "orders" },
+  { title: "Financial ledger", key: "financial-ledger" },
   { title: "WS connected Admins", key: "connected-admins" },
 ];
 
@@ -146,6 +158,24 @@ const parseItemResponse = (data: unknown): EntityRecord | null => {
   return null;
 };
 
+const parseFinancialOrdersResponse = (data: unknown) => {
+  const fallback = {
+    items: [] as FinancialOrderRow[],
+    total: 0,
+    pageSize: 20,
+  };
+  if (!data || typeof data !== "object") return fallback;
+
+  const result =
+    (data as { result?: GetFinancialOrdersResponse }).result ??
+    (data as GetFinancialOrdersResponse);
+  return {
+    items: Array.isArray(result.items) ? result.items : [],
+    total: Number(result.total ?? 0) || 0,
+    pageSize: Number(result.pageSize ?? 20) || 20,
+  };
+};
+
 const pickId = (item: EntityRecord): string =>
   String(
     item.id ??
@@ -159,6 +189,19 @@ const pickId = (item: EntityRecord): string =>
 
 const pickLinkedUserId = (item: EntityRecord): string =>
   String(item.userId ?? item.id ?? item._id ?? "");
+
+const isSuperAccessEntity = (
+  value: SuperAccessViewEntity,
+): value is SuperAccessEntity =>
+  [
+    "admins",
+    "users",
+    "clients",
+    "children",
+    "providers",
+    "addresses",
+    "orders",
+  ].includes(value);
 
 const isIsoDate = (value: string) =>
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value);
@@ -271,7 +314,7 @@ const PROVIDER_PRIORITY_FIELDS = [
 const USER_PRIORITY_FIELDS = ["pushToken", "appVersion"] as const;
 
 const orderDetailFields = (
-  entity: SuperAccessEntity | "alerts" | "connected-admins",
+  entity: SuperAccessViewEntity,
   entries: [string, unknown][],
 ) => {
   const priorityFields =
@@ -411,6 +454,9 @@ const pickFirstString = (...values: unknown[]) => {
   return "";
 };
 
+const getUserName = (firstName?: unknown, lastName?: unknown) =>
+  `${String(firstName ?? "Deleted")} ${String(lastName ?? "User")}`.trim();
+
 const withOrderFinancialFields = (item: EntityRecord): EntityRecord => ({
   ...item,
   isOrderCanceledLessThan12hBeforeStart:
@@ -429,9 +475,7 @@ const withOrderFinancialFields = (item: EntityRecord): EntityRecord => ({
 const SuperAccess = () => {
   const router = useRouter();
   const { lastEvent } = useAdminSocket();
-  const [entity, setEntity] = useState<
-    SuperAccessEntity | "alerts" | "connected-admins"
-  >("users");
+  const [entity, setEntity] = useState<SuperAccessViewEntity>("users");
   const [isCompactListView, setIsCompactListView] = useState(false);
   const [list, setList] = useState<EntityRecord[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -448,6 +492,12 @@ const SuperAccess = () => {
     useState(false);
   const [isRegenerateAddressModalOpen, setIsRegenerateAddressModalOpen] =
     useState(false);
+  const [isFinancialLedgerDeleteModalOpen, setIsFinancialLedgerDeleteModalOpen] =
+    useState(false);
+  const [isFinancialLedgerRebuildAllModalOpen, setIsFinancialLedgerRebuildAllModalOpen] =
+    useState(false);
+  const [isOrderFinancialRebuildModalOpen, setIsOrderFinancialRebuildModalOpen] =
+    useState(false);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
     "ONE",
   );
@@ -463,6 +513,7 @@ const SuperAccess = () => {
   const [appliedSearch, setAppliedSearch] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [removeAdminPassword, setRemoveAdminPassword] = useState(false);
+  const [notice, setNotice] = useState("");
   const [newAdminFirstName, setNewAdminFirstName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
@@ -475,6 +526,8 @@ const SuperAccess = () => {
   const [clientsById, setClientsById] = useState<Record<string, EntityRecord>>({});
   const [providersById, setProvidersById] = useState<Record<string, EntityRecord>>({});
   const [ordersById, setOrdersById] = useState<Record<string, EntityRecord>>({});
+  const [selectedFinancialLedgerOrderIds, setSelectedFinancialLedgerOrderIds] =
+    useState<string[]>([]);
 
   const handleItemCardKeyDown = (
     event: KeyboardEvent<HTMLDivElement>,
@@ -499,6 +552,42 @@ const SuperAccess = () => {
     if (entity === "alerts") {
       setList([]);
       setTotal(0);
+      return;
+    }
+    if (entity === "financial-ledger") {
+      try {
+        setLoadingList(true);
+        setError("");
+        const currentYear = new Date().getFullYear();
+        const response = await getFinancialOrders({
+          startIndex,
+          pageSize,
+          search: appliedSearch.trim() || undefined,
+          startDate: new Date(2020, 0, 1).toISOString(),
+          endDate: new Date(currentYear + 1, 0, 1).toISOString(),
+          sort: "paidAt_desc",
+        });
+        const parsed = parseFinancialOrdersResponse(response.data);
+        setList(parsed.items as unknown as EntityRecord[]);
+        setTotal(parsed.total);
+        setPageSize(parsed.pageSize);
+        setSelectedFinancialLedgerOrderIds((prev) =>
+          prev.filter((id) =>
+            parsed.items.some((item: FinancialOrderRow) => item.id === id),
+          ),
+        );
+        if (parsed.items.length > 0 && !selectedId) {
+          setSelectedId(parsed.items[0].id);
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          router.push("/");
+          return;
+        }
+        setError("Failed to load financial ledger.");
+      } finally {
+        setLoadingList(false);
+      }
       return;
     }
     if (entity === "connected-admins") {
@@ -527,6 +616,7 @@ const SuperAccess = () => {
       }
       return;
     }
+    if (!isSuperAccessEntity(entity)) return;
     try {
       setLoadingList(true);
       setError("");
@@ -559,6 +649,12 @@ const SuperAccess = () => {
       setDraft({});
       return;
     }
+    if (entity === "financial-ledger") {
+      const listItem = list.find((item) => pickId(item) === selectedId) ?? null;
+      setSelectedItem(listItem);
+      setDraft(listItem ?? {});
+      return;
+    }
     if (entity === "connected-admins") {
       const listItem =
         list.find(
@@ -578,6 +674,7 @@ const SuperAccess = () => {
       setRemoveAdminPassword(false);
       return;
     }
+    if (!isSuperAccessEntity(entity)) return;
     try {
       setLoadingItem(true);
       setError("");
@@ -1185,6 +1282,14 @@ const SuperAccess = () => {
     setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
+  const toggleFinancialLedgerOrderSelection = (orderId: string) => {
+    setSelectedFinancialLedgerOrderIds((prev) =>
+      prev.includes(orderId)
+        ? prev.filter((id) => id !== orderId)
+        : [...prev, orderId],
+    );
+  };
+
   const invalidateEntityCaches = (targetEntity: SuperAccessEntity) => {
     if (targetEntity === "orders") {
       setOrdersById({});
@@ -1249,9 +1354,12 @@ const SuperAccess = () => {
         }
         await updateSuperAccessItem(entity, selectedId, payload);
       } else {
+        if (!isSuperAccessEntity(entity)) return;
         await updateSuperAccessItem(entity, selectedId, draft);
       }
-      invalidateEntityCaches(entity);
+      if (isSuperAccessEntity(entity)) {
+        invalidateEntityCaches(entity);
+      }
       await fetchItem();
       await fetchList();
     } catch (err) {
@@ -1265,6 +1373,100 @@ const SuperAccess = () => {
       setError("Failed to update item.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRebuildAllFinancialLedger = async () => {
+    try {
+      setIsSaving(true);
+      setError("");
+      setNotice("");
+      const response = await rebuildAllFinancialLedgerOrders();
+      const result = response.data?.result ?? response.data ?? {};
+      setNotice(
+        `Rebuilt ${Number(result.rebuiltCount ?? 0)} orders. Failed: ${Number(
+          result.failedCount ?? 0,
+        )}. Missing: ${Number(result.missingOrderCount ?? 0)}.`,
+      );
+      await fetchList();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to rebuild financial ledger.",
+        );
+        return;
+      }
+      setError("Failed to rebuild financial ledger.");
+    } finally {
+      setIsSaving(false);
+      setIsFinancialLedgerRebuildAllModalOpen(false);
+    }
+  };
+
+  const handleDeleteSelectedFinancialLedgerOrders = async () => {
+    if (selectedFinancialLedgerOrderIds.length === 0) return;
+    try {
+      setIsSaving(true);
+      setError("");
+      setNotice("");
+      await deleteFinancialLedgerOrders(selectedFinancialLedgerOrderIds);
+      setNotice(
+        `Deleted financial ledger data for ${selectedFinancialLedgerOrderIds.length} orders.`,
+      );
+      setSelectedFinancialLedgerOrderIds([]);
+      if (selectedFinancialLedgerOrderIds.includes(selectedId)) {
+        setSelectedId("");
+        setSelectedItem(null);
+        setDraft({});
+      }
+      await fetchList();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to delete financial ledger rows.",
+        );
+        return;
+      }
+      setError("Failed to delete financial ledger rows.");
+    } finally {
+      setIsSaving(false);
+      setIsFinancialLedgerDeleteModalOpen(false);
+    }
+  };
+
+  const handleRebuildSingleOrderFinancialLedger = async (orderId: string) => {
+    try {
+      setIsSaving(true);
+      setError("");
+      setNotice("");
+      const response = await rebuildFinancialLedgerForOrder(orderId);
+      const result = response.data?.result ?? response.data ?? {};
+      setNotice(
+        result.rebuilt
+          ? "Financial ledger rebuilt for this order."
+          : "Financial ledger already existed for this order.",
+      );
+      if (entity === "orders") {
+        invalidateEntityCaches("orders");
+        await fetchItem();
+        return;
+      }
+      await fetchList();
+      await fetchItem();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to rebuild financial ledger for this order.",
+        );
+        return;
+      }
+      setError("Failed to rebuild financial ledger for this order.");
+    } finally {
+      setIsSaving(false);
+      setIsOrderFinancialRebuildModalOpen(false);
     }
   };
 
@@ -1530,6 +1732,7 @@ const SuperAccess = () => {
   return (
     <div className={styles.main}>
       {error && <p className={styles.error}>{error}</p>}
+      {notice && <p className={styles.notice}>{notice}</p>}
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           {MENU_ITEMS.map((menuItem) => (
@@ -1544,11 +1747,14 @@ const SuperAccess = () => {
                 setSelectedId("");
                 setSelectedItem(null);
                 setDraft({});
+                setNotice("");
                 setLinkedUsersById({});
                 setChildrenById({});
                 setClientsById({});
                 setProvidersById({});
                 setOrdersById({});
+                setSelectedFinancialLedgerOrderIds([]);
+                setIsCompactListView(menuItem.key === "financial-ledger");
                 setStartIndex(0);
                 setSearchText("");
                 setAppliedSearch("");
@@ -1565,6 +1771,8 @@ const SuperAccess = () => {
               <h2>
                 {entity === "alerts"
                   ? "Admin messages"
+                  : entity === "financial-ledger"
+                    ? "Financial ledger"
                   : entity === "connected-admins"
                     ? "WS connected Admins"
                     : prettyTitle(entity)}
@@ -1572,6 +1780,8 @@ const SuperAccess = () => {
               <span>
                 {entity === "alerts"
                   ? "Send a message to all admins."
+                  : entity === "financial-ledger"
+                    ? `${total} ledger orders, page ${currentPage}/${totalPages}`
                   : entity === "connected-admins"
                     ? `${total} admins connected right now.`
                   : `${total} total, page ${currentPage}/${totalPages}`}
@@ -1579,19 +1789,21 @@ const SuperAccess = () => {
             </div>
             {entity !== "alerts" && entity !== "connected-admins" && (
               <div className={styles.listHeaderActions}>
-                <button
-                  type="button"
-                  className={styles.listViewSwitchButton}
-                  onClick={() => setIsCompactListView((prev) => !prev)}
-                >
-                  <span className={styles.listViewSwitchLabel}>Show compact</span>
-                  <span
-                    className={`${styles.listViewSwitchUi} ${
-                      isCompactListView ? styles.listViewSwitchUiActive : ""
-                    }`}
-                  />
-                </button>
-                {isCompactListView && (
+                {entity !== "financial-ledger" && (
+                  <button
+                    type="button"
+                    className={styles.listViewSwitchButton}
+                    onClick={() => setIsCompactListView((prev) => !prev)}
+                  >
+                    <span className={styles.listViewSwitchLabel}>Show compact</span>
+                    <span
+                      className={`${styles.listViewSwitchUi} ${
+                        isCompactListView ? styles.listViewSwitchUiActive : ""
+                      }`}
+                    />
+                  </button>
+                )}
+                {(isCompactListView || entity === "financial-ledger") && (
                   <DropDownButton
                     options={PAGE_SIZE_OPTIONS.map((option) => ({
                       title: option.title,
@@ -1611,6 +1823,24 @@ const SuperAccess = () => {
                       setPageSize(Number(option.value));
                     }}
                   />
+                )}
+                {entity === "financial-ledger" && (
+                  <>
+                    <Button
+                      title={isSaving ? "Rebuilding..." : "Rebuild all"}
+                      type="OUTLINED"
+                      onClick={() => setIsFinancialLedgerRebuildAllModalOpen(true)}
+                      isDisabled={isSaving}
+                    />
+                    <Button
+                      title={`Delete selected (${selectedFinancialLedgerOrderIds.length})`}
+                      type="DELETE"
+                      onClick={() => setIsFinancialLedgerDeleteModalOpen(true)}
+                      isDisabled={
+                        selectedFinancialLedgerOrderIds.length === 0 || isSaving
+                      }
+                    />
+                  </>
                 )}
                 {entity === "addresses" && (
                   <Button
@@ -1682,6 +1912,8 @@ const SuperAccess = () => {
               <div
                 className={`${styles.itemsGrid} ${
                   entity === "orders" ? styles.itemsGridOrders : ""
+                } ${entity === "financial-ledger" ? styles.itemsGridFinancialLedger : ""} ${
+                  entity === "financial-ledger" ? styles.itemsGridCompact : ""
                 } ${isCompactListView ? styles.itemsGridCompact : ""} ${
                   isCompactListView && entity === "orders"
                     ? styles.itemsGridOrdersCompact
@@ -1827,18 +2059,106 @@ const SuperAccess = () => {
                     orderProviderUser?.imageUrl,
                     defaultUserImg.src,
                   );
+                  const isFinancialLedgerItem = entity === "financial-ledger";
+                  const financialLedgerOrder = item as FinancialOrderRow;
+                  const financialProviderName = isFinancialLedgerItem
+                    ? getUserName(
+                        financialLedgerOrder.providerUser?.firstName,
+                        financialLedgerOrder.providerUser?.lastName,
+                      )
+                    : "";
+                  const financialClientName = isFinancialLedgerItem
+                    ? getUserName(
+                        financialLedgerOrder.clientUser?.firstName,
+                        financialLedgerOrder.clientUser?.lastName,
+                      )
+                    : "";
                   return (
                     <div
                       key={id || title}
                       role="button"
                       tabIndex={0}
-                      className={`${styles.itemCard} ${
-                        selectedId === id ? styles.itemCardActive : ""
-                      } ${isCompactListView ? styles.itemCardCompact : ""}`}
+                    className={`${styles.itemCard} ${
+                      selectedId === id ? styles.itemCardActive : ""
+                    } ${
+                      isCompactListView || entity === "financial-ledger"
+                        ? styles.itemCardCompact
+                        : ""
+                    }`}
                       onClick={() => setSelectedId(id)}
                       onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
-                      {entity === "orders" ? (
+                      {isFinancialLedgerItem ? (
+                        <div className={styles.financialLedgerRow}>
+                          <label
+                            className={styles.financialLedgerCheckbox}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedFinancialLedgerOrderIds.includes(id)}
+                              onChange={() =>
+                                toggleFinancialLedgerOrderSelection(id)
+                              }
+                            />
+                          </label>
+                          <div className={styles.financialLedgerUsers}>
+                            <div className={styles.orderUsersCompactAvatars}>
+                              <img
+                                src={
+                                  financialLedgerOrder.providerUser?.imgUrl ||
+                                  defaultUserImg.src
+                                }
+                                alt={financialProviderName}
+                                className={styles.orderProviderImg}
+                              />
+                              <img
+                                src={
+                                  financialLedgerOrder.clientUser?.imgUrl ||
+                                  defaultUserImg.src
+                                }
+                                alt={financialClientName}
+                                className={styles.orderClientImg}
+                              />
+                            </div>
+                            <div className={styles.financialLedgerMain}>
+                              <div className={styles.financialLedgerPrimary}>
+                                {financialLedgerOrder.orderPrettyId}
+                              </div>
+                              <div className={styles.financialLedgerSecondary}>
+                                {financialProviderName} | {financialClientName}
+                              </div>
+                              <div className={styles.financialLedgerSecondary}>
+                                Paid: {formatDateTimeShort(financialLedgerOrder.paidAt)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className={styles.financialLedgerAmount}>
+                            {typeof financialLedgerOrder.actualClientPaidCents === "number"
+                              ? `€${(
+                                  financialLedgerOrder.actualClientPaidCents / 100
+                                ).toFixed(2)}`
+                              : "—"}
+                          </div>
+                          <div className={styles.financialLedgerMeta}>
+                            <span
+                              className={`${styles.financialLedgerMode} ${
+                                financialLedgerOrder.financialMode === "REAL"
+                                  ? styles.financialLedgerModeReal
+                                  : financialLedgerOrder.financialMode ===
+                                      "PARTIAL_REAL"
+                                    ? styles.financialLedgerModePartial
+                                    : styles.financialLedgerModeForecast
+                              }`}
+                            >
+                              {financialLedgerOrder.financialMode}
+                            </span>
+                            <div className={styles.financialLedgerSecondary}>
+                              {String(financialLedgerOrder.status ?? "—")}
+                            </div>
+                          </div>
+                        </div>
+                      ) : entity === "orders" ? (
                         <div className={styles.orderRow}>
                           <div className={styles.orderRowTop}>
                             <div className={styles.orderRowUsers}>
@@ -1949,12 +2269,23 @@ const SuperAccess = () => {
                   isLoading={isRegeneratingAddress}
                 />
               )}
+              {(entity === "financial-ledger" || entity === "orders") &&
+                selectedId && (
+                  <Button
+                    title={isSaving ? "Rebuilding..." : "Rebuild financial"}
+                    type="OUTLINED"
+                    onClick={() => setIsOrderFinancialRebuildModalOpen(true)}
+                    isDisabled={loadingItem || isSaving}
+                  />
+                )}
               <Button
                 title={
                   entity === "alerts"
                     ? isSendingAlert
                       ? "Sending..."
                       : "Send alert"
+                    : entity === "financial-ledger"
+                      ? "Read only"
                     : entity === "connected-admins"
                       ? "Read only"
                     : isSaving
@@ -1966,6 +2297,8 @@ const SuperAccess = () => {
                 isDisabled={
                   entity === "alerts"
                     ? !adminAlertText.trim() || isSendingAlert
+                    : entity === "financial-ledger"
+                      ? true
                     : entity === "connected-admins"
                       ? true
                     : !selectedId || loadingItem || isSaving
@@ -1973,7 +2306,9 @@ const SuperAccess = () => {
                 isLoading={
                   entity === "alerts"
                     ? isSendingAlert
-                    : isSaving && entity !== "connected-admins"
+                    : isSaving &&
+                      entity !== "connected-admins" &&
+                      entity !== "financial-ledger"
                 }
               />
             </div>
@@ -2040,6 +2375,73 @@ const SuperAccess = () => {
               {selectedId && loadingItem && (
                 <div className={styles.empty}>Loading...</div>
               )}
+
+              {entity === "financial-ledger" &&
+                selectedId &&
+                !loadingItem &&
+                selectedItem && (
+                  <div className={styles.form}>
+                    {Object.entries(selectedItem)
+                      .filter(([key]) => !["id", "_id"].includes(key))
+                      .map(([key, value]) => {
+                        const fieldId = `financial-ledger-${key}`;
+
+                        if (typeof value === "boolean") {
+                          return (
+                            <label
+                              key={key}
+                              htmlFor={fieldId}
+                              className={styles.fieldCheckbox}
+                            >
+                              <input
+                                id={fieldId}
+                                type="checkbox"
+                                checked={value}
+                                disabled
+                              />
+                              <span>{prettyTitle(key)}</span>
+                            </label>
+                          );
+                        }
+
+                        if (Array.isArray(value) || (value && typeof value === "object")) {
+                          return (
+                            <label
+                              key={key}
+                              htmlFor={fieldId}
+                              className={styles.field}
+                            >
+                              <span>{prettyTitle(key)} (JSON)</span>
+                              <textarea
+                                id={fieldId}
+                                value={JSON.stringify(value, null, 2)}
+                                disabled
+                              />
+                            </label>
+                          );
+                        }
+
+                        return (
+                          <label
+                            key={key}
+                            htmlFor={fieldId}
+                            className={styles.field}
+                          >
+                            <span>{prettyTitle(key)}</span>
+                            <input
+                              id={fieldId}
+                              type="text"
+                              value={value == null ? "" : String(value)}
+                              disabled
+                            />
+                          </label>
+                        );
+                      })}
+                  </div>
+                )}
+
+              {entity !== "financial-ledger" && (
+                <>
 
               {entity === "admins" && (
                 <div className={styles.adminCreateCard}>
@@ -2721,9 +3123,92 @@ const SuperAccess = () => {
                 </div>
               )}
             </>
+              )}
+            </>
           )}
         </section>
       </div>
+      {isFinancialLedgerRebuildAllModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Rebuild all financial ledger rows?</h3>
+            <p className={styles.modalText}>
+              This scans historical orders and creates missing financial ledger
+              rows for orders that existed before the ledger API was added.
+            </p>
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsFinancialLedgerRebuildAllModalOpen(false)}
+                isDisabled={isSaving}
+              />
+              <Button
+                title={isSaving ? "Rebuilding..." : "Rebuild all"}
+                type="BLACK"
+                onClick={handleRebuildAllFinancialLedger}
+                isDisabled={isSaving}
+                isLoading={isSaving}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isFinancialLedgerDeleteModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Delete selected financial rows?</h3>
+            <p className={styles.modalText}>
+              This removes financial ledger rows for the selected orders. Use it
+              only for test or wrong data.
+            </p>
+            <div className={styles.modalTextStrong}>
+              Selected orders: {selectedFinancialLedgerOrderIds.length}
+            </div>
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsFinancialLedgerDeleteModalOpen(false)}
+                isDisabled={isSaving}
+              />
+              <Button
+                title={isSaving ? "Deleting..." : "Delete"}
+                type="DELETE"
+                onClick={handleDeleteSelectedFinancialLedgerOrders}
+                isDisabled={isSaving}
+                isLoading={isSaving}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isOrderFinancialRebuildModalOpen && selectedId && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Rebuild financial data for this order?</h3>
+            <p className={styles.modalText}>
+              This recreates ledger entries for the selected order if they are
+              missing.
+            </p>
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsOrderFinancialRebuildModalOpen(false)}
+                isDisabled={isSaving}
+              />
+              <Button
+                title={isSaving ? "Rebuilding..." : "Rebuild"}
+                type="BLACK"
+                onClick={() => handleRebuildSingleOrderFinancialLedger(selectedId)}
+                isDisabled={isSaving}
+                isLoading={isSaving}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {isRegenerateAddressModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>

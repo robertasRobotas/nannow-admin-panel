@@ -9,6 +9,13 @@
   font-weight: 700;
 }
 
+.notice {
+  margin: 0 0 12px 0;
+  color: #198f37;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 220px 1fr 1fr;
@@ -132,6 +139,10 @@
 }
 
 .itemsGridOrders {
+  grid-template-columns: 1fr;
+}
+
+.itemsGridFinancialLedger {
   grid-template-columns: 1fr;
 }
 
@@ -281,6 +292,101 @@
   font-weight: 700;
 }
 
+.financialLedgerRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.financialLedgerCheckbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.financialLedgerCheckbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: #ff3b30;
+  cursor: pointer;
+}
+
+.financialLedgerUsers {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.orderUsersCompactAvatars {
+  display: flex;
+  align-items: center;
+  min-width: 44px;
+}
+
+.financialLedgerMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.financialLedgerPrimary {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.financialLedgerSecondary {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.financialLedgerAmount {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.financialLedgerMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.financialLedgerMode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.financialLedgerModeReal {
+  background: rgba(25, 173, 62, 0.14);
+  color: #198f37;
+}
+
+.financialLedgerModePartial {
+  background: rgba(255, 159, 10, 0.14);
+  color: #b86b00;
+}
+
+.financialLedgerModeForecast {
+  background: rgba(47, 128, 237, 0.12);
+  color: #2367c8;
+}
+
 .pagination {
   display: flex;
   justify-content: flex-end;
@@ -387,6 +493,12 @@
   font-size: 14px;
   line-height: 20px;
   font-weight: 600;
+}
+
+.modalTextStrong {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .modalInlineFields {
@@ -614,6 +726,16 @@
 
   .itemsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .financialLedgerRow {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .financialLedgerAmount,
+  .financialLedgerMeta {
+    grid-column: 2;
+    align-items: flex-start;
   }
 
   .modalInlineFields {

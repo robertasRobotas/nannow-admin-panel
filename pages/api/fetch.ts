@@ -1060,6 +1060,81 @@ export const getInvoices = async (params?: {
   return response;
 };
 
+export const getFinancialOrders = async (params?: {
+  startIndex?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  financialMode?: "FORECAST" | "PARTIAL_REAL" | "REAL";
+  startDate?: string;
+  endDate?: string;
+  startsFrom?: string;
+  startsTo?: string;
+  sort?: "paidAt_desc" | "paidAt_asc" | "latest" | "oldest";
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/financial/orders`, {
+    params: {
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+      search: params?.search,
+      status: params?.status,
+      financialMode: params?.financialMode,
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+      startsFrom: params?.startsFrom,
+      startsTo: params?.startsTo,
+      sort: params?.sort ?? "paidAt_desc",
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const rebuildAllFinancialLedgerOrders = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/orders/financial-ledger/rebuild-all`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const rebuildFinancialLedgerForOrder = async (orderId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/orders/${orderId}/financial-ledger/rebuild`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const deleteFinancialLedgerOrders = async (orderIds: string[]) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.delete(
+    `${BASE_URL}/admin/super/financial-ledger/orders`,
+    {
+      data: { orderIds },
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getNotFinishedOnboardingUsers = async (params?: {
   mode?: "CLIENT" | "PROVIDER";
   search?: string;
@@ -1096,11 +1171,14 @@ export const getOnboardingStats = async () => {
 
 export const getUsersAppVersionStats = async () => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/users/app-version/stats`, {
-    headers: {
-      Authorization: jwt,
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/app-version/stats`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
     },
-  });
+  );
   return response;
 };
 

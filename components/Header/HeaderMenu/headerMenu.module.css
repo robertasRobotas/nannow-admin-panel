@@ -71,3 +71,8 @@
     left: -300px;
   }
 }
+
+.financialIcon {
+  color: #000;
+  flex-shrink: 0;
+}

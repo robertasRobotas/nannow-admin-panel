@@ -32,6 +32,7 @@ import axios from "axios";
 import { disconnectAdminSocket } from "@/helpers/adminSocket";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 import MessagesIcon from "@/components/Icons/MessagesIcon";
+import EuroCircleIcon from "@/components/Icons/EuroCircleIcon";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
@@ -430,9 +431,13 @@ const Header = () => {
                     icon={
                       l.link === "/messages" ? (
                         <MessagesIcon className={styles.headerMessagesIcon} />
+                      ) : l.link === "/financial-ledger" ? (
+                        <EuroCircleIcon className={styles.headerFinancialIcon} />
                       ) : undefined
                     }
-                    hideTitle={l.link === "/messages"}
+                    hideTitle={
+                      l.link === "/messages" || l.link === "/financial-ledger"
+                    }
                     attentionNumber={
                       l.link === "/orders"
                         ? ordersAttentionNumber > 0

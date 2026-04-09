@@ -8,6 +8,7 @@ import Link from "next/link";
 import HeaderButton from "@/components/HeaderButton/HeaderButton";
 import Button from "@/components/Button/Button";
 import { useRouter } from "next/router";
+import EuroCircleIcon from "@/components/Icons/EuroCircleIcon";
 
 type HeaderMenuProps = {
   links: HeaderLink[];
@@ -65,6 +66,11 @@ const HeaderMenu = ({
                   title={l.title}
                   isActive={pathname === l.link}
                   justify="JUSTIFY-START"
+                  icon={
+                    l.link === "/financial-ledger" ? (
+                      <EuroCircleIcon className={styles.financialIcon} />
+                    ) : undefined
+                  }
                   attentionNumber={
                     l.link === "/orders"
                       ? (ordersAttentionNumber ?? 0) > 0

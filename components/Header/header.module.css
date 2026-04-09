@@ -83,6 +83,11 @@
   flex-shrink: 0;
 }
 
+.headerFinancialIcon {
+  color: #000;
+  flex-shrink: 0;
+}
+
 .totpBackdrop {
   position: fixed;
   inset: 0;
