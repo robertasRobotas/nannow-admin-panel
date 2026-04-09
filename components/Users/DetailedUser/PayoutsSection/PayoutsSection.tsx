@@ -377,8 +377,11 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
                       providerImgUrl={getUserImage(order.approvedProvider?.user?.imgUrl)}
                       clientImgUrl={getUserImage(order.clientUser?.imgUrl)}
                       id={order.id}
+                      createdAt={order.createdAt}
+                      updatedAt={order.updatedAt}
                       startsAt={order.startsAt}
                       endsAt={order.endsAt}
+                      totalPrice={order.totalPrice}
                       providerName={getUserName(
                         order.approvedProvider?.user?.firstName,
                         order.approvedProvider?.user?.lastName,

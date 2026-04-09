@@ -11,8 +11,11 @@ type OrderProps = {
   clientName: string;
   clientImgUrl: string;
   id: string;
+  createdAt: string;
+  updatedAt?: string | null;
   startsAt: string;
   endsAt: string;
+  totalPrice?: number | null;
   isProviderIgnoredEndNotification?: boolean;
   pendingProvidersCount?: number;
   isRecentlyChanged?: boolean;
@@ -26,8 +29,11 @@ const Order = ({
   clientName,
   clientImgUrl,
   id,
+  createdAt,
+  updatedAt,
   startsAt,
   endsAt,
+  totalPrice,
   isProviderIgnoredEndNotification,
   pendingProvidersCount,
   isRecentlyChanged = false,
@@ -36,14 +42,19 @@ const Order = ({
   const statusTitle = getOrderStatusTitle(status, isDirectOrderToProvider);
 
   const formatDateTime = (iso: string) =>
-    new Date(iso).toLocaleString(undefined, {
+    new Date(iso).toLocaleString("en-GB", {
       year: "numeric",
-      month: "short",
+      month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     });
+
+  const updatedAtText = formatDateTime(updatedAt || createdAt);
+  const timeRangeText = `${formatDateTime(startsAt)} - ${formatDateTime(endsAt)}`;
+  const totalPriceText =
+    typeof totalPrice === "number" ? `€${totalPrice.toFixed(2)}` : null;
 
   return (
     <div
@@ -70,12 +81,11 @@ const Order = ({
                 </div>
               )}
           </div>
-          <div className={styles.startDate}>
-            Starts: {formatDateTime(startsAt)}
-          </div>
-          <div className={styles.endDate}>Ends: {formatDateTime(endsAt)}</div>
+          <div className={styles.updatedAt}>Updated: {updatedAtText}</div>
+          <div className={styles.timeRange}>{timeRangeText}</div>
         </div>
       </div>
+      {totalPriceText && <div className={styles.totalPrice}>{totalPriceText}</div>}
       <div className={styles.orderStatus}>
         {statusTitle}
         {isProviderIgnoredEndNotification && (

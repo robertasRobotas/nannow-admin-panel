@@ -160,8 +160,11 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
                       providerImgUrl={getUserImage(providerUser?.imgUrl)}
                       clientImgUrl={getUserImage(clientUser?.imgUrl)}
                       id={u.id}
+                      createdAt={u.createdAt}
+                      updatedAt={u.updatedAt}
                       startsAt={u.startsAt}
                       endsAt={u.endsAt}
+                      totalPrice={u.totalPrice}
                       isDirectOrderToProvider={u.isDirectOrderToProvider}
                       providerName={getProviderName(
                         getUserName(
@@ -194,4 +197,3 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
 };
 
 export default OrdersSection;
-

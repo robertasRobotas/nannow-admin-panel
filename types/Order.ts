@@ -54,6 +54,7 @@ export type OrderType = {
   endsAt: string; // ISO date
   isUrgent: boolean;
   createdAt: string;
+  updatedAt?: string | null;
   approvedProviderId: string | null;
   totalPrice: number | null;
   subtotalPrice: number | null;

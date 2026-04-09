@@ -40,8 +40,11 @@ const OrdersList = ({ orders, recentlyChangedOrderIds = {} }: OrdersListProps) =
             providerImgUrl={getUserImage(providerUser?.imgUrl)}
             clientImgUrl={getUserImage(clientUser?.imgUrl)}
             id={u.id}
+            createdAt={u.createdAt}
+            updatedAt={u.updatedAt}
             startsAt={u.startsAt}
             endsAt={u.endsAt}
+            totalPrice={u.totalPrice}
             isDirectOrderToProvider={u.isDirectOrderToProvider}
             providerName={getProviderName(
               getUserName(providerUser?.firstName, providerUser?.lastName),
