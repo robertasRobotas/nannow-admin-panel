@@ -390,15 +390,19 @@
 }
 
 .totalsGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  align-items: stretch;
 }
 
 .totalCard {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 0 1 220px;
+  min-width: 180px;
+  max-width: 240px;
   padding: 16px;
   border-radius: 18px;
   background: rgba(0, 0, 0, 0.03);
@@ -433,10 +437,6 @@
   .tableHeader,
   .row {
     grid-template-columns: minmax(320px, 2.4fr) repeat(5, minmax(110px, 0.85fr));
-  }
-
-  .totalsGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -495,10 +495,6 @@
     text-transform: uppercase;
     margin-bottom: 2px;
   }
-
-  .totalsGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 936px) {
@@ -523,8 +519,8 @@
     flex-direction: column;
     align-items: flex-start;
   }
-
-  .totalsGrid {
-    grid-template-columns: 1fr;
+  .totalCard {
+    flex-basis: 100%;
+    max-width: none;
   }
 }
