@@ -2,7 +2,6 @@ import { User } from "@/types/Client";
 import styles from "./userCard.module.css";
 import { useRouter } from "next/router";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
-import defaultUserImg from "../../../assets/images/default-avatar.png";
 import { type KeyboardEvent } from "react";
 
 type UserCardProps = {
@@ -37,7 +36,7 @@ const UserCard = ({ user, mode }: UserCardProps) => {
       <div className={styles.profileWrapper}>
         <ProfileInfo
           name={`${user.firstName} ${user.lastName}`}
-          imgUrl={user.imgUrl !== "" ? user.imgUrl : defaultUserImg.src}
+          imgUrl={user.imgUrl}
           id={user.userId}
           email={user.email}
         />

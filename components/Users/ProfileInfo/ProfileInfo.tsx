@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { MouseEvent, useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import { removeUserImgUrl } from "@/pages/api/fetch";
 import styles from "./profileInfo.module.css";
 import { nunito } from "@/helpers/fonts";
+import defaultAvatarImg from "@/assets/images/default-avatar.png";
 
 type ProfileInfoProps = {
   name: string;
@@ -9,6 +12,9 @@ type ProfileInfoProps = {
   mode?: "client" | "provider";
   email: string;
   locale?: string;
+  imgUrlRemoveMessage?: string | null;
+  allowImageRemoval?: boolean;
+  userId?: string;
 };
 
 const ProfileInfo = ({
@@ -18,11 +24,33 @@ const ProfileInfo = ({
   mode,
   email,
   locale,
+  imgUrlRemoveMessage,
+  allowImageRemoval = false,
+  userId,
 }: ProfileInfoProps) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
+  const [profileImgUrl, setProfileImgUrl] = useState(imgUrl ?? "");
+  const [removeMessage, setRemoveMessage] = useState(imgUrlRemoveMessage ?? "");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteReasonError, setDeleteReasonError] = useState("");
+  const [isRemovingImage, setIsRemovingImage] = useState(false);
 
-  const openImageModal = () => {
+  useEffect(() => {
+    setProfileImgUrl(imgUrl ?? "");
+  }, [imgUrl]);
+
+  useEffect(() => {
+    setRemoveMessage(imgUrlRemoveMessage ?? "");
+  }, [imgUrlRemoveMessage]);
+
+  const hasProfileImage = profileImgUrl.trim().length > 0;
+  const showRemovedAvatar = !hasProfileImage && removeMessage.trim().length > 0;
+
+  const openImageModal = (event?: MouseEvent<HTMLButtonElement>) => {
+    event?.stopPropagation();
+    if (!hasProfileImage) return;
     setImageZoom(1);
     setIsImageModalOpen(true);
   };
@@ -30,6 +58,37 @@ const ProfileInfo = ({
   const closeImageModal = () => {
     setIsImageModalOpen(false);
     setImageZoom(1);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteReason("");
+    setDeleteReasonError("");
+  };
+
+  const confirmDeleteImage = async () => {
+    if (!userId) return;
+
+    const trimmedReason = deleteReason.trim();
+    if (trimmedReason.length === 0) {
+      setDeleteReasonError("Reason is required.");
+      return;
+    }
+
+    try {
+      setIsRemovingImage(true);
+      await removeUserImgUrl(userId, trimmedReason);
+      setProfileImgUrl("");
+      setRemoveMessage(trimmedReason);
+      closeDeleteModal();
+      closeImageModal();
+      toast.success("Profile image was removed");
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to remove profile image");
+    } finally {
+      setIsRemovingImage(false);
+    }
   };
 
   useEffect(() => {
@@ -48,14 +107,24 @@ const ProfileInfo = ({
 
   return (
     <div className={styles.profileInfo}>
-      <button
-        type="button"
-        className={styles.profileImgButton}
-        onClick={openImageModal}
-        aria-label="Open profile image"
-      >
-        <img className={styles.profileImg} src={imgUrl} alt="Profile Image" />
-      </button>
+      {hasProfileImage ? (
+        <button
+          type="button"
+          className={styles.profileImgButton}
+          onClick={openImageModal}
+          aria-label="Open profile image"
+        >
+          <img className={styles.profileImg} src={profileImgUrl} alt="Profile Image" />
+        </button>
+      ) : showRemovedAvatar ? (
+        <div className={styles.removedAvatar}>R</div>
+      ) : (
+        <img
+          className={styles.profileImg}
+          src={defaultAvatarImg.src}
+          alt="Profile Image"
+        />
+      )}
       <span className={`${styles.name} ${nunito.className}`}>
         {name} {mode && (mode === "provider" ? "(Provider)" : "(Client)")}
       </span>
@@ -92,6 +161,15 @@ const ProfileInfo = ({
               >
                 Reset
               </button>
+              {allowImageRemoval && userId && (
+                <button
+                  type="button"
+                  className={`${styles.imageModalButton} ${styles.deleteButton}`}
+                  onClick={() => setIsDeleteModalOpen(true)}
+                >
+                  Delete
+                </button>
+              )}
               <button
                 type="button"
                 className={styles.imageModalButton}
@@ -107,6 +185,57 @@ const ProfileInfo = ({
                 alt="Profile Image"
                 style={{ transform: `scale(${imageZoom})` }}
               />
+            </div>
+            {removeMessage.trim().length > 0 && (
+              <div className={styles.imageRemoveMessage}>{removeMessage}</div>
+            )}
+          </div>
+        </div>
+      )}
+      {isDeleteModalOpen && (
+        <div className={styles.imageModalOverlay} onClick={closeDeleteModal}>
+          <div
+            className={styles.confirmationModal}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className={styles.confirmationTitle}>Delete profile image?</h3>
+            <div className={styles.inputBlock}>
+              <label className={styles.inputLabel} htmlFor="profile-image-delete-reason">
+                Reason
+              </label>
+              <textarea
+                id="profile-image-delete-reason"
+                className={styles.reasonInput}
+                value={deleteReason}
+                onChange={(event) => {
+                  setDeleteReason(event.target.value);
+                  setDeleteReasonError("");
+                }}
+                placeholder="Enter reason..."
+                disabled={isRemovingImage}
+                rows={3}
+              />
+              {deleteReasonError && (
+                <span className={styles.inputError}>{deleteReasonError}</span>
+              )}
+            </div>
+            <div className={styles.confirmationActions}>
+              <button
+                type="button"
+                className={styles.imageModalButton}
+                onClick={closeDeleteModal}
+                disabled={isRemovingImage}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`${styles.imageModalButton} ${styles.deleteButton}`}
+                onClick={confirmDeleteImage}
+                disabled={isRemovingImage}
+              >
+                {isRemovingImage ? "Deleting..." : "Confirm"}
+              </button>
             </div>
           </div>
         </div>

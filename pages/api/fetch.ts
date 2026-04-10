@@ -455,6 +455,23 @@ export const setUserSuspendedStatus = async (
   return response;
 };
 
+export const removeUserImgUrl = async (
+  userId: string,
+  message: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/users/${userId}/img-url/remove`,
+    { message },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const setUserBanStatus = async (
   userId: string,
   isBanned: boolean,
@@ -1354,89 +1371,23 @@ export const getCanceledPendingFinancialOrdersCount = async () => {
 export const getCanceledPendingFinancialOrders = async (
   startIndex = 0,
   pageSize = 20,
+  search?: string,
 ) => {
   const jwt = Cookies.get("@user_jwt");
-  const statuses = ["CLIENT_CANCELED", "CANCELED_BY_CLIENT"];
-  const byId = new Map<string, unknown>();
-
-  for (const status of statuses) {
-    let cursor = 0;
-    let total = 0;
-    let apiPageSize = 100;
-
-    do {
-      const response = await axios.get(
-        `${BASE_URL}/admin/orders?startIndex=${cursor}&status=${status}`,
-        {
-          headers: {
-            Authorization: jwt,
-          },
-        },
-      );
-
-      const result = response.data?.result ?? {};
-      const items = Array.isArray(result.items) ? result.items : [];
-      total = Number(result.total ?? 0);
-      apiPageSize = Number(result.pageSize ?? apiPageSize);
-
-      for (const order of items) {
-        const orderId = String((order as { id?: unknown })?.id ?? "");
-        if (!orderId || byId.has(orderId)) continue;
-
-        const statusUpper = String(
-          (order as { status?: unknown })?.status ?? "",
-        ).toUpperCase();
-        const paymentStatusUpper = String(
-          (order as { paymentStatus?: unknown })?.paymentStatus ?? "",
-        ).toUpperCase();
-        const isCanceledByClient =
-          statusUpper === "CANCELED_BY_CLIENT" ||
-          statusUpper === "CLIENT_CANCELED";
-        if (!isCanceledByClient) continue;
-        if (paymentStatusUpper === "PAID") continue;
-
-        const isLate2 = !!(
-          order as { isOrderCanceledLessThan2hBeforeStart?: unknown }
-        )?.isOrderCanceledLessThan2hBeforeStart;
-        const isLate12 =
-          !!(order as { isOrderCanceledLessThan12hBeforeStart?: unknown })
-            ?.isOrderCanceledLessThan12hBeforeStart && !isLate2;
-        const isRefundDone = !!(order as { refundedAt?: unknown })?.refundedAt;
-        const isPayoutDone = !!(
-          order as { isCancelFeePaidToProvider?: unknown }
-        )?.isCancelFeePaidToProvider;
-
-        const isFinancialPending = isLate2
-          ? !isPayoutDone
-          : isLate12
-            ? !isRefundDone || !isPayoutDone
-            : !isRefundDone;
-        if (!isFinancialPending) continue;
-
-        byId.set(orderId, order);
-      }
-
-      cursor += apiPageSize;
-    } while (cursor < total);
-  }
-
-  const allItems = Array.from(byId.values()).sort((a, b) => {
-    const aCreated = String((a as { createdAt?: unknown })?.createdAt ?? "");
-    const bCreated = String((b as { createdAt?: unknown })?.createdAt ?? "");
-    return bCreated.localeCompare(aCreated);
-  });
-
-  const pagedItems = allItems.slice(startIndex, startIndex + pageSize);
-  return {
-    data: {
-      result: {
-        items: pagedItems,
-        total: allItems.length,
-        pageSize,
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/canceled-financial-pending`,
+    {
+      params: {
         startIndex,
+        pageSize,
+        search: search?.trim() || undefined,
+      },
+      headers: {
+        Authorization: jwt,
       },
     },
-  };
+  );
+  return response;
 };
 
 export const finishOrderByAdmin = async (

@@ -6,7 +6,6 @@ import trashImg from "../../../../assets/images/trash.svg";
 import balanceImg from "../../../../assets/images/wallet.svg";
 import { UserDetails } from "@/types/Client";
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
-import avatarImg from "../../../../assets/images/default-avatar.png";
 import { anonymizeUser, deleteUser, getUserAnonymizationJob } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
@@ -242,13 +241,14 @@ const ProfileMenu = ({
       <div className={styles.profileWrapper}>
         <ProfileInfo
           name={`${user.user.firstName} ${user.user.lastName}`}
-          imgUrl={
-            user.user.imgUrl.length > 0 ? user.user.imgUrl : avatarImg.src
-          }
+          imgUrl={user.user.imgUrl}
           id={user.user.id}
           mode={mode}
           email={user.user.email}
           locale={user.user.userAppLanguage}
+          imgUrlRemoveMessage={user.user.imgUrlRemoveMessage}
+          allowImageRemoval
+          userId={user.user.id}
         />
         <div className={styles.balance}>
           <img src={balanceImg.src} alt="Balance" />
