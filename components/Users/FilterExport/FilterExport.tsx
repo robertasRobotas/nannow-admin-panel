@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getAllUsers, getClientById, getProviderById } from "@/pages/api/fetch";
+import {
+  getAllUsers,
+  getClientById,
+  getProviderById,
+} from "@/pages/api/fetch";
 import { User, UserDetails } from "@/types/Client";
 import styles from "./filterExport.module.css";
 import { nunito } from "@/helpers/fonts";
@@ -10,7 +14,7 @@ import defaultUserImg from "@/assets/images/default-avatar.png";
 import ReactPaginate from "react-paginate";
 import paginateStyles from "../../../styles/paginate.module.css";
 
-type FilterMode = "CLIENT" | "PROVIDER";
+type FilterMode = "CLIENT" | "PROVIDER" | "NO_ROLE";
 
 type OnboardingField =
   | "USER_VERIFIED"
@@ -84,6 +88,7 @@ type ExtendedUser = UserDetails["user"] & {
 const modeOptions = [
   { title: "Clients", value: "CLIENT" },
   { title: "Providers", value: "PROVIDER" },
+  { title: "No role", value: "NO_ROLE" },
 ];
 
 const pageSizeOptions = [
@@ -135,6 +140,8 @@ const buildFinishedFields = (
   detail: UserDetails,
   mode: FilterMode,
 ): OnboardingField[] => {
+  if (mode === "NO_ROLE") return [];
+
   const provider = detail.provider as ExtendedProvider | undefined;
   const currentCriminalStatus = String(
     provider?.criminalRecord?.currentStatus ??
@@ -195,10 +202,15 @@ const mapDetailedUser = (
   };
 };
 
-const hasRoleForMode = (detail: UserDetails, mode: FilterMode) => {
-  const roles = Array.isArray(detail.user?.roles)
-    ? detail.user.roles.map((role) => String(role).toUpperCase())
+const extractRoles = (user?: { roles?: unknown }): string[] =>
+  Array.isArray(user?.roles)
+    ? user.roles.map((role) => String(role).toUpperCase())
     : [];
+
+const hasRoleForMode = (roles: string[], mode: FilterMode) => {
+  if (mode === "NO_ROLE") {
+    return roles.length === 0;
+  }
 
   return roles.includes(mode);
 };
@@ -207,10 +219,13 @@ const fetchAllBaseUsers = async (mode: FilterMode): Promise<User[]> => {
   const collected: User[] = [];
   let startIndex = 0;
   let total = Number.MAX_SAFE_INTEGER;
+  const modeQuery =
+    mode === "CLIENT" ? "client" : mode === "PROVIDER" ? "provider" : "norole";
 
   while (startIndex < total) {
+    const basePath = `admin/users?type=${modeQuery}&startIndex=${startIndex}&search=`;
     const response = await getAllUsers(
-      `admin/users?type=${mode.toLowerCase()}&startIndex=${startIndex}&search=`,
+      basePath,
     );
     const payload = response.data?.users;
     const items = Array.isArray(payload?.items) ? (payload.items as User[]) : [];
@@ -224,6 +239,23 @@ const fetchAllBaseUsers = async (mode: FilterMode): Promise<User[]> => {
 
   return collected;
 };
+
+const mapNoRoleUser = (
+  baseUser: User,
+): EnrichedUser => ({
+  id: baseUser.id,
+  userId: baseUser.userId,
+  firstName: baseUser.firstName,
+  lastName: baseUser.lastName,
+  email: baseUser.email,
+  imgUrl: baseUser.imgUrl,
+  mode: "NO_ROLE",
+  rating: null,
+  reviewsCount: 0,
+  hasProfileVideo: false,
+  finishedFields: [],
+  notFinishedFields: [],
+});
 
 const downloadCsv = (rows: EnrichedUser[]) => {
   const headers = [
@@ -293,7 +325,11 @@ const FilterExport = () => {
     pageSizeOptions[selectedPageSizeOption]?.value ?? "20",
   );
   const availableFields =
-    selectedMode === "CLIENT" ? CLIENT_FIELDS : PROVIDER_FIELDS;
+    selectedMode === "CLIENT"
+      ? CLIENT_FIELDS
+      : selectedMode === "PROVIDER"
+        ? PROVIDER_FIELDS
+        : [];
 
   useEffect(() => {
     setFinishedFields((prev) =>
@@ -307,12 +343,14 @@ const FilterExport = () => {
 
   useEffect(() => {
     let isCancelled = false;
+    const currentMode = modeOptions[selectedModeOption]?.value as FilterMode;
 
     const run = async () => {
       try {
         setIsLoading(true);
         setLoadingText("Loading user list...");
-        const baseUsers = await fetchAllBaseUsers(selectedMode);
+        setUsers([]);
+        const baseUsers = await fetchAllBaseUsers(currentMode);
         const nextUsers: EnrichedUser[] = [];
 
         for (let index = 0; index < baseUsers.length; index += 8) {
@@ -322,20 +360,25 @@ const FilterExport = () => {
           );
           const details = await Promise.all(
             batch.map(async (baseUser) => {
+              if (currentMode === "NO_ROLE") {
+                return mapNoRoleUser(baseUser);
+              }
+
               const response =
-                selectedMode === "CLIENT"
+                currentMode === "CLIENT"
                   ? await getClientById(baseUser.userId)
                   : await getProviderById(baseUser.userId);
               const detail =
-                selectedMode === "CLIENT"
+                currentMode === "CLIENT"
                   ? (response.data?.clientDetails as UserDetails)
                   : (response.data?.providerDetails as UserDetails);
+              const roles = extractRoles(detail.user);
 
-              if (!hasRoleForMode(detail, selectedMode)) {
+              if (!hasRoleForMode(roles, currentMode)) {
                 return null;
               }
 
-              return mapDetailedUser(baseUser, detail, selectedMode);
+              return mapDetailedUser(baseUser, detail, currentMode);
             }),
           );
           nextUsers.push(
@@ -364,7 +407,7 @@ const FilterExport = () => {
     return () => {
       isCancelled = true;
     };
-  }, [selectedMode]);
+  }, [selectedModeOption]);
 
   const normalizedMinimumReviews = Number(minimumReviews);
   const filteredUsers = users.filter((user) => {
@@ -484,72 +527,74 @@ const FilterExport = () => {
 
           <div className={styles.filterBlock}>
             <div className={styles.label}>Finished onboarding fields</div>
-            <div className={styles.checkGrid}>
-              <label className={styles.checkItem}>
-                <input
-                  type="checkbox"
-                  checked={
-                    availableFields.length > 0 &&
-                    finishedFields.length === availableFields.length
-                  }
-                  onChange={(event) =>
-                    toggleAllFields(
-                      event.target.checked,
-                      availableFields,
-                      setFinishedFields,
-                    )
-                  }
-                />
-                <span>All</span>
-              </label>
-              {availableFields.map((field) => (
-                <label key={`finished-${field}`} className={styles.checkItem}>
+            {availableFields.length === 0 ? (
+              <div className={styles.emptyState}>Not available for users without role.</div>
+            ) : (
+              <div className={styles.checkGrid}>
+                <label className={styles.checkItem}>
                   <input
                     type="checkbox"
-                    checked={finishedFields.includes(field)}
-                    onChange={() =>
-                      toggleField(field, finishedFields, setFinishedFields)
+                    checked={finishedFields.length === availableFields.length}
+                    onChange={(event) =>
+                      toggleAllFields(
+                        event.target.checked,
+                        availableFields,
+                        setFinishedFields,
+                      )
                     }
                   />
-                  <span>{FIELD_LABELS[field]}</span>
+                  <span>All</span>
                 </label>
-              ))}
-            </div>
+                {availableFields.map((field) => (
+                  <label key={`finished-${field}`} className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={finishedFields.includes(field)}
+                      onChange={() =>
+                        toggleField(field, finishedFields, setFinishedFields)
+                      }
+                    />
+                    <span>{FIELD_LABELS[field]}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className={styles.filterBlock}>
             <div className={styles.label}>Not finished onboarding fields</div>
-            <div className={styles.checkGrid}>
-              <label className={styles.checkItem}>
-                <input
-                  type="checkbox"
-                  checked={
-                    availableFields.length > 0 &&
-                    notFinishedFields.length === availableFields.length
-                  }
-                  onChange={(event) =>
-                    toggleAllFields(
-                      event.target.checked,
-                      availableFields,
-                      setNotFinishedFields,
-                    )
-                  }
-                />
-                <span>All</span>
-              </label>
-              {availableFields.map((field) => (
-                <label key={`not-finished-${field}`} className={styles.checkItem}>
+            {availableFields.length === 0 ? (
+              <div className={styles.emptyState}>Not available for users without role.</div>
+            ) : (
+              <div className={styles.checkGrid}>
+                <label className={styles.checkItem}>
                   <input
                     type="checkbox"
-                    checked={notFinishedFields.includes(field)}
-                    onChange={() =>
-                      toggleField(field, notFinishedFields, setNotFinishedFields)
+                    checked={notFinishedFields.length === availableFields.length}
+                    onChange={(event) =>
+                      toggleAllFields(
+                        event.target.checked,
+                        availableFields,
+                        setNotFinishedFields,
+                      )
                     }
                   />
-                  <span>{FIELD_LABELS[field]}</span>
+                  <span>All</span>
                 </label>
-              ))}
-            </div>
+                {availableFields.map((field) => (
+                  <label key={`not-finished-${field}`} className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={notFinishedFields.includes(field)}
+                      onChange={() =>
+                        toggleField(field, notFinishedFields, setNotFinishedFields)
+                      }
+                    />
+                    <span>{FIELD_LABELS[field]}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className={styles.inlineFields}>
@@ -665,14 +710,15 @@ const FilterExport = () => {
                 </div>
                 <div className={styles.resultActions}>
                   <Button
-                    title="Open profile"
+                    title={user.mode === "NO_ROLE" ? "No profile" : "Open profile"}
                     type="OUTLINED"
+                    isDisabled={user.mode === "NO_ROLE"}
                     onClick={() =>
-                      router.push(
-                        user.mode === "CLIENT"
-                          ? `/client/${user.userId}`
-                          : `/provider/${user.userId}`,
-                      )
+                      user.mode === "CLIENT"
+                        ? router.push(`/client/${user.userId}`)
+                        : user.mode === "PROVIDER"
+                          ? router.push(`/provider/${user.userId}`)
+                          : undefined
                     }
                   />
                 </div>
