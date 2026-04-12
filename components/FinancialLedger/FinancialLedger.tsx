@@ -170,27 +170,28 @@ const getAmountPresentation = (
   kind: "paid" | "payout" | "refund" | "stripeFee" | "netProfit",
 ) => {
   if (kind === "paid") {
+    const hasActualPaid = typeof order.actualClientPaidCents === "number";
     return {
-      amount: formatMoneyFromCents(order.actualClientPaidCents ?? 0),
-      tone: "real" as const,
-      subtitle: order.paymentStatus,
+      amount: formatMoneyFromCents(
+        hasActualPaid
+          ? order.actualClientPaidCents ?? 0
+          : order.clientPaidCents ?? 0,
+      ),
+      tone: hasActualPaid ? ("real" as const) : ("estimated" as const),
+      subtitle: hasActualPaid ? order.paymentStatus : "Expected paid",
       isEmpty: false,
     };
   }
 
   if (kind === "payout") {
-    const isReal =
-      order.financialMode === "REAL" ||
-      Boolean(order.releasedFundsToProviderAt) ||
-      Boolean(order.cancelFeePaidToProviderAt) ||
-      (order.actualPayoutCents ?? 0) > 0;
-    const cents = isReal
+    const hasActualPayout = typeof order.actualPayoutCents === "number";
+    const cents = hasActualPayout
       ? order.actualPayoutCents ?? 0
       : order.displayedPayoutCents ?? order.expectedPayoutCents ?? 0;
     return {
       amount: formatMoneyFromCents(cents),
-      tone: isReal ? ("real" as const) : ("estimated" as const),
-      subtitle: isReal ? "Real payout" : "Expected payout",
+      tone: hasActualPayout ? ("real" as const) : ("estimated" as const),
+      subtitle: hasActualPayout ? "Real payout" : "Expected payout",
       isEmpty: false,
     };
   }
@@ -211,27 +212,31 @@ const getAmountPresentation = (
       };
     }
 
-    const isReal =
-      order.financialMode === "REAL" ||
-      Boolean(order.refundedAt) ||
-      (order.actualRefundCents ?? 0) > 0;
-    const cents = isReal
+    const hasActualRefund = typeof order.actualRefundCents === "number";
+    const cents = hasActualRefund
       ? order.actualRefundCents ?? 0
       : order.displayedRefundCents ?? order.expectedRefundCents ?? 0;
     return {
       amount: formatMoneyFromCents(cents),
-      tone: isReal ? ("real" as const) : ("estimated" as const),
-      subtitle: isReal ? "Real refund" : "Expected refund",
+      tone: hasActualRefund ? ("real" as const) : ("estimated" as const),
+      subtitle: hasActualRefund ? "Real refund" : "Expected refund",
       isEmpty: false,
     };
   }
 
   if (kind === "stripeFee") {
-    const isReal = order.financialMode === "REAL";
+    const hasKnownStripeFee = typeof order.knownStripeFeeCents === "number";
+    const hasForecastStripeFee =
+      typeof order.forecastStripeFeeCents === "number";
+    const stripeFeeCents = hasKnownStripeFee
+      ? order.knownStripeFeeCents ?? 0
+      : hasForecastStripeFee
+        ? order.forecastStripeFeeCents ?? 0
+        : 0;
     return {
-      amount: formatMoneyFromCents(order.knownStripeFeeCents ?? 0),
-      tone: isReal ? ("real" as const) : ("estimated" as const),
-      subtitle: isReal ? "Real fee" : "Estimated fee",
+      amount: formatMoneyFromCents(stripeFeeCents),
+      tone: hasKnownStripeFee ? ("real" as const) : ("estimated" as const),
+      subtitle: hasKnownStripeFee ? "Real fee" : "Estimated fee",
       isEmpty: false,
     };
   }

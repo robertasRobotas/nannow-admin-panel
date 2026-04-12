@@ -45,6 +45,7 @@ const OrdersList = ({ orders, recentlyChangedOrderIds = {} }: OrdersListProps) =
             startsAt={u.startsAt}
             endsAt={u.endsAt}
             totalPrice={u.totalPrice}
+            isUrgent={u.isUrgent}
             isDirectOrderToProvider={u.isDirectOrderToProvider}
             providerName={getProviderName(
               getUserName(providerUser?.firstName, providerUser?.lastName),

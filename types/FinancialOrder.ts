@@ -30,13 +30,16 @@ export type FinancialOrderRow = {
   releasedFundsToProviderAt: string | null;
   cancelFeePaidToProviderAt: string | null;
   actualClientPaidCents: number | null;
+  clientPaidCents?: number | null;
   actualRefundCents: number | null;
   actualPayoutCents: number | null;
   expectedRefundCents: number | null;
   expectedPayoutCents: number | null;
   displayedRefundCents: number | null;
   displayedPayoutCents: number | null;
+  stripeFeeCents?: number | null;
   knownStripeFeeCents: number | null;
+  forecastStripeFeeCents?: number | null;
   grossPlatformRevenueCents: number | null;
   netPlatformRevenueCents: number | null;
   financialMode: FinancialOrderMode;

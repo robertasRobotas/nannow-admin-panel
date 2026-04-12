@@ -16,6 +16,7 @@ type OrderProps = {
   startsAt: string;
   endsAt: string;
   totalPrice?: number | null;
+  isUrgent?: boolean;
   isProviderIgnoredEndNotification?: boolean;
   pendingProvidersCount?: number;
   isRecentlyChanged?: boolean;
@@ -34,6 +35,7 @@ const Order = ({
   startsAt,
   endsAt,
   totalPrice,
+  isUrgent = false,
   isProviderIgnoredEndNotification,
   pendingProvidersCount,
   isRecentlyChanged = false,
@@ -80,6 +82,7 @@ const Order = ({
                   Pending Providers:{pendingProvidersCount}
                 </div>
               )}
+            {isUrgent && <div className={styles.urgentBadge}>Urgent</div>}
           </div>
           <div className={styles.updatedAt}>Updated: {updatedAtText}</div>
           <div className={styles.timeRange}>{timeRangeText}</div>

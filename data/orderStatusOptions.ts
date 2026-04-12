@@ -1,6 +1,6 @@
 export const options = [
   { title: "All", value: "" },
-  { title: "ORDER_CREATED (WITHOUT DIRECT BOOKING)", value: "ORDER_CREATED" },
+  { title: "ORDER_CREATED(NON DIRECT)", value: "ORDER_CREATED" },
   {
     title: "CLIENT_ORDER_CREATION_IN_PROCESS",
     value: "CLIENT_ORDER_CREATION_IN_PROCESS",
@@ -54,7 +54,7 @@ export const getOrderStatusTitle = (
   const normalizedStatus = normalizeOrderStatus(status);
 
   if (normalizedStatus === "ORDER_CREATED" && isDirectOrderToProvider) {
-    return "ORDER_CREATED (DIRECT ORDER TO PROVIDER)";
+    return "ORDER_CREATED(DIRECT)";
   }
 
   return (

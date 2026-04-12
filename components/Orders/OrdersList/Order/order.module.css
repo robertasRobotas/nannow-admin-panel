@@ -88,6 +88,21 @@
   border-left: 1px solid rgba(0, 0, 0, 0.25);
 }
 
+.urgentBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 59, 48, 0.14);
+  color: #ff3b30;
+  font-family: Inter;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .updatedAt {
   color: #555;
   font-family: Inter;

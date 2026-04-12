@@ -597,6 +597,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               </>
             }
           />
+          {order?.isUrgent && (
+            <InfoCard
+              title="Priority"
+              iconImgUrl={flashImg.src}
+              type={isMobile ? "SPAN1" : "SPAN1"}
+              info={<span className={styles.urgentMark}>Urgent</span>}
+            />
+          )}
           {cancelTimingStatus && (
             <InfoCard
               title="Canceled timing"

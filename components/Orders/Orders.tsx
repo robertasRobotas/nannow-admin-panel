@@ -24,9 +24,9 @@ import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 
 const orderFilterOptions = [
   { title: "All", value: "" },
-  { title: "ORDER_CREATED (WITHOUT DIRECT BOOKING)", value: "ORDER_CREATED" },
+  { title: "ORDER_CREATED(NON DIRECT)", value: "ORDER_CREATED" },
   {
-    title: "ORDER_CREATED (DIRECT ORDER TO PROVIDER)",
+    title: "ORDER_CREATED(DIRECT)",
     value: "ORDER_CREATED_DIRECT",
   },
   {
