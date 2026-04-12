@@ -417,6 +417,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const orderStatusUpper = normalizeOrderStatus(order?.status);
   const isCanceledOrder = orderStatusUpper.includes("CANCELED");
   const isCanceledByClient = orderStatusUpper === "CANCELED_BY_CLIENT";
+  const isCanceledByProvider = orderStatusUpper === "CANCELED_BY_PROVIDER";
   const isCanceledLate2h =
     isCanceledByClient && !!order?.isOrderCanceledLessThan2hBeforeStart;
   const isCanceledLate12h =
@@ -428,7 +429,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     : isCanceledLate12h
       ? "Canceled less than 12h before start"
       : null;
-  const requiresRefund = isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h;
+  const requiresRefund =
+    isCanceledByProvider ||
+    (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h);
   const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
   const providerCostAmount =
     typeof order?.totalProviderPrice === "number" ? order.totalProviderPrice : null;
@@ -450,20 +453,22 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const refundDisplayAmount =
     refundedAmountValue != null
       ? refundedAmountValue
-      : isCanceledByClient
-        ? isCanceledLate12h
-          ? totalOrderAmount != null
-            ? Math.max(
-                totalOrderAmount -
-                  (serviceFeeAmount ?? 0) -
-                  (cancelFeeDisplayAmount ?? 0),
-                0,
-              )
-            : null
-          : requiresRefund
-            ? totalOrderAmount
-            : null
-        : null;
+      : isCanceledByProvider
+        ? totalOrderAmount
+        : isCanceledByClient
+          ? isCanceledLate12h
+            ? totalOrderAmount != null
+              ? Math.max(
+                  totalOrderAmount -
+                    (serviceFeeAmount ?? 0) -
+                    (cancelFeeDisplayAmount ?? 0),
+                  0,
+                )
+              : null
+            : requiresRefund
+              ? totalOrderAmount
+              : null
+          : null;
   const shouldShowInvoiceCards =
     order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" || requiresCancelFeePayout;
   const shouldShowProviderDocumentCard =
@@ -483,13 +488,15 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const specialProcessImgUrl = isRejectedDirectOffer
     ? getUserImage(sitterUser?.user?.imgUrl)
     : getUserImage(parentUser?.imgUrl);
-  const areCanceledFinancialActionsDone = !isCanceledByClient
-    ? true
-    : isCanceledLate2h
+  const areCanceledFinancialActionsDone = isCanceledByClient
+    ? isCanceledLate2h
       ? isCancelFeeDone
       : isCanceledLate12h
         ? isRefundDone && isCancelFeeDone
-        : isRefundDone;
+        : isRefundDone
+    : isCanceledByProvider
+      ? isRefundDone
+      : true;
   const refundedAtText = order?.refundedAt
     ? new Date(order.refundedAt).toLocaleString("en-US", {
         year: "numeric",
@@ -513,24 +520,24 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       })
     : "-";
   const finalPrimaryTitle = isCanceledOrder
-    ? isCanceledByClient
-      ? requiresRefund || isCanceledLate12h
-        ? isRefundDone
-          ? "Refunded to parent"
-          : "Refund to parent"
-        : "Cancel fee to sitter"
-      : "Canceled order payments"
+    ? requiresRefund || isCanceledLate12h
+      ? isRefundDone
+        ? "Refunded to parent"
+        : "Refund to parent"
+      : isCanceledByClient
+        ? "Cancel fee to sitter"
+        : "Canceled order payments"
     : "Final price to pay the sitter";
   const finalPrimaryValue = isCanceledOrder
-    ? isCanceledByClient
-      ? requiresRefund || isCanceledLate12h
-        ? refundDisplayAmount != null
-          ? `€${refundDisplayAmount.toFixed(2)}`
-          : "—"
-        : cancelFeeDisplayAmount != null
+    ? requiresRefund || isCanceledLate12h
+      ? refundDisplayAmount != null
+        ? `€${refundDisplayAmount.toFixed(2)}`
+        : "—"
+      : isCanceledByClient
+        ? cancelFeeDisplayAmount != null
           ? `€${cancelFeeDisplayAmount.toFixed(2)}`
           : "—"
-      : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
+        : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
     : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`;
   const showCanceledFeeBreakdown =
     isCanceledByClient &&
@@ -940,7 +947,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             onClick={payOrderHandler}
           />
         )}
-        {isCanceledByClient && areCanceledFinancialActionsDone && (
+        {(isCanceledByClient || isCanceledByProvider) &&
+          areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsColumn}>
             {(requiresRefund || isCanceledLate12h) && (
               <span className={`${styles.paidText} ${nunito.className}`}>
@@ -954,7 +962,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             )}
           </div>
         )}
-        {isCanceledByClient && isOrderPaid && !areCanceledFinancialActionsDone && (
+        {(isCanceledByClient || isCanceledByProvider) &&
+          isOrderPaid &&
+          !areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsRow}>
             {(requiresRefund || isCanceledLate12h) && !isRefundDone && (
               <Button

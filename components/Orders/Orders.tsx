@@ -4,6 +4,7 @@ import { nunito } from "@/helpers/fonts";
 import {
   getCanceledPendingFinancialOrders,
   getCanceledPendingFinancialOrdersCount,
+  getCanceledPaidOrdersLegacy,
   getClosedOrders,
   getNotEndedOrdersCount,
   getNotPaidOrders,
@@ -67,6 +68,7 @@ const Orders = () => {
     | "NOT_ENDED"
     | "NOT_PAID"
     | "CANCELED_NOT_PAID"
+    | "CANCELED_PAID_LEGACY"
     | "CLOSED_BY_ADMINS";
   const [selectedOption, setSelectedOption] = useState<number>(0);
 
@@ -205,6 +207,31 @@ const Orders = () => {
     [router],
   );
 
+  const fetchCanceledPaidLegacyOrders = useCallback(
+    async (startIndex: number) => {
+      try {
+        const response = await getCanceledPaidOrdersLegacy(startIndex, 20);
+        const result = response.data.result as {
+          items: OrderType[];
+          total: number;
+          pageSize: number;
+        };
+        setOrders(result.items);
+        setItemsPerPage(result.pageSize);
+        setPageCount(Math.ceil(result.total / result.pageSize));
+        setTotalUsers(result.total);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    },
+    [router],
+  );
+
   const fetchClosedOrders = useCallback(
     async (startIndex: number) => {
       try {
@@ -296,6 +323,10 @@ const Orders = () => {
       fetchCanceledNotPaidOrders(itemOffset);
       return;
     }
+    if (activeFilter === "CANCELED_PAID_LEGACY") {
+      fetchCanceledPaidLegacyOrders(itemOffset);
+      return;
+    }
     if (activeFilter === "CLOSED_BY_ADMINS") {
       fetchClosedOrders(itemOffset);
       return;
@@ -321,6 +352,7 @@ const Orders = () => {
     fetchOrders,
     fetchNotPaidOrders,
     fetchCanceledNotPaidOrders,
+    fetchCanceledPaidLegacyOrders,
     fetchClosedOrders,
     fetchCreatedOrdersByBookingType,
   ]);
@@ -397,17 +429,38 @@ const Orders = () => {
   };
 
   const handleIgnoredOrdersClick = () => {
+    if (activeFilter === "NOT_ENDED" && itemOffset === 0) {
+      fetchOrders("NOT_ENDED_IN_TIME", 0);
+      return;
+    }
     setActiveFilter("NOT_ENDED");
     setItemOffset(0);
   };
 
   const handleNotPaidOrdersClick = () => {
+    if (activeFilter === "NOT_PAID" && itemOffset === 0) {
+      fetchNotPaidOrders("NOT_PAID", 0);
+      return;
+    }
     setActiveFilter("NOT_PAID");
     setItemOffset(0);
   };
 
   const handleCanceledNotPaidOrdersClick = () => {
+    if (activeFilter === "CANCELED_NOT_PAID" && itemOffset === 0) {
+      fetchCanceledNotPaidOrders(0);
+      return;
+    }
     setActiveFilter("CANCELED_NOT_PAID");
+    setItemOffset(0);
+  };
+
+  const handleCanceledPaidLegacyOrdersClick = () => {
+    if (activeFilter === "CANCELED_PAID_LEGACY" && itemOffset === 0) {
+      fetchCanceledPaidLegacyOrders(0);
+      return;
+    }
+    setActiveFilter("CANCELED_PAID_LEGACY");
     setItemOffset(0);
   };
 
@@ -475,6 +528,15 @@ const Orders = () => {
             />
           </div>
         )}
+        <div style={{ marginLeft: 12 }}>
+          <Button
+            title="Canceled paid"
+            type="PLAIN"
+            onClick={() => {
+              handleCanceledPaidLegacyOrdersClick();
+            }}
+          />
+        </div>
         <div style={{ marginLeft: "auto" }}>
           <SearchBar
             placeholder="Type order ID"

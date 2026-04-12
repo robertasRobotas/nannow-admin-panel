@@ -1390,6 +1390,123 @@ export const getCanceledPendingFinancialOrders = async (
   return response;
 };
 
+export const getCanceledPaidOrdersLegacy = async (
+  startIndex = 0,
+  pageSize = 20,
+  search?: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const canceledStatuses = [
+    "CANCELED_BY_CLIENT",
+    "CLIENT_CANCELED",
+    "CANCELED_BY_PROVIDER",
+    "PROVIDER_CANCELED",
+  ];
+  const normalizedSearch = search?.trim().toLowerCase() ?? "";
+  const byId = new Map<string, unknown>();
+
+  for (const status of canceledStatuses) {
+    let cursor = 0;
+    let total = 0;
+    let apiPageSize = 100;
+
+    do {
+      const response = await axios.get(`${BASE_URL}/admin/orders`, {
+        params: {
+          startIndex: cursor,
+          pageSize: apiPageSize,
+          status,
+        },
+        headers: {
+          Authorization: jwt,
+        },
+      });
+
+      const result = response.data?.result ?? {};
+      const items = Array.isArray(result.items) ? result.items : [];
+      total = Number(result.total ?? 0);
+      apiPageSize = Number(result.pageSize ?? apiPageSize);
+
+      for (const order of items) {
+        const orderId = String((order as { id?: unknown })?.id ?? "");
+        if (!orderId || byId.has(orderId)) continue;
+
+        const orderStatus = String(
+          (order as { status?: unknown })?.status ?? "",
+        ).toUpperCase();
+        const paymentStatus = String(
+          (order as { paymentStatus?: unknown })?.paymentStatus ?? "",
+        ).toUpperCase();
+        const refundedAmount = Number(
+          (order as { refundedAmount?: unknown })?.refundedAmount ?? 0,
+        );
+        const refundedAmountCents = Number(
+          (order as { refundedAmountCents?: unknown })?.refundedAmountCents ?? 0,
+        );
+
+        if (!orderStatus.includes("CANCELED")) continue;
+        if (paymentStatus !== "PAID") continue;
+        if (refundedAmount > 0 || refundedAmountCents > 0) continue;
+
+        if (normalizedSearch.length > 0) {
+          const orderPrettyId = String(
+            (order as { orderPrettyId?: unknown })?.orderPrettyId ?? "",
+          ).toLowerCase();
+          const clientFullName = `${String(
+            (order as { clientUser?: { firstName?: unknown; lastName?: unknown } })
+              ?.clientUser?.firstName ?? "",
+          )} ${String(
+            (order as { clientUser?: { firstName?: unknown; lastName?: unknown } })
+              ?.clientUser?.lastName ?? "",
+          )}`.trim().toLowerCase();
+          const providerFullName = `${String(
+            (
+              order as {
+                approvedProvider?: { user?: { firstName?: unknown; lastName?: unknown } };
+              }
+            )?.approvedProvider?.user?.firstName ?? "",
+          )} ${String(
+            (
+              order as {
+                approvedProvider?: { user?: { firstName?: unknown; lastName?: unknown } };
+              }
+            )?.approvedProvider?.user?.lastName ?? "",
+          )}`.trim().toLowerCase();
+
+          const matchesSearch =
+            orderPrettyId.includes(normalizedSearch) ||
+            clientFullName.includes(normalizedSearch) ||
+            providerFullName.includes(normalizedSearch);
+
+          if (!matchesSearch) continue;
+        }
+
+        byId.set(orderId, order);
+      }
+
+      cursor += apiPageSize;
+    } while (cursor < total);
+  }
+
+  const allItems = Array.from(byId.values()).sort((a, b) => {
+    const aCreated = String((a as { createdAt?: unknown })?.createdAt ?? "");
+    const bCreated = String((b as { createdAt?: unknown })?.createdAt ?? "");
+    return bCreated.localeCompare(aCreated);
+  });
+
+  return {
+    data: {
+      result: {
+        items: allItems.slice(startIndex, startIndex + pageSize),
+        total: allItems.length,
+        pageSize,
+        startIndex,
+        hasMore: startIndex + pageSize < allItems.length,
+      },
+    },
+  };
+};
+
 export const finishOrderByAdmin = async (
   id: string,
   resolvedReason: string,
