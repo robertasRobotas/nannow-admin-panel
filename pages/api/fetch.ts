@@ -14,7 +14,7 @@ const API_CONFIG = {
     wsTransports: ["websocket"] as const,
   },
   test: {
-    origin: "https://nannow-api-test.com",
+    origin: "https://nannow-test-api.com",
     apiVersion: "/v1",
     wsTransports: ["websocket"] as const,
   },
@@ -455,10 +455,7 @@ export const setUserSuspendedStatus = async (
   return response;
 };
 
-export const removeUserImgUrl = async (
-  userId: string,
-  message: string,
-) => {
+export const removeUserImgUrl = async (userId: string, message: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(
     `${BASE_URL}/admin/users/${userId}/img-url/remove`,
@@ -1110,6 +1107,64 @@ export const getFinancialOrders = async (params?: {
   return response;
 };
 
+export const getMarketplaceAnalytics = async (params?: {
+  dateFrom?: string;
+  dateTo?: string;
+  interval?: "day" | "week" | "month";
+  timezone?: string;
+  country?: string;
+  city?: string;
+  statuses?: string[];
+  paymentStatuses?: string[];
+  topLimit?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/analytics/marketplace`, {
+    params: {
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      interval: params?.interval ?? "day",
+      timezone: params?.timezone ?? "Europe/Vilnius",
+      country: params?.country,
+      city: params?.city,
+      statuses:
+        Array.isArray(params?.statuses) && params.statuses.length > 0
+          ? params.statuses.join(",")
+          : undefined,
+      paymentStatuses:
+        Array.isArray(params?.paymentStatuses) &&
+        params.paymentStatuses.length > 0
+          ? params.paymentStatuses.join(",")
+          : undefined,
+      topLimit: params?.topLimit ?? 10,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const rebuildMarketplaceAnalyticsDailySnapshots = async (params: {
+  dateFrom: string;
+  dateTo: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/analytics/marketplace/daily/rebuild`,
+    {
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+    },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const rebuildAllFinancialLedgerOrders = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
@@ -1441,7 +1496,8 @@ export const getCanceledPaidOrdersLegacy = async (
           (order as { refundedAmount?: unknown })?.refundedAmount ?? 0,
         );
         const refundedAmountCents = Number(
-          (order as { refundedAmountCents?: unknown })?.refundedAmountCents ?? 0,
+          (order as { refundedAmountCents?: unknown })?.refundedAmountCents ??
+            0,
         );
 
         if (!orderStatus.includes("CANCELED")) continue;
@@ -1453,25 +1509,39 @@ export const getCanceledPaidOrdersLegacy = async (
             (order as { orderPrettyId?: unknown })?.orderPrettyId ?? "",
           ).toLowerCase();
           const clientFullName = `${String(
-            (order as { clientUser?: { firstName?: unknown; lastName?: unknown } })
-              ?.clientUser?.firstName ?? "",
+            (
+              order as {
+                clientUser?: { firstName?: unknown; lastName?: unknown };
+              }
+            )?.clientUser?.firstName ?? "",
           )} ${String(
-            (order as { clientUser?: { firstName?: unknown; lastName?: unknown } })
-              ?.clientUser?.lastName ?? "",
-          )}`.trim().toLowerCase();
+            (
+              order as {
+                clientUser?: { firstName?: unknown; lastName?: unknown };
+              }
+            )?.clientUser?.lastName ?? "",
+          )}`
+            .trim()
+            .toLowerCase();
           const providerFullName = `${String(
             (
               order as {
-                approvedProvider?: { user?: { firstName?: unknown; lastName?: unknown } };
+                approvedProvider?: {
+                  user?: { firstName?: unknown; lastName?: unknown };
+                };
               }
             )?.approvedProvider?.user?.firstName ?? "",
           )} ${String(
             (
               order as {
-                approvedProvider?: { user?: { firstName?: unknown; lastName?: unknown } };
+                approvedProvider?: {
+                  user?: { firstName?: unknown; lastName?: unknown };
+                };
               }
             )?.approvedProvider?.user?.lastName ?? "",
-          )}`.trim().toLowerCase();
+          )}`
+            .trim()
+            .toLowerCase();
 
           const matchesSearch =
             orderPrettyId.includes(normalizedSearch) ||

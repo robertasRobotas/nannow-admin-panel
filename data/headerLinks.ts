@@ -2,6 +2,7 @@ import { HeaderLink } from "@/types/HeaderLink";
 
 export const links: HeaderLink[] = [
   { title: "Financial ledger", link: "/financial-ledger" },
+  { title: "Analytics", link: "/analytics" },
   { title: "Users", link: "/users" },
   { title: "Orders", link: "/orders" },
   { title: "Criminal check", link: "/criminal-check" },

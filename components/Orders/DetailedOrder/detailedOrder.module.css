@@ -181,6 +181,16 @@
   line-height: 16px;
 }
 
+.stripeInfoList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stripeInfoLabel {
+  font-weight: 800;
+}
+
 .problemSection {
   padding-top: 40px;
 }

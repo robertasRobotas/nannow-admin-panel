@@ -12,6 +12,11 @@
   box-sizing: border-box;
 }
 
+.multiline {
+  height: auto;
+  align-items: flex-start;
+}
+
 .SPAN3 {
   /* preserved for compatibility, layout is content-sized */
 }

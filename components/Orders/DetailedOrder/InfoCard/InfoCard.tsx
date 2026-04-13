@@ -6,6 +6,7 @@ type InfoCardProps = {
   iconImgUrl: string;
   info: ReactNode;
   type: string;
+  isMultiline?: boolean;
 };
 
 const InfoCard = ({
@@ -13,9 +14,14 @@ const InfoCard = ({
   iconImgUrl,
   info,
   type = "SPAN3",
+  isMultiline = false,
 }: InfoCardProps) => {
   return (
-    <div className={`${styles.main} ${styles[type]}`}>
+    <div
+      className={`${styles.main} ${styles[type]} ${
+        isMultiline ? styles.multiline : ""
+      }`}
+    >
       <img src={iconImgUrl} alt="Status" />
       <div className={styles.infoContent}>
         <div className={styles.infoTitle}>{title}</div>

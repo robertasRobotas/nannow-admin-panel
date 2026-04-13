@@ -76,6 +76,9 @@ export type DetailedOrderType = {
   platformFeePrice: number;
   status: string;
   paymentStatus: string;
+  paidAt?: string | null;
+  stripeCustomerId?: string | null;
+  stripePaymentDescription?: string | null;
   orderPrettyId: string;
   isDirectOrderToProvider: boolean;
   requiredProviderId: string | null;

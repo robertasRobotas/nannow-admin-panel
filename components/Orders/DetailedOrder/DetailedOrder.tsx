@@ -30,6 +30,7 @@ import {
 } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
 import calendarImg from "../../../assets/images/calendar.svg";
+import cardBwImg from "../../../assets/images/card-bw.svg";
 import Review from "@/components/Reviews/ReviewsList/Review/Review";
 import callImg from "../../../assets/images/call.svg";
 import closeImg from "../../../assets/images/close.svg";
@@ -119,41 +120,23 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     order?.address?.houseNumber ?? ""
   }, ${order?.address?.city ?? ""}`;
 
-  const orderCreatedAt = order?.createdAt
-    ? new Date(order.createdAt).toLocaleString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        timeZoneName: "short",
-      })
-    : "-";
+  const formatCompactDateTime = (value?: string | null) =>
+    value
+      ? new Date(value).toLocaleString("en-GB", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZoneName: "short",
+        })
+      : "-";
 
-  const arrivalTime = order?.startsAt
-    ? new Date(order.startsAt).toLocaleString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        timeZoneName: "short",
-      })
-    : "-";
-
-  const leaveTime = order?.endsAt
-    ? new Date(order.endsAt).toLocaleString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        timeZoneName: "short",
-      })
-    : "-";
+  const orderCreatedAt = formatCompactDateTime(order?.createdAt);
+  const arrivalTime = formatCompactDateTime(order?.startsAt);
+  const leaveTime = formatCompactDateTime(order?.endsAt);
+  const paidAtText = formatCompactDateTime(order?.paidAt);
 
   const providerMarkedServiceInProgressAt =
     order?.provider_markedAsServiceInProgressAt
@@ -689,6 +672,28 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 }
               />
           )}
+          <InfoCard
+            title="Stripe data"
+            iconImgUrl={cardBwImg.src}
+            type={isMobile ? "SPAN2" : "SPAN3"}
+            isMultiline={true}
+            info={
+              <div className={styles.stripeInfoList}>
+                <div>
+                  <span className={styles.stripeInfoLabel}>Paid:</span>{" "}
+                  {paidAtText}
+                </div>
+                <div>
+                  <span className={styles.stripeInfoLabel}>Customer:</span>{" "}
+                  {order?.stripeCustomerId || "-"}
+                </div>
+                <div>
+                  <span className={styles.stripeInfoLabel}>Description:</span>{" "}
+                  {order?.stripePaymentDescription || "-"}
+                </div>
+              </div>
+            }
+          />
         </div>
         {pendingProviders.length > 0 && (
           <div className={styles.pendingProvidersSection}>
