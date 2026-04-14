@@ -924,6 +924,11 @@ const Users = () => {
               type="OUTLINED"
               onClick={() => router.push("/users/filter-export")}
             />
+            <Button
+              title="Campaigns"
+              type="OUTLINED"
+              onClick={() => router.push("/campaigns")}
+            />
             {isProvidersSelected && (
               <>
                 <DropDownButton

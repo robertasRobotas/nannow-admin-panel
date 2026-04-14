@@ -1,0 +1,403 @@
+.main {
+  padding: 38px 40px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 54px;
+  line-height: 0.95;
+  font-weight: 900;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.error {
+  color: #d83a2e;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.composeCard,
+.historyPane,
+.detailPane {
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.composeCard {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.composeHeader,
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sectionTitle {
+  color: #000;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.sectionSubtitle {
+  margin-top: 6px;
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.senderCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.senderAvatar,
+.previewRecipientAvatar,
+.recipientAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.senderTitle,
+.previewRecipientName,
+.recipientName {
+  color: #000;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.senderMeta,
+.previewRecipientMeta,
+.recipientMeta,
+.historyMeta,
+.detailFilters {
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.filtersGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field,
+.textareaField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field > span,
+.textareaField > span,
+.filterLabel {
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.field input,
+.textareaField textarea {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 18px;
+  background: #fff;
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 12px 16px;
+  outline: none;
+}
+
+.textareaField textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pillsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pillButton {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.pillButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.pillButtonActive {
+  border-color: #000;
+  background: #000;
+  color: #fff;
+}
+
+.composeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.previewCard {
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.previewCount {
+  color: #000;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.previewFilters,
+.campaignTextCard {
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.previewRecipients,
+.recipientList,
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.previewRecipientRow,
+.recipientRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: #fff;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.previewRecipientRow:hover,
+.recipientRow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 480px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.historyPane,
+.detailPane {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.historyRow {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  background: #fff;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.historyRow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.historyRowActive {
+  border-color: rgba(0, 0, 0, 0.22);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.historyRowTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.historyText {
+  color: #000;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.historyDate,
+.recipientDate {
+  color: rgba(0, 0, 0, 0.48);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.detailSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summaryCard span {
+  color: rgba(0, 0, 0, 0.56);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.summaryCard strong {
+  color: #000;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.campaignTextCard {
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 16px 18px;
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.recipientActions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.recipientMain {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.emptyState {
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 18px;
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 1280px) {
+  .filtersGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detailSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 26px 18px 40px;
+  }
+
+  .title {
+    font-size: 40px;
+  }
+
+  .filtersGrid,
+  .detailSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .historyRowTop,
+  .sectionHeader,
+  .composeHeader,
+  .recipientRow,
+  .previewRecipientRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .recipientDate,
+  .historyDate {
+    white-space: normal;
+  }
+}

@@ -10,6 +10,7 @@ import {
   AdminRole,
   createAdminUser,
   deleteFinancialLedgerOrders,
+  getBroadcastNotificationSender,
   getConnectedAdmins,
   postAdminMessage,
   regenerateAddressPublicLocation,
@@ -21,12 +22,14 @@ import {
   getFinancialOrders,
   getSuperAccessItem,
   getSuperAccessList,
+  updateBroadcastNotificationSender,
   updateSuperAccessItem,
 } from "@/pages/api/fetch";
 import { options as orderStatusOptions } from "@/data/orderStatusOptions";
 import { useRouter } from "next/router";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 import type { FinancialOrderRow, GetFinancialOrdersResponse } from "@/types/FinancialOrder";
+import type { BroadcastNotificationSender } from "@/types/BroadcastNotifications";
 
 type EntityRecord = {
   [key: string]: unknown;
@@ -47,7 +50,8 @@ type SuperAccessViewEntity =
   | SuperAccessEntity
   | "alerts"
   | "connected-admins"
-  | "financial-ledger";
+  | "financial-ledger"
+  | "broadcast-sender";
 
 type SuperMenuItem = {
   title: string;
@@ -63,6 +67,7 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Addresses", key: "addresses" },
   { title: "Orders", key: "orders" },
   { title: "Financial ledger", key: "financial-ledger" },
+  { title: "Broadcast sender", key: "broadcast-sender" },
   { title: "WS connected Admins", key: "connected-admins" },
 ];
 
@@ -554,6 +559,31 @@ const SuperAccess = () => {
       setTotal(0);
       return;
     }
+    if (entity === "broadcast-sender") {
+      try {
+        setLoadingList(true);
+        setError("");
+        const response = await getBroadcastNotificationSender();
+        const sender =
+          ((response.data as { result?: BroadcastNotificationSender }).result ??
+            response.data) as BroadcastNotificationSender | null;
+        const nextList = sender ? [sender as unknown as EntityRecord] : [];
+        setList(nextList);
+        setTotal(nextList.length);
+        if (nextList.length > 0) {
+          setSelectedId(String(nextList[0].id ?? "SYSTEM_NANNOW"));
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          router.push("/");
+          return;
+        }
+        setError("Failed to load broadcast sender.");
+      } finally {
+        setLoadingList(false);
+      }
+      return;
+    }
     if (entity === "financial-ledger") {
       try {
         setLoadingList(true);
@@ -647,6 +677,12 @@ const SuperAccess = () => {
     if (entity === "alerts") {
       setSelectedItem(null);
       setDraft({});
+      return;
+    }
+    if (entity === "broadcast-sender") {
+      const listItem = list.find((item) => pickId(item) === selectedId) ?? null;
+      setSelectedItem(listItem);
+      setDraft(listItem ?? {});
       return;
     }
     if (entity === "financial-ledger") {
@@ -1325,11 +1361,31 @@ const SuperAccess = () => {
   };
 
   const saveChanges = async () => {
-    if (entity === "alerts" || entity === "connected-admins") return;
+    if (
+      entity === "alerts" ||
+      entity === "connected-admins"
+    )
+      return;
     if (!selectedId || isSaving) return;
     try {
       setIsSaving(true);
       setError("");
+      if (entity === "broadcast-sender") {
+        await updateBroadcastNotificationSender({
+          firstName:
+            typeof draft.firstName === "string" && draft.firstName.trim()
+              ? draft.firstName.trim()
+              : undefined,
+          imgUrl:
+            typeof draft.imgUrl === "string"
+              ? draft.imgUrl.trim() || null
+              : draft.imgUrl === null
+                ? null
+                : undefined,
+        });
+        await fetchList();
+        return;
+      }
       if (entity === "admins") {
         const payload: Record<string, unknown> = {
           firstName:
@@ -1775,6 +1831,8 @@ const SuperAccess = () => {
                   ? "Admin messages"
                   : entity === "financial-ledger"
                     ? "Financial ledger"
+                  : entity === "broadcast-sender"
+                    ? "Broadcast sender"
                   : entity === "connected-admins"
                     ? "WS connected Admins"
                     : prettyTitle(entity)}
@@ -1784,12 +1842,16 @@ const SuperAccess = () => {
                   ? "Send a message to all admins."
                   : entity === "financial-ledger"
                     ? `${total} ledger orders, page ${currentPage}/${totalPages}`
+                  : entity === "broadcast-sender"
+                    ? "Manage the SYSTEM_NANNOW sender profile."
                   : entity === "connected-admins"
                     ? `${total} admins connected right now.`
                   : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
-            {entity !== "alerts" && entity !== "connected-admins" && (
+            {entity !== "alerts" &&
+              entity !== "connected-admins" &&
+              entity !== "broadcast-sender" && (
               <div className={styles.listHeaderActions}>
                 {entity !== "financial-ledger" && (
                   <button
@@ -2224,26 +2286,28 @@ const SuperAccess = () => {
                 )}
               </div>
 
-              <div className={styles.pagination}>
-                <Button
-                  title="Prev"
-                  type="OUTLINED"
-                  onClick={() =>
-                    setStartIndex((prev) => Math.max(0, prev - pageSize))
-                  }
-                  isDisabled={startIndex === 0 || loadingList}
-                />
-                <Button
-                  title="Next"
-                  type="OUTLINED"
-                  onClick={() =>
-                    setStartIndex((prev) =>
-                      prev + pageSize >= total ? prev : prev + pageSize,
-                    )
-                  }
-                  isDisabled={startIndex + pageSize >= total || loadingList}
-                />
-              </div>
+              {entity !== "broadcast-sender" && (
+                <div className={styles.pagination}>
+                  <Button
+                    title="Prev"
+                    type="OUTLINED"
+                    onClick={() =>
+                      setStartIndex((prev) => Math.max(0, prev - pageSize))
+                    }
+                    isDisabled={startIndex === 0 || loadingList}
+                  />
+                  <Button
+                    title="Next"
+                    type="OUTLINED"
+                    onClick={() =>
+                      setStartIndex((prev) =>
+                        prev + pageSize >= total ? prev : prev + pageSize,
+                      )
+                    }
+                    isDisabled={startIndex + pageSize >= total || loadingList}
+                  />
+                </div>
+              )}
             </>
           )}
         </section>
@@ -2253,6 +2317,8 @@ const SuperAccess = () => {
             <h2>
               {entity === "alerts"
                 ? "Send message"
+                : entity === "broadcast-sender"
+                  ? "Broadcast sender"
                 : entity === "connected-admins"
                   ? "Connected admin"
                   : "Detail"}
@@ -2286,6 +2352,10 @@ const SuperAccess = () => {
                     ? isSendingAlert
                       ? "Sending..."
                       : "Send alert"
+                    : entity === "broadcast-sender"
+                      ? isSaving
+                        ? "Saving..."
+                        : "Save sender"
                     : entity === "financial-ledger"
                       ? "Read only"
                     : entity === "connected-admins"
@@ -2299,6 +2369,8 @@ const SuperAccess = () => {
                 isDisabled={
                   entity === "alerts"
                     ? !adminAlertText.trim() || isSendingAlert
+                    : entity === "broadcast-sender"
+                      ? loadingItem || isSaving
                     : entity === "financial-ledger"
                       ? true
                     : entity === "connected-admins"
@@ -2366,6 +2438,53 @@ const SuperAccess = () => {
                       type="text"
                       value={String(selectedItem.email ?? "")}
                       disabled
+                    />
+                  </label>
+                </div>
+              )}
+            </>
+          ) : entity === "broadcast-sender" ? (
+            <>
+              {!selectedId && (
+                <div className={styles.empty}>No broadcast sender found.</div>
+              )}
+              {selectedId && !loadingItem && selectedItem && (
+                <div className={styles.form}>
+                  <label className={styles.field}>
+                    <span>Sender ID</span>
+                    <input
+                      type="text"
+                      value={String(selectedItem.id ?? "")}
+                      disabled
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Email</span>
+                    <input
+                      type="text"
+                      value={String(selectedItem.email ?? "")}
+                      disabled
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>First name</span>
+                    <input
+                      type="text"
+                      value={String(draft.firstName ?? "")}
+                      onChange={(e) =>
+                        handleFieldChange("firstName", e.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Image URL</span>
+                    <input
+                      type="text"
+                      value={String(draft.imgUrl ?? "")}
+                      onChange={(e) =>
+                        handleFieldChange("imgUrl", e.target.value)
+                      }
+                      placeholder="Leave empty to remove image"
                     />
                   </label>
                 </div>

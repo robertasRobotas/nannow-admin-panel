@@ -14,7 +14,7 @@ const API_CONFIG = {
     wsTransports: ["websocket"] as const,
   },
   test: {
-    origin: "https://nannow-api-test.com",
+    origin: "http://localhost:8080",
     apiVersion: "/v1",
     wsTransports: ["websocket"] as const,
   },
@@ -1215,6 +1215,135 @@ export const getMarketplaceAnalyticsLocations = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
     `${BASE_URL}/admin/analytics/marketplace/locations`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const previewBroadcastNotifications = async (payload: {
+  filters?: {
+    country?: string;
+    city?: string;
+    currentRoles?: string[];
+    isOnboardingFinished?: boolean;
+    isProfilePictureAdded?: boolean;
+    childQtyMin?: number;
+    childQtyMax?: number;
+    hasActivityNumber?: boolean;
+    appVersions?: string[];
+    generalRatingMin?: number;
+    generalRatingMax?: number;
+  };
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/broadcast-notifications/preview`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const sendBroadcastNotifications = async (payload: {
+  text: string;
+  filters?: {
+    country?: string;
+    city?: string;
+    currentRoles?: string[];
+    isOnboardingFinished?: boolean;
+    isProfilePictureAdded?: boolean;
+    childQtyMin?: number;
+    childQtyMax?: number;
+    hasActivityNumber?: boolean;
+    appVersions?: string[];
+    generalRatingMin?: number;
+    generalRatingMax?: number;
+  };
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/broadcast-notifications`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getBroadcastNotificationCampaigns = async (params?: {
+  startIndex?: number;
+  pageSize?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/broadcast-notifications`, {
+    params: {
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getBroadcastNotificationCampaignById = async (
+  campaignId: string,
+  params?: {
+    startIndex?: number;
+    pageSize?: number;
+    search?: string;
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/broadcast-notifications/${campaignId}`,
+    {
+      params: {
+        startIndex: params?.startIndex ?? 0,
+        pageSize: params?.pageSize ?? 20,
+        search: params?.search,
+      },
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getBroadcastNotificationSender = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/broadcast-notifications/sender`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const updateBroadcastNotificationSender = async (payload: {
+  firstName?: string;
+  imgUrl?: string | null;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/super/broadcast-notifications/sender`,
+    payload,
     {
       headers: {
         Authorization: jwt,
