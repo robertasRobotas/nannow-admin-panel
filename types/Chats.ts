@@ -14,6 +14,7 @@ export type ChatMessageType = {
   senderId: string;
   receiverId: string;
   content: string;
+  imageUrl?: string | null;
   createdAt: string;
   chatId: string;
   isRead: boolean;

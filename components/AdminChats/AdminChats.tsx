@@ -231,7 +231,8 @@ const AdminChats = () => {
                         <span>{user2Name}</span>
                       </div>
                       <div className={styles.chatPreview}>
-                        {lastMessage?.content ?? "No messages yet"}
+                        {lastMessage?.content?.trim() ||
+                          (lastMessage?.imageUrl ? "Image" : "No messages yet")}
                       </div>
                     </div>
                     <div className={styles.chatDate}>

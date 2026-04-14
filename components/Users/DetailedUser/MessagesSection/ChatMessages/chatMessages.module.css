@@ -42,6 +42,25 @@
   white-space: pre-wrap;
 }
 
+.messageImageButton {
+  all: unset;
+  cursor: zoom-in;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 280px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.messageImage {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
 .messageTimestamp {
   font-size: 11px;
   font-weight: 600;
@@ -67,5 +86,10 @@
 
   .chatBubble {
     max-width: calc(100% - 56px);
+  }
+
+  .messageImageButton,
+  .messageImage {
+    max-width: min(240px, 100%);
   }
 }
