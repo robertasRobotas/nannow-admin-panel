@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import Button from "@/components/Button/Button";
+import { nunito } from "@/helpers/fonts";
 import {
   deleteChatMessageByAdmin,
   deleteChatMessageImageByAdmin,
@@ -115,6 +117,9 @@ const ChatMessages = ({
   const [displayMessages, setDisplayMessages] = useState<ChatMessageType[]>(messages);
   const [openedImageUrl, setOpenedImageUrl] = useState("");
   const [imageZoom, setImageZoom] = useState(1);
+  const [messageToDelete, setMessageToDelete] = useState<ChatMessageType | null>(null);
+  const [messageToRemoveImage, setMessageToRemoveImage] =
+    useState<ChatMessageType | null>(null);
   const [editingMessageId, setEditingMessageId] = useState("");
   const [editedContent, setEditedContent] = useState("");
   const [editError, setEditError] = useState("");
@@ -140,6 +145,16 @@ const ChatMessages = ({
     setIsHistoryModalOpen(false);
     setHistoryState({ message: null, history: [] });
     setHistoryError("");
+  };
+
+  const closeDeleteModal = () => {
+    if (loadingActionKey.startsWith("delete-")) return;
+    setMessageToDelete(null);
+  };
+
+  const closeRemoveImageModal = () => {
+    if (loadingActionKey.startsWith("image-")) return;
+    setMessageToRemoveImage(null);
   };
 
   useEffect(() => {
@@ -218,19 +233,20 @@ const ChatMessages = ({
     }
   };
 
-  const removeMessageImage = async (message: ChatMessageType) => {
-    if (!window.confirm("Remove image from this message?")) return;
+  const removeMessageImage = async () => {
+    if (!messageToRemoveImage) return;
 
     try {
-      setLoadingActionKey(`image-${message.id}`);
-      await deleteChatMessageImageByAdmin(message.id);
-      syncMessage(message.id, (current) => ({
+      setLoadingActionKey(`image-${messageToRemoveImage.id}`);
+      await deleteChatMessageImageByAdmin(messageToRemoveImage.id);
+      syncMessage(messageToRemoveImage.id, (current) => ({
         ...current,
         imageUrl: null,
         isEdited: true,
         isModerated: true,
       }));
       toast.success("Message image removed");
+      setMessageToRemoveImage(null);
     } catch (error) {
       console.log(error);
       toast.error("Failed to remove message image");
@@ -239,13 +255,13 @@ const ChatMessages = ({
     }
   };
 
-  const deleteMessage = async (message: ChatMessageType) => {
-    if (!window.confirm("Delete this message for users?")) return;
+  const deleteMessage = async () => {
+    if (!messageToDelete) return;
 
     try {
-      setLoadingActionKey(`delete-${message.id}`);
-      await deleteChatMessageByAdmin(message.id);
-      syncMessage(message.id, (current) => ({
+      setLoadingActionKey(`delete-${messageToDelete.id}`);
+      await deleteChatMessageByAdmin(messageToDelete.id);
+      syncMessage(messageToDelete.id, (current) => ({
         ...current,
         content: "Message deleted by admin",
         imageUrl: null,
@@ -254,6 +270,7 @@ const ChatMessages = ({
         isDeleted: true,
       }));
       toast.success("Message deleted");
+      setMessageToDelete(null);
     } catch (error) {
       console.log(error);
       toast.error("Failed to delete message");
@@ -430,7 +447,7 @@ const ChatMessages = ({
                           <button
                             type="button"
                             className={styles.messageActionBtn}
-                            onClick={() => removeMessageImage(message)}
+                            onClick={() => setMessageToRemoveImage(message)}
                             disabled={loadingActionKey === `image-${message.id}`}
                           >
                             {loadingActionKey === `image-${message.id}`
@@ -451,7 +468,7 @@ const ChatMessages = ({
                           <button
                             type="button"
                             className={`${styles.messageActionBtn} ${styles.messageActionDelete}`}
-                            onClick={() => deleteMessage(message)}
+                            onClick={() => setMessageToDelete(message)}
                             disabled={loadingActionKey === `delete-${message.id}`}
                           >
                             {loadingActionKey === `delete-${message.id}`
@@ -685,6 +702,72 @@ const ChatMessages = ({
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {messageToDelete && (
+        <div className={styles.confirmationBackdrop} onClick={closeDeleteModal}>
+          <div
+            className={`${styles.confirmationModal} ${nunito.className}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className={styles.confirmationTitle}>Delete message?</h2>
+            <p className={styles.confirmationBody}>
+              This will hide the message for users and mark it as deleted by admin.
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeDeleteModal}
+                isDisabled={loadingActionKey === `delete-${messageToDelete.id}`}
+              />
+              <Button
+                title={
+                  loadingActionKey === `delete-${messageToDelete.id}`
+                    ? "Deleting..."
+                    : "Confirm delete"
+                }
+                type="DELETE"
+                onClick={deleteMessage}
+                isDisabled={loadingActionKey === `delete-${messageToDelete.id}`}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {messageToRemoveImage && (
+        <div
+          className={styles.confirmationBackdrop}
+          onClick={closeRemoveImageModal}
+        >
+          <div
+            className={`${styles.confirmationModal} ${nunito.className}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className={styles.confirmationTitle}>Remove image?</h2>
+            <p className={styles.confirmationBody}>
+              This will remove the image from the message and mark the message as
+              moderated.
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeRemoveImageModal}
+                isDisabled={loadingActionKey === `image-${messageToRemoveImage.id}`}
+              />
+              <Button
+                title={
+                  loadingActionKey === `image-${messageToRemoveImage.id}`
+                    ? "Removing..."
+                    : "Confirm remove"
+                }
+                type="DELETE"
+                onClick={removeMessageImage}
+                isDisabled={loadingActionKey === `image-${messageToRemoveImage.id}`}
+              />
             </div>
           </div>
         </div>
