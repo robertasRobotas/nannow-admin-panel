@@ -14,7 +14,7 @@ const API_CONFIG = {
     wsTransports: ["websocket"] as const,
   },
   test: {
-    origin: "http://localhost:8080",
+    origin: "https://nannow-api-test.com",
     apiVersion: "/v1",
     wsTransports: ["websocket"] as const,
   },
@@ -1286,15 +1286,18 @@ export const getBroadcastNotificationCampaigns = async (params?: {
   pageSize?: number;
 }) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/broadcast-notifications`, {
-    params: {
-      startIndex: params?.startIndex ?? 0,
-      pageSize: params?.pageSize ?? 20,
+  const response = await axios.get(
+    `${BASE_URL}/admin/broadcast-notifications`,
+    {
+      params: {
+        startIndex: params?.startIndex ?? 0,
+        pageSize: params?.pageSize ?? 20,
+      },
+      headers: {
+        Authorization: jwt,
+      },
     },
-    headers: {
-      Authorization: jwt,
-    },
-  });
+  );
   return response;
 };
 
