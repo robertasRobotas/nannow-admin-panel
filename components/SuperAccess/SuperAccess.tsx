@@ -1343,7 +1343,9 @@ const SuperAccess = () => {
           roles: Array.isArray(draft.roles)
             ? draft.roles.filter(
                 (role): role is AdminRole =>
-                  role === "ADMIN" || role === "SUPER_ADMIN",
+                  role === "ADMIN" ||
+                  role === "SUPER_ADMIN" ||
+                  role === "CHAT_MODERATOR",
               )
             : undefined,
         };
@@ -2467,7 +2469,7 @@ const SuperAccess = () => {
                     />
                   </div>
                   <div className={styles.rolesMultiSelect}>
-                    {["ADMIN", "SUPER_ADMIN"].map((role) => (
+                    {["ADMIN", "SUPER_ADMIN", "CHAT_MODERATOR"].map((role) => (
                       <label key={role} className={styles.roleToggle}>
                         <input
                           type="checkbox"
@@ -2558,7 +2560,7 @@ const SuperAccess = () => {
                     <div key={key} className={styles.field}>
                       <span>{prettyTitle(key)}</span>
                       <div className={styles.rolesMultiSelect}>
-                        {["ADMIN", "SUPER_ADMIN"].map((role) => (
+                        {["ADMIN", "SUPER_ADMIN", "CHAT_MODERATOR"].map((role) => (
                           <label key={role} className={styles.roleToggle}>
                             <input
                               type="checkbox"

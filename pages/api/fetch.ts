@@ -69,7 +69,7 @@ export const setAdminApiMode = (mode: AdminApiMode) => {
   }
 };
 
-export type AdminRole = "ADMIN" | "SUPER_ADMIN";
+export type AdminRole = "ADMIN" | "SUPER_ADMIN" | "CHAT_MODERATOR";
 export type SuperAccessEntity =
   | "admins"
   | "users"
@@ -360,7 +360,10 @@ export const getCurrentAdminRolesFromJwt = (): AdminRole[] => {
   return Array.from(
     new Set(
       candidateRoles.filter(
-        (role): role is AdminRole => role === "ADMIN" || role === "SUPER_ADMIN",
+        (role): role is AdminRole =>
+          role === "ADMIN" ||
+          role === "SUPER_ADMIN" ||
+          role === "CHAT_MODERATOR",
       ),
     ),
   );
@@ -851,6 +854,69 @@ export const getAdminChats = async ({
       Authorization: jwt,
     },
   });
+  return response;
+};
+
+export const updateChatMessageByAdmin = async (
+  messageId: string,
+  payload: {
+    content: string;
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/chats/messages/${messageId}`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const deleteChatMessageImageByAdmin = async (messageId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.delete(
+    `${BASE_URL}/admin/chats/messages/${messageId}/image`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const deleteChatMessageByAdmin = async (messageId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.delete(
+    `${BASE_URL}/admin/chats/messages/${messageId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getChatMessageHistoryByAdmin = async (
+  messageId: string,
+  useSuperRoute = false,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    useSuperRoute
+      ? `${BASE_URL}/admin/super/chats/messages/${messageId}/history`
+      : `${BASE_URL}/admin/chats/messages/${messageId}/history`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
   return response;
 };
 

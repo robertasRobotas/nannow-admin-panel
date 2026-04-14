@@ -3,7 +3,7 @@ import styles from "./messagesSection.module.css";
 import ChatMessages from "./ChatMessages/ChatMessages";
 import Button from "@/components/Button/Button";
 import { ChatMessageType, ChatType } from "@/types/Chats";
-import { getChatById } from "@/pages/api/fetch";
+import { getChatById, getCurrentAdminRolesFromJwt } from "@/pages/api/fetch";
 import avatarImg from "../../../../assets/images/default-avatar.png";
 
 type MessagesSectionProps = {
@@ -43,6 +43,11 @@ const MessagesSection = ({
   const [userImgUrl, setUserImgUrl] = useState("");
   const [otherUserImgUrl, setOtherUserImgUrl] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+
+  const adminRoles = useMemo(() => getCurrentAdminRolesFromJwt(), []);
+  const canModerate =
+    adminRoles.includes("SUPER_ADMIN") || adminRoles.includes("CHAT_MODERATOR");
+  const useSuperHistoryRoute = adminRoles.includes("SUPER_ADMIN");
 
   useEffect(() => {
     if (selectedChatId || chats.length === 0) return;
@@ -164,6 +169,8 @@ const MessagesSection = ({
                   userId={userId}
                   userImgUrl={userImgUrl}
                   otherUserImgUrl={otherUserImgUrl}
+                  canModerate={canModerate}
+                  useSuperHistoryRoute={useSuperHistoryRoute}
                 />
               ) : (
                 <div className={styles.emptyState}>No messages yet</div>

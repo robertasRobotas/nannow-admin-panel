@@ -42,6 +42,10 @@
   white-space: pre-wrap;
 }
 
+.deletedBubble {
+  opacity: 0.86;
+}
+
 .messageImageButton {
   all: unset;
   cursor: zoom-in;
@@ -68,6 +72,232 @@
   opacity: 0.75;
 }
 
+.messageMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.messageFlag {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  opacity: 0.9;
+}
+
+.messageFlagDeleted {
+  color: #d53b2b;
+}
+
+.messageFlagError {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #d53b2b;
+}
+
+.messageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.messageActionBtn {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: #1a1a1a;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.messageActionBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.messageActionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messageActionDelete {
+  color: #d53b2b;
+  border-color: rgba(213, 59, 43, 0.25);
+}
+
+.sent .messageTimestamp,
+.sent .messageFlag {
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 1;
+}
+
+.sent .messageActionBtn {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(255, 255, 255, 0.72);
+  color: #0f172a;
+}
+
+.sent .messageActionDelete {
+  color: #d53b2b;
+  border-color: rgba(213, 59, 43, 0.3);
+}
+
+.editComposer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: min(380px, calc(100vw - 140px));
+}
+
+.editTextarea {
+  width: 100%;
+  min-height: 84px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #000;
+  resize: vertical;
+  padding: 10px 12px;
+  font: inherit;
+  line-height: 1.4;
+}
+
+.editTextarea:focus {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.historyModalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(780px, 100%);
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+  padding: 0 6px 8px;
+  color: #000;
+}
+
+.historyCurrentState {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.historyCurrentTitle {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #000;
+}
+
+.historyCurrentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #000;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.historyCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.historyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.historyBadgeOriginal,
+.historyBadgeAction {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.historyBadgeOriginal {
+  background: rgba(29, 155, 240, 0.12);
+  color: #0b6fd3;
+}
+
+.historyBadgeAction {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.historyContent {
+  color: #000;
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.historyPrevious {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.historyPreviousLabel {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(0, 0, 0, 0.52);
+}
+
+.historyFlagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.66);
+}
+
+.historyEmpty {
+  padding: 24px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.6);
+}
+
 .sent {
   background-color: #1d9bf0;
   color: #fff;
@@ -91,5 +321,15 @@
   .messageImageButton,
   .messageImage {
     max-width: min(240px, 100%);
+  }
+
+  .editComposer {
+    min-width: 0;
+    width: min(100%, 320px);
+  }
+
+  .historyHeader {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

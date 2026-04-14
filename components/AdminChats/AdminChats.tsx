@@ -4,7 +4,7 @@ import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import SearchBar from "@/components/SearchBar/SearchBar";
-import { getAdminChats, getChatById } from "@/pages/api/fetch";
+import { getAdminChats, getChatById, getCurrentAdminRolesFromJwt } from "@/pages/api/fetch";
 import { ChatMessageType, ChatType, GetAdminChatsResponse } from "@/types/Chats";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
 import paginateStyles from "@/styles/paginate.module.css";
@@ -49,6 +49,11 @@ const AdminChats = () => {
   const [loading, setLoading] = useState(false);
   const [loadingChat, setLoadingChat] = useState(false);
   const [error, setError] = useState("");
+
+  const adminRoles = useMemo(() => getCurrentAdminRolesFromJwt(), []);
+  const canModerate =
+    adminRoles.includes("SUPER_ADMIN") || adminRoles.includes("CHAT_MODERATOR");
+  const useSuperHistoryRoute = adminRoles.includes("SUPER_ADMIN");
 
   const selectedSort = SORT_OPTIONS[selectedSortOption]?.value ?? "latest";
 
@@ -257,6 +262,8 @@ const AdminChats = () => {
               userId={selectedChat.user1.id}
               userImgUrl={selectedChat.user1.imgUrl ?? ""}
               otherUserImgUrl={selectedChat.user2.imgUrl ?? ""}
+              canModerate={canModerate}
+              useSuperHistoryRoute={useSuperHistoryRoute}
             />
           ) : (
             <div className={styles.emptyState}>

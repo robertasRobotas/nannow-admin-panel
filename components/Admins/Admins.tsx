@@ -12,7 +12,7 @@ import {
 } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 
-const ROLE_OPTIONS: AdminRole[] = ["ADMIN", "SUPER_ADMIN"];
+const ROLE_OPTIONS: AdminRole[] = ["ADMIN", "SUPER_ADMIN", "CHAT_MODERATOR"];
 
 const getAdminId = (admin: AdminUserPayload): string => {
   const candidate = admin as AdminUserPayload & {
@@ -191,7 +191,10 @@ const Admins = () => {
     setEditPassword("");
     setRemovePassword(false);
     const initialRoles = (admin.roles ?? []).filter(
-      (role): role is AdminRole => role === "ADMIN" || role === "SUPER_ADMIN",
+      (role): role is AdminRole =>
+        role === "ADMIN" ||
+        role === "SUPER_ADMIN" ||
+        role === "CHAT_MODERATOR",
     );
     setEditRoles(initialRoles.length > 0 ? initialRoles : ["ADMIN"]);
   };
@@ -324,6 +327,9 @@ const Admins = () => {
               <div className={styles.rolesPills}>
                 {(admin.roles ?? []).includes("SUPER_ADMIN") && (
                   <span className={styles.superAdminPill}>SUPER ADMIN</span>
+                )}
+                {(admin.roles ?? []).includes("CHAT_MODERATOR") && (
+                  <span className={styles.superAdminPill}>CHAT MODERATOR</span>
                 )}
               </div>
             </div>

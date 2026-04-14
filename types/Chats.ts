@@ -15,9 +15,33 @@ export type ChatMessageType = {
   receiverId: string;
   content: string;
   imageUrl?: string | null;
+  isEdited?: boolean;
+  editedAt?: string | null;
+  lastEditedByAdminId?: string | null;
+  lastEditedByAdminName?: string | null;
+  isModerated?: boolean;
+  isDeleted?: boolean;
   createdAt: string;
   chatId: string;
   isRead: boolean;
+};
+
+export type ChatMessageHistorySnapshot = {
+  content?: string | null;
+  imageUrl?: string | null;
+  isDeleted?: boolean | null;
+};
+
+export type ChatMessageHistoryEntry = {
+  id: string;
+  messageId: string;
+  chatId: string;
+  action: string;
+  adminId?: string | null;
+  adminName?: string | null;
+  createdAt: string;
+  before?: ChatMessageHistorySnapshot | null;
+  after?: ChatMessageHistorySnapshot | null;
 };
 
 export type ChatType = {
