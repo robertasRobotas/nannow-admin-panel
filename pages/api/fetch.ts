@@ -1211,6 +1211,19 @@ export const getMarketplaceAnalytics = async (params?: {
   return response;
 };
 
+export const getMarketplaceAnalyticsLocations = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/analytics/marketplace/locations`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const rebuildMarketplaceAnalyticsDailySnapshots = async (params: {
   dateFrom: string;
   dateTo: string;
