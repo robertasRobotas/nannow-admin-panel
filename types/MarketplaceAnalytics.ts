@@ -128,6 +128,20 @@ export type GetMarketplaceAnalyticsResponse = {
   filters: MarketplaceAnalyticsAppliedFilters;
 };
 
+export type MarketplaceAnalyticsLocationCity = {
+  name: string;
+};
+
+export type MarketplaceAnalyticsLocationCountry = {
+  code: string;
+  name: string;
+  cities: MarketplaceAnalyticsLocationCity[];
+};
+
+export type GetMarketplaceAnalyticsLocationsResponse = {
+  result: MarketplaceAnalyticsLocationCountry[];
+};
+
 export type MarketplaceAnalyticsRebuildResponse = {
   result: {
     dateFrom: string;

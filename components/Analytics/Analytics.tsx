@@ -9,6 +9,7 @@ import { nunito } from "@/helpers/fonts";
 import {
   getCurrentAdminRolesFromJwt,
   getMarketplaceAnalytics,
+  getMarketplaceAnalyticsLocations,
   rebuildMarketplaceAnalyticsDailySnapshots,
 } from "@/pages/api/fetch";
 import {
@@ -17,10 +18,12 @@ import {
 } from "@/data/orderStatusOptions";
 import {
   GetMarketplaceAnalyticsResponse,
+  GetMarketplaceAnalyticsLocationsResponse,
   MarketplaceAnalyticsAppliedFilters,
   MarketplaceAnalyticsBreakdownItem,
   MarketplaceAnalyticsCohortRow,
   MarketplaceAnalyticsInterval,
+  MarketplaceAnalyticsLocationCountry,
   MarketplaceAnalyticsParentTopItem,
   MarketplaceAnalyticsResponseData,
   MarketplaceAnalyticsSitterTopItem,
@@ -870,10 +873,9 @@ const Analytics = () => {
   const [endDateInput, setEndDateInput] = useState(defaultRange.endInput);
   const [appliedStartDate, setAppliedStartDate] = useState(defaultRange.startIso);
   const [appliedEndDate, setAppliedEndDate] = useState(defaultRange.endIso);
-  const [countryInput, setCountryInput] = useState("");
-  const [appliedCountry, setAppliedCountry] = useState("");
-  const [cityInput, setCityInput] = useState("");
-  const [appliedCity, setAppliedCity] = useState("");
+  const [locations, setLocations] = useState<MarketplaceAnalyticsLocationCountry[]>([]);
+  const [selectedCountryCode, setSelectedCountryCode] = useState("");
+  const [selectedCityName, setSelectedCityName] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPaymentStatuses, setSelectedPaymentStatuses] = useState<string[]>([]);
   const [selectedIntervalOption, setSelectedIntervalOption] = useState(0);
@@ -896,20 +898,68 @@ const Analytics = () => {
   }, []);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setAppliedCountry(countryInput.trim().toUpperCase());
-    }, 400);
+    const fetchLocations = async () => {
+      try {
+        const response = await getMarketplaceAnalyticsLocations();
+        const payload = response.data as GetMarketplaceAnalyticsLocationsResponse;
+        setLocations(Array.isArray(payload?.result) ? payload.result : []);
+      } catch (err) {
+        console.log(err);
+        setLocations([]);
+      }
+    };
 
-    return () => window.clearTimeout(timeoutId);
-  }, [countryInput]);
+    fetchLocations();
+  }, []);
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setAppliedCity(cityInput.trim());
-    }, 400);
+  const countryOptions = useMemo(
+    () => [
+      { title: "All countries", value: "" },
+      ...locations.map((country) => ({
+        title: `${country.name} (${country.code})`,
+        value: country.code,
+      })),
+    ],
+    [locations],
+  );
 
-    return () => window.clearTimeout(timeoutId);
-  }, [cityInput]);
+  const cityOptions = useMemo(() => {
+    const cities = selectedCountryCode
+      ? locations.find((country) => country.code === selectedCountryCode)?.cities ?? []
+      : Array.from(
+          new Map(
+            locations
+              .flatMap((country) => country.cities ?? [])
+              .map((city) => [city.name, city]),
+          ).values(),
+        );
+
+    return [
+      { title: "All cities", value: "" },
+      ...cities.map((city) => ({
+        title: city.name,
+        value: city.name,
+      })),
+    ];
+  }, [locations, selectedCountryCode]);
+
+  const selectedCountryOption = useMemo(
+    () =>
+      Math.max(
+        0,
+        countryOptions.findIndex((option) => option.value === selectedCountryCode),
+      ),
+    [countryOptions, selectedCountryCode],
+  );
+
+  const selectedCityOption = useMemo(
+    () =>
+      Math.max(
+        0,
+        cityOptions.findIndex((option) => option.value === selectedCityName),
+      ),
+    [cityOptions, selectedCityName],
+  );
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -920,8 +970,8 @@ const Analytics = () => {
         dateTo: appliedEndDate,
         interval: selectedInterval,
         timezone: TIMEZONE,
-        country: appliedCountry || undefined,
-        city: appliedCity || undefined,
+        country: selectedCountryCode || undefined,
+        city: selectedCityName || undefined,
         statuses: selectedStatuses,
         paymentStatuses: selectedPaymentStatuses,
         topLimit: selectedTopLimit,
@@ -943,11 +993,11 @@ const Analytics = () => {
       setLoading(false);
     }
   }, [
-    appliedCountry,
-    appliedCity,
     appliedEndDate,
     appliedStartDate,
     router,
+    selectedCityName,
+    selectedCountryCode,
     selectedInterval,
     selectedPaymentStatuses,
     selectedStatuses,
@@ -1136,7 +1186,14 @@ const Analytics = () => {
               </div>
             </div>
 
-            <Button title="Apply dates" type="OUTLINED" onClick={applyCustomDateRange} />
+            <div className={styles.dateButtonField}>
+              <span className={styles.dateButtonLabel}>Apply</span>
+              <Button
+                title="Apply dates"
+                type="OUTLINED"
+                onClick={applyCustomDateRange}
+              />
+            </div>
           </div>
         </div>
 
@@ -1162,27 +1219,30 @@ const Analytics = () => {
             }}
           />
           <div className={styles.textFieldWrap}>
-            <label className={styles.fieldLabel} htmlFor="analytics-country">
+            <label className={styles.fieldLabel}>
               Country
             </label>
-            <input
-              id="analytics-country"
-              className={styles.textInput}
-              placeholder="LT"
-              value={countryInput}
-              onChange={(e) => setCountryInput(e.target.value)}
+            <DropDownButton
+              options={countryOptions}
+              selectedOption={selectedCountryOption}
+              setSelectedOption={(nextOption) => {
+                const nextCountryCode =
+                  countryOptions[nextOption as number]?.value ?? "";
+                setSelectedCountryCode(nextCountryCode);
+                setSelectedCityName("");
+              }}
             />
           </div>
           <div className={styles.textFieldWrap}>
-            <label className={styles.fieldLabel} htmlFor="analytics-city">
+            <label className={styles.fieldLabel}>
               City
             </label>
-            <input
-              id="analytics-city"
-              className={styles.textInput}
-              placeholder="All cities"
-              value={cityInput}
-              onChange={(e) => setCityInput(e.target.value)}
+            <DropDownButton
+              options={cityOptions}
+              selectedOption={selectedCityOption}
+              setSelectedOption={(nextOption) => {
+                setSelectedCityName(cityOptions[nextOption as number]?.value ?? "");
+              }}
             />
           </div>
           <MultiSelectFilter
@@ -1204,9 +1264,9 @@ const Analytics = () => {
         </div>
 
         <div className={styles.filterSummary}>{`Period ${appliedStartLabel} - ${appliedEndLabel} · Timezone ${TIMEZONE}${
-          appliedCountry ? ` · Country ${appliedCountry}` : ""
+          selectedCountryCode ? ` · Country ${selectedCountryCode}` : ""
         }${
-          appliedCity ? ` · City ${appliedCity}` : ""
+          selectedCityName ? ` · City ${selectedCityName}` : ""
         }${
           appliedFilters.statuses && appliedFilters.statuses.length > 0
             ? ` · ${appliedFilters.statuses.length} booking statuses`

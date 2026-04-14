@@ -108,6 +108,22 @@
   min-width: 170px;
 }
 
+.dateButtonField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: flex-end;
+  align-self: stretch;
+}
+
+.dateButtonLabel {
+  visibility: hidden;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+  user-select: none;
+}
+
 .fieldLabel,
 .dateField > span {
   color: rgba(0, 0, 0, 0.7);
