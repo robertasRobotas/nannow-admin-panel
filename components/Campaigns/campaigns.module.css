@@ -17,6 +17,7 @@
   font-size: 54px;
   line-height: 0.95;
   font-weight: 900;
+  color: #000;
 }
 
 .subtitle {
@@ -169,7 +170,10 @@
   font-weight: 800;
   padding: 10px 14px;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .pillButton:hover {
@@ -229,7 +233,9 @@
   border-radius: 18px;
   background: #fff;
   text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .previewRecipientRow:hover,
@@ -261,7 +267,10 @@
   padding: 14px 16px;
   cursor: pointer;
   text-align: left;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .historyRow:hover {
