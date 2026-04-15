@@ -43,6 +43,8 @@ export type User = {
   imgUrlRemoveMessage?: string | null;
   imgUrlRemovedAt?: string | null;
   imgUrlRemovedByAdminId?: string | null;
+  finalPrice?: number;
+  locale?: string;
 };
 
 export type UserDetails = {

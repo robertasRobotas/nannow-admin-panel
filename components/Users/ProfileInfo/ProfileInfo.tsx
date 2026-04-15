@@ -15,6 +15,7 @@ type ProfileInfoProps = {
   imgUrlRemoveMessage?: string | null;
   allowImageRemoval?: boolean;
   userId?: string;
+  finalPrice?: number;
 };
 
 const ProfileInfo = ({
@@ -27,6 +28,7 @@ const ProfileInfo = ({
   imgUrlRemoveMessage,
   allowImageRemoval = false,
   userId,
+  finalPrice,
 }: ProfileInfoProps) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
@@ -114,7 +116,11 @@ const ProfileInfo = ({
           onClick={openImageModal}
           aria-label="Open profile image"
         >
-          <img className={styles.profileImg} src={profileImgUrl} alt="Profile Image" />
+          <img
+            className={styles.profileImg}
+            src={profileImgUrl}
+            alt="Profile Image"
+          />
         </button>
       ) : showRemovedAvatar ? (
         <div className={styles.removedAvatar}>R</div>
@@ -133,6 +139,10 @@ const ProfileInfo = ({
       {locale && (
         <span className={styles.email}>{`USER LOCALE: ${locale}`}</span>
       )}
+      {finalPrice !== undefined && (
+        <span className={styles.email}>{`Final price: ${finalPrice}`}</span>
+      )}
+
       {isImageModalOpen && (
         <div className={styles.imageModalOverlay} onClick={closeImageModal}>
           <div
@@ -143,14 +153,18 @@ const ProfileInfo = ({
               <button
                 type="button"
                 className={styles.imageModalButton}
-                onClick={() => setImageZoom((current) => Math.max(1, current - 0.25))}
+                onClick={() =>
+                  setImageZoom((current) => Math.max(1, current - 0.25))
+                }
               >
                 -
               </button>
               <button
                 type="button"
                 className={styles.imageModalButton}
-                onClick={() => setImageZoom((current) => Math.min(3, current + 0.25))}
+                onClick={() =>
+                  setImageZoom((current) => Math.min(3, current + 0.25))
+                }
               >
                 +
               </button>
@@ -200,7 +214,10 @@ const ProfileInfo = ({
           >
             <h3 className={styles.confirmationTitle}>Delete profile image?</h3>
             <div className={styles.inputBlock}>
-              <label className={styles.inputLabel} htmlFor="profile-image-delete-reason">
+              <label
+                className={styles.inputLabel}
+                htmlFor="profile-image-delete-reason"
+              >
                 Reason
               </label>
               <textarea

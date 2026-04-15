@@ -28,6 +28,11 @@ const UsersList = ({ users, mode }: UsersListProps) => {
               </div>
               <div className={styles.meta}>{user.email || "—"}</div>
               <div className={styles.meta}>{`USER ID: ${user.userId}`}</div>
+              {mode === "provider" && (
+                <div
+                  className={styles.meta}
+                >{`Final price: ${user.finalPrice}`}</div>
+              )}
             </div>
           </div>
           <Button

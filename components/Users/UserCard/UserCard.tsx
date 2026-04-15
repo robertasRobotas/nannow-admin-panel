@@ -39,6 +39,8 @@ const UserCard = ({ user, mode }: UserCardProps) => {
           imgUrl={user.imgUrl}
           id={user.userId}
           email={user.email}
+          locale={user.locale}
+          finalPrice={user.finalPrice}
         />
       </div>
     </div>
