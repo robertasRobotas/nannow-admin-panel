@@ -190,6 +190,11 @@ const formatMoneyFromCents = (value?: number | null) => {
   }).format(amount);
 };
 
+const getPercent = (value: number, total: number) => {
+  if (!total) return null;
+  return ((value / total) * 100).toFixed(2);
+};
+
 const getUserName = (firstName?: string | null, lastName?: string | null) =>
   `${firstName ?? "Deleted"} ${lastName ?? "User"}`.trim();
 
@@ -449,6 +454,10 @@ const FinancialLedger = () => {
   const appliedStartLabel = toInputDate(new Date(appliedStartDate));
   const appliedEndLabel = toInputDate(
     new Date(new Date(appliedEndDate).getTime() - 24 * 60 * 60 * 1000),
+  );
+  const subtotalPercent = getPercent(
+    subtotal.netPlatformRevenueCents,
+    subtotal.clientPaidCents,
   );
 
   return (
@@ -808,6 +817,10 @@ const FinancialLedger = () => {
             <div className={styles.totalLabel}>Net revenue</div>
             <div className={`${styles.totalValue} ${styles.valueReal}`}>
               {formatMoneyFromCents(subtotal.netPlatformRevenueCents)}
+
+              {subtotalPercent && (
+                <span style={{ marginLeft: 6 }}>({subtotalPercent}%)</span>
+              )}
             </div>
           </div>
           <div className={styles.totalCard}>

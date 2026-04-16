@@ -28,11 +28,6 @@ const ALL_ADMIN_API_BASE_URLS = [
   buildApiBaseUrl("test"),
 ] as const;
 
-type MirroredWriteResult<T = unknown> = {
-  result?: T;
-  warnings: string[];
-};
-
 const getStoredAdminApiMode = (): AdminApiMode => {
   if (typeof window === "undefined") return "production";
   const storedMode = window.localStorage.getItem(ADMIN_API_MODE_STORAGE_KEY);
