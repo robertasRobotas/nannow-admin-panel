@@ -8,7 +8,10 @@ import SearchBar from "@/components/SearchBar/SearchBar";
 import Button from "@/components/Button/Button";
 import { nunito } from "@/helpers/fonts";
 import paginateStyles from "@/styles/paginate.module.css";
-import { getOrderStatusTitle, options as orderStatusOptions } from "@/data/orderStatusOptions";
+import {
+  getOrderStatusTitle,
+  options as orderStatusOptions,
+} from "@/data/orderStatusOptions";
 import { getFinancialOrders } from "@/pages/api/fetch";
 import {
   FinancialOrderMode,
@@ -22,7 +25,28 @@ import styles from "./financialLedger.module.css";
 
 const PAGE_SIZE = 20;
 
-type PeriodPreset = "today" | "this_week" | "this_month" | "this_year" | "custom";
+type Tone = "real" | "estimated" | "neutral";
+
+type AmountPresentationItem = {
+  amount: string;
+  tone: Tone;
+  subtitle: string;
+  isEmpty: boolean;
+};
+
+type AmountPresentation = {
+  paid: AmountPresentationItem;
+  payout: AmountPresentationItem;
+  refund: AmountPresentationItem;
+  stripeFee: AmountPresentationItem;
+  netProfit: AmountPresentationItem;
+};
+type PeriodPreset =
+  | "today"
+  | "this_week"
+  | "this_month"
+  | "this_year"
+  | "custom";
 
 type DateRange = {
   startInput: string;
@@ -67,7 +91,10 @@ const STATUS_OPTIONS = [
   ),
 ];
 
-const PERIOD_OPTIONS: Array<{ label: string; value: Exclude<PeriodPreset, "custom"> }> = [
+const PERIOD_OPTIONS: Array<{
+  label: string;
+  value: Exclude<PeriodPreset, "custom">;
+}> = [
   { label: "Today", value: "today" },
   { label: "This week", value: "this_week" },
   { label: "This month", value: "this_month" },
@@ -81,7 +108,8 @@ const toInputDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const toDayStartIso = (inputDate: string) => new Date(`${inputDate}T00:00:00`).toISOString();
+const toDayStartIso = (inputDate: string) =>
+  new Date(`${inputDate}T00:00:00`).toISOString();
 
 const toExclusiveEndIso = (inputDate: string) => {
   const endDate = new Date(`${inputDate}T00:00:00`);
@@ -167,86 +195,100 @@ const getUserName = (firstName?: string | null, lastName?: string | null) =>
 
 const getAmountPresentation = (
   order: FinancialOrderRow,
-  kind: "paid" | "payout" | "refund" | "stripeFee" | "netProfit",
-) => {
-  if (kind === "paid") {
-    const hasActualPaid = typeof order.actualClientPaidCents === "number";
-    return {
-      amount: formatMoneyFromCents(
-        hasActualPaid
-          ? order.actualClientPaidCents ?? 0
-          : order.clientPaidCents ?? 0,
-      ),
-      tone: hasActualPaid ? ("real" as const) : ("estimated" as const),
-      subtitle: hasActualPaid ? order.paymentStatus : "Expected paid",
-      isEmpty: false,
-    };
-  }
+): AmountPresentation => {
+  const paidCents =
+    typeof order.actualClientPaidCents === "number"
+      ? order.actualClientPaidCents
+      : (order.clientPaidCents ?? 0);
 
-  if (kind === "payout") {
-    const hasActualPayout = typeof order.actualPayoutCents === "number";
-    const cents = hasActualPayout
-      ? order.actualPayoutCents ?? 0
-      : order.displayedPayoutCents ?? order.expectedPayoutCents ?? 0;
-    return {
-      amount: formatMoneyFromCents(cents),
-      tone: hasActualPayout ? ("real" as const) : ("estimated" as const),
-      subtitle: hasActualPayout ? "Real payout" : "Expected payout",
-      isEmpty: false,
-    };
-  }
+  const netCents = order.netPlatformRevenueCents ?? 0;
 
-  if (kind === "refund") {
-    const hasAnyRefund =
-      (order.actualRefundCents ?? 0) > 0 ||
-      (order.expectedRefundCents ?? 0) > 0 ||
-      (order.displayedRefundCents ?? 0) > 0 ||
-      Boolean(order.refundedAt);
-
-    if (!hasAnyRefund) {
-      return {
-        amount: "—",
-        tone: "neutral" as const,
-        subtitle: "No refund",
-        isEmpty: true,
-      };
-    }
-
-    const hasActualRefund = typeof order.actualRefundCents === "number";
-    const cents = hasActualRefund
-      ? order.actualRefundCents ?? 0
-      : order.displayedRefundCents ?? order.expectedRefundCents ?? 0;
-    return {
-      amount: formatMoneyFromCents(cents),
-      tone: hasActualRefund ? ("real" as const) : ("estimated" as const),
-      subtitle: hasActualRefund ? "Real refund" : "Expected refund",
-      isEmpty: false,
-    };
-  }
-
-  if (kind === "stripeFee") {
-    const hasKnownStripeFee = typeof order.knownStripeFeeCents === "number";
-    const hasForecastStripeFee =
-      typeof order.forecastStripeFeeCents === "number";
-    const stripeFeeCents = hasKnownStripeFee
-      ? order.knownStripeFeeCents ?? 0
-      : hasForecastStripeFee
-        ? order.forecastStripeFeeCents ?? 0
-        : 0;
-    return {
-      amount: formatMoneyFromCents(stripeFeeCents),
-      tone: hasKnownStripeFee ? ("real" as const) : ("estimated" as const),
-      subtitle: hasKnownStripeFee ? "Real fee" : "Estimated fee",
-      isEmpty: false,
-    };
-  }
+  const percent =
+    paidCents > 0 ? ((netCents / paidCents) * 100).toFixed(2) : null;
 
   const isReal = order.financialMode === "REAL";
+
   return {
-    amount: formatMoneyFromCents(order.netPlatformRevenueCents ?? 0),
-    tone: isReal ? ("real" as const) : ("estimated" as const),
-    subtitle: `Gross ${formatMoneyFromCents(order.grossPlatformRevenueCents ?? 0)}`,
-    isEmpty: false,
+    paid: {
+      amount: formatMoneyFromCents(paidCents),
+      tone:
+        typeof order.actualClientPaidCents === "number" ? "real" : "estimated",
+      subtitle:
+        typeof order.actualClientPaidCents === "number"
+          ? order.paymentStatus
+          : "Expected paid",
+      isEmpty: false,
+    },
+
+    payout: {
+      amount: formatMoneyFromCents(
+        typeof order.actualPayoutCents === "number"
+          ? order.actualPayoutCents
+          : (order.displayedPayoutCents ?? order.expectedPayoutCents ?? 0),
+      ),
+      tone: typeof order.actualPayoutCents === "number" ? "real" : "estimated",
+      subtitle:
+        typeof order.actualPayoutCents === "number"
+          ? "Real payout"
+          : "Expected payout",
+      isEmpty: false,
+    },
+
+    refund: (() => {
+      const hasAnyRefund =
+        (order.actualRefundCents ?? 0) > 0 ||
+        (order.expectedRefundCents ?? 0) > 0 ||
+        (order.displayedRefundCents ?? 0) > 0 ||
+        Boolean(order.refundedAt);
+
+      if (!hasAnyRefund) {
+        return {
+          amount: "—",
+          tone: "neutral",
+          subtitle: "No refund",
+          isEmpty: true,
+        };
+      }
+
+      const hasActualRefund = typeof order.actualRefundCents === "number";
+
+      const cents = hasActualRefund
+        ? (order.actualRefundCents ?? 0)
+        : (order.displayedRefundCents ?? order.expectedRefundCents ?? 0);
+
+      return {
+        amount: formatMoneyFromCents(cents),
+        tone: hasActualRefund ? "real" : "estimated",
+        subtitle: hasActualRefund ? "Real refund" : "Expected refund",
+        isEmpty: false,
+      };
+    })(),
+
+    stripeFee: (() => {
+      const hasKnown = typeof order.knownStripeFeeCents === "number";
+
+      const cents = hasKnown
+        ? (order.knownStripeFeeCents ?? 0)
+        : (order.forecastStripeFeeCents ?? 0);
+
+      return {
+        amount: formatMoneyFromCents(cents),
+        tone: hasKnown ? "real" : "estimated",
+        subtitle: hasKnown ? "Real fee" : "Estimated fee",
+        isEmpty: false,
+      };
+    })(),
+
+    netProfit: {
+      amount: `${formatMoneyFromCents(netCents)}${
+        percent ? ` (${percent}%)` : ""
+      }`,
+      tone: isReal ? "real" : "estimated",
+      subtitle: `Gross ${formatMoneyFromCents(
+        order.grossPlatformRevenueCents ?? 0,
+      )}`,
+      isEmpty: false,
+    },
   };
 };
 
@@ -277,7 +319,8 @@ const FinancialLedger = () => {
   const router = useRouter();
   const defaultRange = useMemo(() => getPresetRange("this_month"), []);
   const [items, setItems] = useState<FinancialOrderRow[]>([]);
-  const [subtotal, setSubtotal] = useState<FinancialOrdersSubtotal>(EMPTY_SUBTOTAL);
+  const [subtotal, setSubtotal] =
+    useState<FinancialOrdersSubtotal>(EMPTY_SUBTOTAL);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [itemOffset, setItemOffset] = useState(0);
@@ -290,10 +333,13 @@ const FinancialLedger = () => {
   const [selectedStatusOption, setSelectedStatusOption] = useState(0);
   const [selectedModeOption, setSelectedModeOption] = useState(0);
   const [selectedSortOption, setSelectedSortOption] = useState(0);
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodPreset>("this_month");
+  const [selectedPeriod, setSelectedPeriod] =
+    useState<PeriodPreset>("this_month");
   const [startDateInput, setStartDateInput] = useState(defaultRange.startInput);
   const [endDateInput, setEndDateInput] = useState(defaultRange.endInput);
-  const [appliedStartDate, setAppliedStartDate] = useState(defaultRange.startIso);
+  const [appliedStartDate, setAppliedStartDate] = useState(
+    defaultRange.startIso,
+  );
   const [appliedEndDate, setAppliedEndDate] = useState(defaultRange.endIso);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
@@ -368,7 +414,10 @@ const FinancialLedger = () => {
       return;
     }
 
-    if (new Date(`${startDateInput}T00:00:00`).getTime() > new Date(`${endDateInput}T00:00:00`).getTime()) {
+    if (
+      new Date(`${startDateInput}T00:00:00`).getTime() >
+      new Date(`${endDateInput}T00:00:00`).getTime()
+    ) {
       setValidationError("Start date must be before end date.");
       return;
     }
@@ -395,7 +444,8 @@ const FinancialLedger = () => {
     setItemOffset(event.selected * pageSize);
   };
 
-  const currentPage = pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize) + 1;
+  const currentPage =
+    pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize) + 1;
   const appliedStartLabel = toInputDate(new Date(appliedStartDate));
   const appliedEndLabel = toInputDate(
     new Date(new Date(appliedEndDate).getTime() - 24 * 60 * 60 * 1000),
@@ -405,8 +455,12 @@ const FinancialLedger = () => {
     <div className={styles.main}>
       <div className={styles.headerRow}>
         <div className={styles.titleWrap}>
-          <h2 className={`${styles.title} ${nunito.className}`}>Financial ledger</h2>
-          <div className={styles.subtitle}>{`${total} orders, page ${currentPage}/${pageCount}`}</div>
+          <h2 className={`${styles.title} ${nunito.className}`}>
+            Financial ledger
+          </h2>
+          <div
+            className={styles.subtitle}
+          >{`${total} orders, page ${currentPage}/${pageCount}`}</div>
         </div>
         <SearchBar
           placeholder="Search order ID or user"
@@ -427,7 +481,9 @@ const FinancialLedger = () => {
                 key={option.value}
                 type="button"
                 className={`${styles.periodButton} ${
-                  selectedPeriod === option.value ? styles.periodButtonActive : ""
+                  selectedPeriod === option.value
+                    ? styles.periodButtonActive
+                    : ""
                 }`}
                 onClick={() => applyPresetRange(option.value)}
               >
@@ -453,7 +509,9 @@ const FinancialLedger = () => {
                 <button
                   type="button"
                   className={styles.datePickerBtn}
-                  onClick={() => openNativeDatePicker(startDateInputRef.current)}
+                  onClick={() =>
+                    openNativeDatePicker(startDateInputRef.current)
+                  }
                   aria-label="Open start date picker"
                 >
                   <img src={calendarImg.src} alt="" />
@@ -486,7 +544,11 @@ const FinancialLedger = () => {
             </div>
 
             <div className={styles.applyDateButtonWrap}>
-              <Button title="Apply dates" type="OUTLINED" onClick={applyCustomDateRange} />
+              <Button
+                title="Apply dates"
+                type="OUTLINED"
+                onClick={applyCustomDateRange}
+              />
             </div>
           </div>
         </div>
@@ -533,128 +595,150 @@ const FinancialLedger = () => {
           />
         </div>
 
-        {validationError && <div className={styles.validationError}>{validationError}</div>}
+        {validationError && (
+          <div className={styles.validationError}>{validationError}</div>
+        )}
       </div>
 
       <div className={styles.tableWrap}>
-          <div className={styles.tableHeader}>
-            <div>Order</div>
-            <div>Paid amount</div>
-            <div>Payout</div>
-            <div>Refund</div>
-            <div>Stripe fee</div>
-            <div>Net profit</div>
-          </div>
+        <div className={styles.tableHeader}>
+          <div>Order</div>
+          <div>Paid amount</div>
+          <div>Payout</div>
+          <div>Refund</div>
+          <div>Stripe fee</div>
+          <div>Net profit</div>
+        </div>
 
-          <div className={styles.tableBody}>
-            {loading && <div className={styles.emptyState}>Loading financial orders...</div>}
-            {!loading && error && <div className={styles.emptyState}>{error}</div>}
-            {!loading && !error && items.length === 0 && (
-              <div className={styles.emptyState}>No financial orders for selected filters</div>
-            )}
+        <div className={styles.tableBody}>
+          {loading && (
+            <div className={styles.emptyState}>Loading financial orders...</div>
+          )}
+          {!loading && error && (
+            <div className={styles.emptyState}>{error}</div>
+          )}
+          {!loading && !error && items.length === 0 && (
+            <div className={styles.emptyState}>
+              No financial orders for selected filters
+            </div>
+          )}
 
-            {!loading &&
-              !error &&
-              items.map((order) => {
-                const clientName = getUserName(
-                  order.clientUser?.firstName,
-                  order.clientUser?.lastName,
-                );
-                const providerName = getUserName(
-                  order.providerUser?.firstName,
-                  order.providerUser?.lastName,
-                );
-                const paid = getAmountPresentation(order, "paid");
-                const payout = getAmountPresentation(order, "payout");
-                const refund = getAmountPresentation(order, "refund");
-                const stripeFee = getAmountPresentation(order, "stripeFee");
-                const netProfit = getAmountPresentation(order, "netProfit");
+          {!loading &&
+            !error &&
+            items.map((order) => {
+              const clientName = getUserName(
+                order.clientUser?.firstName,
+                order.clientUser?.lastName,
+              );
+              const providerName = getUserName(
+                order.providerUser?.firstName,
+                order.providerUser?.lastName,
+              );
+              const { paid, payout, refund, stripeFee, netProfit } =
+                getAmountPresentation(order);
 
-                return (
-                  <div
-                    key={order.id}
-                    className={`${styles.row} ${
-                      order.financialMode === "REAL" ? styles.rowReal : ""
-                    }`}
-                  >
-                    <div className={styles.orderCell} data-label="Order">
-                      <div className={styles.orderUsersWrap}>
-                        <div className={styles.profilePics}>
-                          <img
-                            className={styles.providerImg}
-                            src={order.providerUser?.imgUrl || defaultAvatarImg.src}
-                            alt={providerName}
-                          />
-                          <img
-                            className={styles.clientImg}
-                            src={order.clientUser?.imgUrl || defaultAvatarImg.src}
-                            alt={clientName}
-                          />
+              return (
+                <div
+                  key={order.id}
+                  className={`${styles.row} ${
+                    order.financialMode === "REAL" ? styles.rowReal : ""
+                  }`}
+                >
+                  <div className={styles.orderCell} data-label="Order">
+                    <div className={styles.orderUsersWrap}>
+                      <div className={styles.profilePics}>
+                        <img
+                          className={styles.providerImg}
+                          src={
+                            order.providerUser?.imgUrl || defaultAvatarImg.src
+                          }
+                          alt={providerName}
+                        />
+                        <img
+                          className={styles.clientImg}
+                          src={order.clientUser?.imgUrl || defaultAvatarImg.src}
+                          alt={clientName}
+                        />
+                      </div>
+                      <div className={styles.orderInfo}>
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className={styles.orderIdLink}
+                        >
+                          {order.orderPrettyId}
+                        </Link>
+                        <div
+                          className={styles.orderNames}
+                        >{`${providerName} / ${clientName}`}</div>
+                        <div className={styles.orderMeta}>
+                          Paid: {formatDateTime(order.paidAt)}
                         </div>
-                        <div className={styles.orderInfo}>
-                          <Link href={`/orders/${order.id}`} className={styles.orderIdLink}>
-                            {order.orderPrettyId}
-                          </Link>
-                          <div className={styles.orderNames}>{`${providerName} / ${clientName}`}</div>
-                          <div className={styles.orderMeta}>Paid: {formatDateTime(order.paidAt)}</div>
-                          <div className={styles.orderMeta}>
-                            {`${formatDateTime(order.startsAt)} - ${formatDateTime(order.endsAt)}`}
-                          </div>
+                        <div className={styles.orderMeta}>
+                          {`${formatDateTime(order.startsAt)} - ${formatDateTime(order.endsAt)}`}
                         </div>
                       </div>
-                      <div className={styles.orderBadges}>
-                        <span className={styles.statusBadge}>
-                          {getOrderStatusTitle(order.status)}
-                        </span>
-                        <span className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}>
-                          {order.financialMode}
-                        </span>
-                      </div>
                     </div>
-
-                    <div className={styles.valueCell} data-label="Paid amount">
-                      <div className={`${styles.valueMain} ${getToneClassName(paid.tone)}`}>
-                        {paid.amount}
-                      </div>
-                      <div className={styles.valueSub}>{paid.subtitle}</div>
-                    </div>
-
-                    <div className={styles.valueCell} data-label="Payout">
-                      <div className={`${styles.valueMain} ${getToneClassName(payout.tone)}`}>
-                        {payout.amount}
-                      </div>
-                      <div className={styles.valueSub}>{payout.subtitle}</div>
-                    </div>
-
-                    <div className={styles.valueCell} data-label="Refund">
-                      <div className={`${styles.valueMain} ${getToneClassName(refund.tone)}`}>
-                        {refund.amount}
-                      </div>
-                      <div className={styles.valueSub}>{refund.subtitle}</div>
-                    </div>
-
-                    <div className={styles.valueCell} data-label="Stripe fee">
-                      <div
-                        className={`${styles.valueMain} ${getToneClassName(stripeFee.tone)}`}
+                    <div className={styles.orderBadges}>
+                      <span className={styles.statusBadge}>
+                        {getOrderStatusTitle(order.status)}
+                      </span>
+                      <span
+                        className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}
                       >
-                        {stripeFee.amount}
-                      </div>
-                      <div className={styles.valueSub}>{stripeFee.subtitle}</div>
-                    </div>
-
-                    <div className={styles.valueCell} data-label="Net profit">
-                      <div
-                        className={`${styles.valueMain} ${getToneClassName(netProfit.tone)}`}
-                      >
-                        {netProfit.amount}
-                      </div>
-                      <div className={styles.valueSub}>{netProfit.subtitle}</div>
+                        {order.financialMode}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-          </div>
+
+                  <div className={styles.valueCell} data-label="Paid amount">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(paid.tone)}`}
+                    >
+                      {paid.amount}
+                    </div>
+                    <div className={styles.valueSub}>{paid.subtitle}</div>
+                  </div>
+
+                  <div className={styles.valueCell} data-label="Payout">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(payout.tone)}`}
+                    >
+                      {payout.amount}
+                    </div>
+                    <div className={styles.valueSub}>{payout.subtitle}</div>
+                  </div>
+
+                  <div className={styles.valueCell} data-label="Refund">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(refund.tone)}`}
+                    >
+                      {refund.amount}
+                    </div>
+                    <div className={styles.valueSub}>{refund.subtitle}</div>
+                  </div>
+
+                  <div className={styles.valueCell} data-label="Stripe fee">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(stripeFee.tone)}`}
+                    >
+                      {stripeFee.amount}
+                    </div>
+                    <div className={styles.valueSub}>{stripeFee.subtitle}</div>
+                  </div>
+
+                  <div className={styles.valueCell} data-label="Net profit">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(netProfit.tone)}`}
+                    >
+                      {netProfit.amount}
+                    </div>
+                    <div className={styles.valueSub}>{netProfit.subtitle}</div>
+                  </div>
+                </div>
+              );
+            })}
         </div>
+      </div>
 
       {total > pageSize && (
         <ReactPaginate
@@ -681,7 +765,9 @@ const FinancialLedger = () => {
       <div className={styles.totalsSection}>
         <div className={styles.totalsHeader}>
           <h3 className={styles.totalsTitle}>Totals for selected period</h3>
-          <div className={styles.totalsSubtitle}>{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
+          <div
+            className={styles.totalsSubtitle}
+          >{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
         </div>
         <div className={styles.totalsGrid}>
           <div className={styles.totalCard}>
@@ -696,15 +782,21 @@ const FinancialLedger = () => {
           </div>
           <div className={styles.totalCard}>
             <div className={styles.totalLabel}>Refunded</div>
-            <div className={styles.totalValue}>{formatMoneyFromCents(subtotal.refundCents)}</div>
+            <div className={styles.totalValue}>
+              {formatMoneyFromCents(subtotal.refundCents)}
+            </div>
           </div>
           <div className={styles.totalCard}>
             <div className={styles.totalLabel}>Payouts</div>
-            <div className={styles.totalValue}>{formatMoneyFromCents(subtotal.payoutCents)}</div>
+            <div className={styles.totalValue}>
+              {formatMoneyFromCents(subtotal.payoutCents)}
+            </div>
           </div>
           <div className={styles.totalCard}>
             <div className={styles.totalLabel}>Stripe fees</div>
-            <div className={styles.totalValue}>{formatMoneyFromCents(subtotal.stripeFeeCents)}</div>
+            <div className={styles.totalValue}>
+              {formatMoneyFromCents(subtotal.stripeFeeCents)}
+            </div>
           </div>
           <div className={styles.totalCard}>
             <div className={styles.totalLabel}>Gross revenue</div>
@@ -721,10 +813,14 @@ const FinancialLedger = () => {
           <div className={styles.totalCard}>
             <div className={styles.totalLabel}>Mode counts</div>
             <div className={styles.modeCountsWrap}>
-              <span className={`${styles.modeCountChip} ${styles.modeForecast}`}>
+              <span
+                className={`${styles.modeCountChip} ${styles.modeForecast}`}
+              >
                 Forecast {subtotal.forecastCount}
               </span>
-              <span className={`${styles.modeCountChip} ${styles.modePartialReal}`}>
+              <span
+                className={`${styles.modeCountChip} ${styles.modePartialReal}`}
+              >
                 Partial {subtotal.partialRealCount}
               </span>
               <span className={`${styles.modeCountChip} ${styles.modeReal}`}>
