@@ -14,7 +14,7 @@ const API_CONFIG = {
     wsTransports: ["websocket"] as const,
   },
   test: {
-    origin: "http://localhost:8080",
+    origin: "https://nannow-api-test.com",
     apiVersion: "/v1",
     wsTransports: ["websocket"] as const,
   },
