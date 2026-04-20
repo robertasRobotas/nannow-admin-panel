@@ -3,6 +3,7 @@ import {
   getAllUsers,
   getClientById,
   getProviderById,
+  getUsersAppVersionStats,
 } from "@/pages/api/fetch";
 import { User, UserDetails } from "@/types/Client";
 import styles from "./filterExport.module.css";
@@ -26,6 +27,21 @@ type OnboardingField =
   | "BANK_ONBOARDING"
   | "KYC";
 
+type AppPlatform = "IOS" | "ANDROID" | null;
+type AppVersionFilterValue = "ALL" | "NO_APP_VERSION" | string;
+
+type RawAppVersionStatItem = {
+  platform: unknown;
+  items: unknown[];
+  withoutAppVersionCount: number;
+  totalUsers: number;
+};
+
+type RawNestedAppVersionItem = {
+  appVersion: string;
+  count: number;
+};
+
 type EnrichedUser = {
   id: string;
   userId: string;
@@ -37,6 +53,8 @@ type EnrichedUser = {
   rating: number | null;
   reviewsCount: number;
   hasProfileVideo: boolean;
+  appVersion: string | null;
+  platform: AppPlatform;
   finishedFields: OnboardingField[];
   notFinishedFields: OnboardingField[];
 };
@@ -98,6 +116,13 @@ const pageSizeOptions = [
   { title: "100 per page", value: "100" },
 ];
 
+const platformFilterOptions = [
+  { title: "All platforms", value: "ALL" },
+  { title: "iOS", value: "IOS" },
+  { title: "Android", value: "ANDROID" },
+  { title: "No platform", value: "NO_PLATFORM" },
+];
+
 const extractNumericRating = (
   rating: unknown,
 ): number | null => {
@@ -112,6 +137,9 @@ const extractNumericRating = (
   }
   return null;
 };
+
+const normalizePlatform = (platform: unknown): AppPlatform =>
+  platform === "IOS" || platform === "ANDROID" ? platform : null;
 
 const toggleAllFields = (
   checked: boolean,
@@ -195,6 +223,13 @@ const mapDetailedUser = (
     rating,
     reviewsCount,
     hasProfileVideo: extractProfileVideo(detail),
+    appVersion: detail.user?.appVersion ?? baseUser.appVersion ?? null,
+    platform:
+      detail.user?.platform === "IOS" || detail.user?.platform === "ANDROID"
+        ? detail.user.platform
+        : baseUser.platform === "IOS" || baseUser.platform === "ANDROID"
+          ? baseUser.platform
+          : null,
     finishedFields,
     notFinishedFields: allFields.filter(
       (field) => !finishedFields.includes(field),
@@ -215,7 +250,10 @@ const hasRoleForMode = (roles: string[], mode: FilterMode) => {
   return roles.includes(mode);
 };
 
-const fetchAllBaseUsers = async (mode: FilterMode): Promise<User[]> => {
+const fetchAllBaseUsers = async (
+  mode: FilterMode,
+  hasAppVersionFilter?: boolean,
+): Promise<User[]> => {
   const collected: User[] = [];
   let startIndex = 0;
   let total = Number.MAX_SAFE_INTEGER;
@@ -223,7 +261,17 @@ const fetchAllBaseUsers = async (mode: FilterMode): Promise<User[]> => {
     mode === "CLIENT" ? "client" : mode === "PROVIDER" ? "provider" : "norole";
 
   while (startIndex < total) {
-    const basePath = `admin/users?type=${modeQuery}&startIndex=${startIndex}&search=`;
+    const params = new URLSearchParams({
+      type: modeQuery,
+      startIndex: String(startIndex),
+      search: "",
+    });
+    if (typeof hasAppVersionFilter === "boolean") {
+      const normalized = hasAppVersionFilter ? "true" : "false";
+      params.set("user.hasAppVersion", normalized);
+      params.set("hasAppVersion", normalized);
+    }
+    const basePath = `admin/users?${params.toString()}`;
     const response = await getAllUsers(
       basePath,
     );
@@ -253,6 +301,11 @@ const mapNoRoleUser = (
   rating: null,
   reviewsCount: 0,
   hasProfileVideo: false,
+  appVersion: baseUser.appVersion ?? null,
+  platform:
+    baseUser.platform === "IOS" || baseUser.platform === "ANDROID"
+      ? baseUser.platform
+      : null,
   finishedFields: [],
   notFinishedFields: [],
 });
@@ -265,6 +318,8 @@ const downloadCsv = (rows: EnrichedUser[]) => {
     "Rating",
     "Reviews Count",
     "Has Profile Video",
+    "Platform",
+    "App Version",
     "Finished Onboarding Fields",
     "Not Finished Onboarding Fields",
   ];
@@ -282,6 +337,8 @@ const downloadCsv = (rows: EnrichedUser[]) => {
         row.rating ?? "",
         row.reviewsCount,
         row.hasProfileVideo ? "YES" : "NO",
+        row.platform ?? "",
+        row.appVersion ?? "",
         row.finishedFields.map((field) => FIELD_LABELS[field]).join(" | "),
         row.notFinishedFields.map((field) => FIELD_LABELS[field]).join(" | "),
       ]
@@ -312,6 +369,14 @@ const FilterExport = () => {
   const [loadingText, setLoadingText] = useState("");
   const [minimumReviews, setMinimumReviews] = useState("0");
   const [hasProfileVideoOnly, setHasProfileVideoOnly] = useState(false);
+  const [selectedPlatformOption, setSelectedPlatformOption] = useState(0);
+  const [appVersionOptions, setAppVersionOptions] = useState<
+    { title: string; value: AppVersionFilterValue }[]
+  >([
+    { title: "All app versions", value: "ALL" },
+    { title: "No app version", value: "NO_APP_VERSION" },
+  ]);
+  const [selectedAppVersionOption, setSelectedAppVersionOption] = useState(0);
   const [ratingFrom, setRatingFrom] = useState(0);
   const [ratingTo, setRatingTo] = useState(5);
   const [finishedFields, setFinishedFields] = useState<OnboardingField[]>([]);
@@ -324,6 +389,10 @@ const FilterExport = () => {
   const itemsPerPage = Number(
     pageSizeOptions[selectedPageSizeOption]?.value ?? "20",
   );
+  const selectedAppVersion = appVersionOptions[selectedAppVersionOption]
+    ?.value as AppVersionFilterValue;
+  const hasAppVersionServerFilter =
+    selectedAppVersion === "NO_APP_VERSION" ? false : undefined;
   const availableFields =
     selectedMode === "CLIENT"
       ? CLIENT_FIELDS
@@ -343,6 +412,95 @@ const FilterExport = () => {
 
   useEffect(() => {
     let isCancelled = false;
+
+    const loadAppVersionOptions = async () => {
+      try {
+        const response = await getUsersAppVersionStats();
+        const appVersionStatsResult =
+          response.data?.result ?? response.data ?? {};
+        const rawAppVersionItems = Array.isArray(
+          (appVersionStatsResult as { items?: unknown[] }).items,
+        )
+          ? ((appVersionStatsResult as { items: unknown[] }).items as unknown[])
+          : [];
+
+        const parsedGroups = rawAppVersionItems
+          .filter(
+            (item: unknown): item is RawAppVersionStatItem =>
+              typeof item === "object" &&
+              item !== null &&
+              Array.isArray((item as { items?: unknown[] }).items),
+          )
+          .map((item: RawAppVersionStatItem) => ({
+            platform: normalizePlatform(item.platform),
+            items: item.items
+              .filter(
+                (nestedItem: unknown): nestedItem is RawNestedAppVersionItem =>
+                  typeof nestedItem === "object" &&
+                  nestedItem !== null &&
+                  typeof (nestedItem as { appVersion?: unknown }).appVersion ===
+                    "string",
+              )
+              .map((nestedItem: RawNestedAppVersionItem) => ({
+                appVersion: nestedItem.appVersion,
+                count: Number(nestedItem.count ?? 0) || 0,
+              })),
+            withoutAppVersionCount: Number(item.withoutAppVersionCount ?? 0) || 0,
+          }));
+
+        const versionCounts = new Map<string, number>();
+        let withoutAppVersionCount = 0;
+        parsedGroups.forEach((group) => {
+          group.items.forEach((item) => {
+            versionCounts.set(
+              item.appVersion,
+              (versionCounts.get(item.appVersion) ?? 0) + item.count,
+            );
+          });
+          withoutAppVersionCount += group.withoutAppVersionCount;
+        });
+
+        const versionOptions = Array.from(versionCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(([version, count]) => ({
+            title: `${version} (${count})`,
+            value: version as AppVersionFilterValue,
+          }));
+
+        const nextOptions: { title: string; value: AppVersionFilterValue }[] = [
+          { title: "All app versions", value: "ALL" },
+          {
+            title: `No app version (${withoutAppVersionCount})`,
+            value: "NO_APP_VERSION",
+          },
+          ...versionOptions,
+        ];
+
+        if (!isCancelled) {
+          setAppVersionOptions(nextOptions);
+          setSelectedAppVersionOption(0);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setAppVersionOptions([
+            { title: "All app versions", value: "ALL" },
+            { title: "No app version", value: "NO_APP_VERSION" },
+          ]);
+          setSelectedAppVersionOption(0);
+        }
+        console.error(error);
+      }
+    };
+
+    loadAppVersionOptions();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
     const currentMode = modeOptions[selectedModeOption]?.value as FilterMode;
 
     const run = async () => {
@@ -350,7 +508,10 @@ const FilterExport = () => {
         setIsLoading(true);
         setLoadingText("Loading user list...");
         setUsers([]);
-        const baseUsers = await fetchAllBaseUsers(currentMode);
+        const baseUsers = await fetchAllBaseUsers(
+          currentMode,
+          hasAppVersionServerFilter,
+        );
         const nextUsers: EnrichedUser[] = [];
 
         for (let index = 0; index < baseUsers.length; index += 8) {
@@ -407,9 +568,11 @@ const FilterExport = () => {
     return () => {
       isCancelled = true;
     };
-  }, [selectedModeOption]);
+  }, [selectedModeOption, hasAppVersionServerFilter]);
 
   const normalizedMinimumReviews = Number(minimumReviews);
+  const selectedPlatform = platformFilterOptions[selectedPlatformOption]
+    ?.value as "ALL" | "IOS" | "ANDROID" | "NO_PLATFORM";
   const filteredUsers = users.filter((user) => {
     if (
       Number.isFinite(normalizedMinimumReviews) &&
@@ -419,6 +582,28 @@ const FilterExport = () => {
       return false;
     }
     if (hasProfileVideoOnly && !user.hasProfileVideo) {
+      return false;
+    }
+    if (selectedPlatform === "IOS" && user.platform !== "IOS") {
+      return false;
+    }
+    if (selectedPlatform === "ANDROID" && user.platform !== "ANDROID") {
+      return false;
+    }
+    if (selectedPlatform === "NO_PLATFORM" && user.platform !== null) {
+      return false;
+    }
+    if (
+      selectedAppVersion === "NO_APP_VERSION" &&
+      user.appVersion?.trim().length
+    ) {
+      return false;
+    }
+    if (
+      selectedAppVersion !== "ALL" &&
+      selectedAppVersion !== "NO_APP_VERSION" &&
+      user.appVersion !== selectedAppVersion
+    ) {
       return false;
     }
     if (user.rating != null && user.rating < ratingFrom) {
@@ -451,6 +636,8 @@ const FilterExport = () => {
   }, [
     minimumReviews,
     hasProfileVideoOnly,
+    selectedPlatformOption,
+    selectedAppVersionOption,
     ratingFrom,
     ratingTo,
     finishedFields,
@@ -608,6 +795,22 @@ const FilterExport = () => {
                 onChange={(event) => setMinimumReviews(event.target.value)}
               />
             </div>
+            <div className={styles.fieldColumn}>
+              <div className={styles.label}>Platform</div>
+              <DropDownButton
+                options={platformFilterOptions}
+                selectedOption={selectedPlatformOption}
+                setSelectedOption={setSelectedPlatformOption}
+              />
+            </div>
+            <div className={styles.fieldColumn}>
+              <div className={styles.label}>App version</div>
+              <DropDownButton
+                options={appVersionOptions}
+                selectedOption={selectedAppVersionOption}
+                setSelectedOption={setSelectedAppVersionOption}
+              />
+            </div>
             <label className={styles.videoCheck}>
               <input
                 type="checkbox"
@@ -688,6 +891,7 @@ const FilterExport = () => {
                     </div>
                     <div className={styles.meta}>{user.email || "—"}</div>
                     <div className={styles.meta}>{user.userId}</div>
+                    <div className={styles.meta}>{`APP INFO: ${user.platform ?? "—"} | ${user.appVersion ?? "—"}`}</div>
                   </div>
                 </div>
                 <div className={styles.resultStats}>

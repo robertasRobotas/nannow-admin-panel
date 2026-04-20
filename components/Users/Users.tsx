@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import SearchBar from "../SearchBar/SearchBar";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import Cards from "./Cards/Cards";
@@ -81,6 +81,22 @@ type UsersViewMode =
   | "TEST_USERS";
 type ProviderVideoFilter = "ALL" | "WITH_VIDEO" | "WITHOUT_VIDEO";
 type ProviderSpecialSkillsFilter = "ALL" | "PENDING_SPECIAL_SKILLS";
+type AppVersionPlatform = "IOS" | "ANDROID" | null;
+type AppVersionStatGroup = {
+  platform: AppVersionPlatform;
+  items: { appVersion: string; count: number }[];
+  withoutAppVersionCount: number;
+  totalUsers: number;
+};
+type RawAppVersionStatItem = {
+  platform: unknown;
+  items: unknown[];
+  withoutAppVersionCount: number;
+  totalUsers: number;
+};
+type RawNestedAppVersionItem = { appVersion: string; count: number };
+const normalizePlatform = (platform: unknown): AppVersionPlatform =>
+  platform === "IOS" || platform === "ANDROID" ? platform : null;
 type UsersViewOption = {
   title: string;
   value: UsersViewMode;
@@ -155,12 +171,10 @@ const Users = () => {
     finishedClientOrProviderOnboarding: 0,
   });
   const [appVersionStats, setAppVersionStats] = useState<{
-    items: { appVersion: string; count: number }[];
-    withoutAppVersionCount: number;
+    items: AppVersionStatGroup[];
     totalUsers: number;
   }>({
     items: [],
-    withoutAppVersionCount: 0,
     totalUsers: 0,
   });
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
@@ -236,36 +250,43 @@ const Users = () => {
     { title: "Without video", value: "WITHOUT_VIDEO" },
   ];
 
-  const viewOptions: UsersViewOption[] = [
-    { title: "Clients", value: "CLIENTS" },
-    {
-      title: "Providers",
-      value: "PROVIDERS",
-      attentionNumber: pendingProviderSpecialSkillsCount,
-    },
-    {
-      title: "Active users",
-      value: "ACTIVE_USERS",
-    },
-    {
-      title: "Clients with not finished onboarding",
-      value: "ONBOARDING_CLIENTS",
-      attentionNumber: clientOnboardingCount,
-    },
-    {
-      title: "Providers with not finished onboarding",
-      value: "ONBOARDING_PROVIDERS",
-      attentionNumber: providerOnboardingCount,
-    },
-    {
-      title: "Banned users",
-      value: "BANNED_USERS",
-    },
-    {
-      title: "Test users",
-      value: "TEST_USERS",
-    },
-  ] as const;
+  const viewOptions: UsersViewOption[] = useMemo(
+    () => [
+      { title: "Clients", value: "CLIENTS" },
+      {
+        title: "Providers",
+        value: "PROVIDERS",
+        attentionNumber: pendingProviderSpecialSkillsCount,
+      },
+      {
+        title: "Active users",
+        value: "ACTIVE_USERS",
+      },
+      {
+        title: "Clients with not finished onboarding",
+        value: "ONBOARDING_CLIENTS",
+        attentionNumber: clientOnboardingCount,
+      },
+      {
+        title: "Providers with not finished onboarding",
+        value: "ONBOARDING_PROVIDERS",
+        attentionNumber: providerOnboardingCount,
+      },
+      {
+        title: "Banned users",
+        value: "BANNED_USERS",
+      },
+      {
+        title: "Test users",
+        value: "TEST_USERS",
+      },
+    ],
+    [
+      pendingProviderSpecialSkillsCount,
+      clientOnboardingCount,
+      providerOnboardingCount,
+    ],
+  );
   const currentView = viewOptions[selectedViewOption]?.value as UsersViewMode;
   const isOnboardingSelected =
     currentView === "ONBOARDING_CLIENTS" ||
@@ -306,7 +327,7 @@ const Users = () => {
       setSelectedViewOption(0);
     }
     setModeReady(true);
-  }, [router.isReady, router.query.mode, router.query.view]);
+  }, [router.isReady, router.query.mode, router.query.view, viewOptions]);
 
   const normalizeTestUsersPayload = (
     payload: unknown,
@@ -401,34 +422,42 @@ const Users = () => {
           appVersionStatsResponse.value.data?.result ??
           appVersionStatsResponse.value.data ??
           {};
-        const appVersionItems = Array.isArray(appVersionStatsResult.items)
-          ? appVersionStatsResult.items
-              .filter(
-                (
-                  item: unknown,
-                ): item is {
-                  appVersion: string;
-                  count: number;
-                } =>
-                  typeof item === "object" &&
-                  item !== null &&
-                  typeof (item as { appVersion?: unknown }).appVersion === "string",
-              )
-              .map((item: { appVersion: string; count: number }) => ({
-                appVersion: item.appVersion,
-                count: Number(item.count ?? 0) || 0,
-              }))
+        const rawAppVersionItems = Array.isArray(
+          (appVersionStatsResult as { items?: unknown[] }).items,
+        )
+          ? ((appVersionStatsResult as { items: unknown[] }).items as unknown[])
           : [];
+        const appVersionItems: AppVersionStatGroup[] = rawAppVersionItems
+          .filter(
+            (item: unknown): item is RawAppVersionStatItem =>
+              typeof item === "object" &&
+              item !== null &&
+              Array.isArray((item as { items?: unknown[] }).items),
+          )
+          .map((item: RawAppVersionStatItem) => ({
+            platform: normalizePlatform(item.platform),
+            items: item.items
+              .filter(
+                (nestedItem: unknown): nestedItem is RawNestedAppVersionItem =>
+                  typeof nestedItem === "object" &&
+                  nestedItem !== null &&
+                  typeof (nestedItem as { appVersion?: unknown }).appVersion ===
+                    "string",
+              )
+              .map((nestedItem: RawNestedAppVersionItem) => ({
+                appVersion: nestedItem.appVersion,
+                count: Number(nestedItem.count ?? 0) || 0,
+              })),
+            withoutAppVersionCount: Number(item.withoutAppVersionCount ?? 0) || 0,
+            totalUsers: Number(item.totalUsers ?? 0) || 0,
+          }));
         setAppVersionStats({
           items: appVersionItems,
-          withoutAppVersionCount:
-            Number(appVersionStatsResult.withoutAppVersionCount ?? 0) || 0,
           totalUsers: Number(appVersionStatsResult.totalUsers ?? 0) || 0,
         });
       } else {
         setAppVersionStats({
           items: [],
-          withoutAppVersionCount: 0,
           totalUsers: 0,
         });
       }
@@ -438,11 +467,14 @@ const Users = () => {
   }, []);
 
   const appVersionStatsLine = [
-    ...appVersionStats.items.map(
-      (item) => `${item.appVersion}: ${item.count}`,
-    ),
-    `No app version: ${appVersionStats.withoutAppVersionCount}`,
-    `Total: ${appVersionStats.totalUsers}`,
+    ...appVersionStats.items.map((platformGroup) => {
+      const platformLabel = platformGroup.platform ?? "Unknown";
+      const versionsLine = platformGroup.items
+        .map((item) => `${item.appVersion}: ${item.count}`)
+        .join(", ");
+      return `${platformLabel}: ${versionsLine || "no versions"} (No app version: ${platformGroup.withoutAppVersionCount}, Total: ${platformGroup.totalUsers})`;
+    }),
+    `Total users: ${appVersionStats.totalUsers}`,
   ].join(" · ");
 
   const fetchPendingProviderSpecialSkills = useCallback(async () => {

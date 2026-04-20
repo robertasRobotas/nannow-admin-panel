@@ -12,10 +12,13 @@ type ProfileInfoProps = {
   mode?: "client" | "provider";
   email: string;
   locale?: string;
+  appVersion?: string | null;
+  platform?: "IOS" | "ANDROID" | null;
   imgUrlRemoveMessage?: string | null;
   allowImageRemoval?: boolean;
   userId?: string;
   finalPrice?: number;
+  enableImageViewer?: boolean;
 };
 
 const ProfileInfo = ({
@@ -25,10 +28,13 @@ const ProfileInfo = ({
   mode,
   email,
   locale,
+  appVersion,
+  platform,
   imgUrlRemoveMessage,
   allowImageRemoval = false,
   userId,
   finalPrice,
+  enableImageViewer = true,
 }: ProfileInfoProps) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
@@ -49,9 +55,17 @@ const ProfileInfo = ({
 
   const hasProfileImage = profileImgUrl.trim().length > 0;
   const showRemovedAvatar = !hasProfileImage && removeMessage.trim().length > 0;
+  const hasPlatform = typeof platform === "string" && platform.trim().length > 0;
+  const hasAppVersion =
+    typeof appVersion === "string" && appVersion.trim().length > 0;
+  const appInfoLine =
+    hasPlatform || hasAppVersion
+      ? `${hasPlatform ? platform : "—"} | ${hasAppVersion ? appVersion : "—"}`
+      : "—";
 
   const openImageModal = (event?: MouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation();
+    if (!enableImageViewer) return;
     if (!hasProfileImage) return;
     setImageZoom(1);
     setIsImageModalOpen(true);
@@ -109,7 +123,7 @@ const ProfileInfo = ({
 
   return (
     <div className={styles.profileInfo}>
-      {hasProfileImage ? (
+      {hasProfileImage && enableImageViewer ? (
         <button
           type="button"
           className={styles.profileImgButton}
@@ -122,6 +136,12 @@ const ProfileInfo = ({
             alt="Profile Image"
           />
         </button>
+      ) : hasProfileImage ? (
+        <img
+          className={styles.profileImg}
+          src={profileImgUrl}
+          alt="Profile Image"
+        />
       ) : showRemovedAvatar ? (
         <div className={styles.removedAvatar}>R</div>
       ) : (
@@ -136,6 +156,7 @@ const ProfileInfo = ({
       </span>
       <span className={styles.email}>{email}</span>
       <span className={styles.id}>{`USER ID: ${id}`}</span>
+      <span className={styles.email}>{`APP INFO: ${appInfoLine}`}</span>
       {locale && (
         <span className={styles.email}>{`USER LOCALE: ${locale}`}</span>
       )}

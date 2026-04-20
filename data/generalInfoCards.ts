@@ -92,9 +92,9 @@ export const getInfoCards = (
       value: data?.user?.pushToken ?? "—",
     },
     {
-      title: "App version",
+      title: "App info",
       icon: loginTypeImg,
-      value: data?.user?.appVersion ?? "—",
+      value: `${data?.user?.platform ?? "—"} | ${data?.user?.appVersion ?? "—"}`,
     },
     {
       title: "Profile suspension",

@@ -40,7 +40,10 @@ const UserCard = ({ user, mode }: UserCardProps) => {
           id={user.userId}
           email={user.email}
           locale={user.locale}
+          appVersion={user.appVersion}
+          platform={user.platform}
           finalPrice={user.finalPrice}
+          enableImageViewer={false}
         />
       </div>
     </div>

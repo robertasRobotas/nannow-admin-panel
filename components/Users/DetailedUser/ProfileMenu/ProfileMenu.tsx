@@ -246,6 +246,8 @@ const ProfileMenu = ({
           mode={mode}
           email={user.user.email}
           locale={user.user.userAppLanguage}
+          appVersion={user.user.appVersion}
+          platform={user.user.platform}
           imgUrlRemoveMessage={user.user.imgUrlRemoveMessage}
           allowImageRemoval
           userId={user.user.id}
