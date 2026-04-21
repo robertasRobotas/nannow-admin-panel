@@ -1,5 +1,7 @@
 import styles from "../styles/Home.module.css";
 import logo from "../assets/images/logo-admin.svg";
+import googleLogo from "../assets/images/google-logo.svg";
+import appleLogo from "../assets/images/apple-logo.svg";
 import Input from "@/components/Input/Input";
 import { useState } from "react";
 import Button from "@/components/Button/Button";
@@ -232,6 +234,7 @@ const MainPage = () => {
             type="BLACK"
             htmlType="submit"
             height={48}
+            className="w-full"
             isDisabled={isLoading}
             isLoading={isLoading}
           />
@@ -243,6 +246,7 @@ const MainPage = () => {
               title={isGoogleLoading ? "Google..." : "Google"}
               type="OUTLINED"
               height={44}
+              imgUrl={googleLogo.src}
               isDisabled={isGoogleLoading || isAppleLoading || isLoading}
               onClick={() => completeFirebaseLogin("google")}
             />
@@ -250,6 +254,7 @@ const MainPage = () => {
               title={isAppleLoading ? "Apple..." : "Apple"}
               type="OUTLINED"
               height={44}
+              imgUrl={appleLogo.src}
               isDisabled={isGoogleLoading || isAppleLoading || isLoading}
               onClick={() => completeFirebaseLogin("apple")}
             />

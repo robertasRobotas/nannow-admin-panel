@@ -19,6 +19,8 @@ type ProfileInfoProps = {
   userId?: string;
   finalPrice?: number;
   enableImageViewer?: boolean;
+  /** When false, "(Client)" / "(Provider)" is not shown next to the name. */
+  showRoleSuffix?: boolean;
 };
 
 const ProfileInfo = ({
@@ -35,6 +37,7 @@ const ProfileInfo = ({
   userId,
   finalPrice,
   enableImageViewer = true,
+  showRoleSuffix = true,
 }: ProfileInfoProps) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
@@ -152,10 +155,13 @@ const ProfileInfo = ({
         />
       )}
       <span className={`${styles.name} ${nunito.className}`}>
-        {name} {mode && (mode === "provider" ? "(Provider)" : "(Client)")}
+        {name}
+        {showRoleSuffix && mode
+          ? ` ${mode === "provider" ? "(Provider)" : "(Client)"}`
+          : ""}
       </span>
       <span className={styles.email}>{email}</span>
-      <span className={styles.id}>{`USER ID: ${id}`}</span>
+      <span className={styles.id}>{id}</span>
       <span className={styles.email}>{`APP INFO: ${appInfoLine}`}</span>
       {locale && (
         <span className={styles.email}>{`USER LOCALE: ${locale}`}</span>

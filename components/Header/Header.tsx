@@ -1,6 +1,5 @@
 import styles from "./header.module.css";
-import prodLogo from "../../assets/images/prod-logo.svg";
-import testLogo from "../../assets/images/test-logo.svg";
+import { HeaderLogo } from "./HeaderLogo";
 import Link from "next/link";
 import Button from "../Button/Button";
 import burgerBtn from "../../assets/images/burger-btn.svg";
@@ -109,7 +108,6 @@ const Header = () => {
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [apiMode, setApiMode] = useState<AdminApiMode>("production");
-  const logoSrc = apiMode === "test" ? testLogo.src : prodLogo.src;
   const { pathname } = useRouter();
   const { lastEvent } = useAdminSocket();
 
@@ -487,7 +485,7 @@ const Header = () => {
               className={styles.logoLink}
               aria-label="Users"
             >
-              <img className={styles.logoImg} src={logoSrc} alt="" />
+              <HeaderLogo mode={apiMode} className={styles.logoImg} />
             </Link>
           </div>
           <nav className={styles.nav}>
@@ -661,7 +659,7 @@ const Header = () => {
               className={styles.logoLink}
               aria-label="Users"
             >
-              <img className={styles.logoImg} src={logoSrc} alt="" />
+              <HeaderLogo mode={apiMode} className={styles.logoImg} />
             </Link>
           </div>
         </div>

@@ -1,0 +1,53 @@
+.line {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.text {
+  width: fit-content;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.copyBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.copyBtn:hover {
+  color: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.copyBtn:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 1px;
+}

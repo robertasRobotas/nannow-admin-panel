@@ -3,8 +3,7 @@ import { HeaderLink } from "@/types/HeaderLink";
 import styles from "./headerMenu.module.css";
 import headerStyles from "../header.module.css";
 import crossImg from "../../../assets/images/cross.svg";
-import prodLogo from "../../../assets/images/prod-logo.svg";
-import testLogo from "../../../assets/images/test-logo.svg";
+import { HeaderLogo } from "../HeaderLogo";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -93,8 +92,6 @@ const HeaderMenu = ({
   isTotpSetupLoading,
   onLogout,
 }: HeaderMenuProps) => {
-  const logoSrc =
-    (apiMode ?? "production") === "test" ? testLogo.src : prodLogo.src;
   const [isClosing, setClosing] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [profilePopoverMounted, setProfilePopoverMounted] = useState(false);
@@ -187,7 +184,10 @@ const HeaderMenu = ({
             aria-label="Users"
             onClick={() => onClose()}
           >
-            <img className={styles.logoImg} src={logoSrc} alt="" />
+            <HeaderLogo
+              mode={apiMode ?? "production"}
+              className={styles.logoImg}
+            />
           </Link>
         </div>
         <nav className={styles.nav}>

@@ -5,7 +5,9 @@ import SearchBar from "../SearchBar/SearchBar";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import Cards from "./Cards/Cards";
 import UsersList from "./UsersList/UsersList";
+import userListStyles from "./UsersList/usersList.module.css";
 import styles from "./users.module.css";
+import { cn, isRowNavExcluded } from "@/lib/utils";
 import axios from "axios";
 import {
   createTestUser,
@@ -37,6 +39,8 @@ import {
 import defaultUserImg from "@/assets/images/default-avatar.png";
 import { nunito } from "@/helpers/fonts";
 import Button from "../Button/Button";
+import UserEmailIdLine from "./UserEmailIdLine/UserEmailIdLine";
+import { LayoutGrid, List } from "lucide-react";
 import { toast } from "react-toastify";
 
 const onboardingStepLabels: Record<OnboardingStep, string> = {
@@ -63,6 +67,9 @@ const formatRemainingSteps = (steps: OnboardingStep[]) =>
   steps
     .map((step) => onboardingStepLabels[step] ?? step)
     .join(", ");
+
+const roleParenFromEnum = (role: string) =>
+  String(role).toUpperCase() === "PROVIDER" ? "(Provider)" : "(Client)";
 
 const formatDateTime = (value?: string) => {
   if (!value) return "—";
@@ -168,14 +175,11 @@ const Users = () => {
     totalUsers: 0,
     finishedClientOnboarding: 0,
     finishedProviderOnboarding: 0,
-    finishedClientOrProviderOnboarding: 0,
   });
   const [appVersionStats, setAppVersionStats] = useState<{
     items: AppVersionStatGroup[];
-    totalUsers: number;
   }>({
     items: [],
-    totalUsers: 0,
   });
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
@@ -188,6 +192,7 @@ const Users = () => {
   const [isSavingTestUser, setIsSavingTestUser] = useState(false);
   const [isSyncingTestUsers, setIsSyncingTestUsers] = useState(false);
   const [isLoadingConnectedUsers, setIsLoadingConnectedUsers] = useState(false);
+  const [isStatsSidebarLoading, setIsStatsSidebarLoading] = useState(true);
   const [modeReady, setModeReady] = useState(false);
   const [providerVideoFilter, setProviderVideoFilter] =
     useState<ProviderVideoFilter>("ALL");
@@ -368,6 +373,7 @@ const Users = () => {
   };
 
   const fetchOnboardingNotFinishedCount = useCallback(async () => {
+    setIsStatsSidebarLoading(true);
     try {
       const [
         clientResponse,
@@ -412,8 +418,6 @@ const Users = () => {
             Number(statsResult.finishedClientOnboarding ?? 0) || 0,
           finishedProviderOnboarding:
             Number(statsResult.finishedProviderOnboarding ?? 0) || 0,
-          finishedClientOrProviderOnboarding:
-            Number(statsResult.finishedClientOrProviderOnboarding ?? 0) || 0,
         });
       }
 
@@ -453,16 +457,16 @@ const Users = () => {
           }));
         setAppVersionStats({
           items: appVersionItems,
-          totalUsers: Number(appVersionStatsResult.totalUsers ?? 0) || 0,
         });
       } else {
         setAppVersionStats({
           items: [],
-          totalUsers: 0,
         });
       }
     } catch (err) {
       console.log(err);
+    } finally {
+      setIsStatsSidebarLoading(false);
     }
   }, []);
 
@@ -760,6 +764,7 @@ const Users = () => {
     isBannedUsersSelected,
     isTestUsersSelected,
     itemOffset,
+    itemsPerPage,
     fetchConnectedUsersList,
     fetchBannedUsers,
     fetchOnboardingUsers,
@@ -800,6 +805,8 @@ const Users = () => {
   }, [connectedUsersCounts, connectedUsersFilter, isActiveUsersSelected]);
 
   const openOnboardingUserProfile = (user: OnboardingNotFinishedUser) => {
+    const selectedText = window.getSelection?.()?.toString().trim() ?? "";
+    if (selectedText.length > 0) return;
     const normalizedMode = String(user.currentMode ?? "").toUpperCase();
     router.push(
       normalizedMode === "PROVIDER"
@@ -934,6 +941,31 @@ const Users = () => {
       <div className={styles.pageLayout}>
         <div className={styles.mainColumn}>
       <div className={styles.heading}>
+        <div className={styles.pageHeroRow}>
+          <h1 className={styles.pageHeroTitle}>Users</h1>
+          {!isActiveUsersSelected && (
+            <div className={styles.pageHeroSearch}>
+              <SearchBar
+                className={styles.pageHeroSearchBar}
+                searchText={searchText}
+                setSearchText={setSearchText}
+                placeholder="Type username, ID  or email"
+                onButtonClick={() => {
+                  setItemOffset(0);
+                  if (isOnboardingSelected) {
+                    fetchOnboardingUsers();
+                  } else if (isBannedUsersSelected) {
+                    fetchBannedUsers();
+                  } else if (isTestUsersSelected) {
+                    fetchTestUsers();
+                  } else {
+                    fetchUsers();
+                  }
+                }}
+              />
+            </div>
+          )}
+        </div>
         <div className={styles.headingTopRow}>
           <div className={styles.headingLeftSide}>
             <DropDownButton
@@ -952,11 +984,6 @@ const Users = () => {
               title="Filter and export"
               type="OUTLINED"
               onClick={() => router.push("/users/filter-export")}
-            />
-            <Button
-              title="Campaigns"
-              type="OUTLINED"
-              onClick={() => router.push("/campaigns")}
             />
             {isProvidersSelected && (
               <>
@@ -1015,110 +1042,136 @@ const Users = () => {
                 />
               </>
             )}
-            {!isOnboardingSelected &&
-              !isActiveUsersSelected &&
-              !isBannedUsersSelected &&
-              !isTestUsersSelected && (
-                <>
-                  <button
-                    type="button"
-                    className={styles.viewSwitchButton}
-                    onClick={() => setIsCompactView((prev) => !prev)}
+          </div>
+          {!isOnboardingSelected &&
+            !isActiveUsersSelected &&
+            !isBannedUsersSelected &&
+            !isTestUsersSelected && (
+              <div className={styles.headingRightTools}>
+                <div className="flex shrink-0 items-center gap-3">
+                  <DropDownButton
+                    options={PAGE_SIZE_OPTIONS.map((option) => ({
+                      title: option.title,
+                      value: option.value,
+                    }))}
+                    selectedOption={Math.max(
+                      0,
+                      PAGE_SIZE_OPTIONS.findIndex(
+                        (option) => Number(option.value) === itemsPerPage,
+                      ),
+                    )}
+                    setSelectedOption={(selectedOption) => {
+                      const option =
+                        PAGE_SIZE_OPTIONS[selectedOption as number];
+                      if (!option) return;
+                      setItemOffset(0);
+                      setItemsPerPage(Number(option.value));
+                    }}
+                  />
+                  <div
+                    className="relative box-border flex h-10 w-[78px] min-w-[78px] max-w-[78px] shrink-0 items-stretch gap-0.5 rounded-xl border border-input bg-black/5 p-[3px]"
+                    role="group"
+                    aria-label="Layout"
                   >
-                    <span className={styles.viewSwitchLabel}>Show compact</span>
                     <span
-                      className={`${styles.viewSwitchUi} ${
-                        isCompactView ? styles.viewSwitchUiActive : ""
-                      }`}
-                    />
-                  </button>
-                  {isCompactView && (
-                    <DropDownButton
-                      options={PAGE_SIZE_OPTIONS.map((option) => ({
-                        title: option.title,
-                        value: option.value,
-                      }))}
-                      selectedOption={Math.max(
-                        0,
-                        PAGE_SIZE_OPTIONS.findIndex(
-                          (option) => Number(option.value) === itemsPerPage,
-                        ),
+                      aria-hidden
+                      className={cn(
+                        "pointer-events-none absolute inset-y-[3px] left-[3px] z-0 w-[calc(50%-4px)] rounded-xl border border-border/60 bg-background shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
+                        !isCompactView &&
+                          "translate-x-[calc(100%+2px)]",
                       )}
-                      setSelectedOption={(selectedOption) => {
-                        const option =
-                          PAGE_SIZE_OPTIONS[selectedOption as number];
-                        if (!option) return;
-                        setItemOffset(0);
-                        setItemsPerPage(Number(option.value));
-                      }}
                     />
-                  )}
-                </>
-              )}
-          </div>
-          <div>
-            {!isActiveUsersSelected && (
-              <SearchBar
-                searchText={searchText}
-                setSearchText={setSearchText}
-                placeholder="Type username, ID  or email"
-                onButtonClick={() => {
-                  setItemOffset(0);
-                  if (isOnboardingSelected) {
-                    fetchOnboardingUsers();
-                  } else if (isBannedUsersSelected) {
-                    fetchBannedUsers();
-                  } else if (isTestUsersSelected) {
-                    fetchTestUsers();
-                  } else {
-                    fetchUsers();
-                  }
-                }}
-              />
+                    <button
+                      type="button"
+                      className={cn(
+                        "relative z-10 flex w-[35px] shrink-0 flex-none items-center justify-center self-stretch rounded-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none active:scale-[0.96] motion-reduce:active:scale-100",
+                        isCompactView && "text-foreground",
+                      )}
+                      onClick={() => setIsCompactView(true)}
+                      aria-pressed={isCompactView}
+                      aria-label="List view"
+                    >
+                      <List size={18} strokeWidth={2} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        "relative z-10 flex w-[35px] shrink-0 flex-none items-center justify-center self-stretch rounded-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none active:scale-[0.96] motion-reduce:active:scale-100",
+                        !isCompactView && "text-foreground",
+                      )}
+                      onClick={() => setIsCompactView(false)}
+                      aria-pressed={!isCompactView}
+                      aria-label="Grid view"
+                    >
+                      <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
-          </div>
         </div>
       </div>
 
       {isOnboardingSelected ? (
         onboardingUsers.length > 0 ? (
-          <div className={styles.onboardingList}>
-            {onboardingUsers.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                className={styles.onboardingRow}
-                onClick={() => openOnboardingUserProfile(user)}
-              >
-                <div className={styles.onboardingRowLeft}>
-                  <img
-                    className={styles.onboardingAvatar}
-                    src={user.imgUrl || defaultUserImg.src}
-                    alt={`${user.firstName} ${user.lastName}`}
-                  />
-                  <div>
-                    <div className={styles.onboardingName}>
-                      {`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
-                        "Unknown user"}
-                    </div>
-                    <div className={styles.onboardingMeta}>
-                      {user.email || "—"}
-                    </div>
-                    <div className={styles.onboardingMeta}>
-                      {user.currentMode} • {user.userId}
+          <div className={userListStyles.main}>
+            {onboardingUsers.map((user) => {
+              const displayName =
+                `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+                "Unknown user";
+              return (
+                <div
+                  key={user.id}
+                  className={cn(
+                    userListStyles.row,
+                    styles.listRowWithBelowMeta,
+                  )}
+                  tabIndex={0}
+                  onClick={(e) => {
+                    if (isRowNavExcluded(e.target)) return;
+                    openOnboardingUserProfile(user);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    if (isRowNavExcluded(e.target)) return;
+                    if (e.target !== e.currentTarget) return;
+                    e.preventDefault();
+                    openOnboardingUserProfile(user);
+                  }}
+                  aria-label={`View ${displayName} profile`}
+                >
+                  <div className={userListStyles.left}>
+                    <img
+                      className={userListStyles.avatar}
+                      src={user.imgUrl || defaultUserImg.src}
+                      alt=""
+                    />
+                    <div className={styles.listRowDetailColumn}>
+                      <div className={userListStyles.info}>
+                        <div className={userListStyles.name}>
+                          {displayName}{" "}
+                          {roleParenFromEnum(user.currentMode)}
+                        </div>
+                        <UserEmailIdLine
+                          email={user.email}
+                          userId={user.userId}
+                        />
+                      </div>
+                      <div className={styles.onboardingRight}>
+                        <div className={styles.remainingStepsLine}>
+                          <span className={styles.remainingLabel}>
+                            Remaining:
+                          </span>{" "}
+                          <span className={styles.remainingList}>
+                            {formatRemainingSteps(user.remainingSteps ?? [])}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className={styles.onboardingRight}>
-                  <div className={styles.stepsTitle}>
-                    Remaining steps: {user.remainingStepsCount}
-                  </div>
-                  <div className={styles.stepsText}>
-                    {formatRemainingSteps(user.remainingSteps ?? [])}
-                  </div>
-                </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className={styles.emptyState}>
@@ -1127,25 +1180,25 @@ const Users = () => {
         )
       ) : isBannedUsersSelected ? (
         bannedUsers.length > 0 ? (
-          <div className={styles.onboardingList}>
+          <div className={userListStyles.main}>
             {bannedUsers.map((user) => (
-              <div key={user.id} className={styles.onboardingRow}>
-                <div className={styles.onboardingRowLeft}>
+              <div key={user.id} className={userListStyles.row}>
+                <div className={userListStyles.left}>
                   <img
-                    className={styles.onboardingAvatar}
+                    className={userListStyles.avatar}
                     src={user.userImgUrl || defaultUserImg.src}
-                    alt={`${user.userFirstName ?? ""} ${user.userLastName ?? ""}`}
+                    alt=""
                   />
-                  <div>
-                    <div className={styles.onboardingName}>
+                  <div className={userListStyles.info}>
+                    <div className={userListStyles.name}>
                       {`${user.userFirstName ?? ""} ${user.userLastName ?? ""}`.trim() ||
                         "Unknown user"}
                     </div>
-                    <div className={styles.onboardingMeta}>
-                      {user.userEmail || user.email || "—"}
-                    </div>
-                    <div className={styles.onboardingMeta}>{user.userId}</div>
-                    <div className={styles.onboardingMeta}>
+                    <UserEmailIdLine
+                      email={user.userEmail || user.email}
+                      userId={user.userId}
+                    />
+                    <div className={userListStyles.meta}>
                       {`Reason: ${
                         user.banReason ??
                         user.userBanReason ??
@@ -1154,7 +1207,7 @@ const Users = () => {
                         "—"
                       }`}
                     </div>
-                    <div className={styles.onboardingMeta}>
+                    <div className={userListStyles.meta}>
                       {`Banned at: ${formatDateTime(
                         user.bannedAt ?? user.updatedAt ?? user.createdAt,
                       )}`}
@@ -1182,43 +1235,69 @@ const Users = () => {
         isLoadingConnectedUsers ? (
           <div className={styles.emptyState}>Loading active users...</div>
         ) : paginatedConnectedUsers.length > 0 ? (
-          <div className={styles.onboardingList}>
-            {paginatedConnectedUsers.map((user) => (
-              <button
-                key={`${user.currentRole}-${user.userId}`}
-                type="button"
-                className={styles.onboardingRow}
-                onClick={() =>
-                  router.push(
-                    user.currentRole === "PROVIDER"
-                      ? `/provider/${user.userId}`
-                      : `/client/${user.userId}`,
-                  )
-                }
-              >
-                <div className={styles.onboardingRowLeft}>
-                  <img
-                    className={styles.onboardingAvatar}
-                    src={user.imgUrl || defaultUserImg.src}
-                    alt={user.fullName}
-                  />
-                  <div>
-                    <div className={styles.onboardingName}>
-                      {user.fullName || "Unknown user"}
-                    </div>
-                    <div className={styles.onboardingMeta}>
-                      {`${user.currentRole} • ${user.userId}`}
+          <div className={userListStyles.main}>
+            {paginatedConnectedUsers.map((user) => {
+              const displayName = user.fullName || "Unknown user";
+              return (
+                <div
+                  key={`${user.currentRole}-${user.userId}`}
+                  className={cn(
+                    userListStyles.row,
+                    styles.listRowWithBelowMeta,
+                  )}
+                  tabIndex={0}
+                  onClick={(e) => {
+                    if (isRowNavExcluded(e.target)) return;
+                    const selectedText =
+                      window.getSelection?.()?.toString().trim() ?? "";
+                    if (selectedText.length > 0) return;
+                    router.push(
+                      user.currentRole === "PROVIDER"
+                        ? `/provider/${user.userId}`
+                        : `/client/${user.userId}`,
+                    );
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    if (isRowNavExcluded(e.target)) return;
+                    if (e.target !== e.currentTarget) return;
+                    e.preventDefault();
+                    const selectedText =
+                      window.getSelection?.()?.toString().trim() ?? "";
+                    if (selectedText.length > 0) return;
+                    router.push(
+                      user.currentRole === "PROVIDER"
+                        ? `/provider/${user.userId}`
+                        : `/client/${user.userId}`,
+                    );
+                  }}
+                  aria-label={`View ${displayName} profile`}
+                >
+                  <div className={userListStyles.left}>
+                    <img
+                      className={userListStyles.avatar}
+                      src={user.imgUrl || defaultUserImg.src}
+                      alt=""
+                    />
+                    <div className={styles.listRowDetailColumn}>
+                      <div className={userListStyles.info}>
+                        <div className={userListStyles.name}>
+                          {displayName}{" "}
+                          {roleParenFromEnum(user.currentRole)}
+                        </div>
+                        <UserEmailIdLine userId={user.userId} />
+                      </div>
+                      <div className={styles.onboardingRight}>
+                        <div className={styles.stepsTitle}>Connected at</div>
+                        <div className={styles.stepsText}>
+                          {formatDateTime(user.connectedAt)}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className={styles.onboardingRight}>
-                  <div className={styles.stepsTitle}>Connected at</div>
-                  <div className={styles.stepsText}>
-                    {formatDateTime(user.connectedAt)}
-                  </div>
-                </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className={styles.emptyState}>No active users</div>
@@ -1248,7 +1327,7 @@ const Users = () => {
             />
           </div>
           {testUsers.length > 0 ? (
-            <div className={styles.onboardingList}>
+            <div className={userListStyles.main}>
               {testUsers.map((user) => {
                 const editedEmail =
                   testUserEditValues[user.email] ?? user.email;
@@ -1311,15 +1390,24 @@ const Users = () => {
         )
       )}
 
+      <div className={styles.paginationDock}>
       <ReactPaginate
         breakLabel="..."
         nextLabel=""
         onPageChange={handlePageClick}
         pageRangeDisplayed={5}
         pageCount={pageCount}
+        forcePage={
+          pageCount === 0 || itemsPerPage <= 0
+            ? 0
+            : Math.min(
+                pageCount - 1,
+                Math.floor(itemOffset / itemsPerPage),
+              )
+        }
         previousLabel=""
         renderOnZeroPageCount={null}
-        containerClassName={paginateStyles.paginateWrapper}
+        containerClassName={`${paginateStyles.paginateWrapper} ${styles.paginationInDock}`}
         pageClassName={paginateStyles.pageBtn}
         pageLinkClassName={paginateStyles.pageLink}
         activeClassName={paginateStyles.activePage}
@@ -1329,92 +1417,97 @@ const Users = () => {
         previousLinkClassName={paginateStyles.prevLink}
         breakClassName={paginateStyles.break}
       />
+      </div>
 
         </div>
-        <aside className={styles.statsAside} aria-label="User statistics">
-          <div className={`${styles.statsBlock} ${styles.statsBlockAside}`}>
-            <div className={styles.statsSummaryGrid}>
-              <div className={styles.statTile}>
-                <span className={styles.statTileLabel}>Users</span>
-                <span className={styles.statTileValue}>
-                  {onboardingStats.totalUsers}
-                </span>
-              </div>
-              <div className={styles.statTile}>
-                <span className={styles.statTileLabel}>Client done</span>
-                <span className={styles.statTileValue}>
-                  {onboardingStats.finishedClientOnboarding}
-                </span>
-              </div>
-              <div className={styles.statTile}>
-                <span className={styles.statTileLabel}>Provider done</span>
-                <span className={styles.statTileValue}>
-                  {onboardingStats.finishedProviderOnboarding}
-                </span>
-              </div>
-              <div
-                className={`${styles.statTile} ${styles.statTileWide}`}
-              >
-                <span className={styles.statTileLabel}>
-                  Client or provider done
-                </span>
-                <span className={styles.statTileValue}>
-                  {onboardingStats.finishedClientOrProviderOnboarding}
-                </span>
-              </div>
+        <aside
+          className={styles.statsAside}
+          aria-label="User statistics"
+          aria-busy={isStatsSidebarLoading}
+        >
+          {isStatsSidebarLoading ? (
+            <div
+              className={styles.statsAsideLoading}
+              role="status"
+              aria-live="polite"
+            >
+              <p className={styles.statsAsideShimmerTitle}>
+                Information incoming...
+              </p>
             </div>
-
-            <section className={styles.appVersionSection}>
-              <h3 className={styles.appVersionHeading}>App version</h3>
-              {appVersionStats.items.map((platformGroup, idx) => (
-                <div
-                  key={`${String(platformGroup.platform)}-${idx}`}
-                  className={styles.platformBlock}
-                >
-                  <div className={styles.platformName}>
-                    {formatAppVersionPlatformLabel(platformGroup.platform)}
-                  </div>
-                  {platformGroup.items.map((v) => (
-                    <div
-                      key={v.appVersion}
-                      className={styles.versionRow}
-                    >
-                      <span className={styles.versionName}>
-                        {v.appVersion}
-                      </span>
-                      <span className={styles.versionCount}>{v.count}</span>
-                    </div>
-                  ))}
-                  {platformGroup.items.length === 0 && (
-                    <div className={styles.versionRow}>
-                      <span className={styles.versionName}>No versions</span>
-                      <span className={styles.versionCount}>—</span>
-                    </div>
-                  )}
-                  <div className={styles.platformMeta}>
-                    <div className={styles.platformMetaRow}>
-                      <span className={styles.platformMetaLabel}>
-                        No app version
-                      </span>
-                      <span className={styles.platformMetaValue}>
-                        {platformGroup.withoutAppVersionCount}
-                      </span>
-                    </div>
-                    <div className={styles.platformMetaRow}>
-                      <span className={styles.platformMetaLabel}>Total</span>
-                      <span className={styles.platformMetaValue}>
-                        {platformGroup.totalUsers}
-                      </span>
-                    </div>
-                  </div>
+          ) : (
+            <div
+              className={`${styles.statsBlock} ${styles.statsBlockAside} ${styles.statsAsideContent}`}
+            >
+              <div className={styles.statsSummaryGrid}>
+                <div className={styles.statTile}>
+                  <span className={styles.statTileLabel}>Total users</span>
+                  <span className={styles.statTileValue}>
+                    {onboardingStats.totalUsers}
+                  </span>
                 </div>
-              ))}
-              <div className={styles.appVersionGrandTotal}>
-                <span>Total users</span>
-                <span>{appVersionStats.totalUsers}</span>
+                <div className={styles.statTile}>
+                  <span className={styles.statTileLabel}>Client done</span>
+                  <span className={styles.statTileValue}>
+                    {onboardingStats.finishedClientOnboarding}
+                  </span>
+                </div>
+                <div className={styles.statTile}>
+                  <span className={styles.statTileLabel}>Provider done</span>
+                  <span className={styles.statTileValue}>
+                    {onboardingStats.finishedProviderOnboarding}
+                  </span>
+                </div>
               </div>
-            </section>
-          </div>
+
+              <section className={styles.appVersionSection}>
+                <h3 className={styles.appVersionHeading}>App version</h3>
+                {appVersionStats.items.map((platformGroup, idx) => (
+                  <div
+                    key={`${String(platformGroup.platform)}-${idx}`}
+                    className={styles.platformBlock}
+                  >
+                    <div className={styles.platformName}>
+                      {formatAppVersionPlatformLabel(platformGroup.platform)}
+                    </div>
+                    {platformGroup.items.map((v) => (
+                      <div
+                        key={v.appVersion}
+                        className={styles.versionRow}
+                      >
+                        <span className={styles.versionName}>
+                          {v.appVersion}
+                        </span>
+                        <span className={styles.versionCount}>{v.count}</span>
+                      </div>
+                    ))}
+                    {platformGroup.items.length === 0 && (
+                      <div className={styles.versionRow}>
+                        <span className={styles.versionName}>No versions</span>
+                        <span className={styles.versionCount}>—</span>
+                      </div>
+                    )}
+                    <div className={styles.platformMeta}>
+                      <div className={styles.platformMetaRow}>
+                        <span className={styles.platformMetaLabel}>
+                          No app version
+                        </span>
+                        <span className={styles.platformMetaValue}>
+                          {platformGroup.withoutAppVersionCount}
+                        </span>
+                      </div>
+                      <div className={styles.platformMetaRow}>
+                        <span className={styles.platformMetaLabel}>Total</span>
+                        <span className={styles.platformMetaValue}>
+                          {platformGroup.totalUsers}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            </div>
+          )}
         </aside>
       </div>
 

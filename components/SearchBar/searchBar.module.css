@@ -1,27 +1,77 @@
 .main {
-  width: 444px;
+  width: 270px;
   height: 44px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 4px 4px 16px;
+  gap: 10px;
+  padding: 4px 4px 4px 14px;
   border-radius: 40px;
   background-color: rgba(0, 0, 0, 0.05);
   border: 1px solid transparent;
+  transition:
+    background-color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main:focus-within {
+  background-color: white;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.leftSearchIconWrap {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  min-width: 0;
+  max-width: 18px;
+  overflow: hidden;
+  cursor: text;
+  opacity: 1;
+  transition:
+    max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease,
+    margin 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main:focus-within .leftSearchIconWrap {
+  max-width: 0;
+  opacity: 0;
+  margin-right: -10px;
+  transform: translateX(-4px);
+  pointer-events: none;
+}
+
+.leftSearchIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  opacity: 0.55;
 }
 
 .main input {
   all: unset;
+  flex: 1;
+  min-width: 0;
   color: black;
-  font-family: Inter;
+  font-family: Inter, sans-serif;
   font-size: 14px;
   font-weight: 400;
-  width: 85%;
   height: 100%;
+}
+
+.main input::placeholder {
+  color: rgba(0, 0, 0, 0.5);
 }
 
 .searchBtn {
   all: unset;
+  box-sizing: border-box;
   width: 46px;
   height: 36px;
   display: flex;
@@ -29,33 +79,47 @@
   justify-content: center;
   align-items: center;
   border-radius: 50px;
-  background-color: #000;
-  background-image: url("../../assets/images/search-icon-white.svg");
-  background-size: 18px;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  max-width: 0;
+  min-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  margin-left: 0;
+  transition:
+    max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.24s ease,
+    margin 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main:focus-within .searchBtn {
+  max-width: 46px;
+  min-width: 46px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.searchBtnIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .searchBtn:hover {
-  background-color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 3px 7px -2px rgba(0, 0, 0, 0.1);
-  background-image: url("../../assets/images/search-icon-black.svg");
+  background-color: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: 0 3px 7px -2px rgba(0, 0, 0, 0.08);
 }
 
 .searchBtn:active {
   box-shadow: none;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background-color: white;
-}
-
-.focused {
-  background-color: white;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.main input::placeholder {
-  color: rgba(0, 0, 0, 0.5);
+  border-color: rgba(0, 0, 0, 0.18);
+  background-color: rgba(0, 0, 0, 0.06);
 }
 
 @media (max-width: 936px) {
