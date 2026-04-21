@@ -20,8 +20,17 @@ const API_CONFIG = {
   },
 } as const;
 
-const buildApiBaseUrl = (mode: AdminApiMode) =>
-  `${API_CONFIG[mode].origin}${API_CONFIG[mode].apiVersion}`;
+const buildApiBaseUrl = (mode: AdminApiMode) => {
+  if (
+    process.env.NODE_ENV === "development" &&
+    typeof window !== "undefined"
+  ) {
+    return mode === "production"
+      ? "/api/admin-proxy/prod"
+      : "/api/admin-proxy/test";
+  }
+  return `${API_CONFIG[mode].origin}${API_CONFIG[mode].apiVersion}`;
+};
 
 const ALL_ADMIN_API_BASE_URLS = [
   buildApiBaseUrl("production"),
