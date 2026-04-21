@@ -1,12 +1,11 @@
-import Header from "@/components/Header/Header";
+import Template from "@/components/Template/Template";
 import Users from "@/components/Users/Users";
 
 const UsersPage = () => {
   return (
-    <>
-      <Header />
+    <Template>
       <Users />
-    </>
+    </Template>
   );
 };
 

@@ -1,11 +1,12 @@
 import styles from "./header.module.css";
-import logoImg from "../../assets/images/logo-admin.svg";
+import prodLogo from "../../assets/images/prod-logo.svg";
+import testLogo from "../../assets/images/test-logo.svg";
 import Link from "next/link";
-import HeaderButton from "../HeaderButton/HeaderButton";
 import Button from "../Button/Button";
 import burgerBtn from "../../assets/images/burger-btn.svg";
+import { NavIcon } from "@/helpers/navIcons";
 import { links } from "@/data/headerLinks";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
@@ -32,11 +33,55 @@ import axios from "axios";
 import { disconnectAdminSocket } from "@/helpers/adminSocket";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 import MessagesIcon from "@/components/Icons/MessagesIcon";
-import EuroCircleIcon from "@/components/Icons/EuroCircleIcon";
+import { ChevronDown, LogOut, Server, Shield, User } from "lucide-react";
 
 const Header = () => {
   const [isMenuDisplayed, setMenuDisplayed] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [profilePopoverMounted, setProfilePopoverMounted] = useState(false);
+  const [profilePopoverVisible, setProfilePopoverVisible] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const profileRevealRafRef = useRef<number[]>([]);
   const [notEndedOrdersCount, setNotEndedOrdersCount] = useState(0);
+
+  useEffect(() => {
+    if (isProfileMenuOpen) {
+      setProfilePopoverMounted(true);
+      profileRevealRafRef.current.forEach((id) => cancelAnimationFrame(id));
+      profileRevealRafRef.current = [];
+      profileRevealRafRef.current.push(
+        requestAnimationFrame(() => {
+          profileRevealRafRef.current.push(
+            requestAnimationFrame(() => setProfilePopoverVisible(true)),
+          );
+        }),
+      );
+      return () => {
+        profileRevealRafRef.current.forEach((id) => cancelAnimationFrame(id));
+        profileRevealRafRef.current = [];
+      };
+    }
+    setProfilePopoverVisible(false);
+    const t = window.setTimeout(() => setProfilePopoverMounted(false), 150);
+    return () => window.clearTimeout(t);
+  }, [isProfileMenuOpen]);
+
+  useEffect(() => {
+    if (!profilePopoverMounted) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (profileMenuRef.current?.contains(e.target as Node)) return;
+      setIsProfileMenuOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsProfileMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [profilePopoverMounted]);
   const [notPaidOrdersCount, setNotPaidOrdersCount] = useState(0);
   const [canceledPendingFinancialCount, setCanceledPendingFinancialCount] =
     useState(0);
@@ -64,6 +109,7 @@ const Header = () => {
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [apiMode, setApiMode] = useState<AdminApiMode>("production");
+  const logoSrc = apiMode === "test" ? testLogo.src : prodLogo.src;
   const { pathname } = useRouter();
   const { lastEvent } = useAdminSocket();
 
@@ -374,6 +420,31 @@ const Header = () => {
     }
   };
 
+  const getAttentionForLink = (link: string): number | undefined => {
+    if (link === "/orders" && ordersAttentionNumber > 0) {
+      return ordersAttentionNumber;
+    }
+    if (link === "/users" && usersAttentionNumber > 0) {
+      return usersAttentionNumber;
+    }
+    if (link === "/feedback" && notSolvedFeedbackCount > 0) {
+      return notSolvedFeedbackCount;
+    }
+    if (link === "/criminal-check" && pendingCriminalChecksCount > 0) {
+      return pendingCriminalChecksCount;
+    }
+    if (link === "/documents" && notReviewedDocumentsCount > 0) {
+      return notReviewedDocumentsCount;
+    }
+    if (link === "/messages" && unreadAdminMessagesCount > 0) {
+      return unreadAdminMessagesCount;
+    }
+    if (link === "/reports" && notResolvedReportsCount > 0) {
+      return notResolvedReportsCount;
+    }
+    return undefined;
+  };
+
   const submitAdminMessage = async () => {
     if (isMessageSending) return;
     const text = messageText.trim();
@@ -401,108 +472,177 @@ const Header = () => {
     }
   };
 
+  const activeSegment = `/${pathname.split("/")[1]}`;
+
   return (
     <>
-      <div className={styles.main}>
-        <button
-          onClick={() => setMenuDisplayed(true)}
-          className={styles.burgerBtn}
-        >
-          <img src={burgerBtn.src} alt="Burger button" />
-        </button>
-        <div className={styles.logoWrap}>
-          <img className={styles.logoImg} src={logoImg.src} alt="Logo" />
-          <span
-            className={`${styles.apiModeLabel} ${
-              apiMode === "test" ? styles.apiModeLabelTest : styles.apiModeLabelProd
-            }`}
-          >
-            {apiMode === "test" ? "TEST" : "PROD"}
-          </span>
-        </div>
-        <nav className={styles.nav}>
-          <ul>
-            {visibleLinks.map((l) => (
-              <li key={l.link}>
-                <Link href={l.link}>
-                  <HeaderButton
-                    title={l.title}
-                    isActive={`/${pathname.split("/")[1]}` === l.link}
-                    icon={
-                      l.link === "/messages" ? (
-                        <MessagesIcon className={styles.headerMessagesIcon} />
-                      ) : l.link === "/financial-ledger" ? (
-                        <EuroCircleIcon className={styles.headerFinancialIcon} />
-                      ) : undefined
-                    }
-                    hideTitle={
-                      l.link === "/messages" || l.link === "/financial-ledger"
-                    }
-                    attentionNumber={
-                      l.link === "/orders"
-                        ? ordersAttentionNumber > 0
-                          ? ordersAttentionNumber
-                          : undefined
-                        : l.link === "/users" &&
-                            usersAttentionNumber > 0
-                          ? usersAttentionNumber
-                        : l.link === "/feedback" &&
-                            notSolvedFeedbackCount > 0
-                          ? notSolvedFeedbackCount
-                        : l.link === "/criminal-check" &&
-                              pendingCriminalChecksCount > 0
-                            ? pendingCriminalChecksCount
-                        : l.link === "/documents" &&
-                              notReviewedDocumentsCount > 0
-                            ? notReviewedDocumentsCount
-                          : l.link === "/messages" &&
-                              unreadAdminMessagesCount > 0
-                            ? unreadAdminMessagesCount
-                          : l.link === "/reports" &&
-                              notResolvedReportsCount > 0
-                            ? notResolvedReportsCount
-                          : undefined
-                    }
+      <div className={styles.root}>
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarHeader}>
+            <img className={styles.logoImg} src={logoSrc} alt="Logo" />
+          </div>
+          <nav className={styles.nav}>
+            <ul>
+              {visibleLinks.map((l) => {
+                const isActive = activeSegment === l.link;
+                const attention = getAttentionForLink(l.link);
+                return (
+                  <li key={l.link}>
+                    <Link
+                      href={l.link}
+                      className={`${styles.navLink} ${
+                        isActive ? styles.navLinkActive : ""
+                      }`}
+                    >
+                      <NavIcon path={l.link} className={styles.navIcon} />
+                      <span className={styles.navTitle}>{l.title}</span>
+                      {attention != null && (
+                        <span className={styles.attentionBubble}>
+                          {attention}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+          <div className={styles.sidebarFooter}>
+            <div
+              className={styles.sidebarApiRow}
+              onClick={toggleApiMode}
+            >
+              <div className={styles.sidebarApiLabelGroup}>
+                <Server
+                  className={styles.navIcon}
+                  size={18}
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+                <span className={styles.navTitle}>Use Test API</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={apiMode === "test"}
+                aria-label="Use Test API"
+                className={styles.apiModeSwitch}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleApiMode();
+                }}
+              />
+            </div>
+            <div className={styles.sidebarProfileSection}>
+              <div ref={profileMenuRef} className={styles.profileMenuAnchor}>
+                <button
+                  type="button"
+                  className={styles.profileMenuTrigger}
+                  id="desktop-profile-trigger"
+                  onClick={() => setIsProfileMenuOpen((o) => !o)}
+                  aria-expanded={isProfileMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls="desktop-sidebar-profile-menu"
+                >
+                  <span className={styles.profileMenuTriggerLeft}>
+                    <User
+                      className={styles.navIcon}
+                      size={18}
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                    <span className={styles.navTitle}>Profile</span>
+                  </span>
+                  <ChevronDown
+                    className={`${styles.profileMenuChevron} ${
+                      isProfileMenuOpen ? styles.profileMenuChevronOpen : ""
+                    }`}
+                    size={18}
+                    strokeWidth={1.75}
+                    aria-hidden
                   />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className={styles.logOutBtn}>
-          <Button
-            onClick={toggleApiMode}
-            title={
-              apiMode === "test" ? "Use Production API" : "Use Test API"
-            }
-            type="OUTLINED"
-          />
+                </button>
+                {profilePopoverMounted && (
+                  <div
+                    id="desktop-sidebar-profile-menu"
+                    role="menu"
+                    aria-labelledby="desktop-profile-trigger"
+                    className={`${styles.profileMenuPopover} ${
+                      profilePopoverVisible
+                        ? styles.profileMenuPopoverVisible
+                        : ""
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.profileMenuItem}
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        setMessageError("");
+                        setIsMessageModalOpen(true);
+                      }}
+                    >
+                      <MessagesIcon className={styles.navIcon} />
+                      <span className={styles.navTitle}>New</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.profileMenuItem}
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        void openTotpSetupModal();
+                      }}
+                      disabled={isTotpSetupLoading}
+                    >
+                      <Shield
+                        className={styles.navIcon}
+                        size={18}
+                        strokeWidth={1.75}
+                        aria-hidden
+                      />
+                      <span className={styles.navTitle}>
+                        {isTotpSetupLoading ? "Loading..." : "2FA setup"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.profileMenuItem}
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        disconnectAdminSocket();
+                        Cookies.remove("@user_jwt");
+                        router.push("/");
+                      }}
+                    >
+                      <LogOut
+                        className={styles.navIcon}
+                        size={18}
+                        strokeWidth={1.75}
+                        aria-hidden
+                      />
+                      <span className={styles.navTitle}>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </aside>
+        <div className={styles.mobileTop}>
           <button
             type="button"
-            className={styles.alertHeaderBtn}
-            onClick={() => {
-              setMessageError("");
-              setIsMessageModalOpen(true);
-            }}
+            onClick={() => setMenuDisplayed(true)}
+            className={styles.burgerBtn}
+            aria-label="Open menu"
           >
-            <span>New</span>
-            <MessagesIcon className={styles.alertHeaderIcon} />
+            <img src={burgerBtn.src} alt="" />
           </button>
-          <Button
-            onClick={openTotpSetupModal}
-            title={isTotpSetupLoading ? "Loading..." : "2FA setup"}
-            type="OUTLINED"
-            isDisabled={isTotpSetupLoading}
-          />
-          <Button
-            onClick={() => {
-              disconnectAdminSocket();
-              Cookies.remove("@user_jwt");
-              router.push("/");
-            }}
-            title="Logout"
-            type="OUTLINED"
-          />
+          <div className={styles.mobileLogoWrap}>
+            <img className={styles.logoImg} src={logoSrc} alt="Logo" />
+          </div>
         </div>
       </div>
       {isMenuDisplayed && (
@@ -518,6 +658,21 @@ const Header = () => {
           reportsAttentionNumber={notResolvedReportsCount}
           apiMode={apiMode}
           onToggleApiMode={toggleApiMode}
+          onNewMessage={() => {
+            setMessageError("");
+            setIsMessageModalOpen(true);
+            setMenuDisplayed(false);
+          }}
+          onTotpSetup={() => {
+            setMenuDisplayed(false);
+            void openTotpSetupModal();
+          }}
+          isTotpSetupLoading={isTotpSetupLoading}
+          onLogout={() => {
+            disconnectAdminSocket();
+            Cookies.remove("@user_jwt");
+            router.push("/");
+          }}
         />
       )}
       {isTotpModalOpen && (

@@ -1,12 +1,11 @@
-import Header from "@/components/Header/Header";
+import Template from "@/components/Template/Template";
 import FilterExport from "@/components/Users/FilterExport/FilterExport";
 
 const UsersFilterExportPage = () => {
   return (
-    <>
-      <Header />
+    <Template>
       <FilterExport />
-    </>
+    </Template>
   );
 };
 

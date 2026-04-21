@@ -1,9 +1,33 @@
 .container {
-  min-height: 100vh;
+  height: 100dvh;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
 }
 
 .contentWrapper {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.noSidebar {
+  flex-direction: column;
+  height: auto;
+  min-height: 100dvh;
+  max-height: none;
+  overflow: visible;
+}
+
+.noSidebar .contentWrapper {
+  width: 100%;
+  overflow: visible;
+}
+
+@media (max-width: 936px) {
+  .container:not(.noSidebar) {
+    flex-direction: column;
+  }
 }

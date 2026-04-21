@@ -1,12 +1,11 @@
-import Header from "@/components/Header/Header";
+import Template from "@/components/Template/Template";
 import SuperAccess from "@/components/SuperAccess/SuperAccess";
 
 const SuperAccessPage = () => {
   return (
-    <>
-      <Header />
+    <Template>
       <SuperAccess />
-    </>
+    </Template>
   );
 };
 

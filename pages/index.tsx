@@ -189,7 +189,7 @@ const MainPage = () => {
   return (
     <div className={styles.main}>
       <form className={styles.loginModal} onSubmit={handleSubmit}>
-        <img src={logo.src} />
+        <img src={logo.src} alt="" width={103} height={39} />
         {!mfaToken && (
           <>
             <Input
@@ -230,10 +230,10 @@ const MainPage = () => {
           <Button
             title="Login"
             type="BLACK"
+            htmlType="submit"
             height={48}
             isDisabled={isLoading}
             isLoading={isLoading}
-            onClick={onSubmit}
           />
         )}
         {!mfaToken && <div className={styles.divider}>or continue with</div>}

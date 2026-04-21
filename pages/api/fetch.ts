@@ -21,10 +21,11 @@ const API_CONFIG = {
 } as const;
 
 const buildApiBaseUrl = (mode: AdminApiMode) => {
-  if (
+  const useProxy =
     process.env.NODE_ENV === "development" &&
-    typeof window !== "undefined"
-  ) {
+    typeof window !== "undefined" &&
+    process.env.NEXT_PUBLIC_ADMIN_API_DIRECT !== "true";
+  if (useProxy) {
     return mode === "production"
       ? "/api/admin-proxy/prod"
       : "/api/admin-proxy/test";

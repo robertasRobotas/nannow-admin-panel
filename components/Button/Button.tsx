@@ -6,7 +6,9 @@ import arrowDownImg from "../../assets/images/arrow-down.svg";
 type ButtonProps = {
   title: string;
   type: string;
-  onClick: () => void;
+  /** Native `<button type>` — defaults to `button` so in-form actions don’t accidentally submit forms. */
+  htmlType?: "button" | "submit" | "reset";
+  onClick?: () => void;
   attentionNumber?: number;
   imgUrl?: string;
   arrowDown?: boolean;
@@ -22,6 +24,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     {
       title,
       type,
+      htmlType = "button",
       onClick,
       attentionNumber,
       imgUrl,
@@ -39,6 +42,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <button
+        type={htmlType}
         style={{ height: `${height}px` }}
         ref={ref}
         onClick={onClick}
