@@ -10,6 +10,8 @@ import {
   AdminRole,
   createAdminUser,
   deleteFinancialLedgerOrders,
+  getChatsNormalizationAnalysis,
+  getChatsNormalizationJob,
   getBroadcastNotificationSender,
   getConnectedAdmins,
   postAdminMessage,
@@ -17,6 +19,7 @@ import {
   regenerateAllAddressesPublicLocation,
   rebuildAllFinancialLedgerOrders,
   rebuildFinancialLedgerForOrder,
+  runChatsNormalization,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
   getFinancialOrders,
@@ -46,6 +49,30 @@ type EntityRecord = {
   user?: EntityRecord;
 };
 
+type ChatNormalizationAnalysis = {
+  chatsTotal: number;
+  nonNormalizedChats: number;
+  duplicateGroups: number;
+  duplicateChatsToMerge: number;
+};
+
+type ChatNormalizationJobStep = {
+  key: string;
+  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  error?: string | null;
+};
+
+type ChatNormalizationJob = {
+  id: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  currentStep?: string | null;
+  currentPhase?: string | null;
+  error?: string | null;
+  warnings?: string[];
+  steps?: ChatNormalizationJobStep[];
+  progress?: Record<string, unknown> | null;
+};
+
 type SuperAccessViewEntity =
   | SuperAccessEntity
   | "alerts"
@@ -66,6 +93,7 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Children", key: "children" },
   { title: "Addresses", key: "addresses" },
   { title: "Orders", key: "orders" },
+  { title: "Chats", key: "chats" },
   { title: "Financial ledger", key: "financial-ledger" },
   { title: "Broadcast sender", key: "broadcast-sender" },
   { title: "WS connected Admins", key: "connected-admins" },
@@ -116,6 +144,7 @@ const parseListResponse = (data: unknown) => {
       result.children ??
       result.providers ??
       result.orders ??
+      result.chats ??
       result.addresses ??
       payload.items,
   );
@@ -150,6 +179,7 @@ const parseItemResponse = (data: unknown): EntityRecord | null => {
     result.client,
     result.provider,
     result.order,
+    result.chat,
     result.address,
     result.item,
     result.data,
@@ -206,6 +236,7 @@ const isSuperAccessEntity = (
     "providers",
     "addresses",
     "orders",
+    "chats",
   ].includes(value);
 
 const isIsoDate = (value: string) =>
@@ -503,6 +534,19 @@ const SuperAccess = () => {
     useState(false);
   const [isOrderFinancialRebuildModalOpen, setIsOrderFinancialRebuildModalOpen] =
     useState(false);
+  const [isChatNormalizationConfirmModalOpen, setIsChatNormalizationConfirmModalOpen] =
+    useState(false);
+  const [isChatNormalizationProgressModalOpen, setIsChatNormalizationProgressModalOpen] =
+    useState(false);
+  const [isStartingChatNormalization, setIsStartingChatNormalization] =
+    useState(false);
+  const [chatNormalizationAnalysis, setChatNormalizationAnalysis] =
+    useState<ChatNormalizationAnalysis | null>(null);
+  const [isLoadingChatNormalizationAnalysis, setIsLoadingChatNormalizationAnalysis] =
+    useState(false);
+  const [chatNormalizationJobId, setChatNormalizationJobId] = useState("");
+  const [chatNormalizationJob, setChatNormalizationJob] =
+    useState<ChatNormalizationJob | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
     "ONE",
   );
@@ -836,6 +880,57 @@ const SuperAccess = () => {
 
     fetchAddressUsers();
 
+    return () => {
+      isMounted = false;
+    };
+  }, [entity, linkedUsersById, list]);
+
+  useEffect(() => {
+    if (entity !== "chats") return;
+
+    const userIds = Array.from(
+      new Set(
+        list
+          .flatMap((item) => [
+            String(item.user1Id ?? ""),
+            String(item.user2Id ?? ""),
+          ])
+          .filter((userId) => userId && !linkedUsersById[userId]),
+      ),
+    );
+    if (userIds.length === 0) return;
+
+    let isMounted = true;
+    const fetchChatUsers = async () => {
+      const entries = await Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await getSuperAccessItem("users", userId);
+            const parsedUser = parseItemResponse(response.data);
+            return [userId, parsedUser] as const;
+          } catch {
+            return [userId, null] as const;
+          }
+        }),
+      );
+      if (!isMounted) return;
+      setLinkedUsersById((prev) => {
+        const next = { ...prev };
+        let hasChanges = false;
+        for (const [userId, user] of entries) {
+          if (user) {
+            if (next[userId] !== user) hasChanges = true;
+            next[userId] = user;
+          } else if (!next[userId]) {
+            next[userId] = { id: userId, __missing: true };
+            hasChanges = true;
+          }
+        }
+        return hasChanges ? next : prev;
+      });
+    };
+
+    fetchChatUsers();
     return () => {
       isMounted = false;
     };
@@ -1301,6 +1396,104 @@ const SuperAccess = () => {
       }
     }
   }, [entity, lastEvent, selectedId]);
+
+  const fetchChatNormalizationAnalysis = useCallback(async () => {
+    if (entity !== "chats") return;
+    try {
+      setIsLoadingChatNormalizationAnalysis(true);
+      const response = await getChatsNormalizationAnalysis();
+      const payload =
+        (response.data?.result?.analysis as ChatNormalizationAnalysis | undefined) ??
+        (response.data?.analysis as ChatNormalizationAnalysis | undefined) ??
+        (response.data?.result as ChatNormalizationAnalysis | undefined) ??
+        (response.data as ChatNormalizationAnalysis);
+      setChatNormalizationAnalysis({
+        chatsTotal: Number(payload?.chatsTotal ?? 0),
+        nonNormalizedChats: Number(payload?.nonNormalizedChats ?? 0),
+        duplicateGroups: Number(payload?.duplicateGroups ?? 0),
+        duplicateChatsToMerge: Number(payload?.duplicateChatsToMerge ?? 0),
+      });
+    } catch {
+      setChatNormalizationAnalysis(null);
+    } finally {
+      setIsLoadingChatNormalizationAnalysis(false);
+    }
+  }, [entity]);
+
+  useEffect(() => {
+    if (entity !== "chats" || !isSuperAdmin) return;
+    fetchChatNormalizationAnalysis();
+  }, [entity, fetchChatNormalizationAnalysis, isSuperAdmin]);
+
+  useEffect(() => {
+    if (!chatNormalizationJobId) return;
+    if (
+      chatNormalizationJob?.status === "COMPLETED" ||
+      chatNormalizationJob?.status === "FAILED"
+    ) {
+      fetchChatNormalizationAnalysis();
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getChatsNormalizationJob(chatNormalizationJobId);
+        const job =
+          (response.data?.job as ChatNormalizationJob | undefined) ??
+          (response.data?.result?.job as ChatNormalizationJob | undefined) ??
+          (response.data?.result as ChatNormalizationJob | undefined) ??
+          (response.data as ChatNormalizationJob | undefined);
+        if (!isCancelled && job) {
+          setChatNormalizationJob(job);
+        }
+      } catch {
+        // Ignore transient errors while polling.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 2500);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [chatNormalizationJob?.status, chatNormalizationJobId, fetchChatNormalizationAnalysis]);
+
+  const startChatsNormalization = async () => {
+    if (isStartingChatNormalization) return;
+    try {
+      setIsStartingChatNormalization(true);
+      setError("");
+      const response = await runChatsNormalization();
+      const job =
+        (response.data?.job as ChatNormalizationJob | undefined) ??
+        (response.data?.result?.job as ChatNormalizationJob | undefined) ??
+        (response.data?.result as ChatNormalizationJob | undefined) ??
+        (response.data as ChatNormalizationJob | undefined);
+
+      if (!job?.id) {
+        setError("Failed to start chat normalization.");
+        return;
+      }
+      setChatNormalizationJobId(job.id);
+      setChatNormalizationJob(job);
+      setIsChatNormalizationConfirmModalOpen(false);
+      setIsChatNormalizationProgressModalOpen(true);
+      await fetchChatNormalizationAnalysis();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to start chat normalization.",
+        );
+        return;
+      }
+      setError("Failed to start chat normalization.");
+    } finally {
+      setIsStartingChatNormalization(false);
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.floor(startIndex / pageSize) + 1;
@@ -1812,6 +2005,11 @@ const SuperAccess = () => {
                 setProvidersById({});
                 setOrdersById({});
                 setSelectedFinancialLedgerOrderIds([]);
+                setChatNormalizationAnalysis(null);
+                setChatNormalizationJobId("");
+                setChatNormalizationJob(null);
+                setIsChatNormalizationConfirmModalOpen(false);
+                setIsChatNormalizationProgressModalOpen(false);
                 setIsCompactListView(menuItem.key === "financial-ledger");
                 setStartIndex(0);
                 setSearchText("");
@@ -1837,7 +2035,7 @@ const SuperAccess = () => {
                     ? "WS connected Admins"
                     : prettyTitle(entity)}
               </h2>
-              <span>
+              <span className={styles.listHeaderMeta}>
                 {entity === "alerts"
                   ? "Send a message to all admins."
                   : entity === "financial-ledger"
@@ -1846,6 +2044,8 @@ const SuperAccess = () => {
                     ? "Manage the SYSTEM_NANNOW sender profile."
                   : entity === "connected-admins"
                     ? `${total} admins connected right now.`
+                  : entity === "chats"
+                    ? `${total} chats total, page ${currentPage}/${totalPages}`
                   : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
@@ -1919,6 +2119,27 @@ const SuperAccess = () => {
                     isLoading={isRegeneratingAllAddresses}
                   />
                 )}
+                {entity === "chats" && (
+                  <>
+                    <Button
+                      title={
+                        isLoadingChatNormalizationAnalysis
+                          ? "Refreshing..."
+                          : "Refresh analysis"
+                      }
+                      type="OUTLINED"
+                      onClick={fetchChatNormalizationAnalysis}
+                      isDisabled={isLoadingChatNormalizationAnalysis}
+                      isLoading={isLoadingChatNormalizationAnalysis}
+                    />
+                    <Button
+                      title="Normalize chats"
+                      type="BLACK"
+                      onClick={() => setIsChatNormalizationConfirmModalOpen(true)}
+                      isDisabled={isStartingChatNormalization}
+                    />
+                  </>
+                )}
                 <SearchBar
                   placeholder="Type to search"
                   searchText={searchText}
@@ -1931,7 +2152,7 @@ const SuperAccess = () => {
               </div>
             )}
           </div>
-          {entity === "alerts" ? (
+              {entity === "alerts" ? (
             <div className={styles.alertInfoCard}>
               <div className={styles.alertInfoTitle}>Broadcast admin message</div>
               <div className={styles.alertInfoText}>
@@ -1971,6 +2192,87 @@ const SuperAccess = () => {
                 <div className={styles.empty}>No admins connected.</div>
               )}
             </div>
+          ) : entity === "chats" ? (
+            <>
+              <div className={styles.chatNormalizationCard}>
+                <div className={styles.chatNormalizationTitle}>Normalization analysis</div>
+                <div className={styles.chatNormalizationStats}>
+                  <div>Chats total: {chatNormalizationAnalysis?.chatsTotal ?? "—"}</div>
+                  <div>
+                    Non-normalized chats:{" "}
+                    {chatNormalizationAnalysis?.nonNormalizedChats ?? "—"}
+                  </div>
+                  <div>
+                    Duplicate groups: {chatNormalizationAnalysis?.duplicateGroups ?? "—"}
+                  </div>
+                  <div>
+                    Duplicate chats to merge:{" "}
+                    {chatNormalizationAnalysis?.duplicateChatsToMerge ?? "—"}
+                  </div>
+                </div>
+              </div>
+              <div
+                className={`${styles.itemsGrid} ${
+                  isCompactListView ? styles.itemsGridCompact : ""
+                }`}
+              >
+                {list.map((item) => {
+                  const id = pickId(item);
+                  const user1Id = String(item.user1Id ?? "");
+                  const user2Id = String(item.user2Id ?? "");
+                  const user1Name = getUserDisplayName(
+                    user1Id ? linkedUsersById[user1Id] : null,
+                  );
+                  const user2Name = getUserDisplayName(
+                    user2Id ? linkedUsersById[user2Id] : null,
+                  );
+                  const title = String(
+                    (user1Name || user1Id || "User 1") +
+                      " / " +
+                      (user2Name || user2Id || "User 2"),
+                  );
+                  return (
+                    <div
+                      key={id || title}
+                      role="button"
+                      tabIndex={0}
+                      className={`${styles.itemCard} ${
+                        selectedId === id ? styles.itemCardActive : ""
+                      } ${isCompactListView ? styles.itemCardCompact : ""}`}
+                      onClick={() => setSelectedId(id)}
+                      onKeyDown={(event) => handleItemCardKeyDown(event, id)}
+                    >
+                      <div className={styles.itemTitle}>{title}</div>
+                      <div className={styles.itemSub}>ID: {id || "—"}</div>
+                    </div>
+                  );
+                })}
+                {!loadingList && list.length === 0 && (
+                  <div className={styles.empty}>No items found.</div>
+                )}
+              </div>
+
+              <div className={styles.pagination}>
+                <Button
+                  title="Prev"
+                  type="OUTLINED"
+                  onClick={() =>
+                    setStartIndex((prev) => Math.max(0, prev - pageSize))
+                  }
+                  isDisabled={startIndex === 0 || loadingList}
+                />
+                <Button
+                  title="Next"
+                  type="OUTLINED"
+                  onClick={() =>
+                    setStartIndex((prev) =>
+                      prev + pageSize >= total ? prev : prev + pageSize,
+                    )
+                  }
+                  isDisabled={startIndex + pageSize >= total || loadingList}
+                />
+              </div>
+            </>
           ) : (
             <>
               <div
@@ -2356,7 +2658,7 @@ const SuperAccess = () => {
                       ? isSaving
                         ? "Saving..."
                         : "Save sender"
-                    : entity === "financial-ledger"
+                    : entity === "financial-ledger" || entity === "chats"
                       ? "Read only"
                     : entity === "connected-admins"
                       ? "Read only"
@@ -2371,7 +2673,7 @@ const SuperAccess = () => {
                     ? !adminAlertText.trim() || isSendingAlert
                     : entity === "broadcast-sender"
                       ? loadingItem || isSaving
-                    : entity === "financial-ledger"
+                    : entity === "financial-ledger" || entity === "chats"
                       ? true
                     : entity === "connected-admins"
                       ? true
@@ -2382,7 +2684,8 @@ const SuperAccess = () => {
                     ? isSendingAlert
                     : isSaving &&
                       entity !== "connected-admins" &&
-                      entity !== "financial-ledger"
+                      entity !== "financial-ledger" &&
+                      entity !== "chats"
                 }
               />
             </div>
@@ -2497,7 +2800,7 @@ const SuperAccess = () => {
                 <div className={styles.empty}>Loading...</div>
               )}
 
-              {entity === "financial-ledger" &&
+              {(entity === "financial-ledger" || entity === "chats") &&
                 selectedId &&
                 !loadingItem &&
                 selectedItem && (
@@ -2561,7 +2864,7 @@ const SuperAccess = () => {
                   </div>
                 )}
 
-              {entity !== "financial-ledger" && (
+              {entity !== "financial-ledger" && entity !== "chats" && (
                 <>
 
               {entity === "admins" && (
@@ -3249,6 +3552,102 @@ const SuperAccess = () => {
           )}
         </section>
       </div>
+      {isChatNormalizationConfirmModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Normalize chats?</h3>
+            <p className={styles.modalText}>
+              This will normalize user pairs and merge duplicate chat documents.
+              Messages will be reassigned to a keeper chat.
+            </p>
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsChatNormalizationConfirmModalOpen(false)}
+                isDisabled={isStartingChatNormalization}
+              />
+              <Button
+                title={isStartingChatNormalization ? "Starting..." : "Confirm"}
+                type="BLACK"
+                onClick={startChatsNormalization}
+                isDisabled={isStartingChatNormalization}
+                isLoading={isStartingChatNormalization}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isChatNormalizationProgressModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Chats normalization progress</h3>
+            <p className={styles.modalText}>
+              {`Job: ${chatNormalizationJobId || "—"} • Status: ${
+                chatNormalizationJob?.status ?? "PENDING"
+              }`}
+            </p>
+            {chatNormalizationJob?.currentPhase && (
+              <p className={styles.modalText}>
+                {`Current phase: ${chatNormalizationJob.currentPhase}`}
+              </p>
+            )}
+            {chatNormalizationJob?.currentStep && (
+              <p className={styles.modalText}>
+                {`Current step: ${chatNormalizationJob.currentStep}`}
+              </p>
+            )}
+            {chatNormalizationJob?.error && (
+              <div className={styles.modalError}>{chatNormalizationJob.error}</div>
+            )}
+            {chatNormalizationJob?.progress &&
+              typeof chatNormalizationJob.progress === "object" && (
+                <div className={styles.chatProgressList}>
+                  {Object.entries(chatNormalizationJob.progress).map(
+                    ([key, value]) => (
+                      <div key={key} className={styles.chatProgressRow}>
+                        <span>{prettyTitle(key)}</span>
+                        <strong>
+                          {typeof value === "number" ||
+                          typeof value === "string" ||
+                          typeof value === "boolean"
+                            ? String(value)
+                            : JSON.stringify(value)}
+                        </strong>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+            {Array.isArray(chatNormalizationJob?.steps) &&
+              chatNormalizationJob.steps.length > 0 && (
+                <div className={styles.chatStepsList}>
+                  {chatNormalizationJob.steps.map((step) => (
+                    <div key={step.key} className={styles.chatStepRow}>
+                      <div>{step.key}</div>
+                      <div>{step.status ?? "PENDING"}</div>
+                      {step.error && (
+                        <div className={styles.modalError}>{step.error}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            <div className={styles.modalActions}>
+              <Button
+                title={
+                  chatNormalizationJob?.status === "COMPLETED" ||
+                  chatNormalizationJob?.status === "FAILED"
+                    ? "Close"
+                    : "Hide"
+                }
+                type="OUTLINED"
+                onClick={() => setIsChatNormalizationProgressModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {isFinancialLedgerRebuildAllModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>

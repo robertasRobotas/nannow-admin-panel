@@ -122,7 +122,7 @@
   transform: translateX(20px);
 }
 
-.listHeader span {
+.listHeaderMeta {
   color: rgba(0, 0, 0, 0.6);
   font-size: 13px;
   font-weight: 600;
@@ -443,6 +443,30 @@
   gap: 12px;
 }
 
+.chatNormalizationCard {
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.chatNormalizationTitle {
+  margin: 0 0 10px 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #000;
+}
+
+.chatNormalizationStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .alertTextarea {
   min-height: 220px !important;
   resize: vertical;
@@ -517,6 +541,25 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
+}
+
+.chatProgressList,
+.chatStepsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatProgressRow,
+.chatStepRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  background: #f5f5f5;
+  padding: 8px 10px;
 }
 
 .fieldGroup {
@@ -739,6 +782,10 @@
   }
 
   .modalInlineFields {
+    grid-template-columns: 1fr;
+  }
+
+  .chatNormalizationStats {
     grid-template-columns: 1fr;
   }
 }

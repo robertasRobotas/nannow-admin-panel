@@ -72,7 +72,8 @@ export type SuperAccessEntity =
   | "children"
   | "providers"
   | "addresses"
-  | "orders";
+  | "orders"
+  | "chats";
 
 export type AdminUserPayload = {
   id?: string;
@@ -2194,6 +2195,46 @@ export const getSuperAccessList = async (
       Authorization: jwt,
     },
   });
+  return response;
+};
+
+export const getChatsNormalizationAnalysis = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/super/chats/normalization/analysis`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const runChatsNormalization = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/super/chats/normalization/run`,
+    { confirm: true },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getChatsNormalizationJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/super/chats/normalization/jobs/${jobId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
   return response;
 };
 
