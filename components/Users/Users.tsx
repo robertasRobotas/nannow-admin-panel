@@ -466,16 +466,11 @@ const Users = () => {
     }
   }, []);
 
-  const appVersionStatsLine = [
-    ...appVersionStats.items.map((platformGroup) => {
-      const platformLabel = platformGroup.platform ?? "Unknown";
-      const versionsLine = platformGroup.items
-        .map((item) => `${item.appVersion}: ${item.count}`)
-        .join(", ");
-      return `${platformLabel}: ${versionsLine || "no versions"} (No app version: ${platformGroup.withoutAppVersionCount}, Total: ${platformGroup.totalUsers})`;
-    }),
-    `Total users: ${appVersionStats.totalUsers}`,
-  ].join(" · ");
+  const formatAppVersionPlatformLabel = (platform: AppVersionPlatform) => {
+    if (platform === "IOS") return "iOS";
+    if (platform === "ANDROID") return "Android";
+    return "Unknown";
+  };
 
   const fetchPendingProviderSpecialSkills = useCallback(async () => {
     try {
@@ -936,6 +931,8 @@ const Users = () => {
 
   return (
     <div className={styles.main}>
+      <div className={styles.pageLayout}>
+        <div className={styles.mainColumn}>
       <div className={styles.heading}>
         <div className={styles.headingTopRow}>
           <div className={styles.headingLeftSide}>
@@ -1079,22 +1076,6 @@ const Users = () => {
                 }}
               />
             )}
-          </div>
-        </div>
-        <div className={styles.headingCenter}>
-          <div className={styles.statsBlock}>
-            <div className={styles.statLine}>
-              <span>{`Users: ${onboardingStats.totalUsers}`}</span>
-              <span>{`Client done: ${onboardingStats.finishedClientOnboarding}`}</span>
-              <span>{`Provider done: ${onboardingStats.finishedProviderOnboarding}`}</span>
-              <span>
-                {`Client or provider done: ${onboardingStats.finishedClientOrProviderOnboarding}`}
-              </span>
-            </div>
-            <div className={styles.appVersionStatLine}>
-              <span className={styles.appVersionStatTitle}>App version:</span>{" "}
-              {appVersionStatsLine}
-            </div>
           </div>
         </div>
       </div>
@@ -1348,6 +1329,94 @@ const Users = () => {
         previousLinkClassName={paginateStyles.prevLink}
         breakClassName={paginateStyles.break}
       />
+
+        </div>
+        <aside className={styles.statsAside} aria-label="User statistics">
+          <div className={`${styles.statsBlock} ${styles.statsBlockAside}`}>
+            <div className={styles.statsSummaryGrid}>
+              <div className={styles.statTile}>
+                <span className={styles.statTileLabel}>Users</span>
+                <span className={styles.statTileValue}>
+                  {onboardingStats.totalUsers}
+                </span>
+              </div>
+              <div className={styles.statTile}>
+                <span className={styles.statTileLabel}>Client done</span>
+                <span className={styles.statTileValue}>
+                  {onboardingStats.finishedClientOnboarding}
+                </span>
+              </div>
+              <div className={styles.statTile}>
+                <span className={styles.statTileLabel}>Provider done</span>
+                <span className={styles.statTileValue}>
+                  {onboardingStats.finishedProviderOnboarding}
+                </span>
+              </div>
+              <div
+                className={`${styles.statTile} ${styles.statTileWide}`}
+              >
+                <span className={styles.statTileLabel}>
+                  Client or provider done
+                </span>
+                <span className={styles.statTileValue}>
+                  {onboardingStats.finishedClientOrProviderOnboarding}
+                </span>
+              </div>
+            </div>
+
+            <section className={styles.appVersionSection}>
+              <h3 className={styles.appVersionHeading}>App version</h3>
+              {appVersionStats.items.map((platformGroup, idx) => (
+                <div
+                  key={`${String(platformGroup.platform)}-${idx}`}
+                  className={styles.platformBlock}
+                >
+                  <div className={styles.platformName}>
+                    {formatAppVersionPlatformLabel(platformGroup.platform)}
+                  </div>
+                  {platformGroup.items.map((v) => (
+                    <div
+                      key={v.appVersion}
+                      className={styles.versionRow}
+                    >
+                      <span className={styles.versionName}>
+                        {v.appVersion}
+                      </span>
+                      <span className={styles.versionCount}>{v.count}</span>
+                    </div>
+                  ))}
+                  {platformGroup.items.length === 0 && (
+                    <div className={styles.versionRow}>
+                      <span className={styles.versionName}>No versions</span>
+                      <span className={styles.versionCount}>—</span>
+                    </div>
+                  )}
+                  <div className={styles.platformMeta}>
+                    <div className={styles.platformMetaRow}>
+                      <span className={styles.platformMetaLabel}>
+                        No app version
+                      </span>
+                      <span className={styles.platformMetaValue}>
+                        {platformGroup.withoutAppVersionCount}
+                      </span>
+                    </div>
+                    <div className={styles.platformMetaRow}>
+                      <span className={styles.platformMetaLabel}>Total</span>
+                      <span className={styles.platformMetaValue}>
+                        {platformGroup.totalUsers}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className={styles.appVersionGrandTotal}>
+                <span>Total users</span>
+                <span>{appVersionStats.totalUsers}</span>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </div>
 
       {isBanConfirmModalOpen && (
         <div className={styles.confirmationBackdrop}>

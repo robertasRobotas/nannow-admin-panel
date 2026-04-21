@@ -1,7 +1,197 @@
 .main {
-  padding: 38px 40px;
+  padding: 38px 0 38px 40px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.pageLayout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.mainColumn {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-right: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.statsAside {
+  flex-shrink: 0;
+  width: 300px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  margin-top: -38px;
+  margin-bottom: -38px;
+  padding: 38px 16px 38px 14px;
+  border-left: 1px solid hsl(240 5.9% 90%);
+  background: #f5f5f5;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.statsBlockAside {
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.statsSummaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 10px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.statTile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 10px 12px;
+  border-radius: 8px;
+  background: hsl(0 0% 100%);
+  border: 1px solid hsl(240 5.9% 90%);
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.statTileWide {
+  grid-column: 1 / -1;
+}
+
+.statTileLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.statTileValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.appVersionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.appVersionHeading {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #111;
+  letter-spacing: 0.02em;
+}
+
+.platformBlock {
+  padding: 10px 10px 12px;
+  border-radius: 8px;
+  background: hsl(0 0% 100%);
+  border: 1px solid hsl(240 5.9% 90%);
+}
+
+.platformName {
+  font-size: 11px;
+  font-weight: 700;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.versionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #333;
+  padding: 2px 0;
+}
+
+.versionName {
+  font-weight: 500;
+  color: #555;
+  min-width: 0;
+}
+
+.versionCount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #111;
+  flex-shrink: 0;
+}
+
+.platformMeta {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid hsl(240 5.9% 92%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.platformMetaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  color: #666;
+}
+
+.platformMetaLabel {
+  font-weight: 500;
+}
+
+.platformMetaValue {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #333;
+}
+
+.appVersionGrandTotal {
+  margin-top: 4px;
+  padding: 10px 10px 12px;
+  border-radius: 8px;
+  background: hsl(240 4.8% 96.5%);
+  border: 1px solid hsl(240 5.9% 88%);
+  font-size: 12px;
+  font-weight: 700;
+  color: #111;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .heading {
@@ -23,14 +213,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-}
-
-.headingCenter {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-width: 0;
 }
 
 .statsBlock {
@@ -352,6 +534,37 @@
 @media (max-width: 936px) {
   .main {
     padding: 20px;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .mainColumn {
+    padding-right: 0;
+    overflow: visible;
+  }
+
+  .pageLayout {
+    flex-direction: column;
+    flex: none;
+    gap: 20px;
+    min-height: 0;
+  }
+
+  .statsAside {
+    width: 100%;
+    position: static;
+    order: -1;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding: 14px;
+    border-left: none;
+    border-bottom: 1px solid hsl(240 5.9% 90%);
+    overflow: visible;
+  }
+
+  .statsSummaryGrid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .headingLeftSide {
@@ -366,10 +579,6 @@
     flex-direction: column;
     gap: 20px;
     align-items: normal;
-  }
-
-  .headingCenter {
-    justify-content: flex-start;
   }
 
   .statLine {

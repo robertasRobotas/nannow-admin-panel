@@ -6,7 +6,7 @@ import Button from "../Button/Button";
 import burgerBtn from "../../assets/images/burger-btn.svg";
 import { NavIcon } from "@/helpers/navIcons";
 import { links } from "@/data/headerLinks";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import HeaderMenu from "./HeaderMenu/HeaderMenu";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
@@ -115,10 +115,13 @@ const Header = () => {
 
   const router = useRouter();
 
+  useLayoutEffect(() => {
+    setApiMode(getAdminApiMode());
+  }, []);
+
   useEffect(() => {
     const roles = getCurrentAdminRolesFromJwt();
     setIsSuperAdmin(roles.includes("SUPER_ADMIN"));
-    setApiMode(getAdminApiMode());
   }, []);
 
   const toggleApiMode = () => {
@@ -479,7 +482,13 @@ const Header = () => {
       <div className={styles.root}>
         <aside className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
-            <img className={styles.logoImg} src={logoSrc} alt="Logo" />
+            <Link
+              href="/users"
+              className={styles.logoLink}
+              aria-label="Users"
+            >
+              <img className={styles.logoImg} src={logoSrc} alt="" />
+            </Link>
           </div>
           <nav className={styles.nav}>
             <ul>
@@ -497,7 +506,13 @@ const Header = () => {
                       <NavIcon path={l.link} className={styles.navIcon} />
                       <span className={styles.navTitle}>{l.title}</span>
                       {attention != null && (
-                        <span className={styles.attentionBubble}>
+                        <span
+                          className={`${styles.attentionBubble}${
+                            l.link === "/users"
+                              ? ` ${styles.attentionBubbleUsers}`
+                              : ""
+                          }`}
+                        >
                           {attention}
                         </span>
                       )}
@@ -641,7 +656,13 @@ const Header = () => {
             <img src={burgerBtn.src} alt="" />
           </button>
           <div className={styles.mobileLogoWrap}>
-            <img className={styles.logoImg} src={logoSrc} alt="Logo" />
+            <Link
+              href="/users"
+              className={styles.logoLink}
+              aria-label="Users"
+            >
+              <img className={styles.logoImg} src={logoSrc} alt="" />
+            </Link>
           </div>
         </div>
       </div>

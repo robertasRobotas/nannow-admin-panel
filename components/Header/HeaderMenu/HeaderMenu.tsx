@@ -181,7 +181,14 @@ const HeaderMenu = ({
           >
             <img src={crossImg.src} alt="" />
           </button>
-          <img className={styles.logoImg} src={logoSrc} alt="Logo" />
+          <Link
+            href="/users"
+            className={headerStyles.logoLink}
+            aria-label="Users"
+            onClick={() => onClose()}
+          >
+            <img className={styles.logoImg} src={logoSrc} alt="" />
+          </Link>
         </div>
         <nav className={styles.nav}>
           <ul>
@@ -200,7 +207,13 @@ const HeaderMenu = ({
                     <NavIcon path={l.link} className={headerStyles.navIcon} />
                     <span className={headerStyles.navTitle}>{l.title}</span>
                     {attention != null && (
-                      <span className={headerStyles.attentionBubble}>
+                      <span
+                        className={`${headerStyles.attentionBubble}${
+                          l.link === "/users"
+                            ? ` ${headerStyles.attentionBubbleUsers}`
+                            : ""
+                        }`}
+                      >
                         {attention}
                       </span>
                     )}

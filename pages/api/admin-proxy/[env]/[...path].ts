@@ -1,6 +1,3 @@
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
-
 import type { NextApiRequest, NextApiResponse } from "next";
 
 const UPSTREAM = {
@@ -77,23 +74,11 @@ export default async function handler(
     res.setHeader("content-type", ct);
   }
 
-  if (req.method === "HEAD" || upstreamRes.body == null) {
+  if (req.method === "HEAD") {
     res.end();
     return;
   }
 
-  const nodeReadable = Readable.fromWeb(
-    upstreamRes.body as import("stream/web").ReadableStream<Uint8Array>,
-  );
-  try {
-    await pipeline(nodeReadable, res);
-  } catch {
-    if (!res.writableEnded) {
-      try {
-        res.destroy();
-      } catch {
-        /* ignore */
-      }
-    }
-  }
+  const buf = await upstreamRes.arrayBuffer();
+  res.send(Buffer.from(buf));
 }
