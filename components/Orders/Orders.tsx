@@ -73,9 +73,8 @@ const Orders = () => {
   const [selectedOption, setSelectedOption] = useState<number>(0);
 
   const [orders, setOrders] = useState<OrderType[]>([]);
-  const [activeFilter, setActiveFilter] = useState<ActiveOrdersFilter>(
-    "DEFAULT",
-  );
+  const [activeFilter, setActiveFilter] =
+    useState<ActiveOrdersFilter>("DEFAULT");
   const [notEndedOrdersQTY, setNotEndedOrdersQTY] = useState<number>(0);
   const [notPaidOrdersQTY, setNotPaidOrdersQTY] = useState<number>(0);
   const [canceledNotPaidOrdersQTY, setCanceledNotPaidOrdersQTY] =
@@ -183,7 +182,10 @@ const Orders = () => {
   const fetchCanceledNotPaidOrders = useCallback(
     async (startIndex: number) => {
       try {
-        const response = await getCanceledPendingFinancialOrders(startIndex, 20);
+        const response = await getCanceledPendingFinancialOrders(
+          startIndex,
+          20,
+        );
         const result = response.data.result as {
           items: OrderType[];
           total: number;
@@ -191,9 +193,7 @@ const Orders = () => {
         };
         setOrders(result.items);
         setItemsPerPage(result.pageSize);
-        setPageCount(
-          Math.ceil(result.total / result.pageSize),
-        );
+        setPageCount(Math.ceil(result.total / result.pageSize));
         setTotalUsers(result.total);
       } catch (err) {
         console.log(err);
@@ -479,12 +479,14 @@ const Orders = () => {
       </div>
       <div className={styles.categoryBtns}>
         <DropDownButton
-          options={orderFilterOptions as unknown as {
-            title: string;
-            icon?: string;
-            value: string;
-            attentionNumber?: number;
-          }[]}
+          options={
+            orderFilterOptions as unknown as {
+              title: string;
+              icon?: string;
+              value: string;
+              attentionNumber?: number;
+            }[]
+          }
           selectedOption={selectedOption}
           setSelectedOption={(option) => {
             setSelectedOption(option);
@@ -528,7 +530,7 @@ const Orders = () => {
             />
           </div>
         )}
-        <div style={{ marginLeft: 12 }}>
+        {/* <div style={{ marginLeft: 12 }}>
           <Button
             title="Canceled paid"
             type="PLAIN"
@@ -536,7 +538,7 @@ const Orders = () => {
               handleCanceledPaidLegacyOrdersClick();
             }}
           />
-        </div>
+        </div> */}
         <div style={{ marginLeft: "auto" }}>
           <SearchBar
             placeholder="Type order ID"
