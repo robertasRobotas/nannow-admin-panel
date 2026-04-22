@@ -20,6 +20,7 @@ type HeaderMenuProps = {
   criminalCheckAttentionNumber?: number;
   documentsAttentionNumber?: number;
   messagesAttentionNumber?: number;
+  nannowChatsAttentionNumber?: number;
   reportsAttentionNumber?: number;
   apiMode?: AdminApiMode;
   onToggleApiMode?: () => void;
@@ -39,6 +40,7 @@ const getAttentionForLink = (
     | "criminalCheckAttentionNumber"
     | "documentsAttentionNumber"
     | "messagesAttentionNumber"
+    | "nannowChatsAttentionNumber"
     | "reportsAttentionNumber"
   >,
 ): number | undefined => {
@@ -49,6 +51,7 @@ const getAttentionForLink = (
     criminalCheckAttentionNumber,
     documentsAttentionNumber,
     messagesAttentionNumber,
+    nannowChatsAttentionNumber,
     reportsAttentionNumber,
   } = props;
   if (link === "/orders" && (ordersAttentionNumber ?? 0) > 0) {
@@ -69,6 +72,9 @@ const getAttentionForLink = (
   if (link === "/messages" && (messagesAttentionNumber ?? 0) > 0) {
     return messagesAttentionNumber;
   }
+  if (link === "/nannow-chats" && (nannowChatsAttentionNumber ?? 0) > 0) {
+    return nannowChatsAttentionNumber;
+  }
   if (link === "/reports" && (reportsAttentionNumber ?? 0) > 0) {
     return reportsAttentionNumber;
   }
@@ -84,6 +90,7 @@ const HeaderMenu = ({
   criminalCheckAttentionNumber,
   documentsAttentionNumber,
   messagesAttentionNumber,
+  nannowChatsAttentionNumber,
   reportsAttentionNumber,
   apiMode,
   onToggleApiMode,
@@ -147,6 +154,7 @@ const HeaderMenu = ({
     criminalCheckAttentionNumber,
     documentsAttentionNumber,
     messagesAttentionNumber,
+    nannowChatsAttentionNumber,
     reportsAttentionNumber,
   };
 

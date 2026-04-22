@@ -1,24 +1,12 @@
 import axios from "axios";
 
 import Cookies from "js-cookie";
+import { ADMIN_API_CONFIG, AdminApiMode } from "@/helpers/adminApiConfig";
 
-export type AdminApiMode = "production" | "test";
+export type { AdminApiMode } from "@/helpers/adminApiConfig";
 
 const ADMIN_API_MODE_STORAGE_KEY = "admin_api_mode";
 export const ADMIN_API_MODE_CHANGED_EVENT = "admin-api-mode-changed";
-
-const API_CONFIG = {
-  production: {
-    origin: "https://nannow-api.com",
-    apiVersion: "/v1",
-    wsTransports: ["websocket"] as const,
-  },
-  test: {
-    origin: "https://nannow-api-test.com",
-    apiVersion: "/v1",
-    wsTransports: ["websocket"] as const,
-  },
-} as const;
 
 const buildApiBaseUrl = (mode: AdminApiMode) => {
   const useProxy =
@@ -30,7 +18,7 @@ const buildApiBaseUrl = (mode: AdminApiMode) => {
       ? "/api/admin-proxy/prod"
       : "/api/admin-proxy/test";
   }
-  return `${API_CONFIG[mode].origin}${API_CONFIG[mode].apiVersion}`;
+  return `${ADMIN_API_CONFIG[mode].origin}${ADMIN_API_CONFIG[mode].apiVersion}`;
 };
 
 const ALL_ADMIN_API_BASE_URLS = [
@@ -54,10 +42,10 @@ export const getAdminApiMode = () => currentAdminApiMode;
 
 export const getAdminApiBaseUrl = () => buildApiBaseUrl(currentAdminApiMode);
 
-export const getAdminWsBaseUrl = () => API_CONFIG[currentAdminApiMode].origin;
+export const getAdminWsBaseUrl = () => ADMIN_API_CONFIG[currentAdminApiMode].origin;
 
 export const getAdminWsTransports = () => [
-  ...API_CONFIG[currentAdminApiMode].wsTransports,
+  ...ADMIN_API_CONFIG[currentAdminApiMode].wsTransports,
 ];
 
 export const setAdminApiMode = (mode: AdminApiMode) => {
@@ -860,6 +848,76 @@ export const getAdminChats = async ({
       Authorization: jwt,
     },
   });
+  return response;
+};
+
+export const getSystemNannowChatsUnreadCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/chats/system-nannow/unread-count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getSystemNannowChats = async ({
+  startIndex = 0,
+  pageSize = 20,
+  sort = "latest",
+  search,
+}: {
+  startIndex?: number;
+  pageSize?: number;
+  sort?: "latest" | "name";
+  search?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/chats/system-nannow`, {
+    params: {
+      startIndex,
+      pageSize,
+      sort,
+      search: search?.trim() || undefined,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const markSystemNannowChatRead = async (chatId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/chats/system-nannow/${chatId}/read`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const replySystemNannowChat = async (
+  chatId: string,
+  content: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/chats/system-nannow/${chatId}/reply`,
+    { content },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
   return response;
 };
 

@@ -30,6 +30,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/reports": Flag,
   "/reviews": Star,
   "/chats": MessagesSquare,
+  "/nannow-chats": MessageSquare,
   "/messages": Inbox,
   "/super-access": KeyRound,
 };

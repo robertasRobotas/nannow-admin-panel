@@ -33,6 +33,11 @@ export type AdminEvent =
       senderName: string;
       createdAt: string;
     }
+  | {
+      type: "SYSTEM_CHAT_UNREAD_CHANGED";
+      chatId: string;
+      unreadCount: number;
+    }
   | { type: "FEEDBACK_CREATED"; feedbackId: string }
   | { type: "FEEDBACK_RESOLVED"; feedbackId: string; userId: string }
   | { type: "USER_REPORTED"; reportId: string }

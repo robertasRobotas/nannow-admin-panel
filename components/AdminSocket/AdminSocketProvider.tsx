@@ -219,6 +219,18 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
   }
 
   if (
+    parsed.type === "SYSTEM_CHAT_UNREAD_CHANGED" &&
+    typeof parsed.chatId === "string" &&
+    typeof parsed.unreadCount === "number"
+  ) {
+    return {
+      type: "SYSTEM_CHAT_UNREAD_CHANGED",
+      chatId: parsed.chatId,
+      unreadCount: parsed.unreadCount,
+    };
+  }
+
+  if (
     parsed.type === "FEEDBACK_CREATED" &&
     typeof parsed.feedbackId === "string"
   ) {
@@ -321,6 +333,17 @@ const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
         linkHref: "/messages",
         linkLabel: "Open messages",
       };
+    case "SYSTEM_CHAT_UNREAD_CHANGED":
+      return {
+        ...event,
+        title: "Nannow chat updated",
+        description:
+          event.unreadCount > 0
+            ? `${event.unreadCount} unread in chat`
+            : "Chat marked as read",
+        linkHref: "/nannow-chats",
+        linkLabel: "Open Nannow chats",
+      };
     case "FEEDBACK_CREATED":
       return {
         ...event,
@@ -390,6 +413,8 @@ export const AdminSocketProvider = ({
         return `${event.type}:${event.userId}:${event.applicationId}`;
       case "ADMIN_MESSAGE":
         return `${event.type}:${event.id}`;
+      case "SYSTEM_CHAT_UNREAD_CHANGED":
+        return `${event.type}:${event.chatId}:${event.unreadCount}`;
       case "FEEDBACK_CREATED":
         return `${event.type}:${event.feedbackId}`;
       case "FEEDBACK_RESOLVED":

@@ -14,6 +14,7 @@ import {
   getAdminApiMode,
   getCanceledPendingFinancialOrdersCount,
   getUnreadAdminMessagesCount,
+  getSystemNannowChatsUnreadCount,
   getCurrentAdminRolesFromJwt,
   getNotFinishedOnboardingUsers,
   getNotEndedOrdersCount,
@@ -94,6 +95,8 @@ const Header = () => {
   const [notReviewedDocumentsCount, setNotReviewedDocumentsCount] = useState(0);
   const [notResolvedReportsCount, setNotResolvedReportsCount] = useState(0);
   const [unreadAdminMessagesCount, setUnreadAdminMessagesCount] = useState(0);
+  const [unreadSystemNannowChatsCount, setUnreadSystemNannowChatsCount] =
+    useState(0);
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
   const [isTotpSetupLoading, setIsTotpSetupLoading] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
@@ -127,7 +130,9 @@ const Header = () => {
       apiMode === "test" ? "production" : "test";
     setAdminApiMode(nextMode);
     setApiMode(nextMode);
-    router.reload();
+    disconnectAdminSocket();
+    Cookies.remove("@user_jwt");
+    router.push("/");
   };
 
   useEffect(() => {
@@ -242,6 +247,19 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchUnreadSystemNannowChatsCount = async () => {
+      try {
+        const response = await getSystemNannowChatsUnreadCount();
+        const count =
+          response.data?.count ??
+          response.data?.result?.count ??
+          response.data?.unreadCount ??
+          0;
+        setUnreadSystemNannowChatsCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
 
     fetchPendingProviderSpecialSkills();
     fetchNotEndedOrdersCount();
@@ -253,6 +271,7 @@ const Header = () => {
     fetchNotReviewedDocumentsCount();
     fetchNotResolvedReportsCount();
     fetchUnreadAdminMessagesCount();
+    fetchUnreadSystemNannowChatsCount();
   }, [router]);
 
   useEffect(() => {
@@ -362,6 +381,22 @@ const Header = () => {
     if (lastEvent.type === "ADMIN_MESSAGE") {
       setUnreadAdminMessagesCount((prev) => prev + 1);
     }
+
+    if (lastEvent.type === "SYSTEM_CHAT_UNREAD_CHANGED") {
+      void (async () => {
+        try {
+          const response = await getSystemNannowChatsUnreadCount();
+          const count =
+            response.data?.count ??
+            response.data?.result?.count ??
+            response.data?.unreadCount ??
+            0;
+          setUnreadSystemNannowChatsCount(Number(count) || 0);
+        } catch (err) {
+          console.log(err);
+        }
+      })();
+    }
   }, [lastEvent]);
 
   const ordersAttentionNumber =
@@ -439,6 +474,9 @@ const Header = () => {
     }
     if (link === "/messages" && unreadAdminMessagesCount > 0) {
       return unreadAdminMessagesCount;
+    }
+    if (link === "/nannow-chats" && unreadSystemNannowChatsCount > 0) {
+      return unreadSystemNannowChatsCount;
     }
     if (link === "/reports" && notResolvedReportsCount > 0) {
       return notResolvedReportsCount;
@@ -674,6 +712,7 @@ const Header = () => {
           criminalCheckAttentionNumber={pendingCriminalChecksCount}
           documentsAttentionNumber={notReviewedDocumentsCount}
           messagesAttentionNumber={unreadAdminMessagesCount}
+          nannowChatsAttentionNumber={unreadSystemNannowChatsCount}
           reportsAttentionNumber={notResolvedReportsCount}
           apiMode={apiMode}
           onToggleApiMode={toggleApiMode}

@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-
-const UPSTREAM = {
-  prod: "https://nannow-api.com/v1",
-  test: "https://nannow-api-test.com/v1",
-} as const;
+import {
+  ADMIN_API_CONFIG,
+  ADMIN_PROXY_ENV_TO_MODE,
+  AdminProxyEnv,
+} from "@/helpers/adminApiConfig";
 
 export const config = {
   api: {
@@ -28,7 +28,7 @@ export default async function handler(
     return;
   }
 
-  const env = req.query.env;
+  const env = req.query.env as AdminProxyEnv;
   if (env !== "prod" && env !== "test") {
     res.status(400).json({ error: "Invalid proxy env" });
     return;
@@ -42,11 +42,17 @@ export default async function handler(
       : [];
   const pathSegment = segments.join("/");
 
-  const upstreamBase = UPSTREAM[env];
+  const mode = ADMIN_PROXY_ENV_TO_MODE[env];
+  const upstreamBase = `${ADMIN_API_CONFIG[mode].origin}${ADMIN_API_CONFIG[mode].apiVersion}`;
   const url = `${upstreamBase}/${pathSegment}${queryFromUrl(req)}`;
 
   const headers: Record<string, string> = {};
-  for (const h of ["authorization", "content-type", "accept", "accept-language"]) {
+  for (const h of [
+    "authorization",
+    "content-type",
+    "accept",
+    "accept-language",
+  ]) {
     const v = req.headers[h];
     if (v) headers[h] = Array.isArray(v) ? v[0] : v;
   }

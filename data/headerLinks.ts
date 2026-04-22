@@ -16,5 +16,6 @@ export const links: HeaderLink[] = [
   { title: "Reported", link: "/reports" },
   { title: "Reviews", link: "/reviews" },
   { title: "Chats", link: "/chats" },
+  { title: "Nannow chats", link: "/nannow-chats" },
   { title: "Messages", link: "/messages" },
 ];
