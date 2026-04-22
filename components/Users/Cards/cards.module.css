@@ -1,6 +1,7 @@
 .main {
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
+  gap: 24px;
   justify-content: center;
 }

@@ -1,12 +1,13 @@
 import { HeaderLink } from "@/types/HeaderLink";
 
 export const links: HeaderLink[] = [
-  { title: "Financial ledger", link: "/financial-ledger" },
-  { title: "Analytics", link: "/analytics" },
   { title: "Users", link: "/users" },
+  { title: "Campaigns", link: "/campaigns" },
   { title: "Orders", link: "/orders" },
   { title: "Criminal check", link: "/criminal-check" },
   { title: "Documents", link: "/documents" },
+  { title: "Financial ledger", link: "/financial-ledger" },
+  { title: "Analytics", link: "/analytics" },
   { title: "Invoices", link: "/invoices" },
   //{ title: "Kids", link: "/kids" },
   //{ title: "Payments", link: "/payments" },

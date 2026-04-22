@@ -20,6 +20,11 @@ export default function Document() {
       <body>
         <Main />
         <NextScript />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `setTimeout(function(){var s=document.querySelector('style[data-next-hide-fouc]');if(s)s.remove();if(document.body)document.body.style.display='';},10000);`,
+          }}
+        />
       </body>
     </Html>
   );

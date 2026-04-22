@@ -1,5 +1,7 @@
 import styles from "../styles/Home.module.css";
 import logo from "../assets/images/logo-admin.svg";
+import googleLogo from "../assets/images/google-logo.svg";
+import appleLogo from "../assets/images/apple-logo.svg";
 import Input from "@/components/Input/Input";
 import { useState } from "react";
 import Button from "@/components/Button/Button";
@@ -9,6 +11,7 @@ import {
   loginWithFirebase,
   verifyAdminLoginTotp,
 } from "./api/fetch";
+import axios from "axios";
 import Cookies from "js-cookie";
 import { getFirebaseAuth } from "@/helpers/firebaseClient";
 import {
@@ -30,6 +33,25 @@ const MainPage = () => {
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
 
   const router = useRouter();
+
+  const loginErrorDetail = (err: unknown) => {
+    if (axios.isAxiosError(err)) {
+      if (err.response) {
+        const data = err.response.data;
+        const body =
+          typeof data === "string"
+            ? data
+            : data && typeof data === "object" && "message" in data
+              ? String((data as { message?: unknown }).message)
+              : JSON.stringify(data);
+        return `(${err.response.status}) ${body.slice(0, 200)}`;
+      }
+      if (err.code === "ERR_NETWORK" || err.message === "Network Error") {
+        return "Network error — often CORS: the API must allow http://localhost:3000";
+      }
+    }
+    return err instanceof Error ? err.message : String(err);
+  };
 
   const completeLogin = (jwt: string) => {
     Cookies.set("@user_jwt", jwt);
@@ -58,7 +80,11 @@ const MainPage = () => {
 
     if (response.data.jwt) {
       completeLogin(response.data.jwt);
+      return;
     }
+
+    setIsError(true);
+    setAuthErrorMessage("Login response was incomplete. Check API mode (prod vs test).");
   };
 
   const onSubmit = async () => {
@@ -76,8 +102,11 @@ const MainPage = () => {
       handleAuthResponse(response);
     } catch (err) {
       setIsError(true);
-      setAuthErrorMessage("Your email or password is wrong");
-      void err;
+      setAuthErrorMessage(
+        process.env.NODE_ENV === "development"
+          ? loginErrorDetail(err)
+          : "Your email or password is wrong",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -111,10 +140,12 @@ const MainPage = () => {
     } catch (err) {
       console.error(err);
       setIsError(true);
-      setAuthErrorMessage(
+      const fallback =
         provider === "google"
           ? "Google login failed. Please try again."
-          : "Apple login failed. Please try again.",
+          : "Apple login failed. Please try again.";
+      setAuthErrorMessage(
+        process.env.NODE_ENV === "development" ? loginErrorDetail(err) : fallback,
       );
     } finally {
       setIsGoogleLoading(false);
@@ -160,7 +191,7 @@ const MainPage = () => {
   return (
     <div className={styles.main}>
       <form className={styles.loginModal} onSubmit={handleSubmit}>
-        <img src={logo.src} />
+        <img src={logo.src} alt="" width={103} height={39} />
         {!mfaToken && (
           <>
             <Input
@@ -201,10 +232,11 @@ const MainPage = () => {
           <Button
             title="Login"
             type="BLACK"
+            htmlType="submit"
             height={48}
+            className="w-full"
             isDisabled={isLoading}
             isLoading={isLoading}
-            onClick={onSubmit}
           />
         )}
         {!mfaToken && <div className={styles.divider}>or continue with</div>}
@@ -214,6 +246,7 @@ const MainPage = () => {
               title={isGoogleLoading ? "Google..." : "Google"}
               type="OUTLINED"
               height={44}
+              imgUrl={googleLogo.src}
               isDisabled={isGoogleLoading || isAppleLoading || isLoading}
               onClick={() => completeFirebaseLogin("google")}
             />
@@ -221,6 +254,7 @@ const MainPage = () => {
               title={isAppleLoading ? "Apple..." : "Apple"}
               type="OUTLINED"
               height={44}
+              imgUrl={appleLogo.src}
               isDisabled={isGoogleLoading || isAppleLoading || isLoading}
               onClick={() => completeFirebaseLogin("apple")}
             />

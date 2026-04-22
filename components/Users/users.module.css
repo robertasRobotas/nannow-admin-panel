@@ -1,7 +1,299 @@
 .main {
-  padding: 38px 86px;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.pageLayout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.mainColumn {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 40px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Avoid flex shrinking the list/card block: margin-top:auto on the dock would
+   compress this middle section and clip it (e.g. UsersList overflow:hidden). */
+.mainColumn > * {
+  flex-shrink: 0;
+}
+
+.paginationDock {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  flex-shrink: 0;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 130px;
+  padding: 50px 0 36px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(249, 249, 249, 0) 0%,
+    rgba(249, 249, 249, 1) 45%,
+    rgba(249, 249, 249, 1) 100%
+  );
+}
+
+.paginationDock ul {
+  pointer-events: auto;
+}
+
+.paginationInDock {
+  margin-top: 0;
+}
+
+.mainColumn > *:nth-last-child(2) {
+  padding-bottom: 0;
+}
+
+.statsAside {
+  flex-shrink: 0;
+  width: 300px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 40px 24px;
+  border-left: 1px solid hsl(240 5.9% 90%);
+  background: #f5f5f5;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.statsAsideLoading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: min(320px, 55vh);
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+/* Shimmer is drawn only inside glyph bounds (background-clip: text) */
+.statsAsideShimmerTitle {
+  margin: 0;
+  display: inline-block;
+  max-width: 100%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  background-image: linear-gradient(
+    105deg,
+    hsl(240 4% 46%) 0%,
+    hsl(240 4% 46%) 36%,
+    hsl(0 0% 100%) 50%,
+    hsl(240 4% 46%) 64%,
+    hsl(240 4% 46%) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: statsAsideShimmerClip 1.2s linear infinite;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+@keyframes statsAsideShimmerClip {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.statsAsideContent {
+  animation: statsAsideFadeIn 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes statsAsideFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statsAsideShimmerTitle {
+    animation: none;
+    background-image: none;
+    color: hsl(240 4% 46%);
+    -webkit-text-fill-color: unset;
+    background-clip: unset;
+    -webkit-background-clip: unset;
+  }
+
+  .statsAsideContent {
+    animation: none;
+    opacity: 1;
+  }
+
+}
+
+.statsBlockAside {
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.statsSummaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 10px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.statTile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  height: fit-content;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.statTileLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.statTileValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.appVersionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.appVersionHeading {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: hsl(240 10% 3.9%);
+}
+
+.platformBlock {
+  padding: 0.75rem 0.875rem 0.875rem;
+  border-radius: 0.5rem;
+  background: hsl(0 0% 100%);
+  border: 1px solid hsl(240 5.9% 90%);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-sizing: border-box;
+}
+
+.platformName {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: hsl(240 3.8% 46.1%);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.versionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  padding: 0.125rem 0;
+}
+
+.versionName {
+  font-weight: 500;
+  color: hsl(240 3.8% 46.1%);
+  min-width: 0;
+}
+
+.versionCount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(240 10% 3.9%);
+  flex-shrink: 0;
+}
+
+.platformMeta {
+  margin-top: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid hsl(240 5.9% 90%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.platformMetaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: hsl(240 3.8% 46.1%);
+}
+
+.platformMetaLabel {
+  font-weight: 500;
+}
+
+.platformMetaValue {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(240 10% 3.9%);
 }
 
 .heading {
@@ -12,11 +304,44 @@
   padding-bottom: 30px;
 }
 
+.pageHeroRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.pageHeroTitle {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: hsl(240 10% 3.9%);
+  flex-shrink: 0;
+}
+
+.pageHeroSearch {
+  display: flex;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
+}
+
+.pageHeroSearchBar {
+  width: 100%;
+  max-width: 300px;
+}
+
 .headingTopRow {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 16px;
+  min-width: 0;
 }
 
 .headingLeftSide {
@@ -25,12 +350,11 @@
   gap: 12px;
 }
 
-.headingCenter {
-  width: 100%;
+.headingRightTools {
   display: flex;
-  justify-content: center;
   align-items: center;
-  min-width: 0;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .statsBlock {
@@ -68,128 +392,66 @@
   font-weight: 800;
 }
 
-.viewSwitchButton {
-  all: unset;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.viewSwitchLabel {
-  color: #000;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.viewSwitchUi {
-  width: 48px;
-  height: 28px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
-  position: relative;
-  flex-shrink: 0;
-  transition: background-color 0.2s ease;
-}
-
-.viewSwitchUi::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease;
-}
-
-.viewSwitchUiActive {
-  background: #34c759;
-}
-
-.viewSwitchUiActive::after {
-  transform: translateX(20px);
-}
-
 .onboardingBtnWrap {
   margin-left: 12px;
 }
 
-.onboardingList {
-  margin-top: 8px;
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
-    0 2px 10px 0 rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-}
-
-.onboardingRow {
-  width: 100%;
-  border: none;
-  background: transparent;
-  text-align: left;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  cursor: pointer;
+/* Column beside avatar: user lines + steps / connected-at (below ROLE) */
+.listRowDetailColumn {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.onboardingRow:hover {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.onboardingRowLeft {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
   min-width: 0;
+  flex: 1 1 auto;
+  gap: 0;
 }
 
-.onboardingAvatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.onboardingName {
-  color: #000;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.onboardingMeta {
-  color: rgba(0, 0, 0, 0.65);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
+.listRowWithBelowMeta .left {
+  align-items: flex-start;
 }
 
 .onboardingRight {
-  min-width: 260px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  align-items: flex-end;
+  align-items: flex-start;
+  margin-top: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.remainingStepsLine {
+  font-size: 12px;
+  line-height: 18px;
+  text-align: left;
+  word-break: break-word;
+}
+
+.remainingLabel {
+  font-weight: 700;
+  color: #000;
+}
+
+.remainingList {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.5);
 }
 
 .stepsTitle {
   color: #000;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 18px;
+  text-align: left;
 }
 
 .stepsText {
-  color: rgba(0, 0, 0, 0.68);
+  color: rgba(0, 0, 0, 0.5);
   font-size: 12px;
-  font-weight: 600;
-  text-align: right;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .bannedSwitchWrap {
@@ -352,6 +614,57 @@
 @media (max-width: 936px) {
   .main {
     padding: 20px;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .mainColumn {
+    padding-right: 0;
+    overflow: visible;
+  }
+
+  .pageLayout {
+    flex-direction: column;
+    flex: none;
+    gap: 20px;
+    min-height: 0;
+  }
+
+  .statsAside {
+    width: 100%;
+    position: static;
+    order: -1;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding: 14px;
+    border-left: none;
+    border-bottom: 1px solid hsl(240 5.9% 90%);
+    overflow: visible;
+  }
+
+  .statsSummaryGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pageHeroRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .pageHeroTitle {
+    font-size: 1.75rem;
+  }
+
+  .pageHeroSearch {
+    justify-content: stretch;
+    flex: none;
+    width: 100%;
+  }
+
+  .pageHeroSearchBar {
+    max-width: none;
   }
 
   .headingLeftSide {
@@ -368,25 +681,13 @@
     align-items: normal;
   }
 
-  .headingCenter {
-    justify-content: flex-start;
+  .headingRightTools {
+    margin-left: 0;
+    align-self: flex-end;
   }
 
   .statLine {
     justify-content: flex-start;
-  }
-
-  .onboardingRow {
-    flex-direction: column;
-  }
-
-  .onboardingRight {
-    min-width: 0;
-    align-items: flex-start;
-  }
-
-  .stepsText {
-    text-align: left;
   }
 
   .testUsersAddRow,

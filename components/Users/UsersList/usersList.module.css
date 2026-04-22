@@ -14,8 +14,34 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 20px;
+  padding: 12px 20px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+  background: #fff;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: text;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+}
+
+.row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.row:focus {
+  outline: none;
+}
+
+.row:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: -2px;
 }
 
 .row:last-child {
@@ -25,7 +51,7 @@
 .left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
   flex: 1;
 }
@@ -42,13 +68,15 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: fit-content;
 }
 
 .name {
   color: #000;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 22px;
+  height: fit-content;
 }
 
 .meta {
@@ -56,6 +84,7 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 18px;
+  height: fit-content;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

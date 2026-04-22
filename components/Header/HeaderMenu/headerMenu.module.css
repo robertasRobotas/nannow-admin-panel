@@ -1,78 +1,107 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999999;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: flex-start;
+}
+
 .main {
-  width: 300px;
+  width: min(300px, 100vw);
   height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: white;
-  box-shadow: 10px 0 34px 0 rgba(0, 0, 0, 0.1);
-  position: fixed;
-  z-index: 9999999;
-  top: 0px;
+  background: hsl(0 0% 100%);
+  border-right: 1px solid hsl(240 5.9% 90%);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06);
 }
 
 .logo {
-  padding: 16px 0 0 16px;
+  padding: 16px 16px 0;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .logoImg {
+  display: block;
   width: 103px;
   height: 38px;
 }
 
 .closeBtn {
   all: unset;
-  height: 24px;
+  display: inline-flex;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.closeBtn:hover {
+  background: hsl(240 4.8% 95.9%);
+}
+
+.closeBtn img {
+  display: block;
+  height: 24px;
+  width: auto;
+}
+
+.nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .nav ul {
   display: flex;
   flex-direction: column;
   list-style: none;
-  padding: 0 20px;
+  padding: 0 12px;
+  margin: 0;
+  gap: 2px;
 }
 
-.logOutBtn {
-  padding: 0 0 30px 20px;
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 12px 24px;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
 }
 
 .slideInRight {
   animation-name: slide-in-right;
   animation-iteration-count: 1;
   animation-fill-mode: forwards;
-  animation-duration: 0.5s;
+  animation-duration: 0.35s;
 }
 
 .slideOutLeft {
-  animation-name: slide-out-left;
+  animation-name: slide-out-overlay;
   animation-iteration-count: 1;
   animation-fill-mode: forwards;
-  animation-duration: 0.5s;
+  animation-duration: 0.35s;
 }
 
 @keyframes slide-in-right {
   0% {
-    left: -300px;
+    opacity: 0;
   }
   100% {
-    left: 0px;
+    opacity: 1;
   }
 }
 
-@keyframes slide-out-left {
+@keyframes slide-out-overlay {
   0% {
-    left: 0px;
+    opacity: 1;
   }
   100% {
-    left: -300px;
+    opacity: 0;
   }
-}
-
-.financialIcon {
-  color: #000;
-  flex-shrink: 0;
 }

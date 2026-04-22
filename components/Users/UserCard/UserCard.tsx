@@ -36,6 +36,8 @@ const UserCard = ({ user, mode }: UserCardProps) => {
       <div className={styles.profileWrapper}>
         <ProfileInfo
           name={`${user.firstName} ${user.lastName}`}
+          mode={mode}
+          showRoleSuffix={false}
           imgUrl={user.imgUrl}
           id={user.userId}
           email={user.email}

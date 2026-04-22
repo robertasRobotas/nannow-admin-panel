@@ -12,11 +12,11 @@ const ModalPageTemplate = ({
   isScrollable = false,
 }: ModalPageTemplateProps) => {
   return (
-    <div className={`${styles.wrapper}`}>
+    <div className={styles.wrapper}>
       <Header />
       <div
         className={`${styles.contentWrapper} ${
-          isScrollable && styles.isScrollable
+          isScrollable ? styles.isScrollable : ""
         }`}
       >
         {children}

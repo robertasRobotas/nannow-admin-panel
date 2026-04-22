@@ -20,8 +20,18 @@ const API_CONFIG = {
   },
 } as const;
 
-const buildApiBaseUrl = (mode: AdminApiMode) =>
-  `${API_CONFIG[mode].origin}${API_CONFIG[mode].apiVersion}`;
+const buildApiBaseUrl = (mode: AdminApiMode) => {
+  const useProxy =
+    process.env.NODE_ENV === "development" &&
+    typeof window !== "undefined" &&
+    process.env.NEXT_PUBLIC_ADMIN_API_DIRECT !== "true";
+  if (useProxy) {
+    return mode === "production"
+      ? "/api/admin-proxy/prod"
+      : "/api/admin-proxy/test";
+  }
+  return `${API_CONFIG[mode].origin}${API_CONFIG[mode].apiVersion}`;
+};
 
 const ALL_ADMIN_API_BASE_URLS = [
   buildApiBaseUrl("production"),

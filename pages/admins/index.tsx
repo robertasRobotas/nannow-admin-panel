@@ -1,12 +1,11 @@
-import Header from "@/components/Header/Header";
+import Template from "@/components/Template/Template";
 import Admins from "@/components/Admins/Admins";
 
 const AdminsPage = () => {
   return (
-    <>
-      <Header />
+    <Template>
       <Admins />
-    </>
+    </Template>
   );
 };
 
