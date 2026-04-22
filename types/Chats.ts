@@ -24,6 +24,7 @@ export type ChatMessageType = {
   createdAt: string;
   chatId: string;
   isRead: boolean;
+  readAt?: string | null;
 };
 
 export type ChatMessageHistorySnapshot = {

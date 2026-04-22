@@ -19,6 +19,12 @@ type ChatDetails = {
   messages?: ChatMessageType[];
 };
 
+const isChatUnread = (chat: ChatType) => {
+  if (Number(chat.unreadMessagesCount ?? 0) > 0) return true;
+  if (!Array.isArray(chat.messages)) return false;
+  return chat.messages.some((message) => !message.isRead);
+};
+
 const formatDateTime = (value?: string) => {
   if (!value) return "—";
   const date = new Date(value);
@@ -115,6 +121,7 @@ const MessagesSection = ({
                 const lastMessage = Array.isArray(chat.messages)
                   ? chat.messages[chat.messages.length - 1]
                   : null;
+                const unread = isChatUnread(chat);
 
                 return (
                   <button
@@ -122,9 +129,10 @@ const MessagesSection = ({
                     type="button"
                     className={`${styles.chatRow} ${
                       selectedChatId === chatId ? styles.chatRowActive : ""
-                    }`}
+                    } ${unread ? styles.chatRowUnread : ""}`}
                     onClick={() => setSelectedChatId(chatId)}
                   >
+                    {unread && <span className={styles.unreadDot} />}
                     <img
                       className={styles.chatAvatar}
                       src={counterpart?.imgUrl || avatarImg.src}

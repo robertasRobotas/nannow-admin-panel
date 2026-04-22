@@ -36,6 +36,7 @@
 
 .chatRow {
   all: unset;
+  position: relative;
   display: grid;
   grid-template-columns: 44px 1fr auto;
   align-items: center;
@@ -51,6 +52,29 @@
 
 .chatRowActive {
   background: rgba(0, 0, 0, 0.06);
+}
+
+.chatRowUnread {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.chatRowUnread .chatName {
+  font-weight: 800;
+}
+
+.chatRowUnread .chatPreview {
+  color: rgba(0, 0, 0, 0.8);
+  font-weight: 700;
+}
+
+.unreadDot {
+  position: absolute;
+  top: 18px;
+  left: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--unread-dot-color);
 }
 
 .chatAvatar {

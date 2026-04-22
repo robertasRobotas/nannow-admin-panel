@@ -368,6 +368,7 @@ const ChatMessages = ({
                   isFromUser ? styles.sent : styles.received
                 } ${message.isDeleted ? styles.deletedBubble : ""}`}
               >
+                {!message.isRead && <span className={styles.messageUnreadDot} />}
                 {isEditing ? (
                   <div className={styles.editComposer}>
                     <textarea
@@ -422,6 +423,11 @@ const ChatMessages = ({
                       <span className={styles.messageTimestamp}>
                         {formatDateTime(message.createdAt)}
                       </span>
+                      {message.readAt && (
+                        <span className={styles.messageReadAt}>
+                          Read: {formatDateTime(message.readAt)}
+                        </span>
+                      )}
                       {messageFlag && (
                         <span
                           className={`${styles.messageFlag} ${

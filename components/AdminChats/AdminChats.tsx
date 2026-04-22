@@ -34,6 +34,12 @@ const formatDateTime = (value?: string | null) =>
       })
     : "—";
 
+const isChatUnread = (chat: ChatType) => {
+  if (Number(chat.unreadMessagesCount ?? 0) > 0) return true;
+  if (!Array.isArray(chat.messages)) return false;
+  return chat.messages.some((message) => !message.isRead);
+};
+
 const AdminChats = () => {
   const router = useRouter();
   const [items, setItems] = useState<ChatType[]>([]);
@@ -207,6 +213,7 @@ const AdminChats = () => {
                 const user2Name = `${chat.user2?.firstName ?? "Deleted"} ${
                   chat.user2?.lastName ?? "User"
                 }`.trim();
+                const unread = isChatUnread(chat);
 
                 return (
                   <button
@@ -214,9 +221,12 @@ const AdminChats = () => {
                     type="button"
                     className={`${styles.chatRow} ${
                       selectedChatId === chatId ? styles.chatRowActive : ""
-                    }`}
-                    onClick={() => setSelectedChatId(chatId)}
+                    } ${unread ? styles.chatRowUnread : ""}`}
+                    onClick={() => {
+                      setSelectedChatId(chatId);
+                    }}
                   >
+                    {unread && <span className={styles.unreadDot} />}
                     <div className={styles.chatAvatars}>
                       <img
                         className={styles.chatAvatarPrimary}
