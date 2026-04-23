@@ -10,7 +10,6 @@ import { getOrderStatusTitle, normalizeOrderStatus } from "@/data/orderStatusOpt
 import InfoCard from "./InfoCard/InfoCard";
 import locationPinImg from "../../../assets/images/location-gray.svg";
 import arriveImg from "../../../assets/images/arrival-gray.svg";
-import leaveImg from "../../../assets/images/leave-gray.svg";
 import childrenImg from "../../../assets/images/kid-gray.svg";
 import { useMediaQuery } from "react-responsive";
 import PriceSummary from "./PriceSummary/PriceSummary";
@@ -663,7 +662,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               title="Selected days"
               iconImgUrl={calendarImg.src}
               type={isMobile ? "SPAN2" : "SPAN3"}
-              isMultiline={true}
+              isCentered={true}
               info={
                 <div className={styles.stripeInfoList}>
                   {selectedDays.map((day, index) => (
@@ -674,16 +673,21 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             />
           )}
           <InfoCard
-            title="Sitter's arrival time"
+            title="Time"
             iconImgUrl={arriveImg.src}
-            type={isMobile ? "SPAN1" : "SPAN2"}
-            info={arrivalTime}
-          />
-          <InfoCard
-            title="Sitter's leaving time"
-            iconImgUrl={leaveImg.src}
-            type={isMobile ? "SPAN1" : "SPAN2"}
-            info={leaveTime}
+            type={isMobile ? "SPAN2" : "SPAN2"}
+            info={
+              <div className={styles.stripeInfoList}>
+                <div>
+                  <span className={styles.stripeInfoLabel}>Arrival:</span>{" "}
+                  {arrivalTime}
+                </div>
+                <div>
+                  <span className={styles.stripeInfoLabel}>Leaving:</span>{" "}
+                  {leaveTime}
+                </div>
+              </div>
+            }
           />
           <InfoCard
             title="Children"
@@ -728,7 +732,6 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               title="Unfinished order reminder"
               iconImgUrl={calendarImg.src}
               type={isMobile ? "SPAN2" : "SPAN3"}
-              isMultiline={true}
               info={
                 <div className={styles.stripeInfoList}>
                   {!!order?.unfinishedOrderReminderLastEmailSentAt && (
@@ -803,28 +806,30 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 }
               />
           )}
-          <InfoCard
-            title="Stripe data"
-            iconImgUrl={cardBwImg.src}
-            type={isMobile ? "SPAN2" : "SPAN3"}
-            isMultiline={true}
-            info={
-              <div className={styles.stripeInfoList}>
-                <div>
-                  <span className={styles.stripeInfoLabel}>Paid:</span>{" "}
-                  {paidAtText}
+          {!!order?.paidAt && (
+            <InfoCard
+              title="Stripe data"
+              iconImgUrl={cardBwImg.src}
+              type={isMobile ? "SPAN2" : "SPAN3"}
+              isMultiline={true}
+              info={
+                <div className={styles.stripeInfoList}>
+                  <div>
+                    <span className={styles.stripeInfoLabel}>Paid:</span>{" "}
+                    {paidAtText}
+                  </div>
+                  <div>
+                    <span className={styles.stripeInfoLabel}>Customer:</span>{" "}
+                    {order?.stripeCustomerId || "-"}
+                  </div>
+                  <div>
+                    <span className={styles.stripeInfoLabel}>Description:</span>{" "}
+                    {order?.stripePaymentDescription || "-"}
+                  </div>
                 </div>
-                <div>
-                  <span className={styles.stripeInfoLabel}>Customer:</span>{" "}
-                  {order?.stripeCustomerId || "-"}
-                </div>
-                <div>
-                  <span className={styles.stripeInfoLabel}>Description:</span>{" "}
-                  {order?.stripePaymentDescription || "-"}
-                </div>
-              </div>
-            }
-          />
+              }
+            />
+          )}
         </div>
         {pendingProviders.length > 0 && (
           <div className={styles.pendingProvidersSection}>

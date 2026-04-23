@@ -29,7 +29,7 @@
 .orderInfo {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 20px;
   padding-bottom: 40px;
 }

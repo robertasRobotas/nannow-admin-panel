@@ -7,6 +7,7 @@ type InfoCardProps = {
   info: ReactNode;
   type: string;
   isMultiline?: boolean;
+  isCentered?: boolean;
 };
 
 const InfoCard = ({
@@ -15,6 +16,7 @@ const InfoCard = ({
   info,
   type = "SPAN3",
   isMultiline = false,
+  isCentered = false,
 }: InfoCardProps) => {
   return (
     <div
@@ -23,7 +25,9 @@ const InfoCard = ({
       }`}
     >
       <img src={iconImgUrl} alt="Status" />
-      <div className={styles.infoContent}>
+      <div
+        className={`${styles.infoContent} ${isCentered ? styles.centeredContent : ""}`}
+      >
         <div className={styles.infoTitle}>{title}</div>
         <div className={styles.info}>{info}</div>
       </div>
