@@ -252,18 +252,6 @@ const formatAverage = (value?: number | null) =>
     maximumFractionDigits: 2,
   }).format(typeof value === "number" ? value : 0);
 
-const formatDateTime = (value?: string | null) =>
-  value
-    ? new Date(value).toLocaleString("en-GB", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-    : "—";
-
 const formatBucketLabel = (
   bucket: string,
   interval: MarketplaceAnalyticsInterval,
@@ -892,6 +880,104 @@ const Analytics = () => {
     TOP_LIMIT_OPTIONS[selectedTopLimitOption]?.value ?? DEFAULT_TOP_LIMIT,
   );
 
+  const updateAnalyticsQuery = useCallback(
+    (
+      params: {
+        period?: PeriodPreset;
+        start?: string;
+        end?: string;
+        interval?: MarketplaceAnalyticsInterval;
+        top?: number;
+        country?: string;
+        city?: string;
+        statuses?: string[];
+        paymentStatuses?: string[];
+      },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+
+      const nextPeriod = params.period ?? selectedPeriod;
+      if (nextPeriod && nextPeriod !== "this_month") {
+        nextQuery.period = nextPeriod;
+      } else {
+        delete nextQuery.period;
+      }
+
+      if (typeof params.start === "string" && params.start.length > 0) {
+        nextQuery.start = params.start;
+      } else if (params.start !== undefined) {
+        delete nextQuery.start;
+      }
+
+      if (typeof params.end === "string" && params.end.length > 0) {
+        nextQuery.end = params.end;
+      } else if (params.end !== undefined) {
+        delete nextQuery.end;
+      }
+
+      const nextInterval = params.interval ?? selectedInterval;
+      if (nextInterval && nextInterval !== "day") {
+        nextQuery.interval = nextInterval;
+      } else {
+        delete nextQuery.interval;
+      }
+
+      const nextTop = params.top ?? selectedTopLimit;
+      if (Number.isFinite(nextTop) && nextTop !== DEFAULT_TOP_LIMIT) {
+        nextQuery.top = String(nextTop);
+      } else {
+        delete nextQuery.top;
+      }
+
+      const nextCountry = params.country ?? selectedCountryCode;
+      if (nextCountry) {
+        nextQuery.country = nextCountry;
+      } else {
+        delete nextQuery.country;
+      }
+
+      const nextCity = params.city ?? selectedCityName;
+      if (nextCity) {
+        nextQuery.city = nextCity;
+      } else {
+        delete nextQuery.city;
+      }
+
+      const nextStatuses = params.statuses ?? selectedStatuses;
+      if (Array.isArray(nextStatuses) && nextStatuses.length > 0) {
+        nextQuery.statuses = nextStatuses.join(",");
+      } else {
+        delete nextQuery.statuses;
+      }
+
+      const nextPaymentStatuses =
+        params.paymentStatuses ?? selectedPaymentStatuses;
+      if (Array.isArray(nextPaymentStatuses) && nextPaymentStatuses.length > 0) {
+        nextQuery.paymentStatuses = nextPaymentStatuses.join(",");
+      } else {
+        delete nextQuery.paymentStatuses;
+      }
+
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [
+      router,
+      selectedCityName,
+      selectedCountryCode,
+      selectedInterval,
+      selectedPaymentStatuses,
+      selectedPeriod,
+      selectedStatuses,
+      selectedTopLimit,
+    ],
+  );
+
   useEffect(() => {
     const roles = getCurrentAdminRolesFromJwt();
     setIsSuperAdmin(roles.includes("SUPER_ADMIN"));
@@ -1008,6 +1094,85 @@ const Analytics = () => {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const periodFromQuery =
+      typeof router.query.period === "string" ? router.query.period : "this_month";
+    const safePeriod: PeriodPreset =
+      periodFromQuery === "today" ||
+      periodFromQuery === "this_week" ||
+      periodFromQuery === "this_month" ||
+      periodFromQuery === "this_year" ||
+      periodFromQuery === "custom"
+        ? periodFromQuery
+        : "this_month";
+
+    if (safePeriod === "custom") {
+      const startFromQuery =
+        typeof router.query.start === "string" ? router.query.start : "";
+      const endFromQuery = typeof router.query.end === "string" ? router.query.end : "";
+      if (startFromQuery && endFromQuery) {
+        setSelectedPeriod("custom");
+        setStartDateInput(startFromQuery);
+        setEndDateInput(endFromQuery);
+        setAppliedStartDate(toDayStartIso(startFromQuery));
+        setAppliedEndDate(toExclusiveEndIso(endFromQuery));
+      }
+    } else {
+      const range = getPresetRange(safePeriod);
+      setSelectedPeriod(safePeriod);
+      setStartDateInput(range.startInput);
+      setEndDateInput(range.endInput);
+      setAppliedStartDate(range.startIso);
+      setAppliedEndDate(range.endIso);
+    }
+
+    const intervalFromQuery =
+      typeof router.query.interval === "string" ? router.query.interval : "day";
+    const intervalIndex = INTERVAL_OPTIONS.findIndex(
+      (option) => option.value === intervalFromQuery,
+    );
+    setSelectedIntervalOption(intervalIndex >= 0 ? intervalIndex : 0);
+
+    const topFromQuery =
+      typeof router.query.top === "string"
+        ? Number(router.query.top)
+        : DEFAULT_TOP_LIMIT;
+    const safeTop = Number.isFinite(topFromQuery) ? topFromQuery : DEFAULT_TOP_LIMIT;
+    const topIndex = TOP_LIMIT_OPTIONS.findIndex(
+      (option) => Number(option.value) === safeTop,
+    );
+    setSelectedTopLimitOption(topIndex >= 0 ? topIndex : 1);
+
+    const countryFromQuery =
+      typeof router.query.country === "string" ? router.query.country : "";
+    const cityFromQuery = typeof router.query.city === "string" ? router.query.city : "";
+    setSelectedCountryCode(countryFromQuery);
+    setSelectedCityName(cityFromQuery);
+
+    const parseCsvParam = (value: unknown) =>
+      typeof value === "string" && value.length > 0
+        ? value
+            .split(",")
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0)
+        : [];
+    setSelectedStatuses(parseCsvParam(router.query.statuses));
+    setSelectedPaymentStatuses(parseCsvParam(router.query.paymentStatuses));
+  }, [
+    router.isReady,
+    router.query.city,
+    router.query.country,
+    router.query.end,
+    router.query.interval,
+    router.query.paymentStatuses,
+    router.query.period,
+    router.query.start,
+    router.query.statuses,
+    router.query.top,
+  ]);
+
   const applyCustomDateRange = () => {
     if (!startDateInput || !endDateInput) {
       setValidationError("Select both start and end date.");
@@ -1026,6 +1191,14 @@ const Analytics = () => {
     setSelectedPeriod("custom");
     setAppliedStartDate(toDayStartIso(startDateInput));
     setAppliedEndDate(toExclusiveEndIso(endDateInput));
+    updateAnalyticsQuery(
+      {
+        period: "custom",
+        start: startDateInput,
+        end: endDateInput,
+      },
+      "push",
+    );
   };
 
   const applyPresetRange = (preset: Exclude<PeriodPreset, "custom">) => {
@@ -1036,6 +1209,14 @@ const Analytics = () => {
     setEndDateInput(range.endInput);
     setAppliedStartDate(range.startIso);
     setAppliedEndDate(range.endIso);
+    updateAnalyticsQuery(
+      {
+        period: preset,
+        start: "",
+        end: "",
+      },
+      "push",
+    );
   };
 
   const rebuildSnapshots = async () => {
@@ -1205,7 +1386,12 @@ const Analytics = () => {
             }))}
             selectedOption={selectedIntervalOption}
             setSelectedOption={(nextOption) => {
-              setSelectedIntervalOption(nextOption as number);
+              const nextIndex = nextOption as number;
+              setSelectedIntervalOption(nextIndex);
+              const nextInterval =
+                (INTERVAL_OPTIONS[nextIndex]?.value as MarketplaceAnalyticsInterval) ||
+                "day";
+              updateAnalyticsQuery({ interval: nextInterval });
             }}
           />
           <DropDownButton
@@ -1215,7 +1401,12 @@ const Analytics = () => {
             }))}
             selectedOption={selectedTopLimitOption}
             setSelectedOption={(nextOption) => {
-              setSelectedTopLimitOption(nextOption as number);
+              const nextIndex = nextOption as number;
+              setSelectedTopLimitOption(nextIndex);
+              const nextTop = Number(
+                TOP_LIMIT_OPTIONS[nextIndex]?.value ?? DEFAULT_TOP_LIMIT,
+              );
+              updateAnalyticsQuery({ top: nextTop });
             }}
           />
           <div className={styles.textFieldWrap}>
@@ -1230,6 +1421,10 @@ const Analytics = () => {
                   countryOptions[nextOption as number]?.value ?? "";
                 setSelectedCountryCode(nextCountryCode);
                 setSelectedCityName("");
+                updateAnalyticsQuery({
+                  country: nextCountryCode,
+                  city: "",
+                });
               }}
             />
           </div>
@@ -1241,7 +1436,9 @@ const Analytics = () => {
               options={cityOptions}
               selectedOption={selectedCityOption}
               setSelectedOption={(nextOption) => {
-                setSelectedCityName(cityOptions[nextOption as number]?.value ?? "");
+                const nextCity = cityOptions[nextOption as number]?.value ?? "";
+                setSelectedCityName(nextCity);
+                updateAnalyticsQuery({ city: nextCity });
               }}
             />
           </div>
@@ -1251,7 +1448,10 @@ const Analytics = () => {
             selectionLabel="statuses"
             options={STATUS_FILTER_OPTIONS}
             selectedValues={selectedStatuses}
-            onChange={setSelectedStatuses}
+            onChange={(values) => {
+              setSelectedStatuses(values);
+              updateAnalyticsQuery({ statuses: values });
+            }}
           />
           <MultiSelectFilter
             label="Payment statuses"
@@ -1259,7 +1459,10 @@ const Analytics = () => {
             selectionLabel="payment statuses"
             options={PAYMENT_STATUS_OPTIONS}
             selectedValues={selectedPaymentStatuses}
-            onChange={setSelectedPaymentStatuses}
+            onChange={(values) => {
+              setSelectedPaymentStatuses(values);
+              updateAnalyticsQuery({ paymentStatuses: values });
+            }}
           />
         </div>
 

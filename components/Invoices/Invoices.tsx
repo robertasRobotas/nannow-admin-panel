@@ -79,6 +79,60 @@ const Invoices = () => {
   const [appliedOwnerUserId, setAppliedOwnerUserId] = useState("");
   const [appliedOrderId, setAppliedOrderId] = useState("");
 
+  const updateInvoicesQuery = useCallback(
+    (
+      params: {
+        page?: number;
+        ownerRole?: InvoiceOwnerRole | "";
+        kind?: InvoiceKind | "";
+        ownerUserId?: string;
+        orderId?: string;
+      },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+
+      if (typeof params.ownerRole === "string" && params.ownerRole.length > 0) {
+        nextQuery.ownerRole = params.ownerRole;
+      } else if (params.ownerRole !== undefined) {
+        delete nextQuery.ownerRole;
+      }
+
+      if (typeof params.kind === "string" && params.kind.length > 0) {
+        nextQuery.kind = params.kind;
+      } else if (params.kind !== undefined) {
+        delete nextQuery.kind;
+      }
+
+      if (
+        typeof params.ownerUserId === "string" &&
+        params.ownerUserId.trim().length > 0
+      ) {
+        nextQuery.ownerUserId = params.ownerUserId.trim();
+      } else if (params.ownerUserId !== undefined) {
+        delete nextQuery.ownerUserId;
+      }
+
+      if (typeof params.orderId === "string" && params.orderId.trim().length > 0) {
+        nextQuery.orderId = params.orderId.trim();
+      } else if (params.orderId !== undefined) {
+        delete nextQuery.orderId;
+      }
+
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router],
+  );
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -131,16 +185,78 @@ const Invoices = () => {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+    const ownerRoleFromQuery =
+      typeof router.query.ownerRole === "string"
+        ? router.query.ownerRole
+        : "";
+    const kindFromQuery =
+      typeof router.query.kind === "string" ? router.query.kind : "";
+    const ownerUserIdFromQuery =
+      typeof router.query.ownerUserId === "string" ? router.query.ownerUserId : "";
+    const orderIdFromQuery =
+      typeof router.query.orderId === "string" ? router.query.orderId : "";
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+
+    const safeOwnerRole =
+      ownerRoleFromQuery === "CLIENT" || ownerRoleFromQuery === "PROVIDER"
+        ? ownerRoleFromQuery
+        : "";
+    const safeKind =
+      kindFromQuery === "PLATFORM_FEE_INVOICE" ||
+      kindFromQuery === "PROVIDER_INVOICE" ||
+      kindFromQuery === "PROVIDER_RECEIPT"
+        ? kindFromQuery
+        : "";
+
+    setOwnerRole(safeOwnerRole);
+    setKind(safeKind);
+    setOwnerUserId(ownerUserIdFromQuery);
+    setOrderId(orderIdFromQuery);
+    setAppliedOwnerRole(safeOwnerRole);
+    setAppliedKind(safeKind);
+    setAppliedOwnerUserId(ownerUserIdFromQuery);
+    setAppliedOrderId(orderIdFromQuery);
+    setItemOffset((safePage - 1) * PAGE_SIZE);
+  }, [
+    router.isReady,
+    router.query.kind,
+    router.query.orderId,
+    router.query.ownerRole,
+    router.query.ownerUserId,
+    router.query.page,
+  ]);
+
   const handlePageClick = (event: { selected: number }) => {
-    setItemOffset(event.selected * PAGE_SIZE);
+    updateInvoicesQuery(
+      {
+        page: event.selected + 1,
+        ownerRole: appliedOwnerRole,
+        kind: appliedKind,
+        ownerUserId: appliedOwnerUserId,
+        orderId: appliedOrderId,
+      },
+      "push",
+    );
   };
 
   const applyFilters = () => {
-    setAppliedOwnerRole(ownerRole);
-    setAppliedKind(kind);
-    setAppliedOwnerUserId(ownerUserId);
-    setAppliedOrderId(orderId);
-    setItemOffset(0);
+    updateInvoicesQuery(
+      {
+        page: 1,
+        ownerRole,
+        kind,
+        ownerUserId,
+        orderId,
+      },
+      "push",
+    );
   };
 
   const shownTotal = useMemo(() => `${total} total`, [total]);
@@ -153,7 +269,20 @@ const Invoices = () => {
         <select
           className={styles.select}
           value={ownerRole}
-          onChange={(e) => setOwnerRole(e.target.value as InvoiceOwnerRole | "")}
+          onChange={(e) => {
+            const nextOwnerRole = e.target.value as InvoiceOwnerRole | "";
+            setOwnerRole(nextOwnerRole);
+            updateInvoicesQuery(
+              {
+                page: 1,
+                ownerRole: nextOwnerRole,
+                kind,
+                ownerUserId,
+                orderId,
+              },
+              "push",
+            );
+          }}
         >
           {ownerRoleOptions.map((option) => (
             <option key={option.label} value={option.value}>
@@ -165,7 +294,20 @@ const Invoices = () => {
         <select
           className={styles.select}
           value={kind}
-          onChange={(e) => setKind(e.target.value as InvoiceKind | "")}
+          onChange={(e) => {
+            const nextKind = e.target.value as InvoiceKind | "";
+            setKind(nextKind);
+            updateInvoicesQuery(
+              {
+                page: 1,
+                ownerRole,
+                kind: nextKind,
+                ownerUserId,
+                orderId,
+              },
+              "push",
+            );
+          }}
         >
           {kindOptions.map((option) => (
             <option key={option.label} value={option.value}>

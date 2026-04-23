@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./reviews.module.css";
 import { useMediaQuery } from "react-responsive";
 import ReviewsList from "./ReviewsList/ReviewsList";
@@ -25,6 +25,36 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
   const [pageCount, setPageCount] = useState(0);
   const [totalReviews, setTotalReviews] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number>(0);
+  const pageSizeForOffset = itemsPerPage ?? 20;
+
+  const updateReviewsQuery = useCallback(
+    (
+      params: { page?: number; rating?: number | undefined; id?: string },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady || detailedPageId) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+      if (typeof params.rating === "number") {
+        nextQuery.rating = String(params.rating);
+      } else {
+        delete nextQuery.rating;
+      }
+      if (typeof params.id === "string" && params.id.length > 0) {
+        nextQuery.id = params.id;
+      } else if (params.id !== undefined) {
+        delete nextQuery.id;
+      }
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [detailedPageId, router],
+  );
 
   const selectedRating = useMemo(() => {
     const value = reviewRatingOptions[selectedOption]?.value ?? "";
@@ -59,11 +89,40 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
     }
   };
 
-  // Fetch list on mount and whenever pagination or rating changes
   useEffect(() => {
+    if (!router.isReady) return;
     fetchReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemOffset, selectedRating]);
+  }, [router.isReady, itemOffset, selectedRating]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSizeForOffset);
+  }, [pageSizeForOffset, router.isReady, router.query.page]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const ratingFromQuery =
+      typeof router.query.rating === "string"
+        ? Number(router.query.rating)
+        : NaN;
+    const nextOption = reviewRatingOptions.findIndex(
+      (option) => Number(option.value) === ratingFromQuery,
+    );
+    setSelectedOption(nextOption >= 0 ? nextOption : 0);
+  }, [router.isReady, router.query.rating]);
+
+  useEffect(() => {
+    if (!router.isReady || detailedPageId) return;
+    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    setSelectedReviewId(idFromQuery);
+  }, [detailedPageId, router.isReady, router.query.id]);
 
   // Fetch detailed review when landing on dedicated page
   useEffect(() => {
@@ -78,12 +137,32 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
     }
   }, [selectedReviewId]);
 
+  const selectReview = (nextReviewId: string) => {
+    setSelectedReviewId(nextReviewId);
+    const currentPage = Math.floor(itemOffset / pageSizeForOffset) + 1;
+    updateReviewsQuery({
+      page: currentPage,
+      rating: selectedRating,
+      id: nextReviewId,
+    });
+  };
+
+  const clearSelectedReview = () => {
+    setSelectedReviewId("");
+    const currentPage = Math.floor(itemOffset / pageSizeForOffset) + 1;
+    updateReviewsQuery({
+      page: currentPage,
+      rating: selectedRating,
+      id: "",
+    });
+  };
+
   const renderMobile = () => {
     if (selectedReviewId !== "" && selectedReview) {
       return (
         <DetailedReview
           review={selectedReview}
-          onBackClick={() => setSelectedReviewId("")}
+          onBackClick={clearSelectedReview}
           setReviews={setReviews}
           reviews={reviews}
         />
@@ -94,19 +173,32 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
       <ReviewsList
         reviews={reviews}
         selectedReviewId={selectedReviewId}
-        setSelectedReviewId={setSelectedReviewId}
+        setSelectedReviewId={(nextValue) => {
+          const nextId =
+            typeof nextValue === "function"
+              ? nextValue(selectedReviewId)
+              : nextValue;
+          selectReview(nextId);
+        }}
         itemsPerPage={itemsPerPage ?? 0}
         pageCount={pageCount ?? 0}
         totalReviews={totalReviews ?? 0}
-        setItemOffset={setItemOffset}
+        setItemOffset={(nextOffset) => {
+          const offset =
+            typeof nextOffset === "function" ? nextOffset(itemOffset) : nextOffset;
+          const page = Math.floor(offset / pageSizeForOffset) + 1;
+          updateReviewsQuery({ page, rating: selectedRating, id: selectedReviewId });
+        }}
         setReviewById={setReviewById}
         selectedOption={selectedOption}
         setSelectedOption={(idx) => {
           setSelectedOption(idx);
-          setItemOffset(0);
+          const value = reviewRatingOptions[idx]?.value ?? "";
+          const rating = value.length > 0 ? Number(value) : undefined;
+          updateReviewsQuery({ page: 1, rating, id: selectedReviewId });
         }}
         onClickOption={() => {
-          setItemOffset(0);
+          updateReviewsQuery({ page: 1, rating: selectedRating, id: selectedReviewId });
         }}
       />
     );
@@ -117,25 +209,38 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
       <ReviewsList
         reviews={reviews}
         selectedReviewId={selectedReviewId}
-        setSelectedReviewId={setSelectedReviewId}
+        setSelectedReviewId={(nextValue) => {
+          const nextId =
+            typeof nextValue === "function"
+              ? nextValue(selectedReviewId)
+              : nextValue;
+          selectReview(nextId);
+        }}
         itemsPerPage={itemsPerPage ?? 0}
         pageCount={pageCount ?? 0}
         totalReviews={totalReviews ?? 0}
-        setItemOffset={setItemOffset}
+        setItemOffset={(nextOffset) => {
+          const offset =
+            typeof nextOffset === "function" ? nextOffset(itemOffset) : nextOffset;
+          const page = Math.floor(offset / pageSizeForOffset) + 1;
+          updateReviewsQuery({ page, rating: selectedRating, id: selectedReviewId });
+        }}
         setReviewById={setReviewById}
         selectedOption={selectedOption}
         setSelectedOption={(idx) => {
           setSelectedOption(idx);
-          setItemOffset(0);
+          const value = reviewRatingOptions[idx]?.value ?? "";
+          const rating = value.length > 0 ? Number(value) : undefined;
+          updateReviewsQuery({ page: 1, rating, id: selectedReviewId });
         }}
         onClickOption={() => {
-          setItemOffset(0);
+          updateReviewsQuery({ page: 1, rating: selectedRating, id: selectedReviewId });
         }}
       />
       {selectedReview && (
         <DetailedReview
           review={selectedReview}
-          onBackClick={() => setSelectedReviewId("")}
+          onBackClick={clearSelectedReview}
           setReviews={setReviews}
           reviews={reviews}
         />

@@ -83,13 +83,51 @@ const Orders = () => {
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(0);
   const [pageCount, setPageCount] = useState(0);
-  const [totalUsers, setTotalUsers] = useState(0);
   const [recentlyChangedOrderIds, setRecentlyChangedOrderIds] = useState<
     Record<string, true>
   >({});
   const recentlyChangedTimeoutsRef = useRef<Record<string, number>>({});
   const router = useRouter();
   const { lastEvent } = useAdminSocket();
+  const pageSizeForOffset = itemsPerPage || 20;
+
+  const updateOrdersQuery = useCallback(
+    (
+      params: {
+        page?: number;
+        view?: ActiveOrdersFilter;
+        status?: string;
+      },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+      const nextView = params.view ?? activeFilter;
+      if (nextView && nextView !== "DEFAULT") {
+        nextQuery.view = nextView.toLowerCase();
+      } else {
+        delete nextQuery.view;
+      }
+      const nextStatus =
+        params.status ??
+        (nextView === "DEFAULT" ? orderFilterOptions[selectedOption].value : "");
+      if (nextStatus) {
+        nextQuery.status = nextStatus;
+      } else {
+        delete nextQuery.status;
+      }
+
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [activeFilter, router, selectedOption],
+  );
 
   const fetchOrders = useCallback(
     async (status: string, startIndex: number) => {
@@ -100,7 +138,6 @@ const Orders = () => {
         setPageCount(
           Math.ceil(response.data.result.total / response.data.result.pageSize),
         );
-        setTotalUsers(response.data.result.total);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -143,7 +180,6 @@ const Orders = () => {
 
         setItemsPerPage(pageSize);
         setPageCount(Math.ceil(matchingOrders.length / pageSize));
-        setTotalUsers(matchingOrders.length);
         setOrders(matchingOrders.slice(startIndex, startIndex + pageSize));
       } catch (err) {
         console.log(err);
@@ -166,7 +202,6 @@ const Orders = () => {
         setPageCount(
           Math.ceil(response.data.result.total / response.data.result.pageSize),
         );
-        setTotalUsers(response.data.result.total);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -194,7 +229,6 @@ const Orders = () => {
         setOrders(result.items);
         setItemsPerPage(result.pageSize);
         setPageCount(Math.ceil(result.total / result.pageSize));
-        setTotalUsers(result.total);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -219,7 +253,6 @@ const Orders = () => {
         setOrders(result.items);
         setItemsPerPage(result.pageSize);
         setPageCount(Math.ceil(result.total / result.pageSize));
-        setTotalUsers(result.total);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -244,7 +277,6 @@ const Orders = () => {
         setOrders(result.items);
         setItemsPerPage(result.pageSize);
         setPageCount(Math.ceil(result.total / result.pageSize));
-        setTotalUsers(result.total);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -380,6 +412,44 @@ const Orders = () => {
   }, [refetchCurrentOrders]);
 
   useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSizeForOffset);
+
+    const viewFromQuery =
+      typeof router.query.view === "string"
+        ? router.query.view.toUpperCase()
+        : "DEFAULT";
+    const safeView: ActiveOrdersFilter =
+      viewFromQuery === "NOT_ENDED" ||
+      viewFromQuery === "NOT_PAID" ||
+      viewFromQuery === "CANCELED_NOT_PAID" ||
+      viewFromQuery === "CANCELED_PAID_LEGACY" ||
+      viewFromQuery === "CLOSED_BY_ADMINS"
+        ? viewFromQuery
+        : "DEFAULT";
+    setActiveFilter(safeView);
+
+    const statusFromQuery =
+      typeof router.query.status === "string" ? router.query.status : "";
+    const index = orderFilterOptions.findIndex(
+      (option) => option.value === statusFromQuery,
+    );
+    setSelectedOption(index >= 0 ? index : 0);
+  }, [
+    pageSizeForOffset,
+    router.isReady,
+    router.query.page,
+    router.query.status,
+    router.query.view,
+  ]);
+
+  useEffect(() => {
     fetchNotEndedOrdersCount();
   }, [fetchNotEndedOrdersCount]);
   useEffect(() => {
@@ -424,8 +494,7 @@ const Orders = () => {
   }, []);
 
   const handlePageClick = (event: { selected: number }) => {
-    const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
-    setItemOffset(newOffset);
+    updateOrdersQuery({ page: event.selected + 1 });
   };
 
   const handleIgnoredOrdersClick = () => {
@@ -433,8 +502,7 @@ const Orders = () => {
       fetchOrders("NOT_ENDED_IN_TIME", 0);
       return;
     }
-    setActiveFilter("NOT_ENDED");
-    setItemOffset(0);
+    updateOrdersQuery({ view: "NOT_ENDED", page: 1, status: "" });
   };
 
   const handleNotPaidOrdersClick = () => {
@@ -442,8 +510,7 @@ const Orders = () => {
       fetchNotPaidOrders("NOT_PAID", 0);
       return;
     }
-    setActiveFilter("NOT_PAID");
-    setItemOffset(0);
+    updateOrdersQuery({ view: "NOT_PAID", page: 1, status: "" });
   };
 
   const handleCanceledNotPaidOrdersClick = () => {
@@ -451,17 +518,7 @@ const Orders = () => {
       fetchCanceledNotPaidOrders(0);
       return;
     }
-    setActiveFilter("CANCELED_NOT_PAID");
-    setItemOffset(0);
-  };
-
-  const handleCanceledPaidLegacyOrdersClick = () => {
-    if (activeFilter === "CANCELED_PAID_LEGACY" && itemOffset === 0) {
-      fetchCanceledPaidLegacyOrders(0);
-      return;
-    }
-    setActiveFilter("CANCELED_PAID_LEGACY");
-    setItemOffset(0);
+    updateOrdersQuery({ view: "CANCELED_NOT_PAID", page: 1, status: "" });
   };
 
   const normalizedQuery = orderIdQuery.trim().toLowerCase();
@@ -491,7 +548,12 @@ const Orders = () => {
           setSelectedOption={(option) => {
             setSelectedOption(option);
             setActiveFilter("DEFAULT");
-            setItemOffset(0);
+            const selectedValue = orderFilterOptions[Number(option)]?.value ?? "";
+            updateOrdersQuery({
+              view: "DEFAULT",
+              page: 1,
+              status: selectedValue,
+            });
           }}
         />
         {notEndedOrdersQTY > 0 && (
@@ -563,6 +625,7 @@ const Orders = () => {
         onPageChange={handlePageClick}
         pageRangeDisplayed={5}
         pageCount={pageCount}
+        forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSizeForOffset)}
         previousLabel=""
         renderOnZeroPageCount={null}
         containerClassName={paginateStyles.paginateWrapper}

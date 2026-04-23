@@ -24,7 +24,6 @@ const CriminalCheck = () => {
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(null);
   const [pageCount, setPageCount] = useState(0);
-  const [totalUsers, setTotalUsers] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [stats, setStats] = useState({
     todayApplied: 0,
@@ -35,6 +34,31 @@ const CriminalCheck = () => {
     lastMonthApplied: 0,
   });
   const router = useRouter();
+  const pageSizeForOffset = itemsPerPage ?? 20;
+
+  const updateCriminalCheckQuery = useCallback(
+    (
+      params: { page?: number; status?: typeof selected },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+      if (params.status && params.status !== "ALL") {
+        nextQuery.status = params.status;
+      } else {
+        delete nextQuery.status;
+      }
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router],
+  );
 
   const fetchUsers = useCallback(
     async (status: string, startIndex: number) => {
@@ -48,7 +72,6 @@ const CriminalCheck = () => {
         setPageCount(
           Math.ceil(response.data.users.total / response.data.users.pageSize),
         );
-        setTotalUsers(response.data.users.total);
       } catch (err) {
         console.log(err);
         if (axios.isAxiosError(err)) {
@@ -62,13 +85,38 @@ const CriminalCheck = () => {
   );
 
   const handlePageClick = (event: { selected: number }) => {
-    const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
-    setItemOffset(newOffset);
+    updateCriminalCheckQuery({ page: event.selected + 1, status: selected });
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
     fetchUsers(selected === "ALL" ? "" : selected, itemOffset);
-  }, [selected, itemOffset, fetchUsers]);
+  }, [fetchUsers, itemOffset, router.isReady, selected]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const statusFromQuery =
+      typeof router.query.status === "string" ? router.query.status : "ALL";
+    const safeStatus =
+      statusFromQuery === "NOT_SUBMITTED" ||
+      statusFromQuery === "PENDING" ||
+      statusFromQuery === "APPROVED" ||
+      statusFromQuery === "REJECTED"
+        ? statusFromQuery
+        : "ALL";
+    setSelected(safeStatus);
+  }, [router.isReady, router.query.status]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSizeForOffset);
+  }, [pageSizeForOffset, router.isReady, router.query.page]);
 
   useEffect(() => {
     const fetchPendingCount = async () => {
@@ -149,32 +197,40 @@ const CriminalCheck = () => {
       </div>
       <div className={styles.categoryBtns}>
         <Button
-          onClick={() => setSelected("ALL")}
+          onClick={() => updateCriminalCheckQuery({ status: "ALL", page: 1 })}
           title="All"
           type="PLAIN"
           isSelected={selected === "ALL"}
         />
         <Button
-          onClick={() => setSelected("NOT_SUBMITTED")}
+          onClick={() =>
+            updateCriminalCheckQuery({ status: "NOT_SUBMITTED", page: 1 })
+          }
           title="Not submitted"
           type="PLAIN"
           isSelected={selected === "NOT_SUBMITTED"}
         />
         <Button
-          onClick={() => setSelected("PENDING")}
+          onClick={() =>
+            updateCriminalCheckQuery({ status: "PENDING", page: 1 })
+          }
           title="Pending"
           type="PLAIN"
           isSelected={selected === "PENDING"}
           attentionNumber={pendingCount}
         />
         <Button
-          onClick={() => setSelected("APPROVED")}
+          onClick={() =>
+            updateCriminalCheckQuery({ status: "APPROVED", page: 1 })
+          }
           title="Approved"
           type="PLAIN"
           isSelected={selected === "APPROVED"}
         />
         <Button
-          onClick={() => setSelected("REJECTED")}
+          onClick={() =>
+            updateCriminalCheckQuery({ status: "REJECTED", page: 1 })
+          }
           title="Rejected"
           type="PLAIN"
           isSelected={selected === "REJECTED"}
@@ -219,6 +275,9 @@ const CriminalCheck = () => {
         onPageChange={handlePageClick}
         pageRangeDisplayed={5}
         pageCount={pageCount}
+        forcePage={
+          pageCount === 0 ? 0 : Math.floor(itemOffset / pageSizeForOffset)
+        }
         previousLabel=""
         renderOnZeroPageCount={null}
         containerClassName={paginateStyles.paginateWrapper}

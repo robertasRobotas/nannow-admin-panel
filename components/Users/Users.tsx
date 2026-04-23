@@ -89,25 +89,69 @@ type UsersViewMode =
 type ProviderVideoFilter = "ALL" | "WITH_VIDEO" | "WITHOUT_VIDEO";
 type ProviderSpecialSkillsFilter = "ALL" | "PENDING_SPECIAL_SKILLS";
 type AppVersionPlatform = "IOS" | "ANDROID" | null;
+type LoginMode = "GOOGLE" | "EMAIL" | "APPLE" | "UNKNOWN";
+type LoginModeTotals = Partial<Record<LoginMode, number>>;
 type AppVersionStatGroup = {
   platform: AppVersionPlatform;
   items: { appVersion: string; count: number }[];
   withoutAppVersionCount: number;
   totalUsers: number;
+  totalUsersByLoginMode: LoginModeTotals;
+};
+type AppVersionStatsState = {
+  items: AppVersionStatGroup[];
+  totalUsers: number;
+  totalUsersByLoginMode: LoginModeTotals;
 };
 type RawAppVersionStatItem = {
   platform: unknown;
   items: unknown[];
   withoutAppVersionCount: number;
   totalUsers: number;
+  totalUsersByLoginMode?: unknown;
 };
 type RawNestedAppVersionItem = { appVersion: string; count: number };
 const normalizePlatform = (platform: unknown): AppVersionPlatform =>
   platform === "IOS" || platform === "ANDROID" ? platform : null;
+
+const LOGIN_MODE_ORDER: LoginMode[] = [
+  "GOOGLE",
+  "EMAIL",
+  "APPLE",
+  "UNKNOWN",
+];
+
+const normalizeLoginModeTotals = (value: unknown): LoginModeTotals => {
+  if (!value || typeof value !== "object") return {};
+  const record = value as Record<string, unknown>;
+  return LOGIN_MODE_ORDER.reduce<LoginModeTotals>((acc, mode) => {
+    const nextValue = Number(record[mode] ?? 0);
+    if (Number.isFinite(nextValue) && nextValue > 0) {
+      acc[mode] = nextValue;
+    }
+    return acc;
+  }, {});
+};
 type UsersViewOption = {
   title: string;
   value: UsersViewMode;
   attentionNumber?: number;
+};
+
+const VIEW_QUERY_TO_MODE: Record<string, UsersViewMode> = {
+  "active-users": "ACTIVE_USERS",
+  "onboarding-clients": "ONBOARDING_CLIENTS",
+  "onboarding-providers": "ONBOARDING_PROVIDERS",
+  banned: "BANNED_USERS",
+  "test-users": "TEST_USERS",
+};
+
+const MODE_TO_VIEW_QUERY: Partial<Record<UsersViewMode, string>> = {
+  ACTIVE_USERS: "active-users",
+  ONBOARDING_CLIENTS: "onboarding-clients",
+  ONBOARDING_PROVIDERS: "onboarding-providers",
+  BANNED_USERS: "banned",
+  TEST_USERS: "test-users",
 };
 type BannedUser = {
   id: string;
@@ -168,7 +212,6 @@ const Users = () => {
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [pageCount, setPageCount] = useState(0);
-  const [totalUsers, setTotalUsers] = useState(0);
   const [clientOnboardingCount, setClientOnboardingCount] = useState(0);
   const [providerOnboardingCount, setProviderOnboardingCount] = useState(0);
   const [onboardingStats, setOnboardingStats] = useState({
@@ -176,10 +219,10 @@ const Users = () => {
     finishedClientOnboarding: 0,
     finishedProviderOnboarding: 0,
   });
-  const [appVersionStats, setAppVersionStats] = useState<{
-    items: AppVersionStatGroup[];
-  }>({
+  const [appVersionStats, setAppVersionStats] = useState<AppVersionStatsState>({
     items: [],
+    totalUsers: 0,
+    totalUsersByLoginMode: {},
   });
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
@@ -302,27 +345,65 @@ const Users = () => {
   const isSelectedClients = currentView === "CLIENTS";
   const isProvidersSelected = currentView === "PROVIDERS";
 
-  // Sync selected mode with URL query (?mode=clients|providers)
+  const updateUsersUrlQuery = useCallback(
+    (
+      params: {
+        viewOptionIndex?: number;
+        page?: number;
+      },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+
+      const nextQuery = { ...router.query };
+      const nextPage = params.page;
+      if (typeof nextPage === "number" && nextPage > 0) {
+        nextQuery.page = String(nextPage);
+      }
+
+      if (typeof params.viewOptionIndex === "number") {
+        const nextView = viewOptions[params.viewOptionIndex]?.value;
+        if (!nextView) return;
+
+        delete nextQuery.mode;
+        delete nextQuery.view;
+
+        if (nextView === "CLIENTS") {
+          nextQuery.mode = "clients";
+        } else if (nextView === "PROVIDERS") {
+          nextQuery.mode = "providers";
+        } else {
+          const viewQuery = MODE_TO_VIEW_QUERY[nextView];
+          if (viewQuery) {
+            nextQuery.view = viewQuery;
+          }
+        }
+      }
+
+      router[method](
+        {
+          pathname: router.pathname,
+          query: nextQuery,
+        },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router, viewOptions],
+  );
+
+  // Sync selected mode with URL query
   useEffect(() => {
     if (!router.isReady) return;
-    const view =
-      typeof router.query.view === "string" ? router.query.view : undefined;
-    if (view === "banned") {
-      const bannedIndex = viewOptions.findIndex(
-        (option) => option.value === "BANNED_USERS",
-      );
-      setSelectedViewOption(bannedIndex >= 0 ? bannedIndex : 0);
+    const view = typeof router.query.view === "string" ? router.query.view : "";
+    const viewMode = VIEW_QUERY_TO_MODE[view];
+    if (viewMode) {
+      const index = viewOptions.findIndex((option) => option.value === viewMode);
+      setSelectedViewOption(index >= 0 ? index : 0);
       setModeReady(true);
       return;
     }
-    if (view === "test-users") {
-      const testUsersIndex = viewOptions.findIndex(
-        (option) => option.value === "TEST_USERS",
-      );
-      setSelectedViewOption(testUsersIndex >= 0 ? testUsersIndex : 0);
-      setModeReady(true);
-      return;
-    }
+
     const mode =
       typeof router.query.mode === "string" ? router.query.mode : undefined;
     if (mode === "providers") {
@@ -333,6 +414,18 @@ const Users = () => {
     }
     setModeReady(true);
   }, [router.isReady, router.query.mode, router.query.view, viewOptions]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    const nextOffset = (safePage - 1) * itemsPerPage;
+    setItemOffset((prev) => (prev === nextOffset ? prev : nextOffset));
+  }, [itemsPerPage, router.isReady, router.query.page]);
 
   const normalizeTestUsersPayload = (
     payload: unknown,
@@ -454,13 +547,33 @@ const Users = () => {
               })),
             withoutAppVersionCount: Number(item.withoutAppVersionCount ?? 0) || 0,
             totalUsers: Number(item.totalUsers ?? 0) || 0,
+            totalUsersByLoginMode: normalizeLoginModeTotals(
+              item.totalUsersByLoginMode,
+            ),
           }));
+        const appVersionTotalUsers = Number(
+          (appVersionStatsResult as { totalUsers?: unknown }).totalUsers ?? 0,
+        );
+        const totalUsersByLoginMode = normalizeLoginModeTotals(
+          (appVersionStatsResult as { totalUsersByLoginMode?: unknown })
+            .totalUsersByLoginMode,
+        );
         setAppVersionStats({
           items: appVersionItems,
+          totalUsers: Number.isFinite(appVersionTotalUsers) ? appVersionTotalUsers : 0,
+          totalUsersByLoginMode,
         });
+        setOnboardingStats((prev) => ({
+          ...prev,
+          totalUsers: Number.isFinite(appVersionTotalUsers)
+            ? appVersionTotalUsers
+            : prev.totalUsers,
+        }));
       } else {
         setAppVersionStats({
           items: [],
+          totalUsers: 0,
+          totalUsersByLoginMode: {},
         });
       }
     } catch (err) {
@@ -539,7 +652,6 @@ const Users = () => {
       setPageCount(
         Math.ceil(response.data.users.total / itemsPerPage),
       );
-      setTotalUsers(response.data.users.total);
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -590,7 +702,6 @@ const Users = () => {
       setOnboardingUsers(items);
       setItemsPerPage(pageSize > 0 ? pageSize : 20);
       setPageCount(Math.ceil(total / (pageSize > 0 ? pageSize : 20)));
-      setTotalUsers(total);
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -666,7 +777,6 @@ const Users = () => {
       setBannedUsers(items);
       setItemsPerPage(nextPageSize > 0 ? nextPageSize : 20);
       setPageCount(Math.ceil(nextTotal / (nextPageSize > 0 ? nextPageSize : 20)));
-      setTotalUsers(nextTotal);
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -697,7 +807,6 @@ const Users = () => {
       setPageCount(
         Math.ceil(result.total / (result.pageSize > 0 ? result.pageSize : 20)),
       );
-      setTotalUsers(result.total);
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -709,8 +818,7 @@ const Users = () => {
   }, [itemOffset, itemsPerPage, router, searchText]);
 
   const handlePageClick = (event: { selected: number }) => {
-    const newOffset = (event.selected * (itemsPerPage ?? 0)) % totalUsers;
-    setItemOffset(newOffset);
+    updateUsersUrlQuery({ page: event.selected + 1 }, "push");
   };
 
   useEffect(() => {
@@ -779,7 +887,6 @@ const Users = () => {
       (user) => user.currentRole === connectedUsersFilter,
     ).length;
 
-    setTotalUsers(filteredCount);
     setPageCount(Math.ceil(filteredCount / itemsPerPage) || 0);
   }, [connectedUsers, connectedUsersFilter, isActiveUsersSelected, itemsPerPage]);
 
@@ -975,7 +1082,15 @@ const Users = () => {
                 attentionNumber: option.attentionNumber,
               }))}
               selectedOption={selectedViewOption}
-              setSelectedOption={setSelectedViewOption}
+              setSelectedOption={(nextSelectedOption) => {
+                const nextIndex = Number(nextSelectedOption);
+                if (!Number.isFinite(nextIndex)) return;
+                setSelectedViewOption(nextIndex);
+                updateUsersUrlQuery(
+                  { viewOptionIndex: nextIndex, page: 1 },
+                  "push",
+                );
+              }}
               onClickOption={() => {
                 setItemOffset(0);
               }}
@@ -1066,6 +1181,7 @@ const Users = () => {
                       if (!option) return;
                       setItemOffset(0);
                       setItemsPerPage(Number(option.value));
+                      updateUsersUrlQuery({ page: 1 }, "replace");
                     }}
                   />
                   <div
@@ -1443,7 +1559,7 @@ const Users = () => {
                 <div className={styles.statTile}>
                   <span className={styles.statTileLabel}>Total users</span>
                   <span className={styles.statTileValue}>
-                    {onboardingStats.totalUsers}
+                    {appVersionStats.totalUsers || onboardingStats.totalUsers}
                   </span>
                 </div>
                 <div className={styles.statTile}>
@@ -1505,6 +1621,28 @@ const Users = () => {
                     </div>
                   </div>
                 ))}
+              </section>
+
+              <section className={`${styles.appVersionSection} ${styles.loginModeSection}`}>
+                <h3 className={styles.appVersionHeading}>Login mode</h3>
+                <div className={styles.platformBlock}>
+                  {LOGIN_MODE_ORDER.map((mode) => (
+                    <div key={mode} className={styles.versionRow}>
+                      <span className={styles.versionName}>{mode}</span>
+                      <span className={styles.versionCount}>
+                        {appVersionStats.totalUsersByLoginMode[mode] ?? 0}
+                      </span>
+                    </div>
+                  ))}
+                  <div className={styles.platformMeta}>
+                    <div className={styles.platformMetaRow}>
+                      <span className={styles.platformMetaLabel}>Total</span>
+                      <span className={styles.platformMetaValue}>
+                        {appVersionStats.totalUsers || onboardingStats.totalUsers}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </section>
             </div>
           )}

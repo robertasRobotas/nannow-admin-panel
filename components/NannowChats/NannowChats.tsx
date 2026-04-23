@@ -68,13 +68,48 @@ const NannowChats = () => {
   const [replyText, setReplyText] = useState("");
   const [isReplying, setIsReplying] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
+  const currentSort = SORT_OPTIONS[selectedSortOption]?.value ?? "latest";
+
+  const updateNannowChatsQuery = useCallback(
+    (
+      params: { page?: number; sort?: string; q?: string; id?: string },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+      if (params.sort && params.sort !== "latest") {
+        nextQuery.sort = params.sort;
+      } else if (params.sort !== undefined) {
+        delete nextQuery.sort;
+      }
+      if (typeof params.q === "string" && params.q.trim().length > 0) {
+        nextQuery.q = params.q.trim();
+      } else if (params.q !== undefined) {
+        delete nextQuery.q;
+      }
+      if (typeof params.id === "string" && params.id.length > 0) {
+        nextQuery.id = params.id;
+      } else if (params.id !== undefined) {
+        delete nextQuery.id;
+      }
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router],
+  );
 
   const adminRoles = useMemo(() => getCurrentAdminRolesFromJwt(), []);
   const canModerate =
     adminRoles.includes("SUPER_ADMIN") || adminRoles.includes("CHAT_MODERATOR");
   const useSuperHistoryRoute = adminRoles.includes("SUPER_ADMIN");
 
-  const selectedSort = SORT_OPTIONS[selectedSortOption]?.value ?? "latest";
+  const selectedSort = currentSort;
 
   const fetchChats = useCallback(async () => {
     try {
@@ -127,6 +162,37 @@ const NannowChats = () => {
   useEffect(() => {
     void fetchChats();
   }, [fetchChats]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const sortFromQuery =
+      typeof router.query.sort === "string" ? router.query.sort : "latest";
+    const sortIndex = SORT_OPTIONS.findIndex((option) => option.value === sortFromQuery);
+    setSelectedSortOption(sortIndex >= 0 ? sortIndex : 0);
+
+    const qFromQuery = typeof router.query.q === "string" ? router.query.q : "";
+    setSearchText(qFromQuery);
+    setAppliedSearch(qFromQuery);
+    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    if (idFromQuery) {
+      setSelectedChatId(idFromQuery);
+    }
+
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSize);
+  }, [
+    pageSize,
+    router.isReady,
+    router.query.page,
+    router.query.q,
+    router.query.sort,
+    router.query.id,
+  ]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -183,7 +249,12 @@ const NannowChats = () => {
   }, [fetchChats, lastEvent]);
 
   const handlePageClick = (event: { selected: number }) => {
-    setItemOffset(event.selected * pageSize);
+    updateNannowChatsQuery({
+      page: event.selected + 1,
+      sort: selectedSort,
+      q: appliedSearch,
+      id: selectedChatId,
+    });
   };
 
   const selectedTitle = useMemo(() => {
@@ -258,10 +329,23 @@ const NannowChats = () => {
             }))}
             selectedOption={selectedSortOption}
             setSelectedOption={(nextSelectedOption) => {
-              setSelectedSortOption(nextSelectedOption as number);
+              const nextIndex = nextSelectedOption as number;
+              setSelectedSortOption(nextIndex);
+              const nextSort = SORT_OPTIONS[nextIndex]?.value ?? "latest";
+              updateNannowChatsQuery({
+                page: 1,
+                sort: nextSort,
+                q: appliedSearch,
+                id: selectedChatId,
+              });
             }}
             onClickOption={() => {
-              setItemOffset(0);
+              updateNannowChatsQuery({
+                page: 1,
+                sort: selectedSort,
+                q: appliedSearch,
+                id: selectedChatId,
+              });
             }}
           />
           <SearchBar
@@ -269,8 +353,13 @@ const NannowChats = () => {
             searchText={searchText}
             setSearchText={setSearchText}
             onButtonClick={() => {
-              setItemOffset(0);
               setAppliedSearch(searchText);
+              updateNannowChatsQuery({
+                page: 1,
+                sort: selectedSort,
+                q: searchText,
+                id: selectedChatId,
+              });
             }}
           />
         </div>
@@ -305,7 +394,16 @@ const NannowChats = () => {
                     className={`${listStyles.chatRow} ${
                       selectedChatId === chatId ? listStyles.chatRowActive : ""
                     } ${unread ? listStyles.chatRowUnread : ""}`}
-                    onClick={() => setSelectedChatId(chatId)}
+                    onClick={() => {
+                      setSelectedChatId(chatId);
+                      updateNannowChatsQuery({
+                        page:
+                          pageCount === 0 ? 1 : Math.floor(itemOffset / pageSize) + 1,
+                        sort: selectedSort,
+                        q: appliedSearch,
+                        id: chatId,
+                      });
+                    }}
                   >
                     {unread && <span className={listStyles.unreadDot} />}
                     <div className={listStyles.chatAvatars}>
@@ -398,6 +496,7 @@ const NannowChats = () => {
         pageCount={pageCount}
         previousLabel=""
         renderOnZeroPageCount={null}
+        forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize)}
         containerClassName={paginateStyles.paginateWrapper}
         pageClassName={paginateStyles.pageBtn}
         pageLinkClassName={paginateStyles.pageLink}

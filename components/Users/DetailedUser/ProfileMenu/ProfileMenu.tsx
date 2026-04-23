@@ -5,7 +5,7 @@ import styles from "./profileMenu.module.css";
 import trashImg from "../../../../assets/images/trash.svg";
 import balanceImg from "../../../../assets/images/wallet.svg";
 import { UserDetails } from "@/types/Client";
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { anonymizeUser, deleteUser, getUserAnonymizationJob } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
@@ -66,7 +66,7 @@ type ProfileMenuProps = {
   user: UserDetails;
   selectedSection: string;
   setIsSelectedMenu: () => void;
-  setSelectedSection: Dispatch<SetStateAction<string>>;
+  setSelectedSection: (nextSection: string) => void;
   mode: "client" | "provider";
 };
 

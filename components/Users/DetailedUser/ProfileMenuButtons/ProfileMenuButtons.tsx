@@ -1,14 +1,12 @@
-/* eslint-disable @next/next/no-img-element */
 import { getButtonsData } from "@/data/userProfileMenu";
 import styles from "./profileMenuButtons.module.css";
 import { UserDetails } from "@/types/Client";
-import { Dispatch, SetStateAction } from "react";
 
 type ProfileMenuButtonsProps = {
   user: UserDetails;
   setIsSelectedMenu: () => void;
   selectedSection: string;
-  setSelectedSection: Dispatch<SetStateAction<string>>;
+  setSelectedSection: (nextSection: string) => void;
   mode: "client" | "provider";
 };
 

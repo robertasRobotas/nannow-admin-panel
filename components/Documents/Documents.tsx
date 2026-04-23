@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./documents.module.css";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import { options as documentsStatusOptions } from "@/data/documentsStatusOptions";
@@ -92,11 +92,38 @@ const Documents = () => {
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(0);
   const [pageCount, setPageCount] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
 
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
   const [notReviewedCount, setNotReviewedCount] = useState(0);
+  const pageSizeForOffset = itemsPerPage || 20;
+
+  const updateDocumentsQuery = useCallback(
+    (
+      params: {
+        page?: number;
+        status?: "REVIEWED" | "NOT_REVIEWED" | undefined;
+      },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+      if (params.status) {
+        nextQuery.status = params.status;
+      } else {
+        delete nextQuery.status;
+      }
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router],
+  );
 
   const selectedStatus = useMemo(() => {
     const value = documentsStatusOptions[selectedOption]?.value ?? "";
@@ -127,7 +154,6 @@ const Documents = () => {
       setDocuments(items);
       setItemsPerPage(result.pageSize ?? 0);
       setPageCount(Math.ceil((result.total ?? 0) / (result.pageSize ?? 1)));
-      setTotalItems(result.total ?? 0);
       const initial = new Set<string>();
       items?.forEach((d) => {
         if (
@@ -152,9 +178,31 @@ const Documents = () => {
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
     fetchDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemOffset, selectedStatus]);
+  }, [itemOffset, router.isReady, selectedStatus]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const statusFromQuery =
+      typeof router.query.status === "string" ? router.query.status : "";
+    const index = documentsStatusOptions.findIndex(
+      (option) => option.value === statusFromQuery,
+    );
+    setSelectedOption(index >= 0 ? index : 0);
+  }, [router.isReady, router.query.status]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSizeForOffset);
+  }, [pageSizeForOffset, router.isReady, router.query.page]);
 
   useEffect(() => {
     const fetchNotReviewedCount = async () => {
@@ -169,9 +217,7 @@ const Documents = () => {
   }, []);
 
   const handlePageClick = (event: { selected: number }) => {
-    const newOffset =
-      (event.selected * (itemsPerPage ?? 0)) % (totalItems ?? 0);
-    setItemOffset(newOffset);
+    updateDocumentsQuery({ page: event.selected + 1, status: selectedStatus });
   };
 
   console.log(documents);
@@ -185,10 +231,14 @@ const Documents = () => {
           selectedOption={selectedOption}
           setSelectedOption={(idx) => {
             setSelectedOption(idx);
-            setItemOffset(0);
+            const value = documentsStatusOptions[idx]?.value;
+            const status = value
+              ? (value as "REVIEWED" | "NOT_REVIEWED")
+              : undefined;
+            updateDocumentsQuery({ page: 1, status });
           }}
           onClickOption={() => {
-            setItemOffset(0);
+            updateDocumentsQuery({ page: 1, status: selectedStatus });
           }}
         />
       </div>
@@ -320,6 +370,9 @@ const Documents = () => {
           pageRangeDisplayed={1}
           marginPagesDisplayed={1}
           pageCount={pageCount}
+          forcePage={
+            pageCount === 0 ? 0 : Math.floor(itemOffset / pageSizeForOffset)
+          }
           previousLabel=""
           renderOnZeroPageCount={null}
           containerClassName={paginateStyles.paginateWrapper}

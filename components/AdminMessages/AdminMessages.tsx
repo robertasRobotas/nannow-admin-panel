@@ -55,6 +55,21 @@ const AdminMessages = () => {
   const [updatingId, setUpdatingId] = useState("");
   const [error, setError] = useState("");
 
+  const updateMessagesQuery = useCallback(
+    (page: number, method: "push" | "replace" = "push") => {
+      if (!router.isReady) return;
+      router[method](
+        {
+          pathname: router.pathname,
+          query: { ...router.query, page: String(Math.max(1, page)) },
+        },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router],
+  );
+
   const fetchUnreadCount = useCallback(async () => {
     const response = await getUnreadAdminMessagesCount();
     const count = Number(response.data?.count ?? 0) || 0;
@@ -100,6 +115,17 @@ const AdminMessages = () => {
   }, [fetchMessages]);
 
   useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * PAGE_SIZE);
+  }, [router.isReady, router.query.page]);
+
+  useEffect(() => {
     fetchUnreadCount().catch(() => {
       setUnreadCount(0);
     });
@@ -137,7 +163,7 @@ const AdminMessages = () => {
   }, [itemOffset, lastEvent]);
 
   const handlePageClick = (event: { selected: number }) => {
-    setItemOffset(event.selected * PAGE_SIZE);
+    updateMessagesQuery(event.selected + 1);
   };
 
   const unreadInCurrentPage = useMemo(

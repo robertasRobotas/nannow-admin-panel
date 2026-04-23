@@ -353,6 +353,74 @@ const FinancialLedger = () => {
   const selectedStatus = STATUS_OPTIONS[selectedStatusOption]?.value ?? "";
   const selectedMode = MODE_OPTIONS[selectedModeOption]?.value ?? "";
 
+  const updateLedgerQuery = useCallback(
+    (
+      params: {
+        page?: number;
+        q?: string;
+        status?: string;
+        mode?: string;
+        sort?: string;
+        period?: PeriodPreset;
+        start?: string;
+        end?: string;
+      },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+      if (typeof params.q === "string" && params.q.trim().length > 0) {
+        nextQuery.q = params.q.trim();
+      } else if (params.q !== undefined) {
+        delete nextQuery.q;
+      }
+      if (params.status && params.status.length > 0) {
+        nextQuery.status = params.status;
+      } else if (params.status !== undefined) {
+        delete nextQuery.status;
+      }
+      if (params.mode && params.mode.length > 0) {
+        nextQuery.mode = params.mode;
+      } else if (params.mode !== undefined) {
+        delete nextQuery.mode;
+      }
+      if (params.sort && params.sort !== "paidAt_desc") {
+        nextQuery.sort = params.sort;
+      } else if (params.sort !== undefined) {
+        delete nextQuery.sort;
+      }
+
+      const nextPeriod = params.period ?? selectedPeriod;
+      if (nextPeriod && nextPeriod !== "this_month") {
+        nextQuery.period = nextPeriod;
+      } else {
+        delete nextQuery.period;
+      }
+
+      const nextStart = params.start;
+      const nextEnd = params.end;
+      if (typeof nextStart === "string" && nextStart.length > 0) {
+        nextQuery.start = nextStart;
+      } else if (nextStart !== undefined) {
+        delete nextQuery.start;
+      }
+      if (typeof nextEnd === "string" && nextEnd.length > 0) {
+        nextQuery.end = nextEnd;
+      } else if (nextEnd !== undefined) {
+        delete nextQuery.end;
+      }
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router, selectedPeriod],
+  );
+
   const fetchFinancialOrders = useCallback(async () => {
     try {
       setLoading(true);
@@ -413,6 +481,81 @@ const FinancialLedger = () => {
     fetchFinancialOrders();
   }, [fetchFinancialOrders]);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+    const qFromQuery = typeof router.query.q === "string" ? router.query.q : "";
+    setSearchText(qFromQuery);
+    setAppliedSearch(qFromQuery);
+
+    const statusFromQuery =
+      typeof router.query.status === "string" ? router.query.status : "";
+    const statusIndex = STATUS_OPTIONS.findIndex(
+      (option) => option.value === statusFromQuery,
+    );
+    setSelectedStatusOption(statusIndex >= 0 ? statusIndex : 0);
+
+    const modeFromQuery =
+      typeof router.query.mode === "string" ? router.query.mode : "";
+    const modeIndex = MODE_OPTIONS.findIndex((option) => option.value === modeFromQuery);
+    setSelectedModeOption(modeIndex >= 0 ? modeIndex : 0);
+
+    const sortFromQuery =
+      typeof router.query.sort === "string" ? router.query.sort : "paidAt_desc";
+    const sortIndex = SORT_OPTIONS.findIndex((option) => option.value === sortFromQuery);
+    setSelectedSortOption(sortIndex >= 0 ? sortIndex : 0);
+
+    const periodFromQuery =
+      typeof router.query.period === "string" ? router.query.period : "this_month";
+    const safePeriod: PeriodPreset =
+      periodFromQuery === "today" ||
+      periodFromQuery === "this_week" ||
+      periodFromQuery === "this_month" ||
+      periodFromQuery === "this_year" ||
+      periodFromQuery === "custom"
+        ? periodFromQuery
+        : "this_month";
+
+    if (safePeriod === "custom") {
+      const startFromQuery =
+        typeof router.query.start === "string" ? router.query.start : "";
+      const endFromQuery = typeof router.query.end === "string" ? router.query.end : "";
+      const hasValidInputs = startFromQuery.length > 0 && endFromQuery.length > 0;
+      if (hasValidInputs) {
+        setSelectedPeriod("custom");
+        setStartDateInput(startFromQuery);
+        setEndDateInput(endFromQuery);
+        setAppliedStartDate(toDayStartIso(startFromQuery));
+        setAppliedEndDate(toExclusiveEndIso(endFromQuery));
+      }
+    } else {
+      const range = getPresetRange(safePeriod);
+      setSelectedPeriod(safePeriod);
+      setStartDateInput(range.startInput);
+      setEndDateInput(range.endInput);
+      setAppliedStartDate(range.startIso);
+      setAppliedEndDate(range.endIso);
+    }
+
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSize);
+  }, [
+    pageSize,
+    router.isReady,
+    router.query.mode,
+    router.query.page,
+    router.query.period,
+    router.query.q,
+    router.query.sort,
+    router.query.start,
+    router.query.status,
+    router.query.end,
+  ]);
+
   const applyCustomDateRange = () => {
     if (!startDateInput || !endDateInput) {
       setValidationError("Select both start and end date.");
@@ -429,9 +572,21 @@ const FinancialLedger = () => {
 
     setValidationError("");
     setSelectedPeriod("custom");
-    setItemOffset(0);
     setAppliedStartDate(toDayStartIso(startDateInput));
     setAppliedEndDate(toExclusiveEndIso(endDateInput));
+    updateLedgerQuery(
+      {
+        page: 1,
+        q: appliedSearch,
+        status: selectedStatus,
+        mode: selectedMode,
+        sort: selectedSort,
+        period: "custom",
+        start: startDateInput,
+        end: endDateInput,
+      },
+      "push",
+    );
   };
 
   const applyPresetRange = (preset: Exclude<PeriodPreset, "custom">) => {
@@ -442,11 +597,32 @@ const FinancialLedger = () => {
     setEndDateInput(range.endInput);
     setAppliedStartDate(range.startIso);
     setAppliedEndDate(range.endIso);
-    setItemOffset(0);
+    updateLedgerQuery(
+      {
+        page: 1,
+        q: appliedSearch,
+        status: selectedStatus,
+        mode: selectedMode,
+        sort: selectedSort,
+        period: preset,
+        start: "",
+        end: "",
+      },
+      "push",
+    );
   };
 
   const handlePageClick = (event: { selected: number }) => {
-    setItemOffset(event.selected * pageSize);
+    updateLedgerQuery(
+      {
+        page: event.selected + 1,
+        q: appliedSearch,
+        status: selectedStatus,
+        mode: selectedMode,
+        sort: selectedSort,
+      },
+      "push",
+    );
   };
 
   const currentPage =
@@ -476,8 +652,14 @@ const FinancialLedger = () => {
           searchText={searchText}
           setSearchText={setSearchText}
           onButtonClick={() => {
-            setItemOffset(0);
             setAppliedSearch(searchText);
+            updateLedgerQuery({
+              page: 1,
+              q: searchText,
+              status: selectedStatus,
+              mode: selectedMode,
+              sort: selectedSort,
+            });
           }}
         />
       </div>
@@ -570,12 +752,27 @@ const FinancialLedger = () => {
             }))}
             selectedOption={selectedStatusOption}
             setSelectedOption={(nextOption) => {
-              setSelectedStatusOption(nextOption as number);
-            }}
-            onClickOption={() => {
-              setItemOffset(0);
-            }}
-          />
+            setSelectedStatusOption(nextOption as number);
+            const nextStatus =
+              STATUS_OPTIONS[nextOption as number]?.value ?? "";
+            updateLedgerQuery({
+              page: 1,
+              q: appliedSearch,
+              status: nextStatus,
+              mode: selectedMode,
+              sort: selectedSort,
+            });
+          }}
+          onClickOption={() => {
+              updateLedgerQuery({
+                page: 1,
+                q: appliedSearch,
+                status: selectedStatus,
+                mode: selectedMode,
+                sort: selectedSort,
+              });
+          }}
+        />
           <DropDownButton
             options={MODE_OPTIONS.map((option) => ({
               title: option.title,
@@ -583,12 +780,26 @@ const FinancialLedger = () => {
             }))}
             selectedOption={selectedModeOption}
             setSelectedOption={(nextOption) => {
-              setSelectedModeOption(nextOption as number);
-            }}
-            onClickOption={() => {
-              setItemOffset(0);
-            }}
-          />
+            setSelectedModeOption(nextOption as number);
+            const nextMode = MODE_OPTIONS[nextOption as number]?.value ?? "";
+            updateLedgerQuery({
+              page: 1,
+              q: appliedSearch,
+              status: selectedStatus,
+              mode: nextMode,
+              sort: selectedSort,
+            });
+          }}
+          onClickOption={() => {
+              updateLedgerQuery({
+                page: 1,
+                q: appliedSearch,
+                status: selectedStatus,
+                mode: selectedMode,
+                sort: selectedSort,
+              });
+          }}
+        />
           <DropDownButton
             options={SORT_OPTIONS.map((option) => ({
               title: option.title,
@@ -596,12 +807,27 @@ const FinancialLedger = () => {
             }))}
             selectedOption={selectedSortOption}
             setSelectedOption={(nextOption) => {
-              setSelectedSortOption(nextOption as number);
-            }}
-            onClickOption={() => {
-              setItemOffset(0);
-            }}
-          />
+            setSelectedSortOption(nextOption as number);
+            const nextSort =
+              SORT_OPTIONS[nextOption as number]?.value ?? "paidAt_desc";
+            updateLedgerQuery({
+              page: 1,
+              q: appliedSearch,
+              status: selectedStatus,
+              mode: selectedMode,
+              sort: nextSort,
+            });
+          }}
+          onClickOption={() => {
+              updateLedgerQuery({
+                page: 1,
+                q: appliedSearch,
+                status: selectedStatus,
+                mode: selectedMode,
+                sort: selectedSort,
+              });
+          }}
+        />
         </div>
 
         {validationError && (

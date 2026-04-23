@@ -217,6 +217,10 @@
   width: 100%;
 }
 
+.loginModeSection {
+  margin-top: 12px;
+}
+
 .appVersionHeading {
   margin: 0;
   font-size: 0.875rem;

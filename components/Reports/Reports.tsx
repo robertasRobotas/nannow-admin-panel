@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./reports.module.css";
 import { useMediaQuery } from "react-responsive";
 import ReportsList from "./ReportsList/ReportsList";
@@ -22,8 +22,36 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
   const [itemsPerPage, setItemsPerPage] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [totalReports, setTotalReports] = useState(0);
+  const pageSizeForOffset = itemsPerPage ?? 20;
 
-  const fetchReports = async () => {
+  const updateReportsQuery = useCallback(
+    (
+      params: { page?: number; id?: string },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady || detailedPageId) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(Math.max(1, params.page));
+      }
+      if (typeof params.id === "string" && params.id.length > 0) {
+        nextQuery.id = params.id;
+      } else if (params.id !== undefined) {
+        delete nextQuery.id;
+      }
+      router[method](
+        {
+          pathname: router.pathname,
+          query: nextQuery,
+        },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [detailedPageId, router],
+  );
+
+  const fetchReports = useCallback(async () => {
     try {
       const response = await getAllReports(itemOffset);
       setReports(response.data.result.items);
@@ -40,7 +68,7 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
         }
       }
     }
-  };
+  }, [itemOffset, router]);
 
   const fetchReportById = async (id: string) => {
     try {
@@ -52,11 +80,32 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
     fetchReports();
+  }, [fetchReports, router.isReady]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSizeForOffset);
+  }, [pageSizeForOffset, router.isReady, router.query.page]);
+
+  useEffect(() => {
+    if (!router.isReady || detailedPageId) return;
+    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    setSelectedReportId(idFromQuery);
+  }, [detailedPageId, router.isReady, router.query.id]);
+
+  useEffect(() => {
     if (detailedPageId) {
       fetchReportById(detailedPageId);
     }
-  }, []);
+  }, [detailedPageId]);
 
   useEffect(() => {
     if (selectedReportId) {
@@ -64,12 +113,24 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
     }
   }, [selectedReportId]);
 
+  const selectReport = (nextReportId: string) => {
+    setSelectedReportId(nextReportId);
+    const currentPage = Math.floor(itemOffset / pageSizeForOffset) + 1;
+    updateReportsQuery({ page: currentPage, id: nextReportId }, "push");
+  };
+
+  const clearSelectedReport = () => {
+    setSelectedReportId("");
+    const currentPage = Math.floor(itemOffset / pageSizeForOffset) + 1;
+    updateReportsQuery({ page: currentPage, id: "" }, "push");
+  };
+
   const renderMobile = () => {
     if (selectedReportId !== "" && selectedReport) {
       return (
         <DetailedReport
           report={selectedReport}
-          onBackClick={() => setSelectedReportId("")}
+          onBackClick={clearSelectedReport}
           setReports={setReports}
           reports={reports}
         />
@@ -80,11 +141,22 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
       <ReportsList
         reports={reports}
         selectedReportId={selectedReportId}
-        setSelectedReportId={setSelectedReportId}
+        setSelectedReportId={(nextValue) => {
+          const nextId =
+            typeof nextValue === "function"
+              ? nextValue(selectedReportId)
+              : nextValue;
+          selectReport(nextId);
+        }}
         itemsPerPage={itemsPerPage ?? 0}
         pageCount={pageCount ?? 0}
         totalReports={totalReports ?? 0}
-        setItemOffset={setItemOffset}
+        setItemOffset={(nextOffset) => {
+          const offset =
+            typeof nextOffset === "function" ? nextOffset(itemOffset) : nextOffset;
+          const page = Math.floor(offset / pageSizeForOffset) + 1;
+          updateReportsQuery({ page, id: selectedReportId });
+        }}
         setReportById={setReportById}
       />
     );
@@ -95,17 +167,28 @@ const Reports = ({ detailedPageId }: ReportsProps) => {
       <ReportsList
         reports={reports}
         selectedReportId={selectedReportId}
-        setSelectedReportId={setSelectedReportId}
+        setSelectedReportId={(nextValue) => {
+          const nextId =
+            typeof nextValue === "function"
+              ? nextValue(selectedReportId)
+              : nextValue;
+          selectReport(nextId);
+        }}
         itemsPerPage={itemsPerPage ?? 0}
         pageCount={pageCount ?? 0}
         totalReports={totalReports ?? 0}
-        setItemOffset={setItemOffset}
+        setItemOffset={(nextOffset) => {
+          const offset =
+            typeof nextOffset === "function" ? nextOffset(itemOffset) : nextOffset;
+          const page = Math.floor(offset / pageSizeForOffset) + 1;
+          updateReportsQuery({ page, id: selectedReportId });
+        }}
         setReportById={setReportById}
       />
       {selectedReport && (
         <DetailedReport
           report={selectedReport}
-          onBackClick={() => setSelectedReportId("")}
+          onBackClick={clearSelectedReport}
           setReports={setReports}
           reports={reports}
         />

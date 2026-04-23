@@ -1,9 +1,8 @@
 import { UserDetails } from "@/types/Client";
 import styles from "./detailedUser.module.css";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import GeneralSection from "./GeneralSection/GeneralSection";
 import ProfileMenu from "./ProfileMenu/ProfileMenu";
-import { useMediaQuery } from "react-responsive";
 import MessagesSection from "./MessagesSection/MessagesSection";
 import ChildrenSection from "./ChildrenSection/ChildrenSection";
 import AddressesSection from "./AddressesSection/AddressesSection";
@@ -17,6 +16,8 @@ import OrdersSection from "./OrdersSection/OrdersSection";
 import ClientOrdersSection from "./ClientOrdersSection/ClientOrdersSection";
 import PayoutsSection from "./PayoutsSection/PayoutsSection";
 import PaymentsSection from "./PaymentsSection/PaymentsSection";
+import { useRouter } from "next/router";
+import { getButtonsData } from "@/data/userProfileMenu";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -24,10 +25,46 @@ type DetailedClientProps = {
 };
 
 const DetailedClient = ({ user, mode }: DetailedClientProps) => {
-  const [selectedSection, setSelectedSection] = useState("general");
-  //for responsive
-  const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
-  const [isSelectedMenu, setIsSelectedMenu] = useState(false);
+  const router = useRouter();
+  const [selectedSection, setSelectedSectionState] = useState("general");
+  const validSectionIds = useMemo(
+    () => getButtonsData(user, mode).map((button) => button.id),
+    [mode, user],
+  );
+
+  const setSelectedSection = useCallback(
+    (nextSection: string, method: "push" | "replace" = "push") => {
+      setSelectedSectionState(nextSection);
+      if (!router.isReady) return;
+
+      const nextQuery = { ...router.query };
+      if (nextSection) {
+        nextQuery.section = nextSection;
+      } else {
+        delete nextQuery.section;
+      }
+
+      router[method](
+        {
+          pathname: router.pathname,
+          query: nextQuery,
+        },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const sectionFromQuery =
+      typeof router.query.section === "string" ? router.query.section : "general";
+    const safeSection = validSectionIds.includes(sectionFromQuery)
+      ? sectionFromQuery
+      : "general";
+    setSelectedSectionState((prev) => (prev === safeSection ? prev : safeSection));
+  }, [router.isReady, router.query.section, validSectionIds]);
 
   const renderSelectedSection = () => {
     switch (selectedSection) {
@@ -38,7 +75,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             mode={mode}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -50,7 +86,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             user={user}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -62,7 +97,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             user={user}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -74,7 +108,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             user={user}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -86,7 +119,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             user={user}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -99,7 +131,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             providerId={user?.provider?.id}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -110,7 +141,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
           <MessagesSection
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
             chats={user.chats}
             userId={user.user.id}
@@ -123,7 +153,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             childrenData={user.children}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -134,7 +163,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             addresses={user.addresses}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -146,7 +174,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             reviews={user.givenReviews}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -158,7 +185,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             reviews={user.receivedReviews}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -180,7 +206,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             isProviderCriminalRecordVerified={criminalStatus === "APPROVED"}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -192,7 +217,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             documents={user.documents}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -205,7 +229,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             providerId={user?.provider?.id}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -218,7 +241,6 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             defaultOrderId={user?.orders?.lastOrder?.id}
             onBackClick={() => {
               setSelectedSection("");
-              setIsSelectedMenu(true);
             }}
           />
         );
@@ -230,7 +252,7 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
     <div className={styles.main}>
       <ProfileMenu
         user={user}
-        setIsSelectedMenu={() => setIsSelectedMenu(false)}
+        setIsSelectedMenu={() => {}}
         selectedSection={selectedSection}
         setSelectedSection={setSelectedSection}
         mode={mode}

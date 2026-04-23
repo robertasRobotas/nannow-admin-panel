@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./feedbacks.module.css";
 import { useMediaQuery } from "react-responsive";
 import { FeedbackType } from "@/types/Feedback";
@@ -23,8 +23,36 @@ const Feedbacks = ({ detailedPageId }: FeedbackProps) => {
   const [itemsPerPage, setItemsPerPage] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [totalFeedback, setTotalFeedback] = useState(0);
+  const pageSizeForOffset = itemsPerPage ?? 20;
 
-  const fetchFeedback = async () => {
+  const updateFeedbackQuery = useCallback(
+    (
+      params: { page?: number; id?: string },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady || detailedPageId) return;
+      const nextQuery = { ...router.query };
+      if (typeof params.page === "number" && params.page > 0) {
+        nextQuery.page = String(params.page);
+      }
+      if (typeof params.id === "string" && params.id.length > 0) {
+        nextQuery.id = params.id;
+      } else if (params.id !== undefined) {
+        delete nextQuery.id;
+      }
+      router[method](
+        {
+          pathname: router.pathname,
+          query: nextQuery,
+        },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [detailedPageId, router],
+  );
+
+  const fetchFeedback = useCallback(async () => {
     try {
       const response = await getAllFeedback(itemOffset);
       setFeedbacks(response.data.result.items);
@@ -41,7 +69,7 @@ const Feedbacks = ({ detailedPageId }: FeedbackProps) => {
         }
       }
     }
-  };
+  }, [itemOffset, router]);
 
   const fetchFeedbackById = async (id: string) => {
     try {
@@ -53,11 +81,32 @@ const Feedbacks = ({ detailedPageId }: FeedbackProps) => {
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
     fetchFeedback();
+  }, [fetchFeedback, router.isReady]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setItemOffset((safePage - 1) * pageSizeForOffset);
+  }, [pageSizeForOffset, router.isReady, router.query.page]);
+
+  useEffect(() => {
+    if (!router.isReady || detailedPageId) return;
+    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    setSelectedFeedbackId(idFromQuery);
+  }, [detailedPageId, router.isReady, router.query.id]);
+
+  useEffect(() => {
     if (detailedPageId) {
       fetchFeedbackById(detailedPageId);
     }
-  }, []);
+  }, [detailedPageId]);
 
   useEffect(() => {
     if (selectedFeedbackId) {
@@ -65,12 +114,24 @@ const Feedbacks = ({ detailedPageId }: FeedbackProps) => {
     }
   }, [selectedFeedbackId]);
 
+  const selectFeedback = (nextFeedbackId: string) => {
+    setSelectedFeedbackId(nextFeedbackId);
+    const currentPage = Math.floor(itemOffset / pageSizeForOffset) + 1;
+    updateFeedbackQuery({ page: currentPage, id: nextFeedbackId }, "push");
+  };
+
+  const clearSelectedFeedback = () => {
+    setSelectedFeedbackId("");
+    const currentPage = Math.floor(itemOffset / pageSizeForOffset) + 1;
+    updateFeedbackQuery({ page: currentPage, id: "" }, "push");
+  };
+
   const renderMobile = () => {
     if (selectedFeedbackId !== "" && selectedFeedback) {
       return (
         <DetailedFeedback
           feedback={selectedFeedback}
-          onBackClick={() => setSelectedFeedbackId("")}
+          onBackClick={clearSelectedFeedback}
           setFeedbacks={setFeedbacks}
           feedbacks={feedbacks}
         />
@@ -81,11 +142,22 @@ const Feedbacks = ({ detailedPageId }: FeedbackProps) => {
       <FeedbacksList
         feedbacks={feedbacks}
         selectedFeedbackId={selectedFeedbackId}
-        setSelectedFeedbackId={setSelectedFeedbackId}
+        setSelectedFeedbackId={(nextValue) => {
+          const nextId =
+            typeof nextValue === "function"
+              ? nextValue(selectedFeedbackId)
+              : nextValue;
+          selectFeedback(nextId);
+        }}
         itemsPerPage={itemsPerPage ?? 0}
         pageCount={pageCount ?? 0}
         totalFeedbacks={totalFeedback ?? 0}
-        setItemOffset={setItemOffset}
+        setItemOffset={(nextOffset) => {
+          const offset =
+            typeof nextOffset === "function" ? nextOffset(itemOffset) : nextOffset;
+          const page = Math.floor(offset / pageSizeForOffset) + 1;
+          updateFeedbackQuery({ page, id: selectedFeedbackId });
+        }}
         setFeedbackById={setFeedbackById}
       />
     );
@@ -96,17 +168,28 @@ const Feedbacks = ({ detailedPageId }: FeedbackProps) => {
       <FeedbacksList
         feedbacks={feedbacks}
         selectedFeedbackId={selectedFeedbackId}
-        setSelectedFeedbackId={setSelectedFeedbackId}
+        setSelectedFeedbackId={(nextValue) => {
+          const nextId =
+            typeof nextValue === "function"
+              ? nextValue(selectedFeedbackId)
+              : nextValue;
+          selectFeedback(nextId);
+        }}
         itemsPerPage={itemsPerPage ?? 0}
         pageCount={pageCount ?? 0}
         totalFeedbacks={totalFeedback ?? 0}
-        setItemOffset={setItemOffset}
+        setItemOffset={(nextOffset) => {
+          const offset =
+            typeof nextOffset === "function" ? nextOffset(itemOffset) : nextOffset;
+          const page = Math.floor(offset / pageSizeForOffset) + 1;
+          updateFeedbackQuery({ page, id: selectedFeedbackId });
+        }}
         setFeedbackById={setFeedbackById}
       />
       {selectedFeedback && (
         <DetailedFeedback
           feedback={selectedFeedback}
-          onBackClick={() => setSelectedFeedbackId("")}
+          onBackClick={clearSelectedFeedback}
           setFeedbacks={setFeedbacks}
           feedbacks={feedbacks}
         />
