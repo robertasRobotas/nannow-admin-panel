@@ -577,6 +577,69 @@ const SuperAccess = () => {
   const [ordersById, setOrdersById] = useState<Record<string, EntityRecord>>({});
   const [selectedFinancialLedgerOrderIds, setSelectedFinancialLedgerOrderIds] =
     useState<string[]>([]);
+  const currentPage = Math.floor(startIndex / pageSize) + 1;
+
+  const updateSuperAccessQuery = useCallback(
+    (
+      params: {
+        entity?: SuperAccessViewEntity;
+        page?: number;
+        pageSize?: number;
+        q?: string;
+        id?: string;
+      },
+      method: "push" | "replace" = "push",
+    ) => {
+      if (!router.isReady) return;
+      const nextQuery = { ...router.query };
+      const nextEntity = params.entity ?? entity;
+      const nextPage = params.page ?? currentPage;
+      const nextPageSize = params.pageSize ?? pageSize;
+      const nextSearch = params.q ?? appliedSearch;
+      const nextId = params.id ?? selectedId;
+
+      if (nextEntity && nextEntity !== "users") {
+        nextQuery.entity = nextEntity;
+      } else {
+        delete nextQuery.entity;
+      }
+      if (Number.isFinite(nextPage) && nextPage > 1) {
+        nextQuery.page = String(Math.floor(nextPage));
+      } else {
+        delete nextQuery.page;
+      }
+      if (Number.isFinite(nextPageSize) && nextPageSize !== 20) {
+        nextQuery.pageSize = String(nextPageSize);
+      } else {
+        delete nextQuery.pageSize;
+      }
+      if (typeof nextSearch === "string" && nextSearch.trim().length > 0) {
+        nextQuery.q = nextSearch.trim();
+      } else {
+        delete nextQuery.q;
+      }
+      if (typeof nextId === "string" && nextId.trim().length > 0) {
+        nextQuery.id = nextId.trim();
+      } else {
+        delete nextQuery.id;
+      }
+
+      router[method](
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true, scroll: false },
+      );
+    },
+    [appliedSearch, currentPage, entity, pageSize, router, selectedId],
+  );
+
+  const selectItem = useCallback(
+    (id: string, method: "push" | "replace" = "push") => {
+      setSelectedId(id);
+      updateSuperAccessQuery({ id }, method);
+    },
+    [updateSuperAccessQuery],
+  );
 
   const handleItemCardKeyDown = (
     event: KeyboardEvent<HTMLDivElement>,
@@ -584,7 +647,7 @@ const SuperAccess = () => {
   ) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      setSelectedId(id);
+      selectItem(id);
     }
   };
 
@@ -596,6 +659,50 @@ const SuperAccess = () => {
       router.replace("/users");
     }
   }, [router]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const entityFromQuery =
+      typeof router.query.entity === "string" ? router.query.entity : "users";
+    const isValidEntity = MENU_ITEMS.some((item) => item.key === entityFromQuery);
+    const nextEntity = isValidEntity
+      ? (entityFromQuery as SuperAccessViewEntity)
+      : "users";
+    setEntity(nextEntity);
+    setIsCompactListView(nextEntity === "financial-ledger");
+
+    const pageSizeFromQuery =
+      typeof router.query.pageSize === "string"
+        ? Number(router.query.pageSize)
+        : 20;
+    const safePageSize = PAGE_SIZE_OPTIONS.some(
+      (option) => Number(option.value) === pageSizeFromQuery,
+    )
+      ? pageSizeFromQuery
+      : 20;
+    setPageSize(safePageSize);
+
+    const pageFromQuery =
+      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const safePage =
+      Number.isFinite(pageFromQuery) && pageFromQuery > 0
+        ? Math.floor(pageFromQuery)
+        : 1;
+    setStartIndex((safePage - 1) * safePageSize);
+
+    const searchFromQuery = typeof router.query.q === "string" ? router.query.q : "";
+    setSearchText(searchFromQuery);
+    setAppliedSearch(searchFromQuery);
+    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    setSelectedId(idFromQuery);
+  }, [
+    router.isReady,
+    router.query.entity,
+    router.query.id,
+    router.query.page,
+    router.query.pageSize,
+    router.query.q,
+  ]);
 
   const fetchList = useCallback(async () => {
     if (entity === "alerts") {
@@ -614,8 +721,8 @@ const SuperAccess = () => {
         const nextList = sender ? [sender as unknown as EntityRecord] : [];
         setList(nextList);
         setTotal(nextList.length);
-        if (nextList.length > 0) {
-          setSelectedId(String(nextList[0].id ?? "SYSTEM_NANNOW"));
+        if (nextList.length > 0 && !selectedId) {
+          selectItem(String(nextList[0].id ?? "SYSTEM_NANNOW"), "replace");
         }
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -651,7 +758,7 @@ const SuperAccess = () => {
           ),
         );
         if (parsed.items.length > 0 && !selectedId) {
-          setSelectedId(parsed.items[0].id);
+          selectItem(parsed.items[0].id, "replace");
         }
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -675,9 +782,10 @@ const SuperAccess = () => {
         setList(items);
         setTotal(items.length);
         if (items.length > 0) {
-          setSelectedId((prev) =>
-            prev || String(items[0].adminId ?? items[0].id ?? ""),
-          );
+          const fallbackId = String(items[0].adminId ?? items[0].id ?? "");
+          if (!selectedId) {
+            selectItem(fallbackId, "replace");
+          }
         }
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -704,7 +812,7 @@ const SuperAccess = () => {
       setTotal(parsed.total);
       setPageSize(parsed.pageSize);
       if (parsed.items.length > 0 && !selectedId) {
-        setSelectedId(pickId(parsed.items[0]));
+        selectItem(pickId(parsed.items[0]), "replace");
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -715,7 +823,15 @@ const SuperAccess = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [appliedSearch, entity, pageSize, router, startIndex]);
+  }, [
+    appliedSearch,
+    entity,
+    pageSize,
+    router,
+    selectItem,
+    selectedId,
+    startIndex,
+  ]);
 
   const fetchItem = useCallback(async () => {
     if (entity === "alerts") {
@@ -1376,7 +1492,7 @@ const SuperAccess = () => {
         return [nextItem, ...next];
       });
       if (!selectedId) {
-        setSelectedId(lastEvent.adminId);
+        selectItem(lastEvent.adminId, "replace");
       }
       return;
     }
@@ -1390,12 +1506,12 @@ const SuperAccess = () => {
         ),
       );
       if (selectedId === lastEvent.adminId) {
-        setSelectedId("");
+        selectItem("", "replace");
         setSelectedItem(null);
         setDraft({});
       }
     }
-  }, [entity, lastEvent, selectedId]);
+  }, [entity, lastEvent, selectItem, selectedId]);
 
   const fetchChatNormalizationAnalysis = useCallback(async () => {
     if (entity !== "chats") return;
@@ -1496,7 +1612,6 @@ const SuperAccess = () => {
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.floor(startIndex / pageSize) + 1;
 
   const fields = useMemo(
     () =>
@@ -1667,7 +1782,7 @@ const SuperAccess = () => {
       );
       setSelectedFinancialLedgerOrderIds([]);
       if (selectedFinancialLedgerOrderIds.includes(selectedId)) {
-        setSelectedId("");
+        selectItem("", "replace");
         setSelectedItem(null);
         setDraft({});
       }
@@ -1946,7 +2061,7 @@ const SuperAccess = () => {
       const directItem = parseItemResponse(directResponse.data);
       if (directItem) {
         const directId = pickId(directItem);
-        setSelectedId(directId || userId);
+        selectItem(directId || userId, "replace");
         return;
       }
     } catch {
@@ -1966,7 +2081,7 @@ const SuperAccess = () => {
       );
       if (found) {
         const foundId = pickId(found);
-        setSelectedId(foundId);
+        selectItem(foundId, "replace");
         setList(parsed.items);
         setTotal(parsed.total);
         setPageSize(parsed.pageSize);
@@ -1994,6 +2109,16 @@ const SuperAccess = () => {
                 entity === menuItem.key ? styles.sideBtnActive : ""
               }`}
               onClick={() => {
+                updateSuperAccessQuery(
+                  {
+                    entity: menuItem.key,
+                    page: 1,
+                    pageSize: 20,
+                    q: "",
+                    id: "",
+                  },
+                  "push",
+                );
                 setEntity(menuItem.key);
                 setSelectedId("");
                 setSelectedItem(null);
@@ -2083,8 +2208,13 @@ const SuperAccess = () => {
                       const option =
                         PAGE_SIZE_OPTIONS[selectedOption as number];
                       if (!option) return;
+                      const nextPageSize = Number(option.value);
                       setStartIndex(0);
-                      setPageSize(Number(option.value));
+                      setPageSize(nextPageSize);
+                      updateSuperAccessQuery({
+                        page: 1,
+                        pageSize: nextPageSize,
+                      });
                     }}
                   />
                 )}
@@ -2147,6 +2277,7 @@ const SuperAccess = () => {
                   onButtonClick={() => {
                     setStartIndex(0);
                     setAppliedSearch(searchText);
+                    updateSuperAccessQuery({ page: 1, q: searchText });
                   }}
                 />
               </div>
@@ -2178,7 +2309,7 @@ const SuperAccess = () => {
                     className={`${styles.itemCard} ${
                       selectedId === id ? styles.itemCardActive : ""
                     }`}
-                    onClick={() => setSelectedId(id)}
+                    onClick={() => selectItem(id)}
                     onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                   >
                     <img src={imageUrl} alt="avatar" className={styles.avatar} />
@@ -2239,7 +2370,7 @@ const SuperAccess = () => {
                       className={`${styles.itemCard} ${
                         selectedId === id ? styles.itemCardActive : ""
                       } ${isCompactListView ? styles.itemCardCompact : ""}`}
-                      onClick={() => setSelectedId(id)}
+                      onClick={() => selectItem(id)}
                       onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
                       <div className={styles.itemTitle}>{title}</div>
@@ -2257,7 +2388,9 @@ const SuperAccess = () => {
                   title="Prev"
                   type="OUTLINED"
                   onClick={() =>
-                    setStartIndex((prev) => Math.max(0, prev - pageSize))
+                    updateSuperAccessQuery({
+                      page: Math.max(1, currentPage - 1),
+                    })
                   }
                   isDisabled={startIndex === 0 || loadingList}
                 />
@@ -2265,9 +2398,10 @@ const SuperAccess = () => {
                   title="Next"
                   type="OUTLINED"
                   onClick={() =>
-                    setStartIndex((prev) =>
-                      prev + pageSize >= total ? prev : prev + pageSize,
-                    )
+                    updateSuperAccessQuery({
+                      page:
+                        startIndex + pageSize >= total ? currentPage : currentPage + 1,
+                    })
                   }
                   isDisabled={startIndex + pageSize >= total || loadingList}
                 />
@@ -2451,7 +2585,7 @@ const SuperAccess = () => {
                         ? styles.itemCardCompact
                         : ""
                     }`}
-                      onClick={() => setSelectedId(id)}
+                      onClick={() => selectItem(id)}
                       onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
                       {isFinancialLedgerItem ? (
@@ -2594,7 +2728,9 @@ const SuperAccess = () => {
                     title="Prev"
                     type="OUTLINED"
                     onClick={() =>
-                      setStartIndex((prev) => Math.max(0, prev - pageSize))
+                      updateSuperAccessQuery({
+                        page: Math.max(1, currentPage - 1),
+                      })
                     }
                     isDisabled={startIndex === 0 || loadingList}
                   />
@@ -2602,9 +2738,10 @@ const SuperAccess = () => {
                     title="Next"
                     type="OUTLINED"
                     onClick={() =>
-                      setStartIndex((prev) =>
-                        prev + pageSize >= total ? prev : prev + pageSize,
-                      )
+                      updateSuperAccessQuery({
+                        page:
+                          startIndex + pageSize >= total ? currentPage : currentPage + 1,
+                      })
                     }
                     isDisabled={startIndex + pageSize >= total || loadingList}
                   />
@@ -3054,7 +3191,7 @@ const SuperAccess = () => {
                               className={styles.addressLink}
                               onClick={() => {
                                 setEntity("addresses");
-                                setSelectedId(addressId);
+                                selectItem(addressId);
                                 setSelectedItem(null);
                                 setDraft({});
                               }}
@@ -3084,7 +3221,7 @@ const SuperAccess = () => {
                           className={styles.addressLink}
                           onClick={() => {
                             setEntity("addresses");
-                            setSelectedId(addressId);
+                            selectItem(addressId);
                             setSelectedItem(null);
                             setDraft({});
                           }}
@@ -3115,7 +3252,7 @@ const SuperAccess = () => {
                           className={styles.addressLink}
                           onClick={() => {
                             setEntity("users");
-                            setSelectedId(userId);
+                            selectItem(userId);
                             setSelectedItem(null);
                             setDraft({});
                           }}
@@ -3154,7 +3291,7 @@ const SuperAccess = () => {
                               className={styles.addressLink}
                               onClick={() => {
                                 setEntity("children");
-                                setSelectedId(childId);
+                                selectItem(childId);
                                 setSelectedItem(null);
                                 setDraft({});
                               }}
@@ -3191,7 +3328,7 @@ const SuperAccess = () => {
                           className={styles.addressLink}
                           onClick={() => {
                             setEntity("clients");
-                            setSelectedId(clientId);
+                            selectItem(clientId);
                             setSelectedItem(null);
                             setDraft({});
                           }}
@@ -3285,7 +3422,7 @@ const SuperAccess = () => {
                           className={styles.addressLink}
                           onClick={() => {
                             setEntity("users");
-                            setSelectedId(userId);
+                            selectItem(userId);
                             setSelectedItem(null);
                             setDraft({});
                           }}
@@ -3326,7 +3463,7 @@ const SuperAccess = () => {
                           className={styles.addressLink}
                           onClick={() => {
                             setEntity("providers");
-                            setSelectedId(providerId);
+                            selectItem(providerId);
                             setSelectedItem(null);
                             setDraft({});
                           }}
@@ -3356,7 +3493,7 @@ const SuperAccess = () => {
                           className={styles.addressLink}
                           onClick={() => {
                             setEntity("addresses");
-                            setSelectedId(addressId);
+                            selectItem(addressId);
                             setSelectedItem(null);
                             setDraft({});
                           }}
@@ -3423,7 +3560,7 @@ const SuperAccess = () => {
                               className={styles.addressLink}
                               onClick={() => {
                                 setEntity("children");
-                                setSelectedId(childId);
+                                selectItem(childId);
                                 setSelectedItem(null);
                                 setDraft({});
                               }}
