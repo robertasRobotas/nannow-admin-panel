@@ -86,4 +86,9 @@ export type OrderType = {
   cancelFeeAmountCents?: number | null;
   isClosedByAdmin?: boolean;
   closedByAdminId?: string | null;
+  providerSelectionReminder1SentAt?: string | null;
+  providerSelectionReminder2SentAt?: string | null;
+  providerSelectionAutoCancelWarnedAt?: string | null;
+  unfinishedOrderReminderLastEmailSentAt?: string | null;
+  unfinishedOrderReminderEmailCount?: number | null;
 };

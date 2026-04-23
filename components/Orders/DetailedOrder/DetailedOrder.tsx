@@ -132,11 +132,52 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           timeZoneName: "short",
         })
       : "-";
+  const formatTimeOnly = (value?: string | null) =>
+    value
+      ? new Date(value).toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
+      : "-";
+  const formatDateOnly = (value?: string | null) =>
+    value
+      ? new Date(value).toLocaleDateString("en-GB", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+      : "-";
 
   const orderCreatedAt = formatCompactDateTime(order?.createdAt);
-  const arrivalTime = formatCompactDateTime(order?.startsAt);
-  const leaveTime = formatCompactDateTime(order?.endsAt);
+  const normalizedOrderType = String(order?.orderType ?? "").toUpperCase();
+  const isRepetitiveOrderType = normalizedOrderType === "REPETITIVE";
+  const arrivalTime = isRepetitiveOrderType
+    ? formatTimeOnly(order?.startsAt)
+    : formatCompactDateTime(order?.startsAt);
+  const leaveTime = isRepetitiveOrderType
+    ? formatTimeOnly(order?.endsAt)
+    : formatCompactDateTime(order?.endsAt);
   const paidAtText = formatCompactDateTime(order?.paidAt);
+  const providerSelectionReminder1SentAtText = formatCompactDateTime(
+    order?.providerSelectionReminder1SentAt,
+  );
+  const providerSelectionReminder2SentAtText = formatCompactDateTime(
+    order?.providerSelectionReminder2SentAt,
+  );
+  const providerSelectionAutoCancelWarnedAtText = formatCompactDateTime(
+    order?.providerSelectionAutoCancelWarnedAt,
+  );
+  const hasProviderSelectionReminderInfo =
+    !!order?.providerSelectionReminder1SentAt ||
+    !!order?.providerSelectionReminder2SentAt ||
+    !!order?.providerSelectionAutoCancelWarnedAt;
+  const unfinishedOrderReminderLastEmailSentAtText = formatCompactDateTime(
+    order?.unfinishedOrderReminderLastEmailSentAt,
+  );
+  const hasUnfinishedOrderReminderInfo =
+    !!order?.unfinishedOrderReminderLastEmailSentAt ||
+    order?.unfinishedOrderReminderEmailCount != null;
 
   const providerMarkedServiceInProgressAt =
     order?.provider_markedAsServiceInProgressAt
@@ -397,6 +438,13 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const hasProviderActivityNumber = Boolean(
     order?.approvedProvider?.activityNumber || order?.approvedProvider?.activityNo,
   );
+  const shouldShowOrderTypeCard =
+    normalizedOrderType === "CONTINUOUS" || normalizedOrderType === "REPETITIVE";
+  const selectedDays = Array.isArray(order?.selectedDays)
+    ? order.selectedDays.filter((day): day is string => typeof day === "string")
+    : [];
+  const shouldShowSelectedDaysCard =
+    normalizedOrderType === "REPETITIVE" && selectedDays.length > 0;
   const orderStatusUpper = normalizeOrderStatus(order?.status);
   const isCanceledOrder = orderStatusUpper.includes("CANCELED");
   const isCanceledByClient = orderStatusUpper === "CANCELED_BY_CLIENT";
@@ -602,6 +650,29 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             type={isMobile ? "SPAN1" : "SPAN3"}
             info={parentLocation}
           />
+          {shouldShowOrderTypeCard && (
+            <InfoCard
+              title="Order type"
+              iconImgUrl={calendarImg.src}
+              type={isMobile ? "SPAN2" : "SPAN2"}
+              info={normalizedOrderType}
+            />
+          )}
+          {shouldShowSelectedDaysCard && (
+            <InfoCard
+              title="Selected days"
+              iconImgUrl={calendarImg.src}
+              type={isMobile ? "SPAN2" : "SPAN3"}
+              isMultiline={true}
+              info={
+                <div className={styles.stripeInfoList}>
+                  {selectedDays.map((day, index) => (
+                    <div key={`${day}-${index}`}>{formatDateOnly(day)}</div>
+                  ))}
+                </div>
+              }
+            />
+          )}
           <InfoCard
             title="Sitter's arrival time"
             iconImgUrl={arriveImg.src}
@@ -620,6 +691,66 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             type={isMobile ? "SPAN2" : "SPAN2"}
             info={childrenNames}
           />
+          {hasProviderSelectionReminderInfo && (
+            <InfoCard
+              title="Provider selection reminders"
+              iconImgUrl={calendarImg.src}
+              type={isMobile ? "SPAN2" : "SPAN3"}
+              isMultiline={true}
+              info={
+                <div className={styles.stripeInfoList}>
+                  {!!order?.providerSelectionReminder1SentAt && (
+                    <div>
+                      <span className={styles.stripeInfoLabel}>Reminder 1:</span>{" "}
+                      {providerSelectionReminder1SentAtText}
+                    </div>
+                  )}
+                  {!!order?.providerSelectionReminder2SentAt && (
+                    <div>
+                      <span className={styles.stripeInfoLabel}>Reminder 2:</span>{" "}
+                      {providerSelectionReminder2SentAtText}
+                    </div>
+                  )}
+                  {!!order?.providerSelectionAutoCancelWarnedAt && (
+                    <div>
+                      <span className={styles.stripeInfoLabel}>
+                        Auto-cancel warning:
+                      </span>{" "}
+                      {providerSelectionAutoCancelWarnedAtText}
+                    </div>
+                  )}
+                </div>
+              }
+            />
+          )}
+          {hasUnfinishedOrderReminderInfo && (
+            <InfoCard
+              title="Unfinished order reminder"
+              iconImgUrl={calendarImg.src}
+              type={isMobile ? "SPAN2" : "SPAN3"}
+              isMultiline={true}
+              info={
+                <div className={styles.stripeInfoList}>
+                  {!!order?.unfinishedOrderReminderLastEmailSentAt && (
+                    <div>
+                      <span className={styles.stripeInfoLabel}>
+                        Last email sent:
+                      </span>{" "}
+                      {unfinishedOrderReminderLastEmailSentAtText}
+                    </div>
+                  )}
+                  {order?.unfinishedOrderReminderEmailCount != null && (
+                    <div>
+                      <span className={styles.stripeInfoLabel}>
+                        Email count:
+                      </span>{" "}
+                      {order.unfinishedOrderReminderEmailCount}
+                    </div>
+                  )}
+                </div>
+              }
+            />
+          )}
           {shouldShowInvoiceCards && (
             <InfoCard
               title="Invoice from nannow"
