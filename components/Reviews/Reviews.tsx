@@ -192,8 +192,10 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
         setReviewById={setReviewById}
         selectedOption={selectedOption}
         setSelectedOption={(idx) => {
-          setSelectedOption(idx);
-          const value = reviewRatingOptions[idx]?.value ?? "";
+          const nextIndex = Number(idx);
+          if (!Number.isFinite(nextIndex)) return;
+          setSelectedOption(nextIndex);
+          const value = reviewRatingOptions[nextIndex]?.value ?? "";
           const rating = value.length > 0 ? Number(value) : undefined;
           updateReviewsQuery({ page: 1, rating, id: selectedReviewId });
         }}
@@ -228,8 +230,10 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
         setReviewById={setReviewById}
         selectedOption={selectedOption}
         setSelectedOption={(idx) => {
-          setSelectedOption(idx);
-          const value = reviewRatingOptions[idx]?.value ?? "";
+          const nextIndex = Number(idx);
+          if (!Number.isFinite(nextIndex)) return;
+          setSelectedOption(nextIndex);
+          const value = reviewRatingOptions[nextIndex]?.value ?? "";
           const rating = value.length > 0 ? Number(value) : undefined;
           updateReviewsQuery({ page: 1, rating, id: selectedReviewId });
         }}

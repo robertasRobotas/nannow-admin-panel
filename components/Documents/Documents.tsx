@@ -230,8 +230,10 @@ const Documents = () => {
           options={statusOptionsWithCounters}
           selectedOption={selectedOption}
           setSelectedOption={(idx) => {
-            setSelectedOption(idx);
-            const value = documentsStatusOptions[idx]?.value;
+            const nextIndex = Number(idx);
+            if (!Number.isFinite(nextIndex)) return;
+            setSelectedOption(nextIndex);
+            const value = documentsStatusOptions[nextIndex]?.value;
             const status = value
               ? (value as "REVIEWED" | "NOT_REVIEWED")
               : undefined;
