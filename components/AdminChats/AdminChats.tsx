@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
@@ -42,6 +42,7 @@ const isChatUnread = (chat: ChatType) => {
 
 const AdminChats = () => {
   const router = useRouter();
+  const routerRef = useRef(router);
   const [items, setItems] = useState<ChatType[]>([]);
   const [selectedChatId, setSelectedChatId] = useState("");
   const [selectedChat, setSelectedChat] = useState<ChatDetailsResponse | null>(null);
@@ -98,6 +99,10 @@ const AdminChats = () => {
 
   const selectedSort = currentSort;
 
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
   const fetchChats = useCallback(async () => {
     try {
       setLoading(true);
@@ -130,14 +135,14 @@ const AdminChats = () => {
       });
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
-        router.push("/");
+        routerRef.current.push("/");
         return;
       }
       setError("Failed to load chats.");
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, itemOffset, pageSize, router, selectedSort]);
+  }, [appliedSearch, itemOffset, pageSize, selectedSort]);
 
   useEffect(() => {
     fetchChats();

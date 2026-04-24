@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
@@ -51,6 +51,7 @@ const isChatUnread = (chat: ChatType) => {
 
 const NannowChats = () => {
   const router = useRouter();
+  const routerRef = useRef(router);
   const { lastEvent } = useAdminSocket();
   const [items, setItems] = useState<ChatType[]>([]);
   const [selectedChatId, setSelectedChatId] = useState("");
@@ -111,6 +112,10 @@ const NannowChats = () => {
 
   const selectedSort = currentSort;
 
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
   const fetchChats = useCallback(async () => {
     try {
       setLoading(true);
@@ -143,14 +148,14 @@ const NannowChats = () => {
       });
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
-        router.push("/");
+        routerRef.current.push("/");
         return;
       }
       setError("Failed to load Nannow chats.");
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, itemOffset, pageSize, router, selectedSort]);
+  }, [appliedSearch, itemOffset, pageSize, selectedSort]);
 
   const fetchSelectedChat = useCallback(async (chatId: string) => {
     const response = await getChatById(chatId);
