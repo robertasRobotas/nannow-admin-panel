@@ -132,6 +132,32 @@ const normalizeLoginModeTotals = (value: unknown): LoginModeTotals => {
     return acc;
   }, {});
 };
+
+const normalizeAppVersionItems = (
+  items: unknown[],
+): AppVersionStatGroup["items"] => {
+  const versionCounts = new Map<string, number>();
+
+  items
+    .filter(
+      (nestedItem: unknown): nestedItem is RawNestedAppVersionItem =>
+        typeof nestedItem === "object" &&
+        nestedItem !== null &&
+        typeof (nestedItem as { appVersion?: unknown }).appVersion === "string",
+    )
+    .forEach((nestedItem: RawNestedAppVersionItem) => {
+      versionCounts.set(
+        nestedItem.appVersion,
+        (versionCounts.get(nestedItem.appVersion) ?? 0) +
+          (Number(nestedItem.count ?? 0) || 0),
+      );
+    });
+
+  return Array.from(versionCounts.entries()).map(([appVersion, count]) => ({
+    appVersion,
+    count,
+  }));
+};
 type UsersViewOption = {
   title: string;
   value: UsersViewMode;
@@ -533,18 +559,7 @@ const Users = () => {
           )
           .map((item: RawAppVersionStatItem) => ({
             platform: normalizePlatform(item.platform),
-            items: item.items
-              .filter(
-                (nestedItem: unknown): nestedItem is RawNestedAppVersionItem =>
-                  typeof nestedItem === "object" &&
-                  nestedItem !== null &&
-                  typeof (nestedItem as { appVersion?: unknown }).appVersion ===
-                    "string",
-              )
-              .map((nestedItem: RawNestedAppVersionItem) => ({
-                appVersion: nestedItem.appVersion,
-                count: Number(nestedItem.count ?? 0) || 0,
-              })),
+            items: normalizeAppVersionItems(item.items),
             withoutAppVersionCount: Number(item.withoutAppVersionCount ?? 0) || 0,
             totalUsers: Number(item.totalUsers ?? 0) || 0,
             totalUsersByLoginMode: normalizeLoginModeTotals(
