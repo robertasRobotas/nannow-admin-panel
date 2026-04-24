@@ -252,24 +252,77 @@ const formatAverage = (value?: number | null) =>
     maximumFractionDigits: 2,
   }).format(typeof value === "number" ? value : 0);
 
+const getBucketDate = (bucket: string) => {
+  const dateOnlyMatch = bucket.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateOnlyMatch) {
+    return new Date(
+      Number(dateOnlyMatch[1]),
+      Number(dateOnlyMatch[2]) - 1,
+      Number(dateOnlyMatch[3]),
+    );
+  }
+
+  const date = new Date(bucket);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatShortDate = (date: Date) =>
+  date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+
+const formatWeekday = (date: Date) =>
+  date.toLocaleDateString("en-GB", {
+    weekday: "short",
+  });
+
 const formatBucketLabel = (
   bucket: string,
   interval: MarketplaceAnalyticsInterval,
 ) => {
-  const date = new Date(bucket);
-  if (Number.isNaN(date.getTime())) return bucket;
+  const date = getBucketDate(bucket);
+  if (!date) return [bucket];
 
   if (interval === "month") {
-    return date.toLocaleDateString("en-GB", {
-      year: "numeric",
-      month: "short",
-    });
+    return [
+      date.toLocaleDateString("en-GB", {
+        year: "numeric",
+        month: "short",
+      }),
+    ];
   }
 
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-  });
+  if (interval === "week") {
+    const weekEnd = new Date(date);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    return [formatShortDate(date), formatShortDate(weekEnd)];
+  }
+
+  return [formatWeekday(date), formatShortDate(date)];
+};
+
+const isWeekStartBucket = (bucket: string) => {
+  const date = getBucketDate(bucket);
+  return date?.getDay() === 1;
+};
+
+const shouldShowBucketLabel = (
+  data: MarketplaceAnalyticsTimeseriesItem[],
+  index: number,
+  interval: MarketplaceAnalyticsInterval,
+) => {
+  if (index === 0 || index === data.length - 1) return true;
+
+  if (interval === "day") {
+    return data.length <= 14 || isWeekStartBucket(data[index].bucket);
+  }
+
+  if (interval === "week") {
+    return data.length <= 16 || index % 2 === 0;
+  }
+
+  return data.length <= 12 || index % Math.ceil(data.length / 12) === 0;
 };
 
 const getHeatmapOpacity = (rate: number) =>
@@ -427,7 +480,6 @@ const OrdersTimeseriesChart = ({
   );
   const slotWidth = chartWidth / data.length;
   const barWidth = Math.max(8, Math.min(18, slotWidth * 0.24));
-  const labelStep = data.length > 20 ? 4 : data.length > 10 ? 2 : 1;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
@@ -452,16 +504,29 @@ const OrdersTimeseriesChart = ({
 
       {data.map((item, index) => {
         const baseX = padding.left + slotWidth * index;
+        const bucketCenterX = baseX + slotWidth / 2;
         const totalHeight = (item.totalOrders / maxValue) * chartHeight;
         const paidHeight = (item.paidOrders / maxValue) * chartHeight;
         const totalX = baseX + slotWidth * 0.18;
         const paidX = baseX + slotWidth * 0.52;
         const totalY = padding.top + chartHeight - totalHeight;
         const paidY = padding.top + chartHeight - paidHeight;
-        const shouldShowLabel = index % labelStep === 0 || index === data.length - 1;
+        const shouldShowLabel = shouldShowBucketLabel(data, index, interval);
+        const labelLines = formatBucketLabel(item.bucket, interval);
+        const shouldShowWeekBoundary =
+          interval === "day" && index > 0 && isWeekStartBucket(item.bucket);
 
         return (
           <g key={`${item.bucket}-${index}`}>
+            {shouldShowWeekBoundary && (
+              <line
+                x1={bucketCenterX}
+                y1={padding.top}
+                x2={bucketCenterX}
+                y2={padding.top + chartHeight}
+                className={styles.chartWeekBoundaryLine}
+              />
+            )}
             <rect
               x={totalX}
               y={totalY}
@@ -480,12 +545,20 @@ const OrdersTimeseriesChart = ({
             />
             {shouldShowLabel && (
               <text
-                x={baseX + slotWidth / 2}
-                y={height - 18}
+                x={bucketCenterX}
+                y={height - (labelLines.length > 1 ? 28 : 18)}
                 textAnchor="middle"
                 className={styles.chartAxisLabel}
               >
-                {formatBucketLabel(item.bucket, interval)}
+                {labelLines.map((line, lineIndex) => (
+                  <tspan
+                    key={`${item.bucket}-${line}`}
+                    x={bucketCenterX}
+                    dy={lineIndex === 0 ? 0 : 13}
+                  >
+                    {line}
+                  </tspan>
+                ))}
               </text>
             )}
           </g>
@@ -516,7 +589,6 @@ const RevenueChart = ({
   const maxValue = Math.max(1, ...data.map((item) => item.revenueCents));
   const slotWidth = chartWidth / data.length;
   const barWidth = Math.max(12, Math.min(32, slotWidth * 0.54));
-  const labelStep = data.length > 20 ? 4 : data.length > 10 ? 2 : 1;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
@@ -546,12 +618,25 @@ const RevenueChart = ({
 
       {data.map((item, index) => {
         const baseX = padding.left + slotWidth * index;
+        const bucketCenterX = baseX + slotWidth / 2;
         const barHeight = (item.revenueCents / maxValue) * chartHeight;
         const y = padding.top + chartHeight - barHeight;
-        const shouldShowLabel = index % labelStep === 0 || index === data.length - 1;
+        const shouldShowLabel = shouldShowBucketLabel(data, index, interval);
+        const labelLines = formatBucketLabel(item.bucket, interval);
+        const shouldShowWeekBoundary =
+          interval === "day" && index > 0 && isWeekStartBucket(item.bucket);
 
         return (
           <g key={`${item.bucket}-${index}`}>
+            {shouldShowWeekBoundary && (
+              <line
+                x1={bucketCenterX}
+                y1={padding.top}
+                x2={bucketCenterX}
+                y2={padding.top + chartHeight}
+                className={styles.chartWeekBoundaryLine}
+              />
+            )}
             <rect
               x={baseX + (slotWidth - barWidth) / 2}
               y={y}
@@ -562,12 +647,20 @@ const RevenueChart = ({
             />
             {shouldShowLabel && (
               <text
-                x={baseX + slotWidth / 2}
-                y={height - 18}
+                x={bucketCenterX}
+                y={height - (labelLines.length > 1 ? 28 : 18)}
                 textAnchor="middle"
                 className={styles.chartAxisLabel}
               >
-                {formatBucketLabel(item.bucket, interval)}
+                {labelLines.map((line, lineIndex) => (
+                  <tspan
+                    key={`${item.bucket}-${line}`}
+                    x={bucketCenterX}
+                    dy={lineIndex === 0 ? 0 : 13}
+                  >
+                    {line}
+                  </tspan>
+                ))}
               </text>
             )}
           </g>

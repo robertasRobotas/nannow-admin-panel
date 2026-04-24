@@ -333,6 +333,11 @@
   stroke: rgba(0, 0, 0, 0.08);
 }
 
+.chartWeekBoundaryLine {
+  stroke: rgba(0, 0, 0, 0.12);
+  stroke-dasharray: 3 5;
+}
+
 .chartAxisLabel {
   fill: rgba(0, 0, 0, 0.52);
   font-size: 11px;
