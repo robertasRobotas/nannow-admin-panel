@@ -6,7 +6,6 @@ const LoginPage = () => {
   return (
     <Template>
       <div className={styles.main}>
-        <h1 className={styles.title}>Log in</h1>
         <LoginForm />
       </div>
     </Template>
