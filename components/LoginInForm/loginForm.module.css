@@ -1,20 +1,206 @@
-.main {
+.wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
-  width: 500px;
-  gap: 0.8rem;
+  align-items: center;
 }
 
-.main input {
-  padding: 0.5rem;
-  border-radius: 0.3rem;
+/* ── Card ─────────────────────────────────────────── */
+.card {
+  background: white;
+  width: 400px;
+  max-width: calc(100vw - 40px);
+  padding: 40px;
+  box-sizing: border-box;
+  border-radius: 20px;
+  box-shadow:
+    0px 14px 30px rgba(0, 0, 0, 0.04),
+    0px 55px 55px rgba(0, 0, 0, 0.03),
+    0px 123px 74px rgba(0, 0, 0, 0.02),
+    0px 219px 88px rgba(0, 0, 0, 0.01);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  position: relative;
+  /* card sits on top so it hides the lower body of the mascot */
+  z-index: 2;
 }
 
-.main button {
-  padding: 0.5rem;
-  border-radius: 0.3rem;
+/* ── Mascot ───────────────────────────────────────── */
+.mascot {
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  width: 209px;
+  height: 159px;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
 }
 
+.mascotVisible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.mascotOff {
+  transform: translateX(-50%) translateY(159px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mascotPhotoClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.mascotPhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  display: block;
+}
+
+.eyeLeft,
+.eyeRight {
+  position: absolute;
+  width: 15px;
+  height: 13px;
+  transform-origin: 50% 50%;
+  transition: transform 0.08s ease-out, opacity 0.2s ease;
+  user-select: none;
+  pointer-events: none;
+}
+
+.eyeLeft {
+  left: 84px;
+  top: 68px;
+}
+
+.eyeRight {
+  left: 110px;
+  top: 68px;
+}
+
+
+/* ── Fields ───────────────────────────────────────── */
+.field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+}
+
+.input {
+  width: 100%;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  box-sizing: border-box;
+  transition: background 0.15s;
+}
+
+.input:focus {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.passwordWrap {
+  position: relative;
+  width: 100%;
+}
+
+.passwordInput {
+  padding-right: 48px;
+}
+
+.eyeToggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+
+/* ── MFA ──────────────────────────────────────────── */
+.mfaHint {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+}
+
+/* ── Error ────────────────────────────────────────── */
 .error {
   color: brown;
+  font-size: 14px;
+  text-align: center;
+  margin: -8px 0;
+}
+
+/* ── SSO ──────────────────────────────────────────── */
+.orText {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+  text-align: center;
+}
+
+.ssoRow {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 440px) {
+  .ssoRow {
+    flex-direction: column;
+  }
+}
+
+
+/* ── Stalker Mode ─────────────────────────────────── */
+.stalkerRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 18px 0 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stalkerLabel {
+  color: #999;
+}
+
+.stalkerValue {
+  color: #000;
+  font-weight: 700;
 }
