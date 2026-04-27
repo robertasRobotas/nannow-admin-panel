@@ -8,7 +8,8 @@
 /* ── Card ─────────────────────────────────────────── */
 .card {
   background: white;
-  width: min(400px, 100%);
+  width: 400px;
+  max-width: calc(100vw - 40px);
   padding: 40px;
   box-sizing: border-box;
   border-radius: 20px;
@@ -172,6 +173,12 @@
   display: flex;
   gap: 20px;
   width: 100%;
+}
+
+@media (max-width: 440px) {
+  .ssoRow {
+    flex-direction: column;
+  }
 }
 
 
