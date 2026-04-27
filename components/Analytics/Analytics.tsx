@@ -1605,7 +1605,7 @@ const Analytics = () => {
                 <div className={styles.kpiValue}>{formatNumber(kpis.canceledOrders)}</div>
               </div>
               <div className={styles.kpiCard}>
-                <div className={styles.kpiLabel}>Revenue</div>
+                <div className={styles.kpiLabel}>GMV</div>
                 <div className={styles.kpiValue}>{formatMoneyFromCents(kpis.revenueCents)}</div>
               </div>
               <div className={styles.kpiCard}>
