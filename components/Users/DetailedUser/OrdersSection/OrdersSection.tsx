@@ -32,24 +32,79 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
 
   const providerId = user?.provider?.id;
   const providerUserId = user?.user?.id;
+  const expectedOrdersCount = user?.orders?.length ?? 0;
 
-  const fetchAllOrders = useCallback(async () => {
+  const orderMatchesProvider = useCallback(
+    (order: OrderType) => {
+      const matchesApprovedProviderId =
+        (order.approvedProviderId ?? null) && providerId
+          ? order.approvedProviderId === providerId
+          : false;
+      const matchesApprovedProviderUserId =
+        order.approvedProvider?.user?.id && providerUserId
+          ? order.approvedProvider.user.id === providerUserId
+          : false;
+      const matchesRequiredProviderId =
+        (order.requiredProviderId ?? null) && providerId
+          ? order.requiredProviderId === providerId
+          : false;
+      return (
+        matchesApprovedProviderId ||
+        matchesApprovedProviderUserId ||
+        matchesRequiredProviderId
+      );
+    },
+    [providerId, providerUserId],
+  );
+
+  const fetchLegacyProviderOrders = useCallback(async () => {
+    // Load "All" to minimize status-by-status roundtrips
+    // We'll paginate until we exhaust or reach MAX_SCAN
+    const collected: OrderType[] = [];
+    let startIndex = 0;
+    let total = Infinity;
+    let pageSize = 50;
+    while (collected.length < Math.min(total, MAX_SCAN)) {
+      const resp = await getOrders("", startIndex);
+      const result = resp.data.result;
+      const items: OrderType[] = result.items ?? [];
+      pageSize = result.pageSize ?? items.length ?? 50;
+      total = result.total ?? total;
+      collected.push(...items);
+      if (items.length === 0) break;
+      startIndex += pageSize;
+    }
+    return collected.filter(orderMatchesProvider);
+  }, [orderMatchesProvider]);
+
+  const fetchProviderOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Load "All" to minimize status-by-status roundtrips
-      // We'll paginate until we exhaust or reach MAX_SCAN
       const collected: OrderType[] = [];
       let startIndex = 0;
       let total = Infinity;
       let pageSize = 50;
       while (collected.length < Math.min(total, MAX_SCAN)) {
-        const resp = await getOrders("", startIndex);
+        const resp = await getOrders("", startIndex, {
+          approvedProviderId: providerId,
+        });
         const result = resp.data.result;
         const items: OrderType[] = result.items ?? [];
+        const filteredItems = items.filter(orderMatchesProvider);
+        const filterLooksIgnored =
+          items.some((item) => !orderMatchesProvider(item)) ||
+          (expectedOrdersCount > 0 &&
+            Number(result.total ?? 0) > expectedOrdersCount);
+
+        if (filterLooksIgnored) {
+          setOrders(await fetchLegacyProviderOrders());
+          return;
+        }
+
         pageSize = result.pageSize ?? items.length ?? 50;
         total = result.total ?? total;
-        collected.push(...items);
+        collected.push(...filteredItems);
         if (items.length === 0) break;
         startIndex += pageSize;
       }
@@ -66,33 +121,21 @@ const OrdersSection = ({ user, onBackClick }: OrdersSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [
+    expectedOrdersCount,
+    fetchLegacyProviderOrders,
+    orderMatchesProvider,
+    providerId,
+    router,
+  ]);
 
   useEffect(() => {
-    fetchAllOrders();
-  }, [fetchAllOrders]);
+    fetchProviderOrders();
+  }, [fetchProviderOrders]);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
-      const matchesApprovedProviderId =
-        (o.approvedProviderId ?? null) && providerId
-          ? o.approvedProviderId === providerId
-          : false;
-      const matchesApprovedProviderUserId =
-        o.approvedProvider?.user?.id && providerUserId
-          ? o.approvedProvider.user.id === providerUserId
-          : false;
-      const matchesRequiredProviderId =
-        (o.requiredProviderId ?? null) && providerId
-          ? o.requiredProviderId === providerId
-          : false;
-      return (
-        matchesApprovedProviderId ||
-        matchesApprovedProviderUserId ||
-        matchesRequiredProviderId
-      );
-    });
-  }, [orders, providerId, providerUserId]);
+    return orders.filter(orderMatchesProvider);
+  }, [orders, orderMatchesProvider]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, OrderType[]>();

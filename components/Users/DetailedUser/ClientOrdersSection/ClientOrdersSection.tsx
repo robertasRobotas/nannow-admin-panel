@@ -32,8 +32,38 @@ const ClientOrdersSection = ({ user, onBackClick }: ClientOrdersSectionProps) =>
 
   const clientId = user?.client?.id;
   const clientUserId = user?.user?.id;
+  const expectedOrdersCount = user?.orders?.length ?? 0;
 
-  const fetchAllOrders = useCallback(async () => {
+  const orderMatchesClient = useCallback(
+    (order: OrderType) => {
+      const byClientId = clientId ? order.client?.id === clientId : false;
+      const byClientUserId = clientUserId
+        ? order.clientUser?.id === clientUserId
+        : false;
+      return byClientId || byClientUserId;
+    },
+    [clientId, clientUserId],
+  );
+
+  const fetchLegacyClientOrders = useCallback(async () => {
+    const collected: OrderType[] = [];
+    let startIndex = 0;
+    let total = Infinity;
+    let pageSize = 50;
+    while (collected.length < Math.min(total, MAX_SCAN)) {
+      const resp = await getOrders("", startIndex);
+      const result = resp.data.result;
+      const items: OrderType[] = result.items ?? [];
+      pageSize = result.pageSize ?? items.length ?? 50;
+      total = result.total ?? total;
+      collected.push(...items);
+      if (items.length === 0) break;
+      startIndex += pageSize;
+    }
+    return collected.filter(orderMatchesClient);
+  }, [orderMatchesClient]);
+
+  const fetchClientOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -42,12 +72,23 @@ const ClientOrdersSection = ({ user, onBackClick }: ClientOrdersSectionProps) =>
       let total = Infinity;
       let pageSize = 50;
       while (collected.length < Math.min(total, MAX_SCAN)) {
-        const resp = await getOrders("", startIndex);
+        const resp = await getOrders("", startIndex, { clientId });
         const result = resp.data.result;
         const items: OrderType[] = result.items ?? [];
+        const filteredItems = items.filter(orderMatchesClient);
+        const filterLooksIgnored =
+          items.some((item) => !orderMatchesClient(item)) ||
+          (expectedOrdersCount > 0 &&
+            Number(result.total ?? 0) > expectedOrdersCount);
+
+        if (filterLooksIgnored) {
+          setOrders(await fetchLegacyClientOrders());
+          return;
+        }
+
         pageSize = result.pageSize ?? items.length ?? 50;
         total = result.total ?? total;
-        collected.push(...items);
+        collected.push(...filteredItems);
         if (items.length === 0) break;
         startIndex += pageSize;
       }
@@ -64,19 +105,21 @@ const ClientOrdersSection = ({ user, onBackClick }: ClientOrdersSectionProps) =>
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [
+    clientId,
+    expectedOrdersCount,
+    fetchLegacyClientOrders,
+    orderMatchesClient,
+    router,
+  ]);
 
   useEffect(() => {
-    fetchAllOrders();
-  }, [fetchAllOrders]);
+    fetchClientOrders();
+  }, [fetchClientOrders]);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
-      const byClientId = clientId ? o.client?.id === clientId : false;
-      const byClientUserId = clientUserId ? o.clientUser?.id === clientUserId : false;
-      return byClientId || byClientUserId;
-    });
-  }, [orders, clientId, clientUserId]);
+    return orders.filter(orderMatchesClient);
+  }, [orders, orderMatchesClient]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, OrderType[]>();

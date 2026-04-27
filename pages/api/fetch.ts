@@ -1065,7 +1065,14 @@ export const getCriminalRecordInfo = async (code: string) => {
   return response;
 };
 
-export const getOrders = async (status: string, startIndex: number) => {
+export const getOrders = async (
+  status: string,
+  startIndex: number,
+  filters?: {
+    clientId?: string;
+    approvedProviderId?: string;
+  },
+) => {
   const jwt = Cookies.get("@user_jwt");
   const legacyStatusAliases: Record<string, string[]> = {
     CANCELED_BY_CLIENT: ["CANCELED_BY_CLIENT", "CLIENT_CANCELED"],
@@ -1074,14 +1081,17 @@ export const getOrders = async (status: string, startIndex: number) => {
 
   const aliasedStatuses = legacyStatusAliases[status];
   if (!aliasedStatuses) {
-    const response = await axios.get(
-      `${BASE_URL}/admin/orders?startIndex=${startIndex}&status=${status}`,
-      {
-        headers: {
-          Authorization: jwt,
-        },
+    const response = await axios.get(`${BASE_URL}/admin/orders`, {
+      params: {
+        startIndex,
+        status,
+        clientId: filters?.clientId,
+        approvedProviderId: filters?.approvedProviderId,
       },
-    );
+      headers: {
+        Authorization: jwt,
+      },
+    });
     return response;
   }
 
@@ -1095,8 +1105,14 @@ export const getOrders = async (status: string, startIndex: number) => {
 
     do {
       const response = await axios.get(
-        `${BASE_URL}/admin/orders?startIndex=${cursor}&status=${currentStatus}`,
+        `${BASE_URL}/admin/orders`,
         {
+          params: {
+            startIndex: cursor,
+            status: currentStatus,
+            clientId: filters?.clientId,
+            approvedProviderId: filters?.approvedProviderId,
+          },
           headers: {
             Authorization: jwt,
           },
