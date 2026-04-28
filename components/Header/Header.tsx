@@ -11,6 +11,7 @@ import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import {
   AdminApiMode,
+  getAdditionalPaymentsNotPayoutedOrdersCount,
   getAdminApiMode,
   getCanceledPendingFinancialOrdersCount,
   getUnreadAdminMessagesCount,
@@ -85,6 +86,10 @@ const Header = () => {
   const [notPaidOrdersCount, setNotPaidOrdersCount] = useState(0);
   const [canceledPendingFinancialCount, setCanceledPendingFinancialCount] =
     useState(0);
+  const [
+    additionalPaymentsNotPayoutedCount,
+    setAdditionalPaymentsNotPayoutedCount,
+  ] = useState(0);
   const [notFinishedOnboardingCount, setNotFinishedOnboardingCount] =
     useState(0);
   const [pendingCriminalChecksCount, setPendingCriminalChecksCount] =
@@ -192,6 +197,19 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchAdditionalPaymentsNotPayoutedOrdersCount = async () => {
+      try {
+        const response = await getAdditionalPaymentsNotPayoutedOrdersCount();
+        const count =
+          response.data?.result?.count ??
+          response.data?.count ??
+          response.data?.result ??
+          0;
+        setAdditionalPaymentsNotPayoutedCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
     const fetchNotFinishedOnboardingCount = async () => {
       try {
         const response = await getNotFinishedOnboardingUsers({ pageSize: 1 });
@@ -265,6 +283,7 @@ const Header = () => {
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
     fetchCanceledPendingFinancialOrdersCount();
+    fetchAdditionalPaymentsNotPayoutedOrdersCount();
     fetchNotFinishedOnboardingCount();
     fetchPendingCriminalChecksCount();
     fetchNotSolvedFeedback();
@@ -400,7 +419,10 @@ const Header = () => {
   }, [lastEvent]);
 
   const ordersAttentionNumber =
-    notEndedOrdersCount + notPaidOrdersCount + canceledPendingFinancialCount;
+    notEndedOrdersCount +
+    notPaidOrdersCount +
+    canceledPendingFinancialCount +
+    additionalPaymentsNotPayoutedCount;
   const usersAttentionNumber =
     notFinishedOnboardingCount + pendingProviderSpecialSkillsCount;
   const visibleLinks = isSuperAdmin

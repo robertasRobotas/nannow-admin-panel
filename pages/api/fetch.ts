@@ -1071,6 +1071,7 @@ export const getOrders = async (
   filters?: {
     clientId?: string;
     approvedProviderId?: string;
+    additionalPaymentsNotPayouted?: boolean;
   },
 ) => {
   const jwt = Cookies.get("@user_jwt");
@@ -1087,6 +1088,7 @@ export const getOrders = async (
         status,
         clientId: filters?.clientId,
         approvedProviderId: filters?.approvedProviderId,
+        additionalPaymentsNotPayouted: filters?.additionalPaymentsNotPayouted,
       },
       headers: {
         Authorization: jwt,
@@ -1559,6 +1561,14 @@ export const refreshPayoutByOrderId = async (orderId: string) => {
   return response;
 };
 
+export const getAdditionalPaymentsNotPayoutedOrders = async (
+  startIndex = 0,
+) => {
+  return getOrders("", startIndex, {
+    additionalPaymentsNotPayouted: true,
+  });
+};
+
 export const getNotPaidOrders = async (status: string, startIndex: number) => {
   const jwt = Cookies.get("@user_jwt");
   const filters = encodeURIComponent(
@@ -1692,6 +1702,33 @@ export const payoutCancelFeeByOrderId = async (id: string) => {
   const response = await axios.put(
     `${BASE_URL}/admin/orders/${id}/cancel-fee-payout`,
     {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const payoutAdditionalPaymentsByOrderId = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/additional-payments/payout`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getAdditionalPaymentsNotPayoutedOrdersCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/additional-payments-not-payouted/count`,
     {
       headers: {
         Authorization: jwt,

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./orders.module.css";
 import { nunito } from "@/helpers/fonts";
 import {
+  getAdditionalPaymentsNotPayoutedOrders,
+  getAdditionalPaymentsNotPayoutedOrdersCount,
   getCanceledPendingFinancialOrders,
   getCanceledPendingFinancialOrdersCount,
   getCanceledPaidOrdersLegacy,
@@ -60,6 +62,7 @@ const orderFilterOptions = [
   { title: "Not started in time", value: "NOT_STARTED_IN_TIME" },
   { title: "Not Ended in time", value: "NOT_ENDED_IN_TIME" },
   { title: "Closed by admins", value: "CLOSED_BY_ADMINS" },
+  { title: "Additional payouts", value: "ADDITIONAL_PAYMENTS_NOT_PAYOUTED" },
 ] as const;
 
 const Orders = () => {
@@ -67,6 +70,7 @@ const Orders = () => {
     | "DEFAULT"
     | "NOT_ENDED"
     | "NOT_PAID"
+    | "ADDITIONAL_PAYMENTS_NOT_PAYOUTED"
     | "CANCELED_NOT_PAID"
     | "CANCELED_PAID_LEGACY"
     | "CLOSED_BY_ADMINS";
@@ -79,6 +83,10 @@ const Orders = () => {
   const [notPaidOrdersQTY, setNotPaidOrdersQTY] = useState<number>(0);
   const [canceledNotPaidOrdersQTY, setCanceledNotPaidOrdersQTY] =
     useState<number>(0);
+  const [
+    additionalPaymentsNotPayoutedOrdersQTY,
+    setAdditionalPaymentsNotPayoutedOrdersQTY,
+  ] = useState<number>(0);
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(0);
@@ -241,6 +249,30 @@ const Orders = () => {
     [router],
   );
 
+  const fetchAdditionalPaymentsNotPayoutedOrders = useCallback(
+    async (startIndex: number) => {
+      try {
+        const response = await getAdditionalPaymentsNotPayoutedOrders(startIndex);
+        const result = response.data.result as {
+          items: OrderType[];
+          total: number;
+          pageSize: number;
+        };
+        setOrders(result.items);
+        setItemsPerPage(result.pageSize);
+        setPageCount(Math.ceil(result.total / result.pageSize));
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    },
+    [router],
+  );
+
   const fetchCanceledPaidLegacyOrders = useCallback(
     async (startIndex: number) => {
       try {
@@ -342,6 +374,25 @@ const Orders = () => {
     }
   }, [router]);
 
+  const fetchAdditionalPaymentsNotPayoutedOrdersCount = useCallback(async () => {
+    try {
+      const response = await getAdditionalPaymentsNotPayoutedOrdersCount();
+      const count =
+        response.data?.result?.count ??
+        response.data?.count ??
+        response.data?.result ??
+        0;
+      setAdditionalPaymentsNotPayoutedOrdersQTY(Number(count) || 0);
+    } catch (err) {
+      console.log(err);
+      if (axios.isAxiosError(err)) {
+        if (err.status === 401) {
+          router.push("/");
+        }
+      }
+    }
+  }, [router]);
+
   const refetchCurrentOrders = useCallback(() => {
     if (activeFilter === "NOT_ENDED") {
       fetchOrders("NOT_ENDED_IN_TIME", itemOffset);
@@ -355,6 +406,10 @@ const Orders = () => {
       fetchCanceledNotPaidOrders(itemOffset);
       return;
     }
+    if (activeFilter === "ADDITIONAL_PAYMENTS_NOT_PAYOUTED") {
+      fetchAdditionalPaymentsNotPayoutedOrders(itemOffset);
+      return;
+    }
     if (activeFilter === "CANCELED_PAID_LEGACY") {
       fetchCanceledPaidLegacyOrders(itemOffset);
       return;
@@ -366,6 +421,10 @@ const Orders = () => {
     const selectedFilterValue = orderFilterOptions[selectedOption].value;
     if (selectedFilterValue === "CLOSED_BY_ADMINS") {
       fetchClosedOrders(itemOffset);
+      return;
+    }
+    if (selectedFilterValue === "ADDITIONAL_PAYMENTS_NOT_PAYOUTED") {
+      fetchAdditionalPaymentsNotPayoutedOrders(itemOffset);
       return;
     }
     if (selectedFilterValue === "ORDER_CREATED_DIRECT") {
@@ -384,6 +443,7 @@ const Orders = () => {
     fetchOrders,
     fetchNotPaidOrders,
     fetchCanceledNotPaidOrders,
+    fetchAdditionalPaymentsNotPayoutedOrders,
     fetchCanceledPaidLegacyOrders,
     fetchClosedOrders,
     fetchCreatedOrdersByBookingType,
@@ -428,6 +488,7 @@ const Orders = () => {
     const safeView: ActiveOrdersFilter =
       viewFromQuery === "NOT_ENDED" ||
       viewFromQuery === "NOT_PAID" ||
+      viewFromQuery === "ADDITIONAL_PAYMENTS_NOT_PAYOUTED" ||
       viewFromQuery === "CANCELED_NOT_PAID" ||
       viewFromQuery === "CANCELED_PAID_LEGACY" ||
       viewFromQuery === "CLOSED_BY_ADMINS"
@@ -458,6 +519,9 @@ const Orders = () => {
   useEffect(() => {
     fetchCanceledNotPaidOrdersCount();
   }, [fetchCanceledNotPaidOrdersCount]);
+  useEffect(() => {
+    fetchAdditionalPaymentsNotPayoutedOrdersCount();
+  }, [fetchAdditionalPaymentsNotPayoutedOrdersCount]);
 
   useEffect(() => {
     if (!lastEvent) return;
@@ -475,6 +539,7 @@ const Orders = () => {
     fetchNotEndedOrdersCount();
     fetchNotPaidOrdersCount();
     fetchCanceledNotPaidOrdersCount();
+    fetchAdditionalPaymentsNotPayoutedOrdersCount();
   }, [
     lastEvent,
     markOrderAsRecentlyChanged,
@@ -482,6 +547,7 @@ const Orders = () => {
     fetchNotEndedOrdersCount,
     fetchNotPaidOrdersCount,
     fetchCanceledNotPaidOrdersCount,
+    fetchAdditionalPaymentsNotPayoutedOrdersCount,
   ]);
 
   useEffect(() => {
@@ -519,6 +585,21 @@ const Orders = () => {
       return;
     }
     updateOrdersQuery({ view: "CANCELED_NOT_PAID", page: 1, status: "" });
+  };
+
+  const handleAdditionalPaymentsNotPayoutedOrdersClick = () => {
+    if (
+      activeFilter === "ADDITIONAL_PAYMENTS_NOT_PAYOUTED" &&
+      itemOffset === 0
+    ) {
+      fetchAdditionalPaymentsNotPayoutedOrders(0);
+      return;
+    }
+    updateOrdersQuery({
+      view: "ADDITIONAL_PAYMENTS_NOT_PAYOUTED",
+      page: 1,
+      status: "",
+    });
   };
 
   const normalizedQuery = orderIdQuery.trim().toLowerCase();
@@ -588,6 +669,18 @@ const Orders = () => {
               attentionNumber={canceledNotPaidOrdersQTY}
               onClick={() => {
                 handleCanceledNotPaidOrdersClick();
+              }}
+            />
+          </div>
+        )}
+        {additionalPaymentsNotPayoutedOrdersQTY > 0 && (
+          <div style={{ marginLeft: 12 }}>
+            <Button
+              title="Additional payouts"
+              type="PLAIN"
+              attentionNumber={additionalPaymentsNotPayoutedOrdersQTY}
+              onClick={() => {
+                handleAdditionalPaymentsNotPayoutedOrdersClick();
               }}
             />
           </div>

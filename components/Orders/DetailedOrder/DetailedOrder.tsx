@@ -23,6 +23,7 @@ import {
   getOrderProviderInvoice,
   getOrderProviderReceipt,
   openOrderByAdmin,
+  payoutAdditionalPaymentsByOrderId,
   payoutCancelFeeByOrderId,
   refundOrderById,
   releaseFundsByOrderId,
@@ -64,6 +65,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
   const [isPayingCancelFee, setIsPayingCancelFee] = useState(false);
+  const [isPayingAdditionalPayments, setIsPayingAdditionalPayments] =
+    useState(false);
   const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
@@ -293,6 +296,21 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     }
   };
 
+  const payoutAdditionalPayments = async () => {
+    if (isPayingAdditionalPayments) return;
+    try {
+      setIsPayingAdditionalPayments(true);
+      const response = await payoutAdditionalPaymentsByOrderId(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to payout additional payments", error);
+    } finally {
+      setIsPayingAdditionalPayments(false);
+    }
+  };
+
   const closeConfirmModal = () => setIsConfirmModalOpen(false);
   const closeOrderModal = () => setIsCloseOrderModalOpen(false);
 
@@ -459,6 +477,27 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     : isCanceledLate12h
       ? "Canceled less than 12h before start"
       : null;
+
+  const formatCents = (value?: number | null) =>
+    typeof value === "number" ? `€${(value / 100).toFixed(2)}` : "-";
+  const formatMoney = (value?: number | null) =>
+    typeof value === "number" ? `€${value.toFixed(2)}` : "-";
+  const formatCurrencyAmount = (
+    value?: number | null,
+    currency?: string | null,
+  ) =>
+    typeof value === "number"
+      ? `${value.toFixed(2)} ${String(currency ?? "EUR").toUpperCase()}`
+      : "-";
+  const additionalPayments = Array.isArray(order?.additionalPayments)
+    ? order.additionalPayments
+    : [];
+  const hasAdditionalPayments = additionalPayments.length > 0;
+  const hasPendingAdditionalPayout =
+    (order?.additionalPaymentsSummary?.payoutPendingCount ?? 0) > 0 ||
+    additionalPayments.some(
+      (payment) => String(payment?.payoutState ?? "").toUpperCase() === "PENDING",
+    );
   const requiresRefund =
     isCanceledByProvider ||
     (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h);
@@ -962,6 +1001,147 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           uegentFee={order?.urgentFee ?? 0}
           totalProviderPrice={order?.totalProviderPrice ?? 0}
         />
+        {hasAdditionalPayments && (
+          <div className={styles.additionalPaymentsSection}>
+            <div className={styles.additionalPaymentsHeader}>
+              <div className={`${styles.title} ${nunito.className}`}>
+                Additional payments
+              </div>
+              {hasPendingAdditionalPayout && (
+                <Button
+                  title={
+                    isPayingAdditionalPayments
+                      ? "Paying..."
+                      : "Payout additional payments"
+                  }
+                  type="BLACK"
+                  onClick={payoutAdditionalPayments}
+                  isDisabled={isPayingAdditionalPayments}
+                  isLoading={isPayingAdditionalPayments}
+                />
+              )}
+            </div>
+            {order?.additionalPaymentsSummary && (
+              <div className={styles.additionalPaymentsSummary}>
+                <div className={styles.additionalSummaryItem}>
+                  <span className={styles.additionalSummaryLabel}>State</span>
+                  <span className={styles.additionalSummaryValue}>
+                    {order.additionalPaymentsSummary.payoutState ?? "NONE"}
+                  </span>
+                </div>
+                <div className={styles.additionalSummaryItem}>
+                  <span className={styles.additionalSummaryLabel}>Pending</span>
+                  <span className={styles.additionalSummaryValue}>
+                    {order.additionalPaymentsSummary.payoutPendingCount ?? 0}
+                  </span>
+                </div>
+                <div className={styles.additionalSummaryItem}>
+                  <span className={styles.additionalSummaryLabel}>Paid</span>
+                  <span className={styles.additionalSummaryValue}>
+                    {order.additionalPaymentsSummary.payoutPaidCount ?? 0}
+                  </span>
+                </div>
+                <div className={styles.additionalSummaryItem}>
+                  <span className={styles.additionalSummaryLabel}>Balance</span>
+                  <span className={styles.additionalSummaryValue}>
+                    {formatCents(
+                      order.additionalPaymentsSummary.payoutBalanceCents,
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className={styles.additionalPaymentsList}>
+              {additionalPayments.map((payment, index) => {
+                const paymentKey = payment.id ?? payment._id ?? `payment-${index}`;
+                const paymentAmount =
+                  typeof payment.amountCents === "number"
+                    ? formatCents(payment.amountCents)
+                    : typeof payment.totalAmountCents === "number"
+                      ? formatCents(payment.totalAmountCents)
+                      : typeof payment.amount === "number"
+                        ? formatCurrencyAmount(payment.amount, payment.currency)
+                        : formatMoney(payment.totalAmount);
+                const paymentPurpose =
+                  payment.note ||
+                  payment.description ||
+                  payment.reason ||
+                  "Additional payment";
+                const paymentCompletedAt =
+                  payment.payment_completed_at ?? payment.paidAt;
+                return (
+                  <div key={paymentKey} className={styles.additionalPaymentCard}>
+                    <div className={styles.additionalPaymentTop}>
+                      <div>
+                        <div className={styles.additionalPaymentTitle}>
+                          {paymentPurpose}
+                        </div>
+                        <div className={styles.additionalPaymentMeta}>
+                          Paid: {formatCompactDateTime(paymentCompletedAt)}
+                        </div>
+                      </div>
+                      <span
+                        className={`${styles.additionalPaymentBadge} ${
+                          String(payment.payoutState ?? "").toUpperCase() ===
+                          "PAID"
+                            ? styles.additionalPaymentBadgePaid
+                            : String(payment.payoutState ?? "").toUpperCase() ===
+                                "PENDING"
+                              ? styles.additionalPaymentBadgePending
+                              : styles.additionalPaymentBadgeMuted
+                        }`}
+                      >
+                        {payment.payoutState ?? "NOT_PAYABLE"}
+                      </span>
+                    </div>
+                    <div className={styles.additionalPaymentGrid}>
+                      <div>
+                        <span>Payment amount</span>
+                        <b>{paymentAmount}</b>
+                      </div>
+                      <div>
+                        <span>Provider amount</span>
+                        <b>{formatCents(payment.providerAmountCents)}</b>
+                      </div>
+                      <div>
+                        <span>Platform fee</span>
+                        <b>{formatCents(payment.platformFeeCents)}</b>
+                      </div>
+                      <div>
+                        <span>Stripe fee</span>
+                        <b>
+                          {typeof payment.stripeFeeCents === "number"
+                            ? formatCents(payment.stripeFeeCents)
+                            : formatMoney(payment.stripeFee)}
+                        </b>
+                      </div>
+                      <div>
+                        <span>Stripe net</span>
+                        <b>
+                          {typeof payment.stripeNetCents === "number"
+                            ? formatCents(payment.stripeNetCents)
+                            : formatMoney(payment.stripeNet)}
+                        </b>
+                      </div>
+                      {payment.payoutId && (
+                        <div>
+                          <span>Payout ID</span>
+                          <b>{payment.payoutId}</b>
+                        </div>
+                      )}
+                      {payment.paidOutAt && (
+                        <div>
+                          <span>Paid out at</span>
+                          <b>{formatCompactDateTime(payment.paidOutAt)}</b>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {order?.isProviderIgnoredEndNotification && (
           <div className={styles.problemSection}>
             <div className={`${styles.title} ${nunito.className}`}>
