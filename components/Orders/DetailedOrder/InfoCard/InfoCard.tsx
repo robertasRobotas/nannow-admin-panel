@@ -8,6 +8,7 @@ type InfoCardProps = {
   type: string;
   isMultiline?: boolean;
   isCentered?: boolean;
+  action?: ReactNode;
 };
 
 const InfoCard = ({
@@ -17,6 +18,7 @@ const InfoCard = ({
   type = "SPAN3",
   isMultiline = false,
   isCentered = false,
+  action,
 }: InfoCardProps) => {
   return (
     <div
@@ -30,6 +32,7 @@ const InfoCard = ({
       >
         <div className={styles.infoTitle}>{title}</div>
         <div className={styles.info}>{info}</div>
+        {action && <div className={styles.action}>{action}</div>}
       </div>
     </div>
   );

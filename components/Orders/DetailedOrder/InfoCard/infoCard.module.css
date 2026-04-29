@@ -57,6 +57,10 @@
   letter-spacing: -0.28px;
 }
 
+.action {
+  margin-top: 6px;
+}
+
 @media (max-width: 924px) {
   .main {
     flex-direction: column;

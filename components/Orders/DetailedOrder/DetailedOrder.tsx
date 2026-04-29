@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { DetailedOrderType } from "@/types/DetailedOrder";
+import { OrderStatusEnum } from "@/types/OrderStatusEnum";
 import styles from "./detailedOrder.module.css";
 import { nunito } from "@/helpers/fonts";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
@@ -28,6 +29,7 @@ import {
   payoutCancelFeeByOrderId,
   refundOrderById,
   releaseFundsByOrderId,
+  updateOrderStatusByAdmin,
 } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
 import calendarImg from "../../../assets/images/calendar.svg";
@@ -47,6 +49,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isReleaseFundsErrorModalOpen, setIsReleaseFundsErrorModalOpen] =
     useState(false);
   const [isCloseOrderModalOpen, setIsCloseOrderModalOpen] = useState(false);
+  const [isStatusSelectorOpen, setIsStatusSelectorOpen] = useState(false);
+  const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] =
+    useState(false);
   const [releaseFundsErrorMessage, setReleaseFundsErrorMessage] =
     useState<string>("");
   const [releaseFundsErrorDetails, setReleaseFundsErrorDetails] = useState<
@@ -61,6 +66,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isFinishingOrder, setIsFinishingOrder] = useState(false);
   const [isCancelingOrder, setIsCancelingOrder] = useState(false);
   const [isTogglingClosedByAdmin, setIsTogglingClosedByAdmin] = useState(false);
+  const [isUpdatingOrderStatus, setIsUpdatingOrderStatus] = useState(false);
+  const [selectedOrderStatus, setSelectedOrderStatus] = useState(
+    normalizeOrderStatus(order?.status),
+  );
   const [isInvoiceLoading, setIsInvoiceLoading] = useState(false);
   const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
     useState(false);
@@ -316,6 +325,39 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const closeConfirmModal = () => setIsConfirmModalOpen(false);
   const closeOrderModal = () => setIsCloseOrderModalOpen(false);
+  const closeStatusSelector = () => {
+    if (isUpdatingOrderStatus) return;
+    setSelectedOrderStatus(normalizeOrderStatus(problemStatus));
+    setIsStatusSelectorOpen(false);
+  };
+
+  const openStatusSelector = () => {
+    setSelectedOrderStatus(normalizeOrderStatus(problemStatus));
+    setIsStatusSelectorOpen(true);
+  };
+
+  const openStatusConfirmModal = () => {
+    if (selectedOrderStatus === normalizeOrderStatus(problemStatus)) return;
+    setIsStatusSelectorOpen(false);
+    setIsStatusConfirmModalOpen(true);
+  };
+
+  const confirmOrderStatusChange = async () => {
+    if (isUpdatingOrderStatus) return;
+    try {
+      setIsUpdatingOrderStatus(true);
+      const response = await updateOrderStatusByAdmin(order.id, selectedOrderStatus);
+      if (response.status === 200) {
+        setProblemStatus(selectedOrderStatus);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to update order status", error);
+    } finally {
+      setIsUpdatingOrderStatus(false);
+      setIsStatusConfirmModalOpen(false);
+    }
+  };
 
   const toggleClosedByAdmin = async () => {
     if (isTogglingClosedByAdmin) return;
@@ -536,6 +578,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const isCanceledOrder = orderStatusUpper.includes("CANCELED");
   const isCanceledByClient = orderStatusUpper === "CANCELED_BY_CLIENT";
   const isCanceledByProvider = orderStatusUpper === "CANCELED_BY_PROVIDER";
+  const isCanceledByAdmin = orderStatusUpper === "CANCELED_BY_ADMIN";
+  const isRefundableCanceledOrder =
+    isCanceledByClient || isCanceledByProvider || isCanceledByAdmin;
   const isCanceledLate2h =
     isCanceledByClient && !!order?.isOrderCanceledLessThan2hBeforeStart;
   const isCanceledLate12h =
@@ -569,6 +614,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       (payment) => String(payment?.payoutState ?? "").toUpperCase() === "PENDING",
     );
   const requiresRefund =
+    isCanceledByAdmin ||
     isCanceledByProvider ||
     (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h);
   const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
@@ -592,7 +638,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const refundDisplayAmount =
     refundedAmountValue != null
       ? refundedAmountValue
-      : isCanceledByProvider
+      : isCanceledByProvider || isCanceledByAdmin
         ? totalOrderAmount
         : isCanceledByClient
           ? isCanceledLate12h
@@ -624,10 +670,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const isCancelFeeDone = !!order?.isCancelFeePaidToProvider;
   const statusTitle =
     getOrderStatusTitle(problemStatus, order?.isDirectOrderToProvider) || "-";
+  const orderStatusOptions = Object.values(OrderStatusEnum);
+  const selectedOrderStatusTitle =
+    getOrderStatusTitle(selectedOrderStatus, order?.isDirectOrderToProvider) ||
+    selectedOrderStatus;
+  const currentOrderStatusTitle =
+    getOrderStatusTitle(problemStatus, order?.isDirectOrderToProvider) || "-";
   const specialProcessImgUrl = isRejectedDirectOffer
     ? getUserImage(sitterUser?.user?.imgUrl)
     : getUserImage(parentUser?.imgUrl);
-  const areCanceledFinancialActionsDone = isCanceledByClient
+  const areCanceledFinancialActionsDone = isCanceledByAdmin
+    ? isRefundDone
+    : isCanceledByClient
     ? isCanceledLate2h
       ? isCancelFeeDone
       : isCanceledLate12h
@@ -725,6 +779,16 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             title="Status"
             iconImgUrl={flashImg.src}
             type={isMobile ? "SPAN1" : "SPAN3"}
+            action={
+              <Button
+                title="Change"
+                type="OUTLINED"
+                height={32}
+                className={styles.statusChangeButton}
+                isDisabled={isUpdatingOrderStatus}
+                onClick={openStatusSelector}
+              />
+            }
             info={
               <>
                 <div>{statusTitle}</div>
@@ -1427,7 +1491,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             onClick={payOrderHandler}
           />
         )}
-        {(isCanceledByClient || isCanceledByProvider) &&
+        {isRefundableCanceledOrder &&
           areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsColumn}>
             {(requiresRefund || isCanceledLate12h) && (
@@ -1442,7 +1506,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             )}
           </div>
         )}
-        {(isCanceledByClient || isCanceledByProvider) &&
+        {isRefundableCanceledOrder &&
           isOrderPaid &&
           !areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsRow}>
@@ -1466,6 +1530,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         )}
       </div>
       <div className={styles.closeOrderRow}>
+        {!isCanceledByAdmin && (
+          <Button
+            title={isCancelingOrder ? "Canceling..." : "Cancel order"}
+            type="DELETE"
+            isDisabled={isCancelingOrder}
+            onClick={cancelOrder}
+          />
+        )}
         <Button
           title={order?.isClosedByAdmin ? "Open order" : "Close order"}
           type={order?.isClosedByAdmin ? "OUTLINED" : "DELETE"}
@@ -1512,6 +1584,78 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 title="Close"
                 type="OUTLINED"
                 onClick={() => setIsReleaseFundsErrorModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isStatusSelectorOpen && (
+        <div
+          className={`${styles.confirmationBackdrop} ${styles.statusSelectorBackdrop}`}
+        >
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Change status</h2>
+            <p className={styles.confirmationBody}>
+              Select a new order status.
+            </p>
+            <label className={styles.statusSelectorLabel}>
+              Status
+              <select
+                className={styles.statusSelector}
+                value={selectedOrderStatus}
+                onChange={(event) => setSelectedOrderStatus(event.target.value)}
+                disabled={isUpdatingOrderStatus}
+              >
+                {orderStatusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {getOrderStatusTitle(status, order?.isDirectOrderToProvider)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeStatusSelector}
+                isDisabled={isUpdatingOrderStatus}
+              />
+              <Button
+                title="Continue"
+                type="BLACK"
+                onClick={openStatusConfirmModal}
+                isDisabled={
+                  isUpdatingOrderStatus ||
+                  selectedOrderStatus === normalizeOrderStatus(problemStatus)
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isStatusConfirmModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Confirm status change?</h2>
+            <p className={styles.confirmationBody}>
+              Change order status from {currentOrderStatusTitle} to{" "}
+              {selectedOrderStatusTitle}?
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Back"
+                type="OUTLINED"
+                onClick={() => {
+                  setIsStatusConfirmModalOpen(false);
+                  setIsStatusSelectorOpen(true);
+                }}
+                isDisabled={isUpdatingOrderStatus}
+              />
+              <Button
+                title={isUpdatingOrderStatus ? "Changing..." : "Confirm change"}
+                type="BLACK"
+                onClick={confirmOrderStatusChange}
+                isDisabled={isUpdatingOrderStatus}
               />
             </div>
           </div>

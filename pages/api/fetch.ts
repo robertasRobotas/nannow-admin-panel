@@ -1975,6 +1975,20 @@ export const cancelOrderByAdmin = async (id: string) => {
   return response;
 };
 
+export const updateOrderStatusByAdmin = async (id: string, status: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/status`,
+    { status },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const toggleProviderBadge = async (
   providerUserId: string,
   badge: string,
