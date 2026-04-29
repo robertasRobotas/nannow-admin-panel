@@ -19,6 +19,7 @@ import {
   cancelOrderByAdmin,
   closeOrderByAdmin,
   finishOrderByAdmin,
+  getInvoicePdf,
   getOrderInvoice,
   getOrderProviderInvoice,
   getOrderProviderReceipt,
@@ -67,6 +68,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isPayingCancelFee, setIsPayingCancelFee] = useState(false);
   const [isPayingAdditionalPayments, setIsPayingAdditionalPayments] =
     useState(false);
+  const [openingAdditionalPaymentInvoiceId, setOpeningAdditionalPaymentInvoiceId] =
+    useState<string | null>(null);
   const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
@@ -420,6 +423,73 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     } finally {
       setIsProviderInvoiceLoading(false);
     }
+  };
+
+  const openPdfBlobInNewTab = (data: BlobPart | Blob) => {
+    const pdfBlob =
+      data instanceof Blob ? data : new Blob([data], { type: "application/pdf" });
+    const blobUrl = URL.createObjectURL(pdfBlob);
+
+    const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+  };
+
+  const openAdditionalPaymentInvoice = async (invoiceId: string) => {
+    if (openingAdditionalPaymentInvoiceId) return;
+    try {
+      setOpeningAdditionalPaymentInvoiceId(invoiceId);
+      const response = await getInvoicePdf(invoiceId);
+      openPdfBlobInNewTab(response.data);
+    } catch (error) {
+      console.error("Failed to get additional payment invoice", error);
+    } finally {
+      setOpeningAdditionalPaymentInvoiceId(null);
+    }
+  };
+
+  const openOrderInvoicesPage = () => {
+    window.open(`/invoices?orderId=${order.id}`, "_blank", "noopener,noreferrer");
+  };
+
+  const getAdditionalPaymentInvoiceTitle = (invoice: {
+    ownerRole?: string | null;
+    kind?: string | null;
+    invoiceNo?: string | null;
+  }) => {
+    const role = String(invoice.ownerRole ?? "").toUpperCase();
+    const kind = String(invoice.kind ?? "").toUpperCase();
+
+    if (role === "CLIENT" && kind === "PLATFORM_FEE_INVOICE") {
+      return "Client platform fee invoice";
+    }
+
+    if (role === "CLIENT" && kind === "PROVIDER_RECEIPT") {
+      return "Client provider receipt";
+    }
+
+    if (role === "CLIENT" && kind === "PROVIDER_INVOICE") {
+      return "Client provider invoice";
+    }
+
+    if (role === "PROVIDER" && kind === "PROVIDER_RECEIPT") {
+      return "Provider receipt";
+    }
+
+    if (role === "PROVIDER" && kind === "PROVIDER_INVOICE") {
+      return "Provider invoice";
+    }
+
+    return invoice.invoiceNo ? `Invoice ${invoice.invoiceNo}` : "Open invoice";
   };
 
   const releasedFundsAt = order?.releasedFundsToProviderAt
@@ -1069,6 +1139,16 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                   "Additional payment";
                 const paymentCompletedAt =
                   payment.payment_completed_at ?? payment.paidAt;
+                const paymentInvoiceId =
+                  payment.invoiceId ?? payment.additionalPaymentInvoiceId ?? null;
+                const paymentInvoices = Array.isArray(payment.invoices)
+                  ? payment.invoices
+                  : [];
+                const hasPaymentInvoice =
+                  paymentInvoices.length > 0 ||
+                  !!paymentInvoiceId ||
+                  !!payment.invoiceNo ||
+                  !!payment.invoiceDate;
                 return (
                   <div key={paymentKey} className={styles.additionalPaymentCard}>
                     <div className={styles.additionalPaymentTop}>
@@ -1080,19 +1160,78 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                           Paid: {formatCompactDateTime(paymentCompletedAt)}
                         </div>
                       </div>
-                      <span
-                        className={`${styles.additionalPaymentBadge} ${
-                          String(payment.payoutState ?? "").toUpperCase() ===
-                          "PAID"
-                            ? styles.additionalPaymentBadgePaid
-                            : String(payment.payoutState ?? "").toUpperCase() ===
-                                "PENDING"
-                              ? styles.additionalPaymentBadgePending
-                              : styles.additionalPaymentBadgeMuted
-                        }`}
-                      >
-                        {payment.payoutState ?? "NOT_PAYABLE"}
-                      </span>
+                      <div className={styles.additionalPaymentActions}>
+                        <span
+                          className={`${styles.additionalPaymentBadge} ${
+                            String(payment.payoutState ?? "").toUpperCase() ===
+                            "PAID"
+                              ? styles.additionalPaymentBadgePaid
+                              : String(payment.payoutState ?? "").toUpperCase() ===
+                                  "PENDING"
+                                ? styles.additionalPaymentBadgePending
+                                : styles.additionalPaymentBadgeMuted
+                          }`}
+                        >
+                          {payment.payoutState ?? "NOT_PAYABLE"}
+                        </span>
+                        {hasPaymentInvoice && (
+                          <>
+                            {paymentInvoices.map((invoice, invoiceIndex) => {
+                              const invoiceId = invoice.id ?? invoice._id ?? null;
+                              if (!invoiceId) return null;
+
+                              return (
+                                <Button
+                                  key={`${invoiceId}-${invoiceIndex}`}
+                                  title={getAdditionalPaymentInvoiceTitle(invoice)}
+                                  type="OUTLINED"
+                                  height={24}
+                                  className={styles.additionalPaymentInvoiceButton}
+                                  onClick={() =>
+                                    openAdditionalPaymentInvoice(invoiceId)
+                                  }
+                                  isLoading={
+                                    openingAdditionalPaymentInvoiceId === invoiceId
+                                  }
+                                  isDisabled={
+                                    !!openingAdditionalPaymentInvoiceId &&
+                                    openingAdditionalPaymentInvoiceId !== invoiceId
+                                  }
+                                />
+                              );
+                            })}
+                            {paymentInvoices.length === 0 && (
+                              <Button
+                                title={
+                                  paymentInvoiceId
+                                    ? "Open invoice"
+                                    : "Open invoices"
+                                }
+                                type="OUTLINED"
+                                height={24}
+                                className={styles.additionalPaymentInvoiceButton}
+                                onClick={() => {
+                                  if (paymentInvoiceId) {
+                                    openAdditionalPaymentInvoice(paymentInvoiceId);
+                                    return;
+                                  }
+                                  openOrderInvoicesPage();
+                                }}
+                                isLoading={
+                                  !!paymentInvoiceId &&
+                                  openingAdditionalPaymentInvoiceId ===
+                                    paymentInvoiceId
+                                }
+                                isDisabled={
+                                  !!openingAdditionalPaymentInvoiceId &&
+                                  openingAdditionalPaymentInvoiceId !==
+                                    paymentInvoiceId
+                                }
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className={styles.additionalPaymentGrid}>
                       <div>
@@ -1133,6 +1272,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                         <div>
                           <span>Paid out at</span>
                           <b>{formatCompactDateTime(payment.paidOutAt)}</b>
+                        </div>
+                      )}
+                      {payment.invoiceNo && (
+                        <div>
+                          <span>Invoice No</span>
+                          <b>{payment.invoiceNo}</b>
+                        </div>
+                      )}
+                      {payment.invoiceDate && (
+                        <div>
+                          <span>Invoice date</span>
+                          <b>{formatCompactDateTime(payment.invoiceDate)}</b>
                         </div>
                       )}
                     </div>

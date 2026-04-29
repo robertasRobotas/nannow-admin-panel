@@ -1222,6 +1222,17 @@ export const getInvoices = async (params?: {
   return response;
 };
 
+export const getInvoicePdf = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/invoices/${id}/pdf`, {
+    headers: {
+      Authorization: jwt,
+    },
+    responseType: "blob",
+  });
+  return response;
+};
+
 export const getFinancialOrders = async (params?: {
   startIndex?: number;
   pageSize?: number;

@@ -66,6 +66,8 @@ const EMPTY_SUBTOTAL: FinancialOrdersSubtotal = {
   forecastCount: 0,
   partialRealCount: 0,
   realCount: 0,
+  orderPaymentCount: 0,
+  additionalPaymentCount: 0,
 };
 
 const SORT_OPTIONS = [
@@ -198,6 +200,20 @@ const getPercent = (value: number, total: number) => {
 const getUserName = (firstName?: string | null, lastName?: string | null) =>
   `${firstName ?? "Deleted"} ${lastName ?? "User"}`.trim();
 
+const isAdditionalPaymentRow = (row: FinancialOrderRow) =>
+  row.recordType === "ADDITIONAL_PAYMENT";
+
+const getLedgerRowKey = (row: FinancialOrderRow, index: number) => {
+  if (isAdditionalPaymentRow(row)) {
+    return `${row.recordType}-${row.paymentId ?? row.id}-${index}`;
+  }
+
+  return `${row.recordType ?? "ORDER_PAYMENT"}-${row.id}-${index}`;
+};
+
+const getRecordTypeLabel = (row: FinancialOrderRow) =>
+  isAdditionalPaymentRow(row) ? "Additional payment" : "Order payment";
+
 const getAmountPresentation = (
   order: FinancialOrderRow,
 ): AmountPresentation => {
@@ -218,8 +234,9 @@ const getAmountPresentation = (
       amount: formatMoneyFromCents(paidCents),
       tone:
         typeof order.actualClientPaidCents === "number" ? "real" : "estimated",
-      subtitle:
-        typeof order.actualClientPaidCents === "number"
+      subtitle: isAdditionalPaymentRow(order)
+        ? (order.paymentKind ?? order.paymentStatus)
+        : typeof order.actualClientPaidCents === "number"
           ? order.paymentStatus
           : "Expected paid",
       isEmpty: false,
@@ -232,8 +249,9 @@ const getAmountPresentation = (
           : (order.displayedPayoutCents ?? order.expectedPayoutCents ?? 0),
       ),
       tone: typeof order.actualPayoutCents === "number" ? "real" : "estimated",
-      subtitle:
-        typeof order.actualPayoutCents === "number"
+      subtitle: isAdditionalPaymentRow(order)
+        ? (order.payoutStatus ?? "Additional payout")
+        : typeof order.actualPayoutCents === "number"
           ? "Real payout"
           : "Expected payout",
       isEmpty: false,
@@ -297,7 +315,7 @@ const getAmountPresentation = (
   };
 };
 
-const getModeClassName = (mode: FinancialOrderMode) => {
+const getModeClassName = (mode?: FinancialOrderMode | null) => {
   if (mode === "REAL") return styles.modeReal;
   if (mode === "PARTIAL_REAL") return styles.modePartialReal;
   return styles.modeForecast;
@@ -643,9 +661,9 @@ const FinancialLedger = () => {
           <h2 className={`${styles.title} ${nunito.className}`}>
             Financial ledger
           </h2>
-          <div
-            className={styles.subtitle}
-          >{`${total} orders, page ${currentPage}/${pageCount}`}</div>
+          <div className={styles.subtitle}>
+            {`${total} ledger rows, page ${currentPage}/${pageCount}`}
+          </div>
         </div>
         <SearchBar
           placeholder="Search order ID or user"
@@ -860,7 +878,7 @@ const FinancialLedger = () => {
 
           {!loading &&
             !error &&
-            items.map((order) => {
+            items.map((order, index) => {
               const clientName = getUserName(
                 order.clientUser?.firstName,
                 order.clientUser?.lastName,
@@ -874,9 +892,11 @@ const FinancialLedger = () => {
 
               return (
                 <div
-                  key={order.id}
+                  key={getLedgerRowKey(order, index)}
                   className={`${styles.row} ${
                     order.financialMode === "REAL" ? styles.rowReal : ""
+                  } ${
+                    isAdditionalPaymentRow(order) ? styles.rowAdditional : ""
                   }`}
                 >
                   <div className={styles.orderCell} data-label="Order">
@@ -914,14 +934,30 @@ const FinancialLedger = () => {
                       </div>
                     </div>
                     <div className={styles.orderBadges}>
+                      <span
+                        className={`${styles.recordTypeBadge} ${
+                          isAdditionalPaymentRow(order)
+                            ? styles.recordTypeAdditional
+                            : styles.recordTypeOrder
+                        }`}
+                      >
+                        {getRecordTypeLabel(order)}
+                      </span>
                       <span className={styles.statusBadge}>
                         {getOrderStatusTitle(order.status)}
                       </span>
-                      <span
-                        className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}
-                      >
-                        {order.financialMode}
-                      </span>
+                      {isAdditionalPaymentRow(order) && order.payoutStatus && (
+                        <span className={styles.statusBadge}>
+                          Payout {order.payoutStatus}
+                        </span>
+                      )}
+                      {order.financialMode && (
+                        <span
+                          className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}
+                        >
+                          {order.financialMode}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1008,6 +1044,19 @@ const FinancialLedger = () => {
           <div className={styles.totalCard}>
             <div className={styles.totalLabel}>Orders</div>
             <div className={styles.totalValue}>{subtotal.totalOrders}</div>
+          </div>
+          <div className={styles.totalCard}>
+            <div className={styles.totalLabel}>Ledger rows</div>
+            <div className={styles.modeCountsWrap}>
+              <span className={`${styles.modeCountChip} ${styles.recordTypeOrder}`}>
+                Orders {subtotal.orderPaymentCount ?? 0}
+              </span>
+              <span
+                className={`${styles.modeCountChip} ${styles.recordTypeAdditional}`}
+              >
+                Additional {subtotal.additionalPaymentCount ?? 0}
+              </span>
+            </div>
           </div>
           <div className={styles.totalCard}>
             <div className={styles.totalLabel}>Client paid</div>

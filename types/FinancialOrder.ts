@@ -1,7 +1,23 @@
 export type FinancialOrderMode = "FORECAST" | "PARTIAL_REAL" | "REAL";
 
+export type FinancialOrderRecordType =
+  | "ORDER_PAYMENT"
+  | "ADDITIONAL_PAYMENT";
+
+export type FinancialOrderInvoice = {
+  id?: string;
+  _id?: string;
+  invoiceNo?: string | null;
+  invoiceDate?: string | null;
+  ownerRole?: string | null;
+  kind?: string | null;
+  invoiceSource?: string | null;
+  isAdditionalPaymentInvoice?: boolean;
+};
+
 export type FinancialOrderRow = {
   id: string;
+  recordType?: FinancialOrderRecordType;
   orderPrettyId: string;
   status: string;
   paymentStatus: string;
@@ -42,7 +58,13 @@ export type FinancialOrderRow = {
   forecastStripeFeeCents?: number | null;
   grossPlatformRevenueCents: number | null;
   netPlatformRevenueCents: number | null;
-  financialMode: FinancialOrderMode;
+  financialMode?: FinancialOrderMode | null;
+  paymentId?: string | null;
+  paymentKind?: string | null;
+  note?: string | null;
+  payoutStatus?: string | null;
+  payoutId?: string | null;
+  invoices?: FinancialOrderInvoice[];
 };
 
 export type FinancialOrdersSubtotal = {
@@ -56,6 +78,8 @@ export type FinancialOrdersSubtotal = {
   forecastCount: number;
   partialRealCount: number;
   realCount: number;
+  orderPaymentCount?: number;
+  additionalPaymentCount?: number;
 };
 
 export type GetFinancialOrdersResponse = {

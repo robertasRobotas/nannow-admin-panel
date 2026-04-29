@@ -201,6 +201,14 @@
   background: rgba(25, 173, 62, 0.12);
 }
 
+.rowAdditional {
+  background: rgba(47, 128, 237, 0.06);
+}
+
+.rowAdditional:hover {
+  background: rgba(47, 128, 237, 0.1);
+}
+
 .orderCell {
   display: flex;
   flex-direction: column;
@@ -282,6 +290,7 @@
 
 .statusBadge,
 .modeBadge,
+.recordTypeBadge,
 .modeCountChip {
   display: inline-flex;
   align-items: center;
@@ -299,8 +308,19 @@
 }
 
 .modeBadge,
+.recordTypeBadge,
 .modeCountChip {
   border: 1px solid transparent;
+}
+
+.recordTypeOrder {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.recordTypeAdditional {
+  background: rgba(47, 128, 237, 0.12);
+  color: #2367c8;
 }
 
 .modeForecast {

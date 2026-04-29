@@ -236,6 +236,21 @@ export type DetailedOrderType = {
     paidOutAt?: string | null;
     paidOutByAdminId?: string | null;
     payoutState?: "PENDING" | "PAID" | "NOT_PAYABLE" | string | null;
+    invoiceId?: string | null;
+    additionalPaymentInvoiceId?: string | null;
+    invoiceNo?: string | null;
+    invoiceDate?: string | null;
+    invoiceSource?: string | null;
+    invoices?: {
+      id?: string;
+      _id?: string;
+      ownerRole?: "CLIENT" | "PROVIDER" | string | null;
+      kind?: string | null;
+      invoiceNo?: string | null;
+      invoiceDate?: string | null;
+      invoiceSource?: string | null;
+      isAdditionalPaymentInvoice?: boolean;
+    }[];
   }[];
   additionalPaymentsSummary?: {
     payoutPendingCount?: number | null;

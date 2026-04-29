@@ -5,6 +5,11 @@ export type InvoiceKind =
   | "PROVIDER_INVOICE"
   | "PROVIDER_RECEIPT";
 
+export type InvoiceSource =
+  | "ORDER_PAYOUT"
+  | "ADDITIONAL_PAYMENT_PAYOUT"
+  | string;
+
 export type InvoiceOwner = {
   id: string;
   firstName?: string;
@@ -27,6 +32,11 @@ export type Invoice = {
   createdAt?: string;
   updatedAt?: string;
   owner?: InvoiceOwner;
+  payoutId?: string | null;
+  paymentIds?: string[];
+  serviceDescription?: string | null;
+  isAdditionalPaymentInvoice?: boolean;
+  invoiceSource?: InvoiceSource | null;
 };
 
 export type GetInvoicesResponse = {
@@ -35,4 +45,3 @@ export type GetInvoicesResponse = {
   startIndex: number;
   pageSize: number;
 };
-

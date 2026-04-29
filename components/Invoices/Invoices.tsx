@@ -9,7 +9,13 @@ import { nunito } from "@/helpers/fonts";
 import paginateStyles from "@/styles/paginate.module.css";
 import Button from "@/components/Button/Button";
 import defaultAvatarImg from "@/assets/images/default-avatar.png";
-import { getInvoices } from "@/pages/api/fetch";
+import {
+  getInvoicePdf,
+  getInvoices,
+  getOrderInvoice,
+  getOrderProviderInvoice,
+  getOrderProviderReceipt,
+} from "@/pages/api/fetch";
 import {
   GetInvoicesResponse,
   Invoice,
@@ -58,6 +64,25 @@ const formatMoney = (amount?: number, currency?: string) => {
   }
 };
 
+const openBlobInNewTab = (data: BlobPart | Blob) => {
+  const pdfBlob =
+    data instanceof Blob ? data : new Blob([data], { type: "application/pdf" });
+  const blobUrl = URL.createObjectURL(pdfBlob);
+
+  const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+};
+
 const Invoices = () => {
   const router = useRouter();
   const [items, setItems] = useState<Invoice[]>([]);
@@ -65,6 +90,7 @@ const Invoices = () => {
   const [total, setTotal] = useState(0);
   const [pageCount, setPageCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [openingInvoiceId, setOpeningInvoiceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [ownerRole, setOwnerRole] = useState<InvoiceOwnerRole | "">("");
@@ -259,6 +285,28 @@ const Invoices = () => {
     );
   };
 
+  const openInvoice = async (invoiceId: string) => {
+    if (openingInvoiceId) return;
+    try {
+      setOpeningInvoiceId(invoiceId);
+      const invoice = items.find((item) => item.id === invoiceId);
+      const response =
+        invoice?.isAdditionalPaymentInvoice ||
+        invoice?.invoiceSource === "ADDITIONAL_PAYMENT_PAYOUT"
+          ? await getInvoicePdf(invoiceId)
+          : invoice?.kind === "PROVIDER_INVOICE"
+            ? await getOrderProviderInvoice(invoice.orderId)
+            : invoice?.kind === "PROVIDER_RECEIPT"
+              ? await getOrderProviderReceipt(invoice.orderId)
+              : await getOrderInvoice(invoice?.orderId ?? invoiceId);
+      openBlobInNewTab(response.data);
+    } catch (err) {
+      console.error("Failed to open invoice", err);
+    } finally {
+      setOpeningInvoiceId(null);
+    }
+  };
+
   const shownTotal = useMemo(() => `${total} total`, [total]);
 
   return (
@@ -358,6 +406,11 @@ const Invoices = () => {
                   </div>
                   <div className={styles.meta}>Invoice No: {invoice.invoiceNo}</div>
                   <div className={styles.meta}>Kind: {invoice.kind}</div>
+                  {invoice.invoiceSource && (
+                    <div className={styles.meta}>
+                      Source: {invoice.invoiceSource}
+                    </div>
+                  )}
                   <div className={styles.meta}>Owner role: {invoice.ownerRole}</div>
                   <div className={styles.meta}>Issued at: {formatDateTime(invoice.issuedAt)}</div>
                 </div>
@@ -375,12 +428,37 @@ const Invoices = () => {
                     </div>
                   </Link>
                   <div className={styles.meta}>Order ID: {invoice.orderId}</div>
+                  {invoice.payoutId && (
+                    <div className={styles.meta}>Payout ID: {invoice.payoutId}</div>
+                  )}
+                  {invoice.paymentIds && invoice.paymentIds.length > 0 && (
+                    <div className={styles.meta}>
+                      Payment IDs: {invoice.paymentIds.join(", ")}
+                    </div>
+                  )}
+                  {invoice.serviceDescription && (
+                    <div className={styles.meta}>
+                      Service: {invoice.serviceDescription}
+                    </div>
+                  )}
+                  {invoice.isAdditionalPaymentInvoice && (
+                    <div className={styles.sourceBadge}>
+                      Additional payment invoice
+                    </div>
+                  )}
                 </div>
 
                 <div className={styles.right}>
                   <div className={styles.amount}>
                     {formatMoney(invoice.amount, invoice.currency)}
                   </div>
+                  <Button
+                    title="Open invoice"
+                    type="BLACK"
+                    onClick={() => openInvoice(invoice.id)}
+                    isLoading={openingInvoiceId === invoice.id}
+                    isDisabled={!!openingInvoiceId}
+                  />
                   <Button
                     title="Open order"
                     type="OUTLINED"

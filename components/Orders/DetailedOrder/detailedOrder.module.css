@@ -253,6 +253,22 @@
   padding-bottom: 14px;
 }
 
+.additionalPaymentActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.additionalPaymentInvoiceButton {
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 14px;
+}
+
 .additionalPaymentTitle {
   color: #000;
   font-size: 16px;
