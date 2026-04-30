@@ -18,6 +18,7 @@ import PayoutsSection from "./PayoutsSection/PayoutsSection";
 import PaymentsSection from "./PaymentsSection/PaymentsSection";
 import { useRouter } from "next/router";
 import { getButtonsData } from "@/data/userProfileMenu";
+import ProviderInfoSection from "./ProviderInfoSection/ProviderInfoSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -84,6 +85,17 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
         return (
           <OrdersSection
             user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+            }}
+          />
+        );
+      }
+
+      case "provider_info": {
+        return (
+          <ProviderInfoSection
+            provider={user?.provider}
             onBackClick={() => {
               setSelectedSection("");
             }}

@@ -1,0 +1,81 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 1rem;
+}
+
+.title {
+  color: #000;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  color: #505050;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.counter {
+  color: #777;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.intro {
+  margin: 0;
+  color: #111;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.qualityList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quality {
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #111;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  padding: 7px 10px;
+}
+
+.empty {
+  color: #777;
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.backBtnWrapper {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}

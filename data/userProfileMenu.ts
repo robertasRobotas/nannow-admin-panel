@@ -27,6 +27,13 @@ export const getButtonsData = (
       visibleFor: ["client", "provider"],
     },
     {
+      title: "Provider info",
+      icon: DocWithPencilIcon,
+      number: user?.provider?.qualitiesIds?.length ?? 0,
+      id: "provider_info",
+      visibleFor: ["provider"],
+    },
+    {
       title: "Provider Orders",
       icon: DocWithCheckmarkIcon,
       number: user?.orders?.length ?? 0,

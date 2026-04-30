@@ -22,6 +22,28 @@ import { ReviewType } from "./Reviews";
 
 export type ProviderPriceCalculationMethod = "DYNAMIC" | "CUSTOM";
 
+export type QualityType =
+  | "CAN_BABYSIT_AT_HOME"
+  | "LT_LANGUAGE"
+  | "FIRST_AID"
+  | "DRIVER_LICENSE"
+  | "CAR"
+  | "CAN_SHOP"
+  | "CAN_CLEAN"
+  | "NON_SMOKER"
+  | "CAN_GO_OUTSIDE"
+  | "CAN_COOK"
+  | "LOVES_PETS"
+  | "CAN_SWIM"
+  | "PRIMARY_SCHOOL_TEACHER"
+  | "SINGING_TEACHER"
+  | "DANCE_TEACHER"
+  | "GUITAR"
+  | "PIANO"
+  | "CAT_ALLERGY"
+  | "DOG_ALLERGY"
+  | "ASTHMA";
+
 export type User = {
   _id: string;
   id: string;
@@ -52,6 +74,8 @@ export type UserDetails = {
   provider?: {
     id: string;
     userId: string;
+    intro?: string;
+    qualitiesIds?: QualityType[];
     totalEarnings: number;
     videoUrl?: string;
     badgesIds?: string[];
