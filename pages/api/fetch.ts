@@ -500,6 +500,7 @@ export const setUserBanStatus = async (
   userId: string,
   isBanned: boolean,
   bannedReason?: string,
+  bannedUntil?: string | null,
 ) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(
@@ -507,6 +508,7 @@ export const setUserBanStatus = async (
     {
       isBanned,
       bannedReason,
+      bannedUntil,
     },
     {
       headers: {

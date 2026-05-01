@@ -189,6 +189,7 @@ type BannedUser = {
   createdAt?: string;
   updatedAt?: string;
   bannedAt?: string;
+  bannedUntil?: string | null;
   reason?: string;
   banReason?: string;
   userBanReason?: string;
@@ -1465,6 +1466,11 @@ const Users = () => {
                         user.bannedAt ?? user.updatedAt ?? user.createdAt,
                       )}`}
                     </div>
+                    {user.bannedUntil && (
+                      <div className={userListStyles.meta}>
+                        {`Banned until: ${formatDateTime(user.bannedUntil)}`}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className={styles.bannedSwitchWrap}>

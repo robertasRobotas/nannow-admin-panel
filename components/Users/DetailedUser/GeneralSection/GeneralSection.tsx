@@ -26,12 +26,48 @@ type BasePriceParseResult =
   | { ok: true; value: number }
   | { ok: false; error: string };
 
+type BanDurationOption =
+  | "permanent"
+  | "1"
+  | "2"
+  | "3"
+  | "7"
+  | "14"
+  | "30"
+  | "custom";
+
+const banDurationOptions: { value: BanDurationOption; label: string }[] = [
+  { value: "permanent", label: "Permanent" },
+  { value: "1", label: "1 day" },
+  { value: "2", label: "2 days" },
+  { value: "3", label: "3 days" },
+  { value: "7", label: "1 week" },
+  { value: "14", label: "2 weeks" },
+  { value: "30", label: "1 month" },
+  { value: "custom", label: "Pick date" },
+];
+
 const normalizeRequestedCompensationInfoAt = (value?: string | null) => {
   if (!value) return null;
   const date = new Date(value);
   if (!Number.isNaN(date.getTime()) && date.getTime() === 0) return null;
   return value;
 };
+
+const formatLocalDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getDateInputValueAfterDays = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return formatLocalDateInputValue(date);
+};
+
+const dateInputValueToIsoDate = (value: string) => `${value}T00:00:00.000Z`;
 
 const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const [isSuspendedLocal, setIsSuspendedLocal] = useState(
@@ -42,6 +78,10 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const [isBanModalOpen, setIsBanModalOpen] = useState(false);
   const [banReason, setBanReason] = useState("");
   const [banReasonError, setBanReasonError] = useState<string | null>(null);
+  const [banDurationOption, setBanDurationOption] =
+    useState<BanDurationOption>("permanent");
+  const [customBanUntilDate, setCustomBanUntilDate] = useState("");
+  const [banUntilError, setBanUntilError] = useState<string | null>(null);
   const [isSavingBanStatus, setIsSavingBanStatus] = useState(false);
   const [isBasePriceModalOpen, setIsBasePriceModalOpen] = useState(false);
   const [basePriceInput, setBasePriceInput] = useState(
@@ -140,6 +180,9 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const openBanModal = () => {
     setBanReason("");
     setBanReasonError(null);
+    setBanDurationOption("permanent");
+    setCustomBanUntilDate("");
+    setBanUntilError(null);
     setIsBanModalOpen(true);
   };
 
@@ -147,6 +190,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     if (isSavingBanStatus) return;
     setIsBanModalOpen(false);
     setBanReasonError(null);
+    setBanUntilError(null);
   };
 
   const confirmBanStatusChange = async () => {
@@ -159,12 +203,36 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       return;
     }
 
+    let bannedUntil: string | null | undefined;
+
+    if (isBanning) {
+      if (banDurationOption === "permanent") {
+        bannedUntil = null;
+      } else if (banDurationOption === "custom") {
+        if (!customBanUntilDate) {
+          setBanUntilError("Date is required.");
+          return;
+        }
+        if (customBanUntilDate < getDateInputValueAfterDays(1)) {
+          setBanUntilError("Choose a future date.");
+          return;
+        }
+
+        bannedUntil = dateInputValueToIsoDate(customBanUntilDate);
+      } else {
+        bannedUntil = dateInputValueToIsoDate(
+          getDateInputValueAfterDays(Number(banDurationOption)),
+        );
+      }
+    }
+
     try {
       setIsSavingBanStatus(true);
       await setUserBanStatus(
         user.user.id,
         isBanning,
         isBanning ? banReason.trim() : undefined,
+        bannedUntil,
       );
       toast.success(isBanning ? "User was banned" : "User was unbanned");
       setIsBanModalOpen(false);
@@ -443,26 +511,75 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
               {user?.user?.isBannedByAdmin ? "Unban user?" : "Ban user?"}
             </h2>
             {!user?.user?.isBannedByAdmin && (
-              <div className={styles.inputBlock}>
-                <label className={styles.inputLabel} htmlFor="ban-reason-input">
-                  Reason
-                </label>
-                <input
-                  id="ban-reason-input"
-                  type="text"
-                  value={banReason}
-                  onChange={(e) => {
-                    setBanReason(e.target.value);
-                    setBanReasonError(null);
-                  }}
-                  className={styles.textInput}
-                  placeholder="Enter reason..."
-                  disabled={isSavingBanStatus}
-                />
-                {banReasonError && (
-                  <span className={styles.inputError}>{banReasonError}</span>
-                )}
-              </div>
+              <>
+                <div className={styles.inputBlock}>
+                  <label
+                    className={styles.inputLabel}
+                    htmlFor="ban-reason-input"
+                  >
+                    Reason
+                  </label>
+                  <input
+                    id="ban-reason-input"
+                    type="text"
+                    value={banReason}
+                    onChange={(e) => {
+                      setBanReason(e.target.value);
+                      setBanReasonError(null);
+                    }}
+                    className={styles.textInput}
+                    placeholder="Enter reason..."
+                    disabled={isSavingBanStatus}
+                  />
+                  {banReasonError && (
+                    <span className={styles.inputError}>{banReasonError}</span>
+                  )}
+                </div>
+                <div className={styles.inputBlock}>
+                  <label
+                    className={styles.inputLabel}
+                    htmlFor="ban-duration-select"
+                  >
+                    Ban duration
+                  </label>
+                  <select
+                    id="ban-duration-select"
+                    value={banDurationOption}
+                    onChange={(e) => {
+                      const nextValue = e.target.value as BanDurationOption;
+                      setBanDurationOption(nextValue);
+                      setBanUntilError(null);
+                      if (nextValue !== "custom") {
+                        setCustomBanUntilDate("");
+                      }
+                    }}
+                    className={styles.selectInput}
+                    disabled={isSavingBanStatus}
+                  >
+                    {banDurationOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {banDurationOption === "custom" && (
+                    <input
+                      type="date"
+                      value={customBanUntilDate}
+                      min={getDateInputValueAfterDays(1)}
+                      onChange={(e) => {
+                        setCustomBanUntilDate(e.target.value);
+                        setBanUntilError(null);
+                      }}
+                      className={styles.textInput}
+                      disabled={isSavingBanStatus}
+                    />
+                  )}
+                  {banUntilError && (
+                    <span className={styles.inputError}>{banUntilError}</span>
+                  )}
+                </div>
+              </>
             )}
             <p className={styles.confirmationBody}>
               Banned users are visible in the Users page under the{" "}
