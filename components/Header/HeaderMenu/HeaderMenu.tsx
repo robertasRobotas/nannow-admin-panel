@@ -215,13 +215,7 @@ const HeaderMenu = ({
                     <NavIcon path={l.link} className={headerStyles.navIcon} />
                     <span className={headerStyles.navTitle}>{l.title}</span>
                     {attention != null && (
-                      <span
-                        className={`${headerStyles.attentionBubble}${
-                          l.link === "/users"
-                            ? ` ${headerStyles.attentionBubbleUsers}`
-                            : ""
-                        }`}
-                      >
+                      <span className={headerStyles.attentionBubble}>
                         {attention}
                       </span>
                     )}

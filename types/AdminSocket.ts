@@ -41,7 +41,13 @@ export type AdminEvent =
   | { type: "FEEDBACK_CREATED"; feedbackId: string }
   | { type: "FEEDBACK_RESOLVED"; feedbackId: string; userId: string }
   | { type: "USER_REPORTED"; reportId: string }
-  | { type: "REPORT_RESOLVED"; reportId: string; userId: string };
+  | { type: "REPORT_RESOLVED"; reportId: string; userId: string }
+  | {
+      type: "CLIENT_REQUESTED_COMPENSATION_INFO";
+      userId: string;
+      clientId: string;
+      requestedCompensationInfoAt: string;
+    };
 
 export type AdminSocketEvent = AdminEvent & {
   title: string;

@@ -161,6 +161,36 @@ export const getClientById = async (id: string) => {
   return response;
 };
 
+export const updateClientRequestedCompensationInfoAt = async (
+  clientId: string,
+  requestedCompensationInfoAt: true | null,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/clients/${clientId}/requested-compensation-info-at`,
+    { requestedCompensationInfoAt },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getRequestedCompensationInfoAtCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/clients/requested-compensation-info-at/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getProviderById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/providers/${id}`, {

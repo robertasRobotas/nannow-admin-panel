@@ -25,6 +25,7 @@ import {
   getNotPaidOrdersCount,
   getPendingProviderSpecialSkillsCount,
   getPendingCriminalRecordCount,
+  getRequestedCompensationInfoAtCount,
   postAdminMessage,
   setAdminApiMode,
   setupAdminTotp,
@@ -96,6 +97,10 @@ const Header = () => {
     useState(0);
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
+  const [
+    requestedCompensationInfoAtCount,
+    setRequestedCompensationInfoAtCount,
+  ] = useState(0);
   const [notSolvedFeedbackCount, setNotSolvedFeedbackCount] = useState(0);
   const [notReviewedDocumentsCount, setNotReviewedDocumentsCount] = useState(0);
   const [notResolvedReportsCount, setNotResolvedReportsCount] = useState(0);
@@ -229,6 +234,15 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchRequestedCompensationInfoAtCount = async () => {
+      try {
+        const response = await getRequestedCompensationInfoAtCount();
+        const total = response.data?.total ?? response.data?.result?.total ?? 0;
+        setRequestedCompensationInfoAtCount(Number(total) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
     const fetchNotSolvedFeedback = async () => {
       try {
         const response = await getNotResolvedFeedbackCount();
@@ -285,6 +299,7 @@ const Header = () => {
     fetchCanceledPendingFinancialOrdersCount();
     fetchAdditionalPaymentsNotPayoutedOrdersCount();
     fetchNotFinishedOnboardingCount();
+    fetchRequestedCompensationInfoAtCount();
     fetchPendingCriminalChecksCount();
     fetchNotSolvedFeedback();
     fetchNotReviewedDocumentsCount();
@@ -313,6 +328,38 @@ const Header = () => {
       window.removeEventListener(
         "pending-provider-special-skills-count-refresh",
         handlePendingProviderSpecialSkillsRefresh,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleRequestedCompensationInfoRefresh = async (event: Event) => {
+      const delta = (event as CustomEvent<{ delta?: number }>).detail?.delta;
+      if (typeof delta === "number") {
+        setRequestedCompensationInfoAtCount((prev) =>
+          Math.max(prev + delta, 0),
+        );
+        return;
+      }
+
+      try {
+        const response = await getRequestedCompensationInfoAtCount();
+        const total = response.data?.total ?? response.data?.result?.total ?? 0;
+        setRequestedCompensationInfoAtCount(Number(total) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    window.addEventListener(
+      "requested-compensation-info-count-refresh",
+      handleRequestedCompensationInfoRefresh,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "requested-compensation-info-count-refresh",
+        handleRequestedCompensationInfoRefresh,
       );
     };
   }, []);
@@ -416,6 +463,10 @@ const Header = () => {
         }
       })();
     }
+
+    if (lastEvent.type === "CLIENT_REQUESTED_COMPENSATION_INFO") {
+      setRequestedCompensationInfoAtCount((prev) => prev + 1);
+    }
   }, [lastEvent]);
 
   const ordersAttentionNumber =
@@ -424,7 +475,9 @@ const Header = () => {
     canceledPendingFinancialCount +
     additionalPaymentsNotPayoutedCount;
   const usersAttentionNumber =
-    notFinishedOnboardingCount + pendingProviderSpecialSkillsCount;
+    notFinishedOnboardingCount +
+    pendingProviderSpecialSkillsCount +
+    requestedCompensationInfoAtCount;
   const visibleLinks = isSuperAdmin
     ? [{ title: "Super Access", link: "/super-access" }, ...links]
     : links;
@@ -564,13 +617,7 @@ const Header = () => {
                       <NavIcon path={l.link} className={styles.navIcon} />
                       <span className={styles.navTitle}>{l.title}</span>
                       {attention != null && (
-                        <span
-                          className={`${styles.attentionBubble}${
-                            l.link === "/users"
-                              ? ` ${styles.attentionBubbleUsers}`
-                              : ""
-                          }`}
-                        >
+                        <span className={styles.attentionBubble}>
                           {attention}
                         </span>
                       )}

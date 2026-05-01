@@ -268,6 +268,20 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
     };
   }
 
+  if (
+    parsed.type === "CLIENT_REQUESTED_COMPENSATION_INFO" &&
+    typeof parsed.userId === "string" &&
+    typeof parsed.clientId === "string" &&
+    typeof parsed.requestedCompensationInfoAt === "string"
+  ) {
+    return {
+      type: "CLIENT_REQUESTED_COMPENSATION_INFO",
+      userId: parsed.userId,
+      clientId: parsed.clientId,
+      requestedCompensationInfoAt: parsed.requestedCompensationInfoAt,
+    };
+  }
+
   return null;
 };
 
@@ -376,6 +390,14 @@ const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
         linkHref: `/reports/${event.reportId}`,
         linkLabel: "Open report",
       };
+    case "CLIENT_REQUESTED_COMPENSATION_INFO":
+      return {
+        ...event,
+        title: "Client requested compensation info",
+        description: event.requestedCompensationInfoAt,
+        linkHref: `/client/${event.userId}`,
+        linkLabel: "Open client profile",
+      };
   }
 };
 
@@ -423,6 +445,8 @@ export const AdminSocketProvider = ({
         return `${event.type}:${event.reportId}`;
       case "REPORT_RESOLVED":
         return `${event.type}:${event.reportId}:${event.userId}`;
+      case "CLIENT_REQUESTED_COMPENSATION_INFO":
+        return `${event.type}:${event.clientId}:${event.requestedCompensationInfoAt}`;
     }
   };
 

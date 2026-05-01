@@ -20,6 +20,7 @@ import {
   getOnboardingStats,
   getPendingProviderSpecialSkillsCount,
   getProviderById,
+  getRequestedCompensationInfoAtCount,
   getTestUsers,
   getUsersAppVersionStats,
   setUserBanStatus,
@@ -42,6 +43,7 @@ import Button from "../Button/Button";
 import UserEmailIdLine from "./UserEmailIdLine/UserEmailIdLine";
 import { LayoutGrid, List } from "lucide-react";
 import { toast } from "react-toastify";
+import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 
 const onboardingStepLabels: Record<OnboardingStep, string> = {
   USER_VERIFIED: "User verified",
@@ -88,6 +90,7 @@ type UsersViewMode =
   | "TEST_USERS";
 type ProviderVideoFilter = "ALL" | "WITH_VIDEO" | "WITHOUT_VIDEO";
 type ProviderSpecialSkillsFilter = "ALL" | "PENDING_SPECIAL_SKILLS";
+type ClientCompensationFilter = "ALL" | "REQUESTED" | "WITHOUT";
 type AppVersionPlatform = "IOS" | "ANDROID" | null;
 type LoginMode = "GOOGLE" | "EMAIL" | "APPLE" | "UNKNOWN";
 type LoginModeTotals = Partial<Record<LoginMode, number>>;
@@ -234,6 +237,7 @@ const Users = () => {
   const [testUsers, setTestUsers] = useState<TestUser[]>([]);
   const [connectedUsers, setConnectedUsers] = useState<ConnectedUser[]>([]);
   const router = useRouter();
+  const { lastEvent } = useAdminSocket();
 
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
@@ -252,6 +256,10 @@ const Users = () => {
   });
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
+  const [
+    requestedCompensationInfoAtCount,
+    setRequestedCompensationInfoAtCount,
+  ] = useState(0);
   const [isBanConfirmModalOpen, setIsBanConfirmModalOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<BannedUser | null>(null);
   const [isUpdatingBan, setIsUpdatingBan] = useState(false);
@@ -267,6 +275,8 @@ const Users = () => {
     useState<ProviderVideoFilter>("ALL");
   const [providerSpecialSkillsFilter, setProviderSpecialSkillsFilter] =
     useState<ProviderSpecialSkillsFilter>("ALL");
+  const [clientCompensationFilter, setClientCompensationFilter] =
+    useState<ClientCompensationFilter>("ALL");
   const [newTestUserEmail, setNewTestUserEmail] = useState("");
   const [testUserEditValues, setTestUserEditValues] = useState<
     Record<string, string>
@@ -396,13 +406,19 @@ const Users = () => {
 
         if (nextView === "CLIENTS") {
           nextQuery.mode = "clients";
+          delete nextQuery.hasRequestedCompensationInfoAt;
+          delete nextQuery.requestedCompensationInfoAt;
         } else if (nextView === "PROVIDERS") {
           nextQuery.mode = "providers";
+          delete nextQuery.hasRequestedCompensationInfoAt;
+          delete nextQuery.requestedCompensationInfoAt;
         } else {
           const viewQuery = MODE_TO_VIEW_QUERY[nextView];
           if (viewQuery) {
             nextQuery.view = viewQuery;
           }
+          delete nextQuery.hasRequestedCompensationInfoAt;
+          delete nextQuery.requestedCompensationInfoAt;
         }
       }
 
@@ -434,12 +450,28 @@ const Users = () => {
       typeof router.query.mode === "string" ? router.query.mode : undefined;
     if (mode === "providers") {
       setSelectedViewOption(1);
+      setClientCompensationFilter("ALL");
     } else {
       // default to clients
       setSelectedViewOption(0);
+      const hasRequested =
+        router.query.hasRequestedCompensationInfoAt === "true" ||
+        router.query.requestedCompensationInfoAt === "true";
+      const withoutRequested =
+        router.query.requestedCompensationInfoAt === "false";
+      setClientCompensationFilter(
+        hasRequested ? "REQUESTED" : withoutRequested ? "WITHOUT" : "ALL",
+      );
     }
     setModeReady(true);
-  }, [router.isReady, router.query.mode, router.query.view, viewOptions]);
+  }, [
+    router.isReady,
+    router.query.hasRequestedCompensationInfoAt,
+    router.query.mode,
+    router.query.requestedCompensationInfoAt,
+    router.query.view,
+    viewOptions,
+  ]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -499,11 +531,13 @@ const Users = () => {
         providerResponse,
         statsResponse,
         appVersionStatsResponse,
+        requestedCompensationResponse,
       ] = await Promise.allSettled([
         getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
         getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
         getOnboardingStats(),
         getUsersAppVersionStats(),
+        getRequestedCompensationInfoAtCount(),
       ]);
 
       if (clientResponse.status === "fulfilled") {
@@ -591,6 +625,14 @@ const Users = () => {
           totalUsersByLoginMode: {},
         });
       }
+
+      if (requestedCompensationResponse.status === "fulfilled") {
+        const total =
+          requestedCompensationResponse.value.data?.total ??
+          requestedCompensationResponse.value.data?.result?.total ??
+          0;
+        setRequestedCompensationInfoAtCount(Number(total) || 0);
+      }
     } catch (err) {
       console.log(err);
     } finally {
@@ -623,7 +665,13 @@ const Users = () => {
         search: searchText,
       });
 
-      if (!isSelectedClients) {
+      if (isSelectedClients) {
+        if (clientCompensationFilter === "REQUESTED") {
+          searchParams.set("hasRequestedCompensationInfoAt", "true");
+        } else if (clientCompensationFilter === "WITHOUT") {
+          searchParams.set("requestedCompensationInfoAt", "false");
+        }
+      } else {
         if (providerVideoFilter === "WITH_VIDEO") {
           searchParams.set("hasVideo", "true");
         } else if (providerVideoFilter === "WITHOUT_VIDEO") {
@@ -676,6 +724,7 @@ const Users = () => {
       }
     }
   }, [
+    clientCompensationFilter,
     isSelectedClients,
     itemOffset,
     itemsPerPage,
@@ -860,6 +909,44 @@ const Users = () => {
   }, [fetchPendingProviderSpecialSkills]);
 
   useEffect(() => {
+    const handleRequestedCompensationInfoRefresh = async (event: Event) => {
+      const delta = (event as CustomEvent<{ delta?: number }>).detail?.delta;
+      if (typeof delta === "number") {
+        setRequestedCompensationInfoAtCount((prev) =>
+          Math.max(prev + delta, 0),
+        );
+        if (clientCompensationFilter === "REQUESTED") {
+          fetchUsers();
+        }
+        return;
+      }
+
+      try {
+        const response = await getRequestedCompensationInfoAtCount();
+        const total = response.data?.total ?? response.data?.result?.total ?? 0;
+        setRequestedCompensationInfoAtCount(Number(total) || 0);
+        if (clientCompensationFilter === "REQUESTED") {
+          fetchUsers();
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    window.addEventListener(
+      "requested-compensation-info-count-refresh",
+      handleRequestedCompensationInfoRefresh,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "requested-compensation-info-count-refresh",
+        handleRequestedCompensationInfoRefresh,
+      );
+    };
+  }, [clientCompensationFilter, fetchUsers]);
+
+  useEffect(() => {
     if (!router.isReady || !modeReady) return;
     if (isActiveUsersSelected) {
       fetchConnectedUsersList();
@@ -925,6 +1012,14 @@ const Users = () => {
       setItemOffset(0);
     }
   }, [connectedUsersCounts, connectedUsersFilter, isActiveUsersSelected]);
+
+  useEffect(() => {
+    if (lastEvent?.type !== "CLIENT_REQUESTED_COMPENSATION_INFO") return;
+    setRequestedCompensationInfoAtCount((prev) => prev + 1);
+    if (clientCompensationFilter === "REQUESTED") {
+      fetchUsers();
+    }
+  }, [clientCompensationFilter, fetchUsers, lastEvent]);
 
   const openOnboardingUserProfile = (user: OnboardingNotFinishedUser) => {
     const selectedText = window.getSelection?.()?.toString().trim() ?? "";
@@ -1115,6 +1210,33 @@ const Users = () => {
               type="OUTLINED"
               onClick={() => router.push("/users/filter-export")}
             />
+            {requestedCompensationInfoAtCount > 0 && (
+              <Button
+                title="Compensation requests"
+                type="OUTLINED"
+                isSelected={
+                  isSelectedClients && clientCompensationFilter === "REQUESTED"
+                }
+                attentionNumber={requestedCompensationInfoAtCount}
+                onClick={() => {
+                  setSelectedViewOption(0);
+                  setClientCompensationFilter("REQUESTED");
+                  setItemOffset(0);
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query: {
+                        mode: "clients",
+                        hasRequestedCompensationInfoAt: "true",
+                        page: "1",
+                      },
+                    },
+                    undefined,
+                    { shallow: true, scroll: false },
+                  );
+                }}
+              />
+            )}
             {isProvidersSelected && (
               <>
                 <DropDownButton

@@ -68,6 +68,7 @@ export type User = {
   imgUrlRemovedByAdminId?: string | null;
   finalPrice?: number;
   locale?: string;
+  requestedCompensationInfoAt?: string | null;
 };
 
 export type UserDetails = {
@@ -158,6 +159,7 @@ export type UserDetails = {
   client?: {
     id: string;
     userId: string;
+    requestedCompensationInfoAt?: string | null;
     languages: string[];
     badgesIds: string[];
     animals: string[];

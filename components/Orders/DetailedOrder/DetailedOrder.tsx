@@ -1530,7 +1530,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         )}
       </div>
       <div className={styles.closeOrderRow}>
-        {!isCanceledByAdmin && (
+        {!isCanceledOrder && (
           <Button
             title={isCancelingOrder ? "Canceling..." : "Cancel order"}
             type="DELETE"

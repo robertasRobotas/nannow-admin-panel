@@ -10,6 +10,7 @@ import {
   deleteProviderStripeAccount,
   setUserBanStatus,
   setUserSuspendedStatus,
+  updateClientRequestedCompensationInfoAt,
   updateProviderFields,
 } from "@/pages/api/fetch";
 import axios from "axios";
@@ -24,6 +25,13 @@ type GeneralSectionProps = {
 type BasePriceParseResult =
   | { ok: true; value: number }
   | { ok: false; error: string };
+
+const normalizeRequestedCompensationInfoAt = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime()) && date.getTime() === 0) return null;
+  return value;
+};
 
 const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const [isSuspendedLocal, setIsSuspendedLocal] = useState(
@@ -44,6 +52,16 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const [basePriceError, setBasePriceError] = useState<string | null>(null);
   const [isUpdatingBasePrice, setIsUpdatingBasePrice] = useState(false);
   const [openedVideoUrl, setOpenedVideoUrl] = useState<string | null>(null);
+  const [
+    requestedCompensationInfoAtLocal,
+    setRequestedCompensationInfoAtLocal,
+  ] = useState<string | null>(
+    normalizeRequestedCompensationInfoAt(
+      user?.client?.requestedCompensationInfoAt,
+    ),
+  );
+  const [isCompensationModalOpen, setIsCompensationModalOpen] = useState(false);
+  const [isCompensationSaving, setIsCompensationSaving] = useState(false);
 
   console.log(user.provider);
   const [isSuspendedSaving, setIsSuspendedSaving] = useState(false);
@@ -70,6 +88,15 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
         }
       },
     },
+    compensationRequestSwitch:
+      mode === "client"
+        ? {
+            value: !!requestedCompensationInfoAtLocal,
+            onChange: () => setIsCompensationModalOpen(true),
+            disabled: isCompensationSaving,
+          }
+        : undefined,
+    requestedCompensationInfoAt: requestedCompensationInfoAtLocal,
   });
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
@@ -206,6 +233,48 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     }
   };
 
+  const closeCompensationModal = () => {
+    if (isCompensationSaving) return;
+    setIsCompensationModalOpen(false);
+  };
+
+  const confirmCompensationStatusChange = async () => {
+    if (!user?.client?.id || isCompensationSaving) return;
+    const nextStatus = !requestedCompensationInfoAtLocal;
+
+    try {
+      setIsCompensationSaving(true);
+      const response = await updateClientRequestedCompensationInfoAt(
+        user.client.id,
+        nextStatus ? true : null,
+      );
+      const result = response.data?.result ?? response.data ?? {};
+      const nextRequestedAt = nextStatus
+        ? (normalizeRequestedCompensationInfoAt(
+            result.requestedCompensationInfoAt ??
+              result.client?.requestedCompensationInfoAt,
+          ) ?? new Date().toISOString())
+        : null;
+      setRequestedCompensationInfoAtLocal(nextRequestedAt);
+      setIsCompensationModalOpen(false);
+      window.dispatchEvent(
+        new CustomEvent("requested-compensation-info-count-refresh", {
+          detail: { delta: nextStatus ? 1 : -1 },
+        }),
+      );
+      toast.success(
+        nextStatus
+          ? "Compensation request was set"
+          : "Compensation request was cleared",
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to change compensation request status");
+    } finally {
+      setIsCompensationSaving(false);
+    }
+  };
+
   return (
     <div className={styles.main}>
       <h3 className={`${styles.title} ${nunito.className}`}>General info</h3>
@@ -237,7 +306,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 type="button"
                 className={styles.suspendSwitch}
                 onClick={c.booleanSwitch.onChange}
-                disabled={isSuspendedSaving}
+                disabled={c.booleanSwitch.disabled ?? isSuspendedSaving}
               >
                 <span
                   className={`${styles.suspendSwitchUi} ${
@@ -411,6 +480,37 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 type="BLACK"
                 onClick={confirmBanStatusChange}
                 isDisabled={isSavingBanStatus}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCompensationModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>
+              {requestedCompensationInfoAtLocal
+                ? "Clear compensation request?"
+                : "Set compensation request?"}
+            </h2>
+            <p className={styles.confirmationBody}>
+              {requestedCompensationInfoAtLocal
+                ? "This will remove the compensation request status from this client."
+                : "This will mark this client as requested for compensation info."}
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeCompensationModal}
+                isDisabled={isCompensationSaving}
+              />
+              <Button
+                title={isCompensationSaving ? "Saving..." : "Confirm"}
+                type="BLACK"
+                onClick={confirmCompensationStatusChange}
+                isDisabled={isCompensationSaving}
               />
             </div>
           </div>

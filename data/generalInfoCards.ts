@@ -27,7 +27,20 @@ export type InfoCard = {
   booleanSwitch?: {
     value: boolean;
     onChange: () => void;
+    disabled?: boolean;
   };
+};
+
+const formatShortDate = (value?: string | null) => {
+  if (!value) return "Not requested";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  if (date.getTime() === 0) return "Not requested";
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 };
 
 export const getInfoCards = (
@@ -37,7 +50,14 @@ export const getInfoCards = (
     suspendedSwitch?: {
       value: boolean;
       onChange: () => void;
+      disabled?: boolean;
     };
+    compensationRequestSwitch?: {
+      value: boolean;
+      onChange: () => void;
+      disabled?: boolean;
+    };
+    requestedCompensationInfoAt?: string | null;
   },
 ): InfoCard[] => {
   const isSuspended =
@@ -206,6 +226,15 @@ export const getInfoCards = (
   // client
   return [
     ...baseCards,
+    {
+      title: "Compensation request",
+      icon: walletImg,
+      value: formatShortDate(
+        options?.requestedCompensationInfoAt ??
+          data?.client?.requestedCompensationInfoAt,
+      ),
+      booleanSwitch: options?.compensationRequestSwitch,
+    },
     {
       title: "Children",
       icon: kidImg,
