@@ -12,8 +12,9 @@ import {
   getOrderStatusTitle,
   options as orderStatusOptions,
 } from "@/data/orderStatusOptions";
-import { getFinancialOrders } from "@/pages/api/fetch";
+import { getFinancialForecasts, getFinancialOrders } from "@/pages/api/fetch";
 import {
+  FinancialForecastsResponse,
   FinancialOrderMode,
   FinancialOrderRow,
   FinancialOrdersSubtotal,
@@ -349,6 +350,11 @@ const FinancialLedger = () => {
   const [itemOffset, setItemOffset] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [forecasts, setForecasts] = useState<FinancialForecastsResponse | null>(
+    null,
+  );
+  const [forecastsLoading, setForecastsLoading] = useState(false);
+  const [forecastsError, setForecastsError] = useState("");
   const [error, setError] = useState("");
   const [validationError, setValidationError] = useState("");
   const [searchText, setSearchText] = useState("");
@@ -370,6 +376,36 @@ const FinancialLedger = () => {
   const selectedSort = SORT_OPTIONS[selectedSortOption]?.value ?? "paidAt_desc";
   const selectedStatus = STATUS_OPTIONS[selectedStatusOption]?.value ?? "";
   const selectedMode = MODE_OPTIONS[selectedModeOption]?.value ?? "";
+
+  const fetchForecasts = useCallback(async () => {
+    if (!router.isReady) return;
+
+    try {
+      setForecastsLoading(true);
+      setForecastsError("");
+      const nowParam =
+        typeof router.query.now === "string" ? router.query.now : undefined;
+      const response = await getFinancialForecasts({ now: nowParam });
+      const payload = response.data as
+        | FinancialForecastsResponse
+        | { result?: FinancialForecastsResponse };
+      const data =
+        (payload as { result?: FinancialForecastsResponse }).result ??
+        (payload as FinancialForecastsResponse);
+
+      setForecasts(data);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      console.log(err);
+      setForecasts(null);
+      setForecastsError("Failed to load forecasts.");
+    } finally {
+      setForecastsLoading(false);
+    }
+  }, [router]);
 
   const updateLedgerQuery = useCallback(
     (
@@ -498,6 +534,10 @@ const FinancialLedger = () => {
   useEffect(() => {
     fetchFinancialOrders();
   }, [fetchFinancialOrders]);
+
+  useEffect(() => {
+    fetchForecasts();
+  }, [fetchForecasts]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -653,9 +693,14 @@ const FinancialLedger = () => {
     subtotal.netPlatformRevenueCents,
     subtotal.clientPaidCents,
   );
+  const forecastTotals = forecasts?.totals;
+  const forecastCounts = forecasts?.counts;
+  const forecastCrossChecks = forecasts?.crossChecks;
+  const stripeFeeForecast = forecasts?.assumptions.stripeFeeForecast;
 
   return (
     <div className={styles.main}>
+      <div className={styles.ledgerColumn}>
       <div className={styles.headerRow}>
         <div className={styles.titleWrap}>
           <h2 className={`${styles.title} ${nunito.className}`}>
@@ -1118,6 +1163,216 @@ const FinancialLedger = () => {
           </div>
         </div>
       </div>
+      </div>
+
+      <aside
+        className={styles.forecastsAside}
+        aria-label="Financial forecasts"
+        aria-busy={forecastsLoading}
+      >
+        {forecastsLoading ? (
+          <div
+            className={styles.forecastsAsideLoading}
+            role="status"
+            aria-live="polite"
+          >
+            <p className={styles.forecastsAsideShimmerTitle}>
+              Information incoming...
+            </p>
+          </div>
+        ) : forecastsError ? (
+          <div className={styles.forecastsAsideError}>{forecastsError}</div>
+        ) : forecasts && forecastTotals && forecastCounts ? (
+          <div className={styles.forecastsAsideContent}>
+            <div className={styles.forecastsHeader}>
+              <h3 className={styles.forecastsTitle}>Forecasts</h3>
+              <div className={styles.forecastsGenerated}>
+                {formatDateTime(forecasts.generatedAt)}
+              </div>
+            </div>
+
+            <div className={styles.forecastSummaryGrid}>
+              <div className={styles.forecastStatTile}>
+                <span className={styles.forecastStatTileLabel}>
+                  Outstanding
+                </span>
+                <span className={styles.forecastStatTileValue}>
+                  {formatMoneyFromCents(
+                    forecastTotals.totalOutstandingPayoutLiabilityCents,
+                  )}
+                </span>
+              </div>
+              <div className={styles.forecastStatTile}>
+                <span className={styles.forecastStatTileLabel}>
+                  Net revenue
+                </span>
+                <span
+                  className={`${styles.forecastStatTileValue} ${styles.valueReal}`}
+                >
+                  {formatMoneyFromCents(
+                    forecastTotals.totalNetPlatformRevenueRemainingCents,
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <section className={styles.forecastSection}>
+              <h4 className={styles.forecastSectionHeading}>Payouts</h4>
+              <div className={styles.forecastRows}>
+                <div className={styles.forecastRow}>
+                  <span>Already paid</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.alreadyPaidOutToSittersCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Scheduled</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.scheduledOutstandingPayoutsCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Future events</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.futureConfirmedEventPayoutLiabilityCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Additional payments</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.additionalProviderPaymentOutstandingCents,
+                    )}
+                  </strong>
+                </div>
+              </div>
+            </section>
+
+            <section className={styles.forecastSection}>
+              <h4 className={styles.forecastSectionHeading}>Revenue</h4>
+              <div className={styles.forecastRows}>
+                <div className={styles.forecastRow}>
+                  <span>Future gross</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.futureConfirmedGrossPlatformRevenueCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Future Stripe fees</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.futureConfirmedForecastStripeFeeCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Future net</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.futureConfirmedNetPlatformRevenueCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Additional gross</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.additionalPaymentsGrossPlatformRevenueCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Additional fees</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.additionalPaymentsForecastStripeFeeCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Additional net</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.additionalPaymentsNetPlatformRevenueCents,
+                    )}
+                  </strong>
+                </div>
+                <div className={styles.forecastRow}>
+                  <span>Total gross</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastTotals.totalGrossPlatformRevenueRemainingCents,
+                    )}
+                  </strong>
+                </div>
+              </div>
+            </section>
+
+            <section className={styles.forecastSection}>
+              <h4 className={styles.forecastSectionHeading}>Counts</h4>
+              <div className={styles.forecastChipGrid}>
+                <span className={styles.forecastChip}>
+                  Paid {forecastCounts.paidOutPayouts}
+                </span>
+                <span className={styles.forecastChip}>
+                  Scheduled {forecastCounts.scheduledOutstandingPayouts}
+                </span>
+                <span className={styles.forecastChip}>
+                  Future {forecastCounts.futureConfirmedEvents}
+                </span>
+                <span className={styles.forecastChip}>
+                  Additional{" "}
+                  {forecastCounts.additionalProviderPaymentsOutstanding}
+                </span>
+                <span className={styles.forecastChip}>
+                  Ledger {forecastCounts.ledgerPaidOutEntries}
+                </span>
+              </div>
+            </section>
+
+            <section className={styles.forecastSection}>
+              <h4 className={styles.forecastSectionHeading}>Cross-check</h4>
+              <div className={styles.forecastRows}>
+                <div className={styles.forecastRow}>
+                  <span>Ledger paid</span>
+                  <strong>
+                    {formatMoneyFromCents(
+                      forecastCrossChecks
+                        ?.ledgerAlreadyPaidOutToSittersCents ?? 0,
+                    )}
+                  </strong>
+                </div>
+              </div>
+            </section>
+
+            <section className={styles.forecastSection}>
+              <h4 className={styles.forecastSectionHeading}>Assumptions</h4>
+              <p className={styles.forecastAssumption}>
+                Refunds: {forecasts.assumptions.refunds}
+              </p>
+              {stripeFeeForecast && (
+                <p className={styles.forecastAssumption}>
+                  Stripe fees: {(stripeFeeForecast.percent * 100).toFixed(2)}%
+                  {" + "}
+                  {formatMoneyFromCents(stripeFeeForecast.fixedCents)}
+                </p>
+              )}
+            </section>
+          </div>
+        ) : (
+          <div className={styles.forecastsAsideError}>
+            No forecasts available.
+          </div>
+        )}
+      </aside>
     </div>
   );
 };

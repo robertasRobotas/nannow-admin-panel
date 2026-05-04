@@ -100,3 +100,41 @@ export type GetFinancialOrdersResponse = {
     sort?: string | null;
   };
 };
+
+export type FinancialForecastsResponse = {
+  generatedAt: string;
+  currency: string;
+  assumptions: {
+    refunds: string;
+    futureConfirmedEventsMatch: string;
+    stripeFeeForecast: {
+      percent: number;
+      fixedCents: number;
+    };
+  };
+  totals: {
+    alreadyPaidOutToSittersCents: number;
+    scheduledOutstandingPayoutsCents: number;
+    futureConfirmedEventPayoutLiabilityCents: number;
+    additionalProviderPaymentOutstandingCents: number;
+    totalOutstandingPayoutLiabilityCents: number;
+    futureConfirmedGrossPlatformRevenueCents: number;
+    futureConfirmedForecastStripeFeeCents: number;
+    futureConfirmedNetPlatformRevenueCents: number;
+    additionalPaymentsGrossPlatformRevenueCents: number;
+    additionalPaymentsForecastStripeFeeCents: number;
+    additionalPaymentsNetPlatformRevenueCents: number;
+    totalGrossPlatformRevenueRemainingCents: number;
+    totalNetPlatformRevenueRemainingCents: number;
+  };
+  counts: {
+    paidOutPayouts: number;
+    scheduledOutstandingPayouts: number;
+    futureConfirmedEvents: number;
+    additionalProviderPaymentsOutstanding: number;
+    ledgerPaidOutEntries: number;
+  };
+  crossChecks: {
+    ledgerAlreadyPaidOutToSittersCents: number;
+  };
+};
