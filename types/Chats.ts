@@ -53,6 +53,7 @@ export type ChatType = {
   messagesCount?: number;
   lastMessageId?: string;
   lastMessageCreatedAt?: string;
+  lastMessageReadAt?: string | null;
   unreadMessagesCount?: number;
   user1: ChatUserType;
   user2: ChatUserType;

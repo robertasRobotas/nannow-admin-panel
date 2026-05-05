@@ -40,6 +40,11 @@ const isChatUnread = (chat: ChatType) => {
   return chat.messages.some((message) => !message.isRead);
 };
 
+const getChatReadAt = (
+  chat: ChatType,
+  lastMessage?: ChatMessageType | null,
+) => lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+
 const AdminChats = () => {
   const router = useRouter();
   const routerRef = useRef(router);
@@ -308,6 +313,7 @@ const AdminChats = () => {
                   chat.user2?.lastName ?? "User"
                 }`.trim();
                 const unread = isChatUnread(chat);
+                const readAt = getChatReadAt(chat, lastMessage);
 
                 return (
                   <button
@@ -352,7 +358,12 @@ const AdminChats = () => {
                       </div>
                     </div>
                     <div className={styles.chatDate}>
-                      {formatDateTime(chat.lastMessageCreatedAt)}
+                      <span>{formatDateTime(chat.lastMessageCreatedAt)}</span>
+                      {readAt && (
+                        <span className={styles.chatReadAt}>
+                          Read: {formatDateTime(readAt)}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );

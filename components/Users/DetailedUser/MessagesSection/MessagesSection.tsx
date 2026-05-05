@@ -25,6 +25,11 @@ const isChatUnread = (chat: ChatType) => {
   return chat.messages.some((message) => !message.isRead);
 };
 
+const getChatReadAt = (
+  chat: ChatType,
+  lastMessage?: ChatMessageType | null,
+) => lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+
 const formatDateTime = (value?: string) => {
   if (!value) return "—";
   const date = new Date(value);
@@ -122,6 +127,7 @@ const MessagesSection = ({
                   ? chat.messages[chat.messages.length - 1]
                   : null;
                 const unread = isChatUnread(chat);
+                const readAt = getChatReadAt(chat, lastMessage);
 
                 return (
                   <button
@@ -150,7 +156,12 @@ const MessagesSection = ({
                       </div>
                     </div>
                     <div className={styles.chatDate}>
-                      {formatDateTime(chat.lastMessageCreatedAt)}
+                      <span>{formatDateTime(chat.lastMessageCreatedAt)}</span>
+                      {readAt && (
+                        <span className={styles.chatReadAt}>
+                          Read: {formatDateTime(readAt)}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );

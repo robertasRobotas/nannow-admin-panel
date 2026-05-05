@@ -1,4 +1,5 @@
 import { getChatById } from "@/pages/api/fetch";
+import { ChatMessageType } from "@/types/Chats";
 import styles from "./chat.module.css";
 import { useEffect, useState } from "react";
 
@@ -11,14 +12,38 @@ type ChatProps = {
 
 const Chat = ({ id, name, imgUrl, onClick }: ChatProps) => {
   const [lastMessage, setLastMessage] = useState("");
+  const [lastMessageReadAt, setLastMessageReadAt] = useState<string | null>(
+    null,
+  );
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
   const fetchLastMessage = async (chatId: string) => {
     try {
       const response = await getChatById(chatId);
+      const messages = response.data.result.messages as
+        | ChatMessageType[]
+        | undefined;
+      const message = Array.isArray(messages)
+        ? messages[messages.length - 1]
+        : null;
       setLastMessage(
-        response.data.result.messages[response.data.result.messages.length - 1]
-          .content
+        message?.content?.trim() ||
+          (message?.imageUrl ? "Image" : "No messages yet"),
       );
+      setLastMessageReadAt(message?.readAt ?? null);
     } catch (err) {
       console.log(err);
     }
@@ -36,6 +61,11 @@ const Chat = ({ id, name, imgUrl, onClick }: ChatProps) => {
           <span>{name}</span>
         </div>
         <div className={styles.lastMessage}>{lastMessage}</div>
+        {lastMessageReadAt && (
+          <div className={styles.readAt}>
+            Read: {formatDateTime(lastMessageReadAt)}
+          </div>
+        )}
       </div>
     </div>
   );
