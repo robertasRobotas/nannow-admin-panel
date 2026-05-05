@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  BadgeEuro,
   CircleHelp,
   FileText,
   Flag,
@@ -19,6 +20,7 @@ import {
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/financial-ledger": Wallet,
+  "/financial-profit-earned": BadgeEuro,
   "/analytics": BarChart3,
   "/users": Users,
   "/campaigns": Megaphone,

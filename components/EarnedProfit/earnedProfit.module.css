@@ -1,0 +1,330 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  padding: 38px 48px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  color: #000;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.subtitle {
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.filtersPanel,
+.totalsSection,
+.sectionCard,
+.assumptionsSection,
+.emptyState {
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
+    0 2px 10px 0 rgba(0, 0, 0, 0.04);
+}
+
+.filtersPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  padding: 18px 20px;
+}
+
+.periodButtons,
+.customDateControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.customDateControls {
+  align-items: flex-end;
+}
+
+.periodButton {
+  all: unset;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.02);
+  color: rgba(0, 0, 0, 0.82);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.periodButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.periodButtonActive {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
+.dateField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dateInputWrap {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  overflow: hidden;
+}
+
+.dateInput {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0 12px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dateInput:focus {
+  outline: none;
+}
+
+.datePickerBtn {
+  all: unset;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.applyDateButtonWrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+}
+
+.validationError {
+  flex-basis: 100%;
+  color: #ff3b30;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.emptyState {
+  padding: 24px;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.totalsSection,
+.sectionCard,
+.assumptionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.totalsHeader,
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.totalsTitle,
+.sectionTitle,
+.assumptionsTitle {
+  margin: 0;
+  color: #000;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.sectionSubtitle {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.totalsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.sectionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.sectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 680px), 1fr));
+  gap: 20px;
+}
+
+.metricCard {
+  display: grid;
+  grid-template-rows: 34px 24px minmax(16px, auto);
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  height: 128px;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.metricLabel,
+.assumptionLabel {
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.metricLabel {
+  height: 34px;
+  line-height: 16px;
+  overflow: hidden;
+}
+
+.metricValue {
+  color: #000;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 24px;
+  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.metricSubtitle {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.metricPositive {
+  color: #198f37;
+}
+
+.metricWarning {
+  color: #b86b00;
+}
+
+.warningBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 159, 10, 0.14);
+  color: #b86b00;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.assumptionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assumptionItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.assumptionText {
+  color: rgba(0, 0, 0, 0.76);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+@media (max-width: 1280px) {
+  .sectionsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .main {
+    padding: 24px 16px;
+  }
+
+  .title {
+    font-size: 32px;
+  }
+
+  .filtersPanel {
+    align-items: stretch;
+  }
+
+  .customDateControls,
+  .dateField {
+    width: 100%;
+  }
+
+  .totalsGrid,
+  .sectionGrid,
+  .assumptionsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .totalsHeader,
+  .sectionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

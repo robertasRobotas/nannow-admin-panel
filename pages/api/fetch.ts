@@ -1311,6 +1311,23 @@ export const getFinancialForecasts = async (params?: { now?: string }) => {
   return response;
 };
 
+export const getEarnedProfit = async (params?: {
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/financial/profit/earned`, {
+    params: {
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
 export const getMarketplaceAnalytics = async (params?: {
   dateFrom?: string;
   dateTo?: string;
