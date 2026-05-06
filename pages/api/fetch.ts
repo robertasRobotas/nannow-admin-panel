@@ -1620,6 +1620,19 @@ export const getUsersAppVersionStats = async () => {
   return response;
 };
 
+export const getProviderLocationPermissionsStats = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/location-permissions/stats`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const refreshPayoutByOrderId = async (orderId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(

@@ -19,6 +19,7 @@ import {
   getNotFinishedOnboardingUsers,
   getOnboardingStats,
   getPendingProviderSpecialSkillsCount,
+  getProviderLocationPermissionsStats,
   getProviderById,
   getRequestedCompensationInfoAtCount,
   getTestUsers,
@@ -106,6 +107,11 @@ type AppVersionStatsState = {
   totalUsers: number;
   totalUsersByLoginMode: LoginModeTotals;
 };
+type PermissionStatusStats = Record<string, number>;
+type LocationPermissionsStatsState = {
+  foregroundPermissionStatus: PermissionStatusStats;
+  backgroundPermissionStatus: PermissionStatusStats;
+};
 type RawAppVersionStatItem = {
   platform: unknown;
   items: unknown[];
@@ -161,6 +167,46 @@ const normalizeAppVersionItems = (
     count,
   }));
 };
+
+const LOCATION_PERMISSION_STATUS_ORDER = [
+  "granted",
+  "denied",
+  "undetermined",
+  "UNKNOWN",
+];
+
+const normalizePermissionStatusStats = (
+  value: unknown,
+): PermissionStatusStats => {
+  if (!value || typeof value !== "object") return {};
+  return Object.entries(
+    value as Record<string, unknown>,
+  ).reduce<PermissionStatusStats>((acc, [key, rawCount]) => {
+    const count = Number(rawCount ?? 0);
+    if (Number.isFinite(count)) {
+      acc[key] = count;
+    }
+    return acc;
+  }, {});
+};
+
+const getOrderedPermissionStatusEntries = (stats: PermissionStatusStats) => {
+  const knownEntries = LOCATION_PERMISSION_STATUS_ORDER.map((status) => [
+    status,
+    stats[status] ?? 0,
+  ] as const);
+  const extraEntries = Object.entries(stats)
+    .filter(([status]) => !LOCATION_PERMISSION_STATUS_ORDER.includes(status))
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  return [...knownEntries, ...extraEntries];
+};
+
+const formatPermissionStatusLabel = (status: string) =>
+  status === "UNKNOWN"
+    ? "Unknown"
+    : status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+
 type UsersViewOption = {
   title: string;
   value: UsersViewMode;
@@ -255,6 +301,11 @@ const Users = () => {
     totalUsers: 0,
     totalUsersByLoginMode: {},
   });
+  const [locationPermissionsStats, setLocationPermissionsStats] =
+    useState<LocationPermissionsStatsState>({
+      foregroundPermissionStatus: {},
+      backgroundPermissionStatus: {},
+    });
   const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
     useState(0);
   const [
@@ -533,12 +584,14 @@ const Users = () => {
         statsResponse,
         appVersionStatsResponse,
         requestedCompensationResponse,
+        locationPermissionsStatsResponse,
       ] = await Promise.allSettled([
         getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
         getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
         getOnboardingStats(),
         getUsersAppVersionStats(),
         getRequestedCompensationInfoAtCount(),
+        getProviderLocationPermissionsStats(),
       ]);
 
       if (clientResponse.status === "fulfilled") {
@@ -633,6 +686,36 @@ const Users = () => {
           requestedCompensationResponse.value.data?.result?.total ??
           0;
         setRequestedCompensationInfoAtCount(Number(total) || 0);
+      }
+
+      if (locationPermissionsStatsResponse.status === "fulfilled") {
+        const locationPermissionsStatsResult =
+          locationPermissionsStatsResponse.value.data?.result ??
+          locationPermissionsStatsResponse.value.data ??
+          {};
+        setLocationPermissionsStats({
+          foregroundPermissionStatus: normalizePermissionStatusStats(
+            (
+              locationPermissionsStatsResult as {
+                foregroundPermissionStatus?: unknown;
+              }
+            )
+              .foregroundPermissionStatus,
+          ),
+          backgroundPermissionStatus: normalizePermissionStatusStats(
+            (
+              locationPermissionsStatsResult as {
+                backgroundPermissionStatus?: unknown;
+              }
+            )
+              .backgroundPermissionStatus,
+          ),
+        });
+      } else {
+        setLocationPermissionsStats({
+          foregroundPermissionStatus: {},
+          backgroundPermissionStatus: {},
+        });
       }
     } catch (err) {
       console.log(err);
@@ -1766,7 +1849,9 @@ const Users = () => {
                 ))}
               </section>
 
-              <section className={`${styles.appVersionSection} ${styles.loginModeSection}`}>
+              <section
+                className={`${styles.appVersionSection} ${styles.loginModeSection}`}
+              >
                 <h3 className={styles.appVersionHeading}>Login mode</h3>
                 <div className={styles.platformBlock}>
                   {LOGIN_MODE_ORDER.map((mode) => (
@@ -1785,6 +1870,44 @@ const Users = () => {
                       </span>
                     </div>
                   </div>
+                </div>
+              </section>
+
+              <section className={`${styles.appVersionSection} ${styles.loginModeSection}`}>
+                <h3 className={styles.appVersionHeading}>
+                  Provider location permissions
+                </h3>
+                <div className={styles.platformBlock}>
+                  <div className={styles.platformName}>Foreground</div>
+                  {getOrderedPermissionStatusEntries(
+                    locationPermissionsStats.foregroundPermissionStatus,
+                  ).map(([status, count]) => (
+                    <div
+                      key={`foreground-${status}`}
+                      className={styles.versionRow}
+                    >
+                      <span className={styles.versionName}>
+                        {formatPermissionStatusLabel(status)}
+                      </span>
+                      <span className={styles.versionCount}>{count}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.platformBlock}>
+                  <div className={styles.platformName}>Background</div>
+                  {getOrderedPermissionStatusEntries(
+                    locationPermissionsStats.backgroundPermissionStatus,
+                  ).map(([status, count]) => (
+                    <div
+                      key={`background-${status}`}
+                      className={styles.versionRow}
+                    >
+                      <span className={styles.versionName}>
+                        {formatPermissionStatusLabel(status)}
+                      </span>
+                      <span className={styles.versionCount}>{count}</span>
+                    </div>
+                  ))}
                 </div>
               </section>
             </div>
