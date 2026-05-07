@@ -189,9 +189,11 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const unfinishedOrderReminderLastEmailSentAtText = formatCompactDateTime(
     order?.unfinishedOrderReminderLastEmailSentAt,
   );
+  const unfinishedOrderReminderEmailCount = Number(
+    order?.unfinishedOrderReminderEmailCount ?? 0,
+  );
   const hasUnfinishedOrderReminderInfo =
-    !!order?.unfinishedOrderReminderLastEmailSentAt ||
-    order?.unfinishedOrderReminderEmailCount != null;
+    unfinishedOrderReminderEmailCount > 0;
 
   const providerMarkedServiceInProgressAt =
     order?.provider_markedAsServiceInProgressAt
@@ -915,12 +917,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                       {unfinishedOrderReminderLastEmailSentAtText}
                     </div>
                   )}
-                  {order?.unfinishedOrderReminderEmailCount != null && (
+                  {unfinishedOrderReminderEmailCount > 0 && (
                     <div>
                       <span className={styles.stripeInfoLabel}>
                         Email count:
                       </span>{" "}
-                      {order.unfinishedOrderReminderEmailCount}
+                      {unfinishedOrderReminderEmailCount}
                     </div>
                   )}
                 </div>

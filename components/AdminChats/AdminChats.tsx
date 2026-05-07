@@ -381,9 +381,9 @@ const AdminChats = () => {
           ) : messages.length > 0 && selectedChat?.user1 && selectedChat?.user2 ? (
             <ChatMessages
               messages={messages}
-              userId={selectedChat.user1.id}
-              userImgUrl={selectedChat.user1.imgUrl ?? ""}
-              otherUserImgUrl={selectedChat.user2.imgUrl ?? ""}
+              userId={selectedChat.user2.id}
+              userImgUrl={selectedChat.user2.imgUrl ?? ""}
+              otherUserImgUrl={selectedChat.user1.imgUrl ?? ""}
               canModerate={canModerate}
               useSuperHistoryRoute={useSuperHistoryRoute}
             />
