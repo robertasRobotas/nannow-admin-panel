@@ -270,6 +270,7 @@ const hasRoleForMode = (detail: UserDetails, mode: "CLIENT" | "PROVIDER") => {
 const Users = () => {
   const [selectedViewOption, setSelectedViewOption] = useState(0);
   const [searchText, setSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [onboardingUsers, setOnboardingUsers] = useState<
     OnboardingNotFinishedUser[]
@@ -831,7 +832,7 @@ const Users = () => {
       const searchParams = new URLSearchParams({
         startIndex: String(itemOffset),
         pageSize: String(itemsPerPage),
-        search: searchText,
+        search: appliedSearchText,
       });
 
       if (selectedCountryName) {
@@ -906,7 +907,9 @@ const Users = () => {
     providerSpecialSkillsFilter,
     providerVideoFilter,
     router,
-    searchText,
+    appliedSearchText,
+    selectedCountryName,
+    selectedCityName,
   ]);
 
   const fetchOnboardingUsers = useCallback(async () => {
@@ -921,7 +924,7 @@ const Users = () => {
       const response = await getNotFinishedOnboardingUsers({
         startIndex: itemOffset,
         pageSize: itemsPerPage,
-        search: searchText || undefined,
+        search: appliedSearchText || undefined,
         mode,
       });
       const payload = response.data as
@@ -950,7 +953,7 @@ const Users = () => {
         }
       }
     }
-  }, [currentView, itemOffset, itemsPerPage, router, searchText]);
+  }, [currentView, itemOffset, itemsPerPage, router, appliedSearchText]);
 
   const fetchConnectedUsersList = useCallback(async () => {
     try {
@@ -1008,7 +1011,7 @@ const Users = () => {
       const response = await getBannedUsers({
         startIndex: itemOffset,
         pageSize: itemsPerPage || 20,
-        search: searchText || undefined,
+        search: appliedSearchText || undefined,
       });
       const result = response.data?.result ?? response.data ?? {};
       const items = Array.isArray(result.items)
@@ -1029,12 +1032,12 @@ const Users = () => {
         }
       }
     }
-  }, [itemOffset, itemsPerPage, router, searchText]);
+  }, [itemOffset, itemsPerPage, router, appliedSearchText]);
 
   const fetchTestUsers = useCallback(async () => {
     try {
       const response = await getTestUsers({
-        search: searchText || undefined,
+        search: appliedSearchText || undefined,
         startIndex: itemOffset,
         pageSize: itemsPerPage || 20,
       });
@@ -1059,7 +1062,7 @@ const Users = () => {
         }
       }
     }
-  }, [itemOffset, itemsPerPage, router, searchText]);
+  }, [itemOffset, itemsPerPage, router, appliedSearchText]);
 
   const handlePageClick = (event: { selected: number }) => {
     updateUsersUrlQuery({ page: event.selected + 1 }, "push");
@@ -1353,16 +1356,9 @@ const Users = () => {
                     setSearchText={setSearchText}
                     placeholder="Type username, ID  or email"
                     onButtonClick={() => {
+                      setAppliedSearchText(searchText.trim());
                       setItemOffset(0);
-                      if (isOnboardingSelected) {
-                        fetchOnboardingUsers();
-                      } else if (isBannedUsersSelected) {
-                        fetchBannedUsers();
-                      } else if (isTestUsersSelected) {
-                        fetchTestUsers();
-                      } else {
-                        fetchUsers();
-                      }
+                      updateUsersUrlQuery({ page: 1 }, "replace");
                     }}
                   />
                 </div>
