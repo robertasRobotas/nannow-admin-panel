@@ -2,6 +2,7 @@ import { MouseEvent } from "react";
 import { Copy } from "lucide-react";
 import { shortenUserId } from "@/lib/utils";
 import { toast } from "react-toastify";
+import { copyTextToClipboard } from "@/helpers/clipboardWrites";
 import styles from "./userEmailIdLine.module.css";
 
 type UserEmailIdLineProps = {
@@ -17,11 +18,12 @@ const UserEmailIdLine = ({ email, userId }: UserEmailIdLineProps) => {
   const short = shortenUserId(userId);
 
   const copyId = async (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
     e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(userId);
+    const didCopy = await copyTextToClipboard(userId);
+    if (didCopy) {
       toast.success("ID copied");
-    } catch {
+    } else {
       toast.error("Could not copy");
     }
   };
@@ -37,6 +39,10 @@ const UserEmailIdLine = ({ email, userId }: UserEmailIdLineProps) => {
         data-row-nav-exclude=""
         aria-label="Copy ID"
         onClick={copyId}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
       >
         <Copy size={14} strokeWidth={2} aria-hidden />
       </button>

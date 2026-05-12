@@ -160,7 +160,6 @@
     animation: none;
     opacity: 1;
   }
-
 }
 
 .statsBlockAside {
@@ -352,6 +351,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  align-items: flex-end;
 }
 
 .headingRightTools {
@@ -703,5 +703,19 @@
 
   .testUserActions {
     margin-left: 0;
+  }
+
+  .userFilterField {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+  }
+
+  .userFilterLabel {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    line-height: 1;
   }
 }

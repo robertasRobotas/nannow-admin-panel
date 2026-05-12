@@ -189,11 +189,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const unfinishedOrderReminderLastEmailSentAtText = formatCompactDateTime(
     order?.unfinishedOrderReminderLastEmailSentAt,
   );
+  const unfinishedOrderReminderLastNotificationSentAtText =
+    formatCompactDateTime(
+      order?.unfinishedOrderReminderLastNotificationSentAt,
+    );
   const unfinishedOrderReminderEmailCount = Number(
     order?.unfinishedOrderReminderEmailCount ?? 0,
   );
   const hasUnfinishedOrderReminderInfo =
-    unfinishedOrderReminderEmailCount > 0;
+    unfinishedOrderReminderEmailCount > 0 ||
+    !!order?.unfinishedOrderReminderLastEmailSentAt ||
+    !!order?.isUnfinishedOrderReminderNotificationSent ||
+    !!order?.unfinishedOrderReminderLastNotificationSentAt;
 
   const providerMarkedServiceInProgressAt =
     order?.provider_markedAsServiceInProgressAt
@@ -923,6 +930,22 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                         Email count:
                       </span>{" "}
                       {unfinishedOrderReminderEmailCount}
+                    </div>
+                  )}
+                  {!!order?.isUnfinishedOrderReminderNotificationSent && (
+                    <div>
+                      <span className={styles.stripeInfoLabel}>
+                        Push notification:
+                      </span>{" "}
+                      Sent
+                    </div>
+                  )}
+                  {!!order?.unfinishedOrderReminderLastNotificationSentAt && (
+                    <div>
+                      <span className={styles.stripeInfoLabel}>
+                        Last push sent:
+                      </span>{" "}
+                      {unfinishedOrderReminderLastNotificationSentAtText}
                     </div>
                   )}
                 </div>

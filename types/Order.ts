@@ -91,4 +91,6 @@ export type OrderType = {
   providerSelectionAutoCancelWarnedAt?: string | null;
   unfinishedOrderReminderLastEmailSentAt?: string | null;
   unfinishedOrderReminderEmailCount?: number | null;
+  isUnfinishedOrderReminderNotificationSent?: boolean;
+  unfinishedOrderReminderLastNotificationSentAt?: string | null;
 };

@@ -1106,6 +1106,7 @@ export const getOrders = async (
     clientId?: string;
     approvedProviderId?: string;
     additionalPaymentsNotPayouted?: boolean;
+    unfinishedReminderNotified?: boolean;
     search?: string;
   },
 ) => {
@@ -1124,6 +1125,7 @@ export const getOrders = async (
         clientId: filters?.clientId,
         approvedProviderId: filters?.approvedProviderId,
         additionalPaymentsNotPayouted: filters?.additionalPaymentsNotPayouted,
+        unfinishedReminderNotified: filters?.unfinishedReminderNotified,
         search: filters?.search?.trim() || undefined,
       },
       headers: {
@@ -1149,6 +1151,7 @@ export const getOrders = async (
           clientId: filters?.clientId,
           approvedProviderId: filters?.approvedProviderId,
           additionalPaymentsNotPayouted: filters?.additionalPaymentsNotPayouted,
+          unfinishedReminderNotified: filters?.unfinishedReminderNotified,
           search: filters?.search?.trim() || undefined,
         },
         headers: {
@@ -1661,6 +1664,12 @@ export const getAdditionalPaymentsNotPayoutedOrders = async (
   });
 };
 
+export const getUnfinishedReminderNotifiedOrders = async (startIndex = 0) => {
+  return getOrders("", startIndex, {
+    unfinishedReminderNotified: true,
+  });
+};
+
 export const getNotPaidOrders = async (status: string, startIndex: number) => {
   const jwt = Cookies.get("@user_jwt");
   const filters = encodeURIComponent(
@@ -1821,6 +1830,19 @@ export const getAdditionalPaymentsNotPayoutedOrdersCount = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
     `${BASE_URL}/admin/orders/additional-payments-not-payouted/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getUnfinishedReminderNotifiedOrdersCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/unfinished-reminder-notified/count`,
     {
       headers: {
         Authorization: jwt,

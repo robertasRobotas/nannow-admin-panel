@@ -12,6 +12,8 @@ import {
   getNotPaidOrders,
   getNotPaidOrdersCount,
   getOrders,
+  getUnfinishedReminderNotifiedOrders,
+  getUnfinishedReminderNotifiedOrdersCount,
 } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import ReactPaginate from "react-paginate";
@@ -71,6 +73,7 @@ const Orders = () => {
     | "NOT_ENDED"
     | "NOT_PAID"
     | "ADDITIONAL_PAYMENTS_NOT_PAYOUTED"
+    | "UNFINISHED_REMINDER_NOTIFIED"
     | "CANCELED_NOT_PAID"
     | "CANCELED_PAID_LEGACY"
     | "CLOSED_BY_ADMINS";
@@ -86,6 +89,10 @@ const Orders = () => {
   const [
     additionalPaymentsNotPayoutedOrdersQTY,
     setAdditionalPaymentsNotPayoutedOrdersQTY,
+  ] = useState<number>(0);
+  const [
+    unfinishedReminderNotifiedOrdersQTY,
+    setUnfinishedReminderNotifiedOrdersQTY,
   ] = useState<number>(0);
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [appliedOrderSearch, setAppliedOrderSearch] = useState("");
@@ -281,6 +288,31 @@ const Orders = () => {
     [router],
   );
 
+  const fetchUnfinishedReminderNotifiedOrders = useCallback(
+    async (startIndex: number) => {
+      try {
+        const response =
+          await getUnfinishedReminderNotifiedOrders(startIndex);
+        const result = response.data.result as {
+          items: OrderType[];
+          total: number;
+          pageSize: number;
+        };
+        setOrders(result.items);
+        setItemsPerPage(result.pageSize);
+        setPageCount(Math.ceil(result.total / result.pageSize));
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    },
+    [router],
+  );
+
   const fetchCanceledPaidLegacyOrders = useCallback(
     async (startIndex: number) => {
       try {
@@ -402,6 +434,28 @@ const Orders = () => {
       }
     }, [router]);
 
+  const fetchUnfinishedReminderNotifiedOrdersCount =
+    useCallback(async () => {
+      try {
+        const response = await getUnfinishedReminderNotifiedOrdersCount();
+        const count =
+          response.data?.result?.count ??
+          response.data?.result?.total ??
+          response.data?.count ??
+          response.data?.total ??
+          response.data?.result ??
+          0;
+        setUnfinishedReminderNotifiedOrdersQTY(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
+        }
+      }
+    }, [router]);
+
   const refetchCurrentOrders = useCallback(() => {
     if (activeFilter === "NOT_ENDED") {
       fetchOrders("NOT_ENDED_IN_TIME", itemOffset);
@@ -417,6 +471,10 @@ const Orders = () => {
     }
     if (activeFilter === "ADDITIONAL_PAYMENTS_NOT_PAYOUTED") {
       fetchAdditionalPaymentsNotPayoutedOrders(itemOffset);
+      return;
+    }
+    if (activeFilter === "UNFINISHED_REMINDER_NOTIFIED") {
+      fetchUnfinishedReminderNotifiedOrders(itemOffset);
       return;
     }
     if (activeFilter === "CANCELED_PAID_LEGACY") {
@@ -453,6 +511,7 @@ const Orders = () => {
     fetchNotPaidOrders,
     fetchCanceledNotPaidOrders,
     fetchAdditionalPaymentsNotPayoutedOrders,
+    fetchUnfinishedReminderNotifiedOrders,
     fetchCanceledPaidLegacyOrders,
     fetchClosedOrders,
     fetchCreatedOrdersByBookingType,
@@ -498,6 +557,7 @@ const Orders = () => {
       viewFromQuery === "NOT_ENDED" ||
       viewFromQuery === "NOT_PAID" ||
       viewFromQuery === "ADDITIONAL_PAYMENTS_NOT_PAYOUTED" ||
+      viewFromQuery === "UNFINISHED_REMINDER_NOTIFIED" ||
       viewFromQuery === "CANCELED_NOT_PAID" ||
       viewFromQuery === "CANCELED_PAID_LEGACY" ||
       viewFromQuery === "CLOSED_BY_ADMINS"
@@ -531,6 +591,9 @@ const Orders = () => {
   useEffect(() => {
     fetchAdditionalPaymentsNotPayoutedOrdersCount();
   }, [fetchAdditionalPaymentsNotPayoutedOrdersCount]);
+  useEffect(() => {
+    fetchUnfinishedReminderNotifiedOrdersCount();
+  }, [fetchUnfinishedReminderNotifiedOrdersCount]);
 
   useEffect(() => {
     if (!lastEvent) return;
@@ -549,6 +612,7 @@ const Orders = () => {
     fetchNotPaidOrdersCount();
     fetchCanceledNotPaidOrdersCount();
     fetchAdditionalPaymentsNotPayoutedOrdersCount();
+    fetchUnfinishedReminderNotifiedOrdersCount();
   }, [
     lastEvent,
     markOrderAsRecentlyChanged,
@@ -557,6 +621,7 @@ const Orders = () => {
     fetchNotPaidOrdersCount,
     fetchCanceledNotPaidOrdersCount,
     fetchAdditionalPaymentsNotPayoutedOrdersCount,
+    fetchUnfinishedReminderNotifiedOrdersCount,
   ]);
 
   useEffect(() => {
@@ -606,6 +671,21 @@ const Orders = () => {
     }
     updateOrdersQuery({
       view: "ADDITIONAL_PAYMENTS_NOT_PAYOUTED",
+      page: 1,
+      status: "",
+    });
+  };
+
+  const handleUnfinishedReminderNotifiedOrdersClick = () => {
+    if (
+      activeFilter === "UNFINISHED_REMINDER_NOTIFIED" &&
+      itemOffset === 0
+    ) {
+      fetchUnfinishedReminderNotifiedOrders(0);
+      return;
+    }
+    updateOrdersQuery({
+      view: "UNFINISHED_REMINDER_NOTIFIED",
       page: 1,
       status: "",
     });
@@ -683,6 +763,18 @@ const Orders = () => {
               attentionNumber={additionalPaymentsNotPayoutedOrdersQTY}
               onClick={() => {
                 handleAdditionalPaymentsNotPayoutedOrdersClick();
+              }}
+            />
+          </div>
+        )}
+        {unfinishedReminderNotifiedOrdersQTY > 0 && (
+          <div style={{ marginLeft: 12 }}>
+            <Button
+              title="Unfinished reminder"
+              type="PLAIN"
+              attentionNumber={unfinishedReminderNotifiedOrdersQTY}
+              onClick={() => {
+                handleUnfinishedReminderNotifiedOrdersClick();
               }}
             />
           </div>

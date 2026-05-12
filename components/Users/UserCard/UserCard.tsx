@@ -1,8 +1,8 @@
 import { User } from "@/types/Client";
 import styles from "./userCard.module.css";
-import { useRouter } from "next/router";
+import Link from "next/link";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
-import { type KeyboardEvent } from "react";
+import { useRef, type DragEvent, type MouseEvent } from "react";
 
 type UserCardProps = {
   user: User;
@@ -10,28 +10,34 @@ type UserCardProps = {
 };
 
 const UserCard = ({ user, mode }: UserCardProps) => {
-  const router = useRouter();
+  const href = `/${mode}/${user.userId}`;
+  const hasSelectionRef = useRef(false);
 
-  const openProfile = () => {
-    const selectedText = window.getSelection?.()?.toString().trim() ?? "";
-    if (selectedText.length > 0) return;
-    router.push(`/${mode}/${user.userId}`);
+  const updateSelectionState = () => {
+    hasSelectionRef.current =
+      (window.getSelection?.()?.toString().trim() ?? "").length > 0;
   };
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    updateSelectionState();
+    if (hasSelectionRef.current) {
       event.preventDefault();
-      openProfile();
     }
   };
 
+  const preventLinkDrag = (event: DragEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+  };
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <Link
+      href={href}
       className={styles.main}
-      onClick={openProfile}
-      onKeyDown={handleKeyDown}
+      onClick={handleClick}
+      onMouseUp={updateSelectionState}
+      onDragStart={preventLinkDrag}
+      draggable={false}
+      aria-label={`View ${`${user.firstName} ${user.lastName}`.trim() || "user"} profile`}
     >
       <div className={styles.profileWrapper}>
         <ProfileInfo
@@ -48,7 +54,7 @@ const UserCard = ({ user, mode }: UserCardProps) => {
           enableImageViewer={false}
         />
       </div>
-    </div>
+    </Link>
   );
 };
 

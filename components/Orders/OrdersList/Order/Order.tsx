@@ -1,5 +1,5 @@
 import styles from "./order.module.css";
-import { useRouter } from "next/router";
+import Link from "next/link";
 import { getOrderStatusTitle } from "@/data/orderStatusOptions";
 import { OrderStatus } from "@/types/Order";
 
@@ -40,7 +40,6 @@ const Order = ({
   pendingProvidersCount,
   isRecentlyChanged = false,
 }: OrderProps) => {
-  const router = useRouter();
   const statusTitle = getOrderStatusTitle(status, isDirectOrderToProvider);
 
   const formatDateTime = (iso: string) =>
@@ -59,10 +58,8 @@ const Order = ({
     typeof totalPrice === "number" ? `€${totalPrice.toFixed(2)}` : null;
 
   return (
-    <div
-      onClick={() => {
-        router.push(`/orders/${id}`);
-      }}
+    <Link
+      href={`/orders/${id}`}
       className={`${styles.main} ${
         isRecentlyChanged ? styles.recentlyChanged : ""
       }`}
@@ -97,7 +94,7 @@ const Order = ({
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 };
 

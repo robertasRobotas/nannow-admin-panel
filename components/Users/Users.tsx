@@ -27,6 +27,7 @@ import {
   setUserBanStatus,
   syncTestUsersAcrossApis,
   updateTestUser,
+  getMarketplaceAnalyticsLocations,
 } from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import paginateStyles from "../../styles/paginate.module.css";
@@ -45,6 +46,10 @@ import UserEmailIdLine from "./UserEmailIdLine/UserEmailIdLine";
 import { LayoutGrid, List } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
+import {
+  GetMarketplaceAnalyticsLocationsResponse,
+  MarketplaceAnalyticsLocationCountry,
+} from "@/types/MarketplaceAnalytics";
 
 const onboardingStepLabels: Record<OnboardingStep, string> = {
   USER_VERIFIED: "User verified",
@@ -67,9 +72,7 @@ const USERS_COMPACT_STORAGE_KEY = "users:isCompactView";
 const USERS_PAGE_SIZE_STORAGE_KEY = "users:itemsPerPage";
 
 const formatRemainingSteps = (steps: OnboardingStep[]) =>
-  steps
-    .map((step) => onboardingStepLabels[step] ?? step)
-    .join(", ");
+  steps.map((step) => onboardingStepLabels[step] ?? step).join(", ");
 
 const roleParenFromEnum = (role: string) =>
   String(role).toUpperCase() === "PROVIDER" ? "(Provider)" : "(Client)";
@@ -123,12 +126,7 @@ type RawNestedAppVersionItem = { appVersion: string; count: number };
 const normalizePlatform = (platform: unknown): AppVersionPlatform =>
   platform === "IOS" || platform === "ANDROID" ? platform : null;
 
-const LOGIN_MODE_ORDER: LoginMode[] = [
-  "GOOGLE",
-  "EMAIL",
-  "APPLE",
-  "UNKNOWN",
-];
+const LOGIN_MODE_ORDER: LoginMode[] = ["GOOGLE", "EMAIL", "APPLE", "UNKNOWN"];
 
 const normalizeLoginModeTotals = (value: unknown): LoginModeTotals => {
   if (!value || typeof value !== "object") return {};
@@ -191,10 +189,9 @@ const normalizePermissionStatusStats = (
 };
 
 const getOrderedPermissionStatusEntries = (stats: PermissionStatusStats) => {
-  const knownEntries = LOCATION_PERMISSION_STATUS_ORDER.map((status) => [
-    status,
-    stats[status] ?? 0,
-  ] as const);
+  const knownEntries = LOCATION_PERMISSION_STATUS_ORDER.map(
+    (status) => [status, stats[status] ?? 0] as const,
+  );
   const extraEntries = Object.entries(stats)
     .filter(([status]) => !LOCATION_PERMISSION_STATUS_ORDER.includes(status))
     .sort(([a], [b]) => a.localeCompare(b));
@@ -262,10 +259,7 @@ type ConnectedUser = {
   currentRole: "CLIENT" | "PROVIDER";
 };
 
-const hasRoleForMode = (
-  detail: UserDetails,
-  mode: "CLIENT" | "PROVIDER",
-) => {
+const hasRoleForMode = (detail: UserDetails, mode: "CLIENT" | "PROVIDER") => {
   const roles = Array.isArray(detail.user?.roles)
     ? detail.user.roles.map((role) => String(role).toUpperCase())
     : [];
@@ -306,8 +300,10 @@ const Users = () => {
       foregroundPermissionStatus: {},
       backgroundPermissionStatus: {},
     });
-  const [pendingProviderSpecialSkillsCount, setPendingProviderSpecialSkillsCount] =
-    useState(0);
+  const [
+    pendingProviderSpecialSkillsCount,
+    setPendingProviderSpecialSkillsCount,
+  ] = useState(0);
   const [
     requestedCompensationInfoAtCount,
     setRequestedCompensationInfoAtCount,
@@ -317,7 +313,9 @@ const Users = () => {
   const [isUpdatingBan, setIsUpdatingBan] = useState(false);
   const [isDeleteTestUserModalOpen, setIsDeleteTestUserModalOpen] =
     useState(false);
-  const [testUserToDelete, setTestUserToDelete] = useState<TestUser | null>(null);
+  const [testUserToDelete, setTestUserToDelete] = useState<TestUser | null>(
+    null,
+  );
   const [isSavingTestUser, setIsSavingTestUser] = useState(false);
   const [isSyncingTestUsers, setIsSyncingTestUsers] = useState(false);
   const [isLoadingConnectedUsers, setIsLoadingConnectedUsers] = useState(false);
@@ -342,6 +340,86 @@ const Users = () => {
     PROVIDER: 0,
     total: 0,
   });
+  const [locations, setLocations] = useState<
+    MarketplaceAnalyticsLocationCountry[]
+  >([]);
+  const [selectedCountryCode, setSelectedCountryCode] = useState("");
+  const [selectedCityName, setSelectedCityName] = useState("");
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await getMarketplaceAnalyticsLocations();
+        const payload =
+          response.data as GetMarketplaceAnalyticsLocationsResponse;
+        setLocations(Array.isArray(payload?.result) ? payload.result : []);
+      } catch (err) {
+        console.log(err);
+        setLocations([]);
+      }
+    };
+
+    fetchLocations();
+  }, []);
+
+  const countryOptions = useMemo(
+    () => [
+      { title: "All countries", value: "" },
+      ...locations.map((country) => ({
+        title: `${country.name} (${country.code})`,
+        value: country.code,
+      })),
+    ],
+    [locations],
+  );
+
+  const cityOptions = useMemo(() => {
+    const cities = selectedCountryCode
+      ? (locations.find((country) => country.code === selectedCountryCode)
+          ?.cities ?? [])
+      : Array.from(
+          new Map(
+            locations
+              .flatMap((country) => country.cities ?? [])
+              .map((city) => [city.name, city]),
+          ).values(),
+        );
+
+    return [
+      { title: "All cities", value: "" },
+      ...cities.map((city) => ({
+        title: city.name,
+        value: city.name,
+      })),
+    ];
+  }, [locations, selectedCountryCode]);
+
+  const selectedCountryOption = useMemo(
+    () =>
+      Math.max(
+        0,
+        countryOptions.findIndex(
+          (option) => option.value === selectedCountryCode,
+        ),
+      ),
+    [countryOptions, selectedCountryCode],
+  );
+
+  const selectedCityOption = useMemo(
+    () =>
+      Math.max(
+        0,
+        cityOptions.findIndex((option) => option.value === selectedCityName),
+      ),
+    [cityOptions, selectedCityName],
+  );
+
+  const selectedCountry = useMemo(
+    () => locations.find((country) => country.code === selectedCountryCode),
+    [locations, selectedCountryCode],
+  );
+
+  const selectedCountryName = selectedCountry?.name ?? "";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -356,7 +434,9 @@ const Users = () => {
     const savedPageSize = Number(
       window.localStorage.getItem(USERS_PAGE_SIZE_STORAGE_KEY),
     );
-    if (PAGE_SIZE_OPTIONS.some((option) => Number(option.value) === savedPageSize)) {
+    if (
+      PAGE_SIZE_OPTIONS.some((option) => Number(option.value) === savedPageSize)
+    ) {
       setItemsPerPage(savedPageSize);
     }
   }, []);
@@ -492,7 +572,9 @@ const Users = () => {
     const view = typeof router.query.view === "string" ? router.query.view : "";
     const viewMode = VIEW_QUERY_TO_MODE[view];
     if (viewMode) {
-      const index = viewOptions.findIndex((option) => option.value === viewMode);
+      const index = viewOptions.findIndex(
+        (option) => option.value === viewMode,
+      );
       setSelectedViewOption(index >= 0 ? index : 0);
       setModeReady(true);
       return;
@@ -599,9 +681,8 @@ const Users = () => {
           | GetOnboardingNotFinishedUsersResponse
           | { result?: GetOnboardingNotFinishedUsersResponse };
         const clientResult =
-          (
-            clientPayload as { result?: GetOnboardingNotFinishedUsersResponse }
-          ).result ?? (clientPayload as GetOnboardingNotFinishedUsersResponse);
+          (clientPayload as { result?: GetOnboardingNotFinishedUsersResponse })
+            .result ?? (clientPayload as GetOnboardingNotFinishedUsersResponse);
         setClientOnboardingCount(Number(clientResult.total ?? 0));
       }
 
@@ -611,8 +692,11 @@ const Users = () => {
           | { result?: GetOnboardingNotFinishedUsersResponse };
         const providerResult =
           (
-            providerPayload as { result?: GetOnboardingNotFinishedUsersResponse }
-          ).result ?? (providerPayload as GetOnboardingNotFinishedUsersResponse);
+            providerPayload as {
+              result?: GetOnboardingNotFinishedUsersResponse;
+            }
+          ).result ??
+          (providerPayload as GetOnboardingNotFinishedUsersResponse);
         setProviderOnboardingCount(Number(providerResult.total ?? 0));
       }
 
@@ -648,7 +732,8 @@ const Users = () => {
           .map((item: RawAppVersionStatItem) => ({
             platform: normalizePlatform(item.platform),
             items: normalizeAppVersionItems(item.items),
-            withoutAppVersionCount: Number(item.withoutAppVersionCount ?? 0) || 0,
+            withoutAppVersionCount:
+              Number(item.withoutAppVersionCount ?? 0) || 0,
             totalUsers: Number(item.totalUsers ?? 0) || 0,
             totalUsersByLoginMode: normalizeLoginModeTotals(
               item.totalUsersByLoginMode,
@@ -663,7 +748,9 @@ const Users = () => {
         );
         setAppVersionStats({
           items: appVersionItems,
-          totalUsers: Number.isFinite(appVersionTotalUsers) ? appVersionTotalUsers : 0,
+          totalUsers: Number.isFinite(appVersionTotalUsers)
+            ? appVersionTotalUsers
+            : 0,
           totalUsersByLoginMode,
         });
         setOnboardingStats((prev) => ({
@@ -699,16 +786,14 @@ const Users = () => {
               locationPermissionsStatsResult as {
                 foregroundPermissionStatus?: unknown;
               }
-            )
-              .foregroundPermissionStatus,
+            ).foregroundPermissionStatus,
           ),
           backgroundPermissionStatus: normalizePermissionStatusStats(
             (
               locationPermissionsStatsResult as {
                 backgroundPermissionStatus?: unknown;
               }
-            )
-              .backgroundPermissionStatus,
+            ).backgroundPermissionStatus,
           ),
         });
       } else {
@@ -748,6 +833,14 @@ const Users = () => {
         pageSize: String(itemsPerPage),
         search: searchText,
       });
+
+      if (selectedCountryName) {
+        searchParams.set("country", selectedCountryName);
+      }
+
+      if (selectedCityName) {
+        searchParams.set("city", selectedCityName);
+      }
 
       if (isSelectedClients) {
         if (clientCompensationFilter === "REQUESTED") {
@@ -796,9 +889,7 @@ const Users = () => {
       ).filter((user): user is User => user !== null);
 
       setUsers(filteredUsers);
-      setPageCount(
-        Math.ceil(response.data.users.total / itemsPerPage),
-      );
+      setPageCount(Math.ceil(response.data.users.total / itemsPerPage));
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -837,12 +928,13 @@ const Users = () => {
         | GetOnboardingNotFinishedUsersResponse
         | { result?: GetOnboardingNotFinishedUsersResponse };
       const result =
-        (payload as { result?: GetOnboardingNotFinishedUsersResponse }).result ??
-        (payload as GetOnboardingNotFinishedUsersResponse);
+        (payload as { result?: GetOnboardingNotFinishedUsersResponse })
+          .result ?? (payload as GetOnboardingNotFinishedUsersResponse);
       const items = Array.isArray(result.items)
         ? result.items.filter(
             (user) =>
-              String(user.currentMode ?? "").toUpperCase() === String(mode ?? "").toUpperCase(),
+              String(user.currentMode ?? "").toUpperCase() ===
+              String(mode ?? "").toUpperCase(),
           )
         : [];
       const pageSize = Number(result.pageSize ?? itemsPerPage);
@@ -919,12 +1011,16 @@ const Users = () => {
         search: searchText || undefined,
       });
       const result = response.data?.result ?? response.data ?? {};
-      const items = Array.isArray(result.items) ? (result.items as BannedUser[]) : [];
+      const items = Array.isArray(result.items)
+        ? (result.items as BannedUser[])
+        : [];
       const nextPageSize = Number(result.pageSize ?? itemsPerPage ?? 20);
       const nextTotal = Number(result.total ?? 0);
       setBannedUsers(items);
       setItemsPerPage(nextPageSize > 0 ? nextPageSize : 20);
-      setPageCount(Math.ceil(nextTotal / (nextPageSize > 0 ? nextPageSize : 20)));
+      setPageCount(
+        Math.ceil(nextTotal / (nextPageSize > 0 ? nextPageSize : 20)),
+      );
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -1074,7 +1170,12 @@ const Users = () => {
     ).length;
 
     setPageCount(Math.ceil(filteredCount / itemsPerPage) || 0);
-  }, [connectedUsers, connectedUsersFilter, isActiveUsersSelected, itemsPerPage]);
+  }, [
+    connectedUsers,
+    connectedUsersFilter,
+    isActiveUsersSelected,
+    itemsPerPage,
+  ]);
 
   useEffect(() => {
     if (!isActiveUsersSelected) return;
@@ -1241,526 +1342,573 @@ const Users = () => {
     <div className={styles.main}>
       <div className={styles.pageLayout}>
         <div className={styles.mainColumn}>
-      <div className={styles.heading}>
-        <div className={styles.pageHeroRow}>
-          <h1 className={styles.pageHeroTitle}>Users</h1>
-          {!isActiveUsersSelected && (
-            <div className={styles.pageHeroSearch}>
-              <SearchBar
-                className={styles.pageHeroSearchBar}
-                searchText={searchText}
-                setSearchText={setSearchText}
-                placeholder="Type username, ID  or email"
-                onButtonClick={() => {
-                  setItemOffset(0);
-                  if (isOnboardingSelected) {
-                    fetchOnboardingUsers();
-                  } else if (isBannedUsersSelected) {
-                    fetchBannedUsers();
-                  } else if (isTestUsersSelected) {
-                    fetchTestUsers();
-                  } else {
-                    fetchUsers();
-                  }
-                }}
-              />
+          <div className={styles.heading}>
+            <div className={styles.pageHeroRow}>
+              <h1 className={styles.pageHeroTitle}>Users</h1>
+              {!isActiveUsersSelected && (
+                <div className={styles.pageHeroSearch}>
+                  <SearchBar
+                    className={styles.pageHeroSearchBar}
+                    searchText={searchText}
+                    setSearchText={setSearchText}
+                    placeholder="Type username, ID  or email"
+                    onButtonClick={() => {
+                      setItemOffset(0);
+                      if (isOnboardingSelected) {
+                        fetchOnboardingUsers();
+                      } else if (isBannedUsersSelected) {
+                        fetchBannedUsers();
+                      } else if (isTestUsersSelected) {
+                        fetchTestUsers();
+                      } else {
+                        fetchUsers();
+                      }
+                    }}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <div className={styles.headingTopRow}>
-          <div className={styles.headingLeftSide}>
-            <DropDownButton
-              options={viewOptions.map((option) => ({
-                title: option.title,
-                value: option.value,
-                attentionNumber: option.attentionNumber,
-              }))}
-              selectedOption={selectedViewOption}
-              setSelectedOption={(nextSelectedOption) => {
-                const nextIndex = Number(nextSelectedOption);
-                if (!Number.isFinite(nextIndex)) return;
-                setSelectedViewOption(nextIndex);
-                updateUsersUrlQuery(
-                  { viewOptionIndex: nextIndex, page: 1 },
-                  "push",
-                );
-              }}
-              onClickOption={() => {
-                setItemOffset(0);
-              }}
-            />
-            <Button
-              title="Filter and export"
-              type="OUTLINED"
-              onClick={() => router.push("/users/filter-export")}
-            />
-            {requestedCompensationInfoAtCount > 0 && (
-              <Button
-                title="Compensation requests"
-                type="OUTLINED"
-                isSelected={
-                  isSelectedClients && clientCompensationFilter === "REQUESTED"
-                }
-                attentionNumber={requestedCompensationInfoAtCount}
-                onClick={() => {
-                  setSelectedViewOption(0);
-                  setClientCompensationFilter("REQUESTED");
-                  setItemOffset(0);
-                  router.push(
-                    {
-                      pathname: router.pathname,
-                      query: {
-                        mode: "clients",
-                        hasRequestedCompensationInfoAt: "true",
-                        page: "1",
-                      },
-                    },
-                    undefined,
-                    { shallow: true, scroll: false },
-                  );
-                }}
-              />
-            )}
-            {isProvidersSelected && (
-              <>
+            <div className={styles.headingTopRow}>
+              <div className={styles.headingLeftSide}>
                 <DropDownButton
-                  options={providerVideoFilterOptions}
-                  selectedOption={providerVideoFilterOptions.findIndex(
-                    (option) => option.value === providerVideoFilter,
-                  )}
+                  options={viewOptions.map((option) => ({
+                    title: option.title,
+                    value: option.value,
+                    attentionNumber: option.attentionNumber,
+                  }))}
+                  selectedOption={selectedViewOption}
                   setSelectedOption={(nextSelectedOption) => {
-                    const option =
-                      providerVideoFilterOptions[nextSelectedOption as number];
-                    if (!option) return;
-                    setProviderVideoFilter(option.value);
+                    const nextIndex = Number(nextSelectedOption);
+                    if (!Number.isFinite(nextIndex)) return;
+                    setSelectedViewOption(nextIndex);
+                    updateUsersUrlQuery(
+                      { viewOptionIndex: nextIndex, page: 1 },
+                      "push",
+                    );
                   }}
                   onClickOption={() => {
                     setItemOffset(0);
                   }}
                 />
                 <Button
-                  title="Pending special skills"
+                  title="Filter and export"
                   type="OUTLINED"
-                  isSelected={
-                    providerSpecialSkillsFilter === "PENDING_SPECIAL_SKILLS"
-                  }
-                  attentionNumber={pendingProviderSpecialSkillsCount}
-                  onClick={() => {
-                    setItemOffset(0);
-                    setProviderSpecialSkillsFilter((prev) =>
-                      prev === "PENDING_SPECIAL_SKILLS"
-                        ? "ALL"
-                        : "PENDING_SPECIAL_SKILLS",
-                    );
-                  }}
+                  onClick={() => router.push("/users/filter-export")}
                 />
-              </>
-            )}
-            {isActiveUsersSelected && (
-              <>
-                <Button
-                  title={`Clients (${connectedUsersCounts.CLIENT})`}
-                  type="OUTLINED"
-                  isSelected={connectedUsersFilter === "CLIENT"}
-                  onClick={() => {
-                    setItemOffset(0);
-                    setConnectedUsersFilter("CLIENT");
-                  }}
-                />
-                <Button
-                  title={`Providers (${connectedUsersCounts.PROVIDER})`}
-                  type="OUTLINED"
-                  isSelected={connectedUsersFilter === "PROVIDER"}
-                  onClick={() => {
-                    setItemOffset(0);
-                    setConnectedUsersFilter("PROVIDER");
-                  }}
-                />
-              </>
-            )}
-          </div>
-          {!isOnboardingSelected &&
-            !isActiveUsersSelected &&
-            !isBannedUsersSelected &&
-            !isTestUsersSelected && (
-              <div className={styles.headingRightTools}>
-                <div className="flex shrink-0 items-center gap-3">
-                  <DropDownButton
-                    options={PAGE_SIZE_OPTIONS.map((option) => ({
-                      title: option.title,
-                      value: option.value,
-                    }))}
-                    selectedOption={Math.max(
-                      0,
-                      PAGE_SIZE_OPTIONS.findIndex(
-                        (option) => Number(option.value) === itemsPerPage,
-                      ),
-                    )}
-                    setSelectedOption={(selectedOption) => {
-                      const option =
-                        PAGE_SIZE_OPTIONS[selectedOption as number];
-                      if (!option) return;
+                {requestedCompensationInfoAtCount > 0 && (
+                  <Button
+                    title="Compensation requests"
+                    type="OUTLINED"
+                    isSelected={
+                      isSelectedClients &&
+                      clientCompensationFilter === "REQUESTED"
+                    }
+                    attentionNumber={requestedCompensationInfoAtCount}
+                    onClick={() => {
+                      setSelectedViewOption(0);
+                      setClientCompensationFilter("REQUESTED");
                       setItemOffset(0);
-                      setItemsPerPage(Number(option.value));
-                      updateUsersUrlQuery({ page: 1 }, "replace");
+                      router.push(
+                        {
+                          pathname: router.pathname,
+                          query: {
+                            mode: "clients",
+                            hasRequestedCompensationInfoAt: "true",
+                            page: "1",
+                          },
+                        },
+                        undefined,
+                        { shallow: true, scroll: false },
+                      );
                     }}
                   />
-                  <div
-                    className="relative box-border flex h-10 w-[78px] min-w-[78px] max-w-[78px] shrink-0 items-stretch gap-0.5 rounded-xl border border-input bg-black/5 p-[3px]"
-                    role="group"
-                    aria-label="Layout"
-                  >
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "pointer-events-none absolute inset-y-[3px] left-[3px] z-0 w-[calc(50%-4px)] rounded-xl border border-border/60 bg-background shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
-                        !isCompactView &&
-                          "translate-x-[calc(100%+2px)]",
+                )}
+                {isProvidersSelected && (
+                  <>
+                    <DropDownButton
+                      options={providerVideoFilterOptions}
+                      selectedOption={providerVideoFilterOptions.findIndex(
+                        (option) => option.value === providerVideoFilter,
                       )}
+                      setSelectedOption={(nextSelectedOption) => {
+                        const option =
+                          providerVideoFilterOptions[
+                            nextSelectedOption as number
+                          ];
+                        if (!option) return;
+                        setProviderVideoFilter(option.value);
+                      }}
+                      onClickOption={() => {
+                        setItemOffset(0);
+                      }}
                     />
-                    <button
-                      type="button"
-                      className={cn(
-                        "relative z-10 flex w-[35px] shrink-0 flex-none items-center justify-center self-stretch rounded-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none active:scale-[0.96] motion-reduce:active:scale-100",
-                        isCompactView && "text-foreground",
-                      )}
-                      onClick={() => setIsCompactView(true)}
-                      aria-pressed={isCompactView}
-                      aria-label="List view"
-                    >
-                      <List size={18} strokeWidth={2} aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      className={cn(
-                        "relative z-10 flex w-[35px] shrink-0 flex-none items-center justify-center self-stretch rounded-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none active:scale-[0.96] motion-reduce:active:scale-100",
-                        !isCompactView && "text-foreground",
-                      )}
-                      onClick={() => setIsCompactView(false)}
-                      aria-pressed={!isCompactView}
-                      aria-label="Grid view"
-                    >
-                      <LayoutGrid size={18} strokeWidth={2} aria-hidden />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-        </div>
-      </div>
+                    <Button
+                      title="Pending special skills"
+                      type="OUTLINED"
+                      isSelected={
+                        providerSpecialSkillsFilter === "PENDING_SPECIAL_SKILLS"
+                      }
+                      attentionNumber={pendingProviderSpecialSkillsCount}
+                      onClick={() => {
+                        setItemOffset(0);
+                        setProviderSpecialSkillsFilter((prev) =>
+                          prev === "PENDING_SPECIAL_SKILLS"
+                            ? "ALL"
+                            : "PENDING_SPECIAL_SKILLS",
+                        );
+                      }}
+                    />
+                  </>
+                )}
+                {isActiveUsersSelected && (
+                  <>
+                    <Button
+                      title={`Clients (${connectedUsersCounts.CLIENT})`}
+                      type="OUTLINED"
+                      isSelected={connectedUsersFilter === "CLIENT"}
+                      onClick={() => {
+                        setItemOffset(0);
+                        setConnectedUsersFilter("CLIENT");
+                      }}
+                    />
+                    <Button
+                      title={`Providers (${connectedUsersCounts.PROVIDER})`}
+                      type="OUTLINED"
+                      isSelected={connectedUsersFilter === "PROVIDER"}
+                      onClick={() => {
+                        setItemOffset(0);
+                        setConnectedUsersFilter("PROVIDER");
+                      }}
+                    />
+                  </>
+                )}
+                {!isActiveUsersSelected &&
+                  !isOnboardingSelected &&
+                  !isBannedUsersSelected &&
+                  !isTestUsersSelected && (
+                    <>
+                      <div className={styles.userFilterField}>
+                        <span className={styles.userFilterLabel}>Country</span>
+                        <DropDownButton
+                          options={countryOptions}
+                          selectedOption={selectedCountryOption}
+                          setSelectedOption={(nextOption) => {
+                            const nextCountryCode =
+                              countryOptions[nextOption as number]?.value ?? "";
 
-      {isOnboardingSelected ? (
-        onboardingUsers.length > 0 ? (
-          <div className={userListStyles.main}>
-            {onboardingUsers.map((user) => {
-              const displayName =
-                `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
-                "Unknown user";
-              return (
-                <div
-                  key={user.id}
-                  className={cn(
-                    userListStyles.row,
-                    styles.listRowWithBelowMeta,
-                  )}
-                  tabIndex={0}
-                  onClick={(e) => {
-                    if (isRowNavExcluded(e.target)) return;
-                    openOnboardingUserProfile(user);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter" && e.key !== " ") return;
-                    if (isRowNavExcluded(e.target)) return;
-                    if (e.target !== e.currentTarget) return;
-                    e.preventDefault();
-                    openOnboardingUserProfile(user);
-                  }}
-                  aria-label={`View ${displayName} profile`}
-                >
-                  <div className={userListStyles.left}>
-                    <img
-                      className={userListStyles.avatar}
-                      src={user.imgUrl || defaultUserImg.src}
-                      alt=""
-                    />
-                    <div className={styles.listRowDetailColumn}>
-                      <div className={userListStyles.info}>
-                        <div className={userListStyles.name}>
-                          {displayName}{" "}
-                          {roleParenFromEnum(user.currentMode)}
-                        </div>
-                        <UserEmailIdLine
-                          email={user.email}
-                          userId={user.userId}
+                            setSelectedCountryCode(nextCountryCode);
+                            setSelectedCityName("");
+                            setItemOffset(0);
+                            updateUsersUrlQuery({ page: 1 }, "replace");
+                          }}
                         />
                       </div>
-                      <div className={styles.onboardingRight}>
-                        <div className={styles.remainingStepsLine}>
-                          <span className={styles.remainingLabel}>
-                            Remaining:
-                          </span>{" "}
-                          <span className={styles.remainingList}>
-                            {formatRemainingSteps(user.remainingSteps ?? [])}
-                          </span>
+
+                      <div className={styles.userFilterField}>
+                        <span className={styles.userFilterLabel}>City</span>
+                        <DropDownButton
+                          options={cityOptions}
+                          selectedOption={selectedCityOption}
+                          setSelectedOption={(nextOption) => {
+                            const nextCity =
+                              cityOptions[nextOption as number]?.value ?? "";
+
+                            setSelectedCityName(nextCity);
+                            setItemOffset(0);
+                            updateUsersUrlQuery({ page: 1 }, "replace");
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+              </div>
+              {!isOnboardingSelected &&
+                !isActiveUsersSelected &&
+                !isBannedUsersSelected &&
+                !isTestUsersSelected && (
+                  <div className={styles.headingRightTools}>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <DropDownButton
+                        options={PAGE_SIZE_OPTIONS.map((option) => ({
+                          title: option.title,
+                          value: option.value,
+                        }))}
+                        selectedOption={Math.max(
+                          0,
+                          PAGE_SIZE_OPTIONS.findIndex(
+                            (option) => Number(option.value) === itemsPerPage,
+                          ),
+                        )}
+                        setSelectedOption={(selectedOption) => {
+                          const option =
+                            PAGE_SIZE_OPTIONS[selectedOption as number];
+                          if (!option) return;
+                          setItemOffset(0);
+                          setItemsPerPage(Number(option.value));
+                          updateUsersUrlQuery({ page: 1 }, "replace");
+                        }}
+                      />
+                      <div
+                        className="relative box-border flex h-10 w-[78px] min-w-[78px] max-w-[78px] shrink-0 items-stretch gap-0.5 rounded-xl border border-input bg-black/5 p-[3px]"
+                        role="group"
+                        aria-label="Layout"
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "pointer-events-none absolute inset-y-[3px] left-[3px] z-0 w-[calc(50%-4px)] rounded-xl border border-border/60 bg-background shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
+                            !isCompactView && "translate-x-[calc(100%+2px)]",
+                          )}
+                        />
+                        <button
+                          type="button"
+                          className={cn(
+                            "relative z-10 flex w-[35px] shrink-0 flex-none items-center justify-center self-stretch rounded-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none active:scale-[0.96] motion-reduce:active:scale-100",
+                            isCompactView && "text-foreground",
+                          )}
+                          onClick={() => setIsCompactView(true)}
+                          aria-pressed={isCompactView}
+                          aria-label="List view"
+                        >
+                          <List size={18} strokeWidth={2} aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          className={cn(
+                            "relative z-10 flex w-[35px] shrink-0 flex-none items-center justify-center self-stretch rounded-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none active:scale-[0.96] motion-reduce:active:scale-100",
+                            !isCompactView && "text-foreground",
+                          )}
+                          onClick={() => setIsCompactView(false)}
+                          aria-pressed={!isCompactView}
+                          aria-label="Grid view"
+                        >
+                          <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+            </div>
+          </div>
+
+          {isOnboardingSelected ? (
+            onboardingUsers.length > 0 ? (
+              <div className={userListStyles.main}>
+                {onboardingUsers.map((user) => {
+                  const displayName =
+                    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+                    "Unknown user";
+                  return (
+                    <div
+                      key={user.id}
+                      className={cn(
+                        userListStyles.row,
+                        styles.listRowWithBelowMeta,
+                      )}
+                      tabIndex={0}
+                      onClick={(e) => {
+                        if (isRowNavExcluded(e.target)) return;
+                        openOnboardingUserProfile(user);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        if (isRowNavExcluded(e.target)) return;
+                        if (e.target !== e.currentTarget) return;
+                        e.preventDefault();
+                        openOnboardingUserProfile(user);
+                      }}
+                      aria-label={`View ${displayName} profile`}
+                    >
+                      <div className={userListStyles.left}>
+                        <img
+                          className={userListStyles.avatar}
+                          src={user.imgUrl || defaultUserImg.src}
+                          alt=""
+                        />
+                        <div className={styles.listRowDetailColumn}>
+                          <div className={userListStyles.info}>
+                            <div className={userListStyles.name}>
+                              {displayName}{" "}
+                              {roleParenFromEnum(user.currentMode)}
+                            </div>
+                            <UserEmailIdLine
+                              email={user.email}
+                              userId={user.userId}
+                            />
+                          </div>
+                          <div className={styles.onboardingRight}>
+                            <div className={styles.remainingStepsLine}>
+                              <span className={styles.remainingLabel}>
+                                Remaining:
+                              </span>{" "}
+                              <span className={styles.remainingList}>
+                                {formatRemainingSteps(
+                                  user.remainingSteps ?? [],
+                                )}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className={styles.emptyState}>
-            No users with unfinished onboarding
-          </div>
-        )
-      ) : isBannedUsersSelected ? (
-        bannedUsers.length > 0 ? (
-          <div className={userListStyles.main}>
-            {bannedUsers.map((user) => (
-              <div key={user.id} className={userListStyles.row}>
-                <div className={userListStyles.left}>
-                  <img
-                    className={userListStyles.avatar}
-                    src={user.userImgUrl || defaultUserImg.src}
-                    alt=""
-                  />
-                  <div className={userListStyles.info}>
-                    <div className={userListStyles.name}>
-                      {`${user.userFirstName ?? ""} ${user.userLastName ?? ""}`.trim() ||
-                        "Unknown user"}
-                    </div>
-                    <UserEmailIdLine
-                      email={user.userEmail || user.email}
-                      userId={user.userId}
-                    />
-                    <div className={userListStyles.meta}>
-                      {`Reason: ${
-                        user.banReason ??
-                        user.userBanReason ??
-                        user.bannedReason ??
-                        user.reason ??
-                        "—"
-                      }`}
-                    </div>
-                    <div className={userListStyles.meta}>
-                      {`Banned at: ${formatDateTime(
-                        user.bannedAt ?? user.updatedAt ?? user.createdAt,
-                      )}`}
-                    </div>
-                    {user.bannedUntil && (
-                      <div className={userListStyles.meta}>
-                        {`Banned until: ${formatDateTime(user.bannedUntil)}`}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className={styles.bannedSwitchWrap}>
-                  <button
-                    type="button"
-                    className={styles.suspendSwitch}
-                    onClick={() => openBanConfirmModal(user)}
-                  >
-                    <span
-                      className={`${styles.suspendSwitchUi} ${styles.suspendSwitchUiActive}`}
-                    />
-                  </button>
-                </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className={styles.emptyState}>No banned users</div>
-        )
-      ) : isActiveUsersSelected ? (
-        isLoadingConnectedUsers ? (
-          <div className={styles.emptyState}>Loading active users...</div>
-        ) : paginatedConnectedUsers.length > 0 ? (
-          <div className={userListStyles.main}>
-            {paginatedConnectedUsers.map((user) => {
-              const displayName = user.fullName || "Unknown user";
-              return (
-                <div
-                  key={`${user.currentRole}-${user.userId}`}
-                  className={cn(
-                    userListStyles.row,
-                    styles.listRowWithBelowMeta,
-                  )}
-                  tabIndex={0}
-                  onClick={(e) => {
-                    if (isRowNavExcluded(e.target)) return;
-                    const selectedText =
-                      window.getSelection?.()?.toString().trim() ?? "";
-                    if (selectedText.length > 0) return;
-                    router.push(
-                      user.currentRole === "PROVIDER"
-                        ? `/provider/${user.userId}`
-                        : `/client/${user.userId}`,
-                    );
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter" && e.key !== " ") return;
-                    if (isRowNavExcluded(e.target)) return;
-                    if (e.target !== e.currentTarget) return;
-                    e.preventDefault();
-                    const selectedText =
-                      window.getSelection?.()?.toString().trim() ?? "";
-                    if (selectedText.length > 0) return;
-                    router.push(
-                      user.currentRole === "PROVIDER"
-                        ? `/provider/${user.userId}`
-                        : `/client/${user.userId}`,
-                    );
-                  }}
-                  aria-label={`View ${displayName} profile`}
-                >
-                  <div className={userListStyles.left}>
-                    <img
-                      className={userListStyles.avatar}
-                      src={user.imgUrl || defaultUserImg.src}
-                      alt=""
-                    />
-                    <div className={styles.listRowDetailColumn}>
+            ) : (
+              <div className={styles.emptyState}>
+                No users with unfinished onboarding
+              </div>
+            )
+          ) : isBannedUsersSelected ? (
+            bannedUsers.length > 0 ? (
+              <div className={userListStyles.main}>
+                {bannedUsers.map((user) => (
+                  <div key={user.id} className={userListStyles.row}>
+                    <div className={userListStyles.left}>
+                      <img
+                        className={userListStyles.avatar}
+                        src={user.userImgUrl || defaultUserImg.src}
+                        alt=""
+                      />
                       <div className={userListStyles.info}>
                         <div className={userListStyles.name}>
-                          {displayName}{" "}
-                          {roleParenFromEnum(user.currentRole)}
+                          {`${user.userFirstName ?? ""} ${user.userLastName ?? ""}`.trim() ||
+                            "Unknown user"}
                         </div>
-                        <UserEmailIdLine userId={user.userId} />
+                        <UserEmailIdLine
+                          email={user.userEmail || user.email}
+                          userId={user.userId}
+                        />
+                        <div className={userListStyles.meta}>
+                          {`Reason: ${
+                            user.banReason ??
+                            user.userBanReason ??
+                            user.bannedReason ??
+                            user.reason ??
+                            "—"
+                          }`}
+                        </div>
+                        <div className={userListStyles.meta}>
+                          {`Banned at: ${formatDateTime(
+                            user.bannedAt ?? user.updatedAt ?? user.createdAt,
+                          )}`}
+                        </div>
+                        {user.bannedUntil && (
+                          <div className={userListStyles.meta}>
+                            {`Banned until: ${formatDateTime(user.bannedUntil)}`}
+                          </div>
+                        )}
                       </div>
-                      <div className={styles.onboardingRight}>
-                        <div className={styles.stepsTitle}>Connected at</div>
-                        <div className={styles.stepsText}>
-                          {formatDateTime(user.connectedAt)}
+                    </div>
+                    <div className={styles.bannedSwitchWrap}>
+                      <button
+                        type="button"
+                        className={styles.suspendSwitch}
+                        onClick={() => openBanConfirmModal(user)}
+                      >
+                        <span
+                          className={`${styles.suspendSwitchUi} ${styles.suspendSwitchUiActive}`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>No banned users</div>
+            )
+          ) : isActiveUsersSelected ? (
+            isLoadingConnectedUsers ? (
+              <div className={styles.emptyState}>Loading active users...</div>
+            ) : paginatedConnectedUsers.length > 0 ? (
+              <div className={userListStyles.main}>
+                {paginatedConnectedUsers.map((user) => {
+                  const displayName = user.fullName || "Unknown user";
+                  return (
+                    <div
+                      key={`${user.currentRole}-${user.userId}`}
+                      className={cn(
+                        userListStyles.row,
+                        styles.listRowWithBelowMeta,
+                      )}
+                      tabIndex={0}
+                      onClick={(e) => {
+                        if (isRowNavExcluded(e.target)) return;
+                        const selectedText =
+                          window.getSelection?.()?.toString().trim() ?? "";
+                        if (selectedText.length > 0) return;
+                        router.push(
+                          user.currentRole === "PROVIDER"
+                            ? `/provider/${user.userId}`
+                            : `/client/${user.userId}`,
+                        );
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        if (isRowNavExcluded(e.target)) return;
+                        if (e.target !== e.currentTarget) return;
+                        e.preventDefault();
+                        const selectedText =
+                          window.getSelection?.()?.toString().trim() ?? "";
+                        if (selectedText.length > 0) return;
+                        router.push(
+                          user.currentRole === "PROVIDER"
+                            ? `/provider/${user.userId}`
+                            : `/client/${user.userId}`,
+                        );
+                      }}
+                      aria-label={`View ${displayName} profile`}
+                    >
+                      <div className={userListStyles.left}>
+                        <img
+                          className={userListStyles.avatar}
+                          src={user.imgUrl || defaultUserImg.src}
+                          alt=""
+                        />
+                        <div className={styles.listRowDetailColumn}>
+                          <div className={userListStyles.info}>
+                            <div className={userListStyles.name}>
+                              {displayName}{" "}
+                              {roleParenFromEnum(user.currentRole)}
+                            </div>
+                            <UserEmailIdLine userId={user.userId} />
+                          </div>
+                          <div className={styles.onboardingRight}>
+                            <div className={styles.stepsTitle}>
+                              Connected at
+                            </div>
+                            <div className={styles.stepsText}>
+                              {formatDateTime(user.connectedAt)}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>No active users</div>
+            )
+          ) : isTestUsersSelected ? (
+            <div className={styles.testUsersSection}>
+              <div className={styles.testUsersAddRow}>
+                <input
+                  type="email"
+                  className={styles.testUsersInput}
+                  placeholder="Add test user email"
+                  value={newTestUserEmail}
+                  onChange={(e) => setNewTestUserEmail(e.target.value)}
+                  disabled={isSavingTestUser}
+                />
+                <Button
+                  title={isSavingTestUser ? "Saving..." : "Add"}
+                  type="BLACK"
+                  onClick={handleAddTestUser}
+                  isDisabled={
+                    isSavingTestUser || newTestUserEmail.trim().length === 0
+                  }
+                />
+                <Button
+                  title={isSyncingTestUsers ? "Syncing..." : "Sync"}
+                  type="OUTLINED"
+                  onClick={handleSyncTestUsers}
+                  isDisabled={isSyncingTestUsers || isSavingTestUser}
+                />
+              </div>
+              {testUsers.length > 0 ? (
+                <div className={userListStyles.main}>
+                  {testUsers.map((user) => {
+                    const editedEmail =
+                      testUserEditValues[user.email] ?? user.email;
+                    return (
+                      <div key={user.email} className={styles.testUserRow}>
+                        <div className={styles.testUserInfo}>
+                          <input
+                            type="email"
+                            className={styles.testUsersInput}
+                            value={editedEmail}
+                            onChange={(e) =>
+                              setTestUserEditValues((prev) => ({
+                                ...prev,
+                                [user.email]: e.target.value,
+                              }))
+                            }
+                            disabled={isSavingTestUser}
+                          />
+                          <div className={styles.testUserMeta}>
+                            {`Created: ${formatDateTime(user.createdAt)}`}
+                          </div>
+                          <div className={styles.testUserMeta}>
+                            {`Updated: ${formatDateTime(user.updatedAt)}`}
+                          </div>
+                        </div>
+                        <div className={styles.testUserActions}>
+                          <Button
+                            title="Save"
+                            type="OUTLINED"
+                            onClick={() => handleUpdateTestUser(user)}
+                            isDisabled={
+                              isSavingTestUser ||
+                              editedEmail.trim().length === 0 ||
+                              editedEmail.trim() === user.email
+                            }
+                          />
+                          <Button
+                            title="Delete"
+                            type="DELETE"
+                            onClick={() => openDeleteTestUserModal(user)}
+                            isDisabled={isSavingTestUser}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className={styles.emptyState}>No active users</div>
-        )
-      ) : isTestUsersSelected ? (
-        <div className={styles.testUsersSection}>
-          <div className={styles.testUsersAddRow}>
-            <input
-              type="email"
-              className={styles.testUsersInput}
-              placeholder="Add test user email"
-              value={newTestUserEmail}
-              onChange={(e) => setNewTestUserEmail(e.target.value)}
-              disabled={isSavingTestUser}
-            />
-            <Button
-              title={isSavingTestUser ? "Saving..." : "Add"}
-              type="BLACK"
-              onClick={handleAddTestUser}
-              isDisabled={isSavingTestUser || newTestUserEmail.trim().length === 0}
-            />
-            <Button
-              title={isSyncingTestUsers ? "Syncing..." : "Sync"}
-              type="OUTLINED"
-              onClick={handleSyncTestUsers}
-              isDisabled={isSyncingTestUsers || isSavingTestUser}
-            />
-          </div>
-          {testUsers.length > 0 ? (
-            <div className={userListStyles.main}>
-              {testUsers.map((user) => {
-                const editedEmail =
-                  testUserEditValues[user.email] ?? user.email;
-                return (
-                  <div key={user.email} className={styles.testUserRow}>
-                    <div className={styles.testUserInfo}>
-                      <input
-                        type="email"
-                        className={styles.testUsersInput}
-                        value={editedEmail}
-                        onChange={(e) =>
-                          setTestUserEditValues((prev) => ({
-                            ...prev,
-                            [user.email]: e.target.value,
-                          }))
-                        }
-                        disabled={isSavingTestUser}
-                      />
-                      <div className={styles.testUserMeta}>
-                        {`Created: ${formatDateTime(user.createdAt)}`}
-                      </div>
-                      <div className={styles.testUserMeta}>
-                        {`Updated: ${formatDateTime(user.updatedAt)}`}
-                      </div>
-                    </div>
-                    <div className={styles.testUserActions}>
-                      <Button
-                        title="Save"
-                        type="OUTLINED"
-                        onClick={() => handleUpdateTestUser(user)}
-                        isDisabled={
-                          isSavingTestUser ||
-                          editedEmail.trim().length === 0 ||
-                          editedEmail.trim() === user.email
-                        }
-                      />
-                      <Button
-                        title="Delete"
-                        type="DELETE"
-                        onClick={() => openDeleteTestUserModal(user)}
-                        isDisabled={isSavingTestUser}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+              ) : (
+                <div className={styles.emptyState}>No test users</div>
+              )}
             </div>
+          ) : isCompactView ? (
+            <UsersList
+              users={users}
+              mode={isSelectedClients ? "client" : "provider"}
+            />
           ) : (
-            <div className={styles.emptyState}>No test users</div>
+            <Cards
+              users={users}
+              mode={isSelectedClients ? "client" : "provider"}
+            />
           )}
-        </div>
-      ) : (
-        isCompactView ? (
-          <UsersList
-            users={users}
-            mode={isSelectedClients ? "client" : "provider"}
-          />
-        ) : (
-          <Cards users={users} mode={isSelectedClients ? "client" : "provider"} />
-        )
-      )}
 
-      <div className={styles.paginationDock}>
-      <ReactPaginate
-        breakLabel="..."
-        nextLabel=""
-        onPageChange={handlePageClick}
-        pageRangeDisplayed={5}
-        pageCount={pageCount}
-        forcePage={
-          pageCount === 0 || itemsPerPage <= 0
-            ? 0
-            : Math.min(
-                pageCount - 1,
-                Math.floor(itemOffset / itemsPerPage),
-              )
-        }
-        previousLabel=""
-        renderOnZeroPageCount={null}
-        containerClassName={`${paginateStyles.paginateWrapper} ${styles.paginationInDock}`}
-        pageClassName={paginateStyles.pageBtn}
-        pageLinkClassName={paginateStyles.pageLink}
-        activeClassName={paginateStyles.activePage}
-        nextClassName={paginateStyles.nextPageBtn}
-        nextLinkClassName={paginateStyles.nextLink}
-        previousClassName={paginateStyles.prevPageBtn}
-        previousLinkClassName={paginateStyles.prevLink}
-        breakClassName={paginateStyles.break}
-      />
-      </div>
-
+          <div className={styles.paginationDock}>
+            <ReactPaginate
+              breakLabel="..."
+              nextLabel=""
+              onPageChange={handlePageClick}
+              pageRangeDisplayed={5}
+              pageCount={pageCount}
+              forcePage={
+                pageCount === 0 || itemsPerPage <= 0
+                  ? 0
+                  : Math.min(
+                      pageCount - 1,
+                      Math.floor(itemOffset / itemsPerPage),
+                    )
+              }
+              previousLabel=""
+              renderOnZeroPageCount={null}
+              containerClassName={`${paginateStyles.paginateWrapper} ${styles.paginationInDock}`}
+              pageClassName={paginateStyles.pageBtn}
+              pageLinkClassName={paginateStyles.pageLink}
+              activeClassName={paginateStyles.activePage}
+              nextClassName={paginateStyles.nextPageBtn}
+              nextLinkClassName={paginateStyles.nextLink}
+              previousClassName={paginateStyles.prevPageBtn}
+              previousLinkClassName={paginateStyles.prevLink}
+              breakClassName={paginateStyles.break}
+            />
+          </div>
         </div>
         <aside
           className={styles.statsAside}
@@ -1813,10 +1961,7 @@ const Users = () => {
                       {formatAppVersionPlatformLabel(platformGroup.platform)}
                     </div>
                     {platformGroup.items.map((v) => (
-                      <div
-                        key={v.appVersion}
-                        className={styles.versionRow}
-                      >
+                      <div key={v.appVersion} className={styles.versionRow}>
                         <span className={styles.versionName}>
                           {v.appVersion}
                         </span>
@@ -1866,14 +2011,17 @@ const Users = () => {
                     <div className={styles.platformMetaRow}>
                       <span className={styles.platformMetaLabel}>Total</span>
                       <span className={styles.platformMetaValue}>
-                        {appVersionStats.totalUsers || onboardingStats.totalUsers}
+                        {appVersionStats.totalUsers ||
+                          onboardingStats.totalUsers}
                       </span>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section className={`${styles.appVersionSection} ${styles.loginModeSection}`}>
+              <section
+                className={`${styles.appVersionSection} ${styles.loginModeSection}`}
+              >
                 <h3 className={styles.appVersionHeading}>
                   Provider location permissions
                 </h3>

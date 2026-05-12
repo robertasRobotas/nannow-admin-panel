@@ -1,10 +1,10 @@
 import { User } from "@/types/Client";
 import styles from "./usersList.module.css";
 import defaultUserImg from "@/assets/images/default-avatar.png";
-import { useRouter } from "next/router";
+import Link from "next/link";
 import { isRowNavExcluded } from "@/lib/utils";
 import UserEmailIdLine from "../UserEmailIdLine/UserEmailIdLine";
-import type { KeyboardEvent, MouseEvent } from "react";
+import { useRef, type DragEvent, type MouseEvent } from "react";
 
 type UsersListProps = {
   users: User[];
@@ -12,40 +12,44 @@ type UsersListProps = {
 };
 
 const UsersList = ({ users, mode }: UsersListProps) => {
-  const router = useRouter();
+  const hasSelectionRef = useRef(false);
+
+  const updateSelectionState = () => {
+    hasSelectionRef.current =
+      (window.getSelection?.()?.toString().trim() ?? "").length > 0;
+  };
+
+  const preventLinkDrag = (event: DragEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+  };
 
   return (
     <div className={styles.main}>
       {users.map((user) => {
         const displayName =
           `${user.firstName} ${user.lastName}`.trim() || "Unknown user";
+        const href = `/${mode}/${user.userId}`;
 
-        const openProfile = () => {
-          const selectedText = window.getSelection?.()?.toString().trim() ?? "";
-          if (selectedText.length > 0) return;
-          router.push(`/${mode}/${user.userId}`);
-        };
-
-        const onRowClick = (e: MouseEvent<HTMLDivElement>) => {
-          if (isRowNavExcluded(e.target)) return;
-          openProfile();
-        };
-
-        const onRowKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-          if (e.key !== "Enter" && e.key !== " ") return;
-          if (isRowNavExcluded(e.target)) return;
-          if (e.target !== e.currentTarget) return;
-          e.preventDefault();
-          openProfile();
+        const onRowClick = (e: MouseEvent<HTMLAnchorElement>) => {
+          if (isRowNavExcluded(e.target)) {
+            e.preventDefault();
+            return;
+          }
+          updateSelectionState();
+          if (hasSelectionRef.current) {
+            e.preventDefault();
+          }
         };
 
         return (
-          <div
+          <Link
             key={user.id}
+            href={href}
             className={styles.row}
-            tabIndex={0}
             onClick={onRowClick}
-            onKeyDown={onRowKeyDown}
+            onMouseUp={updateSelectionState}
+            onDragStart={preventLinkDrag}
+            draggable={false}
             aria-label={`View ${displayName} profile`}
           >
             <div className={styles.left}>
@@ -67,7 +71,7 @@ const UsersList = ({ users, mode }: UsersListProps) => {
                 )}
               </div>
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>

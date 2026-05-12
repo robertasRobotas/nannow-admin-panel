@@ -23,6 +23,7 @@ import {
   getNotResolvedReportsCount,
   getNotReviewedDocumentsCount,
   getNotPaidOrdersCount,
+  getUnfinishedReminderNotifiedOrdersCount,
   getPendingProviderSpecialSkillsCount,
   getPendingCriminalRecordCount,
   getRequestedCompensationInfoAtCount,
@@ -90,6 +91,10 @@ const Header = () => {
   const [
     additionalPaymentsNotPayoutedCount,
     setAdditionalPaymentsNotPayoutedCount,
+  ] = useState(0);
+  const [
+    unfinishedReminderNotifiedCount,
+    setUnfinishedReminderNotifiedCount,
   ] = useState(0);
   const [notFinishedOnboardingCount, setNotFinishedOnboardingCount] =
     useState(0);
@@ -215,6 +220,21 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchUnfinishedReminderNotifiedOrdersCount = async () => {
+      try {
+        const response = await getUnfinishedReminderNotifiedOrdersCount();
+        const count =
+          response.data?.result?.count ??
+          response.data?.result?.total ??
+          response.data?.count ??
+          response.data?.total ??
+          response.data?.result ??
+          0;
+        setUnfinishedReminderNotifiedCount(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
     const fetchNotFinishedOnboardingCount = async () => {
       try {
         const response = await getNotFinishedOnboardingUsers({ pageSize: 1 });
@@ -298,6 +318,7 @@ const Header = () => {
     fetchNotPaidOrdersCount();
     fetchCanceledPendingFinancialOrdersCount();
     fetchAdditionalPaymentsNotPayoutedOrdersCount();
+    fetchUnfinishedReminderNotifiedOrdersCount();
     fetchNotFinishedOnboardingCount();
     fetchRequestedCompensationInfoAtCount();
     fetchPendingCriminalChecksCount();
@@ -473,7 +494,8 @@ const Header = () => {
     notEndedOrdersCount +
     notPaidOrdersCount +
     canceledPendingFinancialCount +
-    additionalPaymentsNotPayoutedCount;
+    additionalPaymentsNotPayoutedCount +
+    unfinishedReminderNotifiedCount;
   const usersAttentionNumber =
     notFinishedOnboardingCount +
     pendingProviderSpecialSkillsCount +

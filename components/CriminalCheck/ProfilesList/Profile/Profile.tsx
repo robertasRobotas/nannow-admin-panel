@@ -4,7 +4,7 @@ import checkmarkImg from "../../../../assets/images/circle-checkmark.svg";
 import clockImg from "../../../../assets/images/clock.svg";
 import questionImg from "../../../../assets/images/question.svg";
 import arrowOutImg from "../../../../assets/images/arrow-out.svg";
-import { useRouter } from "next/router";
+import Link from "next/link";
 
 type ProfileProps = {
   status: "APPROVED" | "REJECTED" | "PENDING" | "NOT_SUBMITTED";
@@ -22,8 +22,6 @@ const Profile = ({ status, imgUrl, name, id, changedAt }: ProfileProps) => {
     NOT_SUBMITTED: questionImg.src,
   };
 
-  const router = useRouter();
-
   const changedAtText = (() => {
     if (!changedAt) return null;
     const date = new Date(changedAt);
@@ -39,19 +37,18 @@ const Profile = ({ status, imgUrl, name, id, changedAt }: ProfileProps) => {
   })();
 
   return (
-    <div
-      onClick={() => {
-        router.push(`/criminal-check/${id}`);
-      }}
-      className={styles.main}
-    >
-      <img className={styles.statusIcon} src={icons[status] ?? questionImg.src} />
+    <Link href={`/criminal-check/${id}`} className={styles.main}>
+      <img
+        className={styles.statusIcon}
+        src={icons[status] ?? questionImg.src}
+        alt=""
+      />
       <div className={styles.profile}>
-        <img src={imgUrl} />
+        <img src={imgUrl} alt="" />
         <div className={styles.profileDetails}>
           <div className={styles.name}>
             <span>{name}</span>
-            <img src={arrowOutImg.src} />
+            <img src={arrowOutImg.src} alt="" />
           </div>
 
           <span className={styles.id}>{id}</span>
@@ -63,7 +60,7 @@ const Profile = ({ status, imgUrl, name, id, changedAt }: ProfileProps) => {
           <span className={styles.changedAtValue}>{changedAtText}</span>
         </div>
       )}
-    </div>
+    </Link>
   );
 };
 

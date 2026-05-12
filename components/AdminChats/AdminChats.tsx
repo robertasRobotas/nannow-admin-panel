@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import { getAdminChats, getChatById, getCurrentAdminRolesFromJwt } from "@/pages/api/fetch";
@@ -237,6 +238,16 @@ const AdminChats = () => {
     } ${selectedChat.user2.lastName ?? ""}`.trim();
   }, [selectedChat]);
 
+  const getChatHref = (chatId: string) => ({
+    pathname: router.pathname,
+    query: {
+      page: String(pageCount === 0 ? 1 : Math.floor(itemOffset / pageSize) + 1),
+      ...(selectedSort !== "latest" ? { sort: selectedSort } : {}),
+      ...(appliedSearch.trim().length > 0 ? { q: appliedSearch } : {}),
+      id: chatId,
+    },
+  });
+
   return (
     <div className={styles.main}>
       <div className={styles.headerRow}>
@@ -316,21 +327,25 @@ const AdminChats = () => {
                 const readAt = getChatReadAt(chat, lastMessage);
 
                 return (
-                  <button
+                  <Link
                     key={chatId}
-                    type="button"
+                    href={getChatHref(chatId)}
+                    shallow
+                    scroll={false}
                     className={`${styles.chatRow} ${
                       selectedChatId === chatId ? styles.chatRowActive : ""
                     } ${unread ? styles.chatRowUnread : ""}`}
-                    onClick={() => {
+                    onClick={(event) => {
+                      if (
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey ||
+                        event.altKey ||
+                        event.button !== 0
+                      ) {
+                        return;
+                      }
                       setSelectedChatId(chatId);
-                      updateChatsQuery({
-                        page:
-                          pageCount === 0 ? 1 : Math.floor(itemOffset / pageSize) + 1,
-                        sort: selectedSort,
-                        q: appliedSearch,
-                        id: chatId,
-                      });
                     }}
                   >
                     {unread && <span className={styles.unreadDot} />}
@@ -365,7 +380,7 @@ const AdminChats = () => {
                         </span>
                       )}
                     </div>
-                  </button>
+                  </Link>
                 );
               })
             ) : (
