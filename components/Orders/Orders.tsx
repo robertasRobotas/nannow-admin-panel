@@ -88,6 +88,7 @@ const Orders = () => {
     setAdditionalPaymentsNotPayoutedOrdersQTY,
   ] = useState<number>(0);
   const [orderIdQuery, setOrderIdQuery] = useState("");
+  const [appliedOrderSearch, setAppliedOrderSearch] = useState("");
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(0);
   const [pageCount, setPageCount] = useState(0);
@@ -121,7 +122,9 @@ const Orders = () => {
       }
       const nextStatus =
         params.status ??
-        (nextView === "DEFAULT" ? orderFilterOptions[selectedOption].value : "");
+        (nextView === "DEFAULT"
+          ? orderFilterOptions[selectedOption].value
+          : "");
       if (nextStatus) {
         nextQuery.status = nextStatus;
       } else {
@@ -140,7 +143,9 @@ const Orders = () => {
   const fetchOrders = useCallback(
     async (status: string, startIndex: number) => {
       try {
-        const response = await getOrders(status, startIndex);
+        const response = await getOrders(status, startIndex, {
+          search: appliedOrderSearch,
+        });
         setOrders(response.data.result.items);
         setItemsPerPage(response.data.result.pageSize);
         setPageCount(
@@ -155,7 +160,7 @@ const Orders = () => {
         }
       }
     },
-    [router],
+    [router, appliedOrderSearch],
   );
 
   const fetchCreatedOrdersByBookingType = useCallback(
@@ -167,7 +172,9 @@ const Orders = () => {
         let pageSize = 20;
 
         do {
-          const response = await getOrders("ORDER_CREATED", nextStartIndex);
+          const response = await getOrders("ORDER_CREATED", nextStartIndex, {
+            search: appliedOrderSearch,
+          });
           const result = response.data.result as {
             items: OrderType[];
             total: number;
@@ -198,7 +205,7 @@ const Orders = () => {
         }
       }
     },
-    [router],
+    [router, appliedOrderSearch],
   );
 
   const fetchNotPaidOrders = useCallback(
@@ -252,7 +259,8 @@ const Orders = () => {
   const fetchAdditionalPaymentsNotPayoutedOrders = useCallback(
     async (startIndex: number) => {
       try {
-        const response = await getAdditionalPaymentsNotPayoutedOrders(startIndex);
+        const response =
+          await getAdditionalPaymentsNotPayoutedOrders(startIndex);
         const result = response.data.result as {
           items: OrderType[];
           total: number;
@@ -374,24 +382,25 @@ const Orders = () => {
     }
   }, [router]);
 
-  const fetchAdditionalPaymentsNotPayoutedOrdersCount = useCallback(async () => {
-    try {
-      const response = await getAdditionalPaymentsNotPayoutedOrdersCount();
-      const count =
-        response.data?.result?.count ??
-        response.data?.count ??
-        response.data?.result ??
-        0;
-      setAdditionalPaymentsNotPayoutedOrdersQTY(Number(count) || 0);
-    } catch (err) {
-      console.log(err);
-      if (axios.isAxiosError(err)) {
-        if (err.status === 401) {
-          router.push("/");
+  const fetchAdditionalPaymentsNotPayoutedOrdersCount =
+    useCallback(async () => {
+      try {
+        const response = await getAdditionalPaymentsNotPayoutedOrdersCount();
+        const count =
+          response.data?.result?.count ??
+          response.data?.count ??
+          response.data?.result ??
+          0;
+        setAdditionalPaymentsNotPayoutedOrdersQTY(Number(count) || 0);
+      } catch (err) {
+        console.log(err);
+        if (axios.isAxiosError(err)) {
+          if (err.status === 401) {
+            router.push("/");
+          }
         }
       }
-    }
-  }, [router]);
+    }, [router]);
 
   const refetchCurrentOrders = useCallback(() => {
     if (activeFilter === "NOT_ENDED") {
@@ -602,14 +611,6 @@ const Orders = () => {
     });
   };
 
-  const normalizedQuery = orderIdQuery.trim().toLowerCase();
-  const displayedOrders =
-    normalizedQuery.length > 0
-      ? orders.filter((o) =>
-          (o.orderPrettyId ?? "").toLowerCase().includes(normalizedQuery),
-        )
-      : orders;
-
   return (
     <div className={styles.main}>
       <div className={`${styles.title} ${nunito.className}`}>
@@ -629,7 +630,8 @@ const Orders = () => {
           setSelectedOption={(option) => {
             setSelectedOption(option);
             setActiveFilter("DEFAULT");
-            const selectedValue = orderFilterOptions[Number(option)]?.value ?? "";
+            const selectedValue =
+              orderFilterOptions[Number(option)]?.value ?? "";
             updateOrdersQuery({
               view: "DEFAULT",
               page: 1,
@@ -700,15 +702,15 @@ const Orders = () => {
             searchText={orderIdQuery}
             setSearchText={setOrderIdQuery}
             onButtonClick={() => {
-              // No-op: filtering happens live as you type
-              // Keep the callback to match component API
+              setAppliedOrderSearch(orderIdQuery.trim());
+              updateOrdersQuery({ page: 1 });
             }}
           />
         </div>
       </div>
       <div className={styles.ordersWrapper}>
         <OrdersList
-          orders={displayedOrders}
+          orders={orders}
           recentlyChangedOrderIds={recentlyChangedOrderIds}
         />
       </div>
@@ -718,7 +720,9 @@ const Orders = () => {
         onPageChange={handlePageClick}
         pageRangeDisplayed={5}
         pageCount={pageCount}
-        forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSizeForOffset)}
+        forcePage={
+          pageCount === 0 ? 0 : Math.floor(itemOffset / pageSizeForOffset)
+        }
         previousLabel=""
         renderOnZeroPageCount={null}
         containerClassName={paginateStyles.paginateWrapper}

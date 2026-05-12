@@ -42,7 +42,8 @@ export const getAdminApiMode = () => currentAdminApiMode;
 
 export const getAdminApiBaseUrl = () => buildApiBaseUrl(currentAdminApiMode);
 
-export const getAdminWsBaseUrl = () => ADMIN_API_CONFIG[currentAdminApiMode].origin;
+export const getAdminWsBaseUrl = () =>
+  ADMIN_API_CONFIG[currentAdminApiMode].origin;
 
 export const getAdminWsTransports = () => [
   ...ADMIN_API_CONFIG[currentAdminApiMode].wsTransports,
@@ -1100,10 +1101,12 @@ export const getCriminalRecordInfo = async (code: string) => {
 export const getOrders = async (
   status: string,
   startIndex: number,
+
   filters?: {
     clientId?: string;
     approvedProviderId?: string;
     additionalPaymentsNotPayouted?: boolean;
+    search?: string;
   },
 ) => {
   const jwt = Cookies.get("@user_jwt");
@@ -1121,6 +1124,7 @@ export const getOrders = async (
         clientId: filters?.clientId,
         approvedProviderId: filters?.approvedProviderId,
         additionalPaymentsNotPayouted: filters?.additionalPaymentsNotPayouted,
+        search: filters?.search?.trim() || undefined,
       },
       headers: {
         Authorization: jwt,
@@ -1138,20 +1142,19 @@ export const getOrders = async (
     let apiPageSize = resolvedPageSize;
 
     do {
-      const response = await axios.get(
-        `${BASE_URL}/admin/orders`,
-        {
-          params: {
-            startIndex: cursor,
-            status: currentStatus,
-            clientId: filters?.clientId,
-            approvedProviderId: filters?.approvedProviderId,
-          },
-          headers: {
-            Authorization: jwt,
-          },
+      const response = await axios.get(`${BASE_URL}/admin/orders`, {
+        params: {
+          startIndex: cursor,
+          status: currentStatus,
+          clientId: filters?.clientId,
+          approvedProviderId: filters?.approvedProviderId,
+          additionalPaymentsNotPayouted: filters?.additionalPaymentsNotPayouted,
+          search: filters?.search?.trim() || undefined,
         },
-      );
+        headers: {
+          Authorization: jwt,
+        },
+      });
 
       const result = response.data?.result ?? {};
       const items = Array.isArray(result.items) ? result.items : [];
@@ -1316,15 +1319,18 @@ export const getEarnedProfit = async (params?: {
   endDate?: string;
 }) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/financial/profit/earned`, {
-    params: {
-      startDate: params?.startDate,
-      endDate: params?.endDate,
+  const response = await axios.get(
+    `${BASE_URL}/admin/financial/profit/earned`,
+    {
+      params: {
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+      },
+      headers: {
+        Authorization: jwt,
+      },
     },
-    headers: {
-      Authorization: jwt,
-    },
-  });
+  );
   return response;
 };
 
