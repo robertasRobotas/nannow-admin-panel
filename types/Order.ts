@@ -12,7 +12,10 @@ export type OrderStatus =
   | "CANCELED_NOT_PAID_BY_CLIENT"
   | "NOT_STARTED_IN_TIME"
   | "NOT_ENDED_IN_TIME"
-  | "CLIENT_ORDER_CREATION_IN_PROCESS";
+  | "CLIENT_ORDER_CREATION_IN_PROCESS"
+  | "CANCELED_BY_ADMIN"
+  | "SPLIT_INTO_DAILY"
+  | "SPLIT_INTO_REPETITIVE";
 
 export type Rating = {
   generalRating: number;

@@ -25,12 +25,15 @@ export const options = [
   },
   { title: "CANCELED_BY_CLIENT", value: "CANCELED_BY_CLIENT" },
   { title: "CANCELED_BY_PROVIDER", value: "CANCELED_BY_PROVIDER" },
+  { title: "CANCELED_BY_ADMIN", value: "CANCELED_BY_ADMIN" },
   {
     title: "CANCELED_NOT_PAID_BY_CLIENT",
     value: "CANCELED_NOT_PAID_BY_CLIENT",
   },
   { title: "Not started in time", value: "NOT_STARTED_IN_TIME" },
   { title: "Not Ended in time", value: "NOT_ENDED_IN_TIME" },
+  { title: "SPLIT_INTO_DAILY", value: "SPLIT_INTO_DAILY" },
+  { title: "SPLIT_INTO_REPETITIVE", value: "SPLIT_INTO_REPETITIVE" },
 ];
 
 export const normalizeOrderStatus = (status?: string | null) => {

@@ -685,9 +685,40 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     selectedOrderStatus;
   const currentOrderStatusTitle =
     getOrderStatusTitle(problemStatus, order?.isDirectOrderToProvider) || "-";
-  const specialProcessImgUrl = isRejectedDirectOffer
-    ? getUserImage(sitterUser?.user?.imgUrl)
-    : getUserImage(parentUser?.imgUrl);
+  const getStatusActorImgUrl = (status?: string | null) => {
+    const normalizedStatus = normalizeOrderStatus(status);
+    const clientStatuses = new Set([
+      "ORDER_CREATED",
+      "BOTH_APPROVED",
+      "CLIENT_ORDER_CREATION_IN_PROCESS",
+      "CLIENT_CANCELED_ORDER_CREATION_PROCESS",
+      "CANCELED_BY_CLIENT",
+      "CANCELED_NOT_PAID_BY_CLIENT",
+    ]);
+    const providerStatuses = new Set([
+      "PROVIDER_OFFERED_SERVICE",
+      "PROVIDER_ACCEPTED_DIRECT_OFFER",
+      "PROVIDER_REJECTED_DIRECT_OFFER",
+      "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
+      "PROVIDER_MARKED_AS_SERVICE_ENDED",
+      "CANCELED_BY_PROVIDER",
+      "NOT_STARTED_IN_TIME",
+      "NOT_ENDED_IN_TIME",
+      "CANCELED_NOT_STARTED_IN_TIME",
+      "CANCELED_NOT_CONFIRMED_BY_PROVIDER",
+    ]);
+
+    if (clientStatuses.has(normalizedStatus)) {
+      return getUserImage(parentUser?.imgUrl);
+    }
+
+    if (providerStatuses.has(normalizedStatus)) {
+      return getUserImage(sitterUser?.user?.imgUrl);
+    }
+
+    return defaultUserImg.src;
+  };
+  const currentStatusActorImgUrl = getStatusActorImgUrl(problemStatus);
   const areCanceledFinancialActionsDone = isCanceledByAdmin
     ? isRefundDone
     : isCanceledByClient
@@ -1081,14 +1112,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         <div className={styles.processCards}>
           {hasSpecialProcessStatus ? (
             <ProcessCard
-              imgUrl={specialProcessImgUrl}
+              imgUrl={currentStatusActorImgUrl}
               process={statusTitle}
               date="-"
             />
           ) : isCanceledOrder ? (
             <>
               <ProcessCard
-                imgUrl={getUserImage(parentUser?.imgUrl)}
+                imgUrl={currentStatusActorImgUrl}
                 process="Order canceled"
                 date={refundedAtText !== "-" ? refundedAtText : "-"}
               />
@@ -1104,7 +1135,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             <>
               {!order?.provider_markedAsServiceInProgressAt && (
                 <ProcessCard
-                  imgUrl={""}
+                  imgUrl={currentStatusActorImgUrl}
                   process="Service not started yet"
                   date={providerMarkedServiceInProgressAt}
                 />
