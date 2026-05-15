@@ -1,0 +1,82 @@
+.header {
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.header :global(.title) {
+  border-bottom: 0;
+}
+
+.subtitle {
+  margin: -18px 24px 18px;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chatPanel {
+  min-height: 640px;
+  background: #fff;
+}
+
+.composer {
+  padding: 18px 24px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.replyInput {
+  width: 100%;
+  min-height: 92px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  resize: vertical;
+  background: #fff;
+}
+
+.replyInput:focus {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.replyInput:disabled {
+  color: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.composerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.error {
+  margin: 16px 24px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(216, 31, 31, 0.22);
+  border-radius: 8px;
+  color: #b42318;
+  background: rgba(216, 31, 31, 0.06);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 936px) {
+  .composer {
+    padding: 14px 16px;
+  }
+
+  .composerActions {
+    justify-content: stretch;
+  }
+
+  .composerActions button {
+    flex: 1;
+  }
+}

@@ -19,6 +19,7 @@ import PaymentsSection from "./PaymentsSection/PaymentsSection";
 import { useRouter } from "next/router";
 import { getButtonsData } from "@/data/userProfileMenu";
 import ProviderInfoSection from "./ProviderInfoSection/ProviderInfoSection";
+import NannowChatSection from "./NannowChatSection/NannowChatSection";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -156,6 +157,16 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
             }}
             chats={user.chats}
             userId={user.user.id}
+          />
+        );
+      }
+      case "nannow_chat": {
+        return (
+          <NannowChatSection
+            user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+            }}
           />
         );
       }

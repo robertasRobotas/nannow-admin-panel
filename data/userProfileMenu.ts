@@ -121,6 +121,12 @@ export const getButtonsData = (
       id: "messages",
       visibleFor: ["client", "provider"],
     },
+    {
+      title: "Nannow chat",
+      icon: MessagesIcon,
+      id: "nannow_chat",
+      visibleFor: ["client", "provider"],
+    },
     // {
     //   title: "Profile completion",
     //   icon: IdIcon,
