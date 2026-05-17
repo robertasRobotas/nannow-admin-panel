@@ -6,6 +6,10 @@ import Head from "next/head";
 import { AdminSocketProvider } from "@/components/AdminSocket/AdminSocketProvider";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 
+if (process.env.NODE_ENV !== "production") {
+  console.log("Nannow admin test deployment log");
+}
+
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <AppErrorBoundary>
