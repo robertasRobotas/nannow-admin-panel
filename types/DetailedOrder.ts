@@ -202,6 +202,10 @@ export type DetailedOrderType = {
   invoiceDate?: string;
   orderType?: string | null;
   selectedDays?: string[] | null;
+  periods?: {
+    startsAt?: string | null;
+    endsAt?: string | null;
+  }[] | null;
   additionalPayments?: {
     id?: string;
     _id?: string;

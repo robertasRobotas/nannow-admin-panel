@@ -154,9 +154,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           hour12: false,
         })
       : "-";
-  const formatDateOnly = (value?: string | null) =>
+  const formatPeriodDate = (value?: string | null) =>
     value
-      ? new Date(value).toLocaleDateString("en-GB", {
+      ? new Date(value).toLocaleDateString("en-CA", {
           year: "numeric",
           month: "2-digit",
           day: "2-digit",
@@ -165,13 +165,6 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const orderCreatedAt = formatCompactDateTime(order?.createdAt);
   const normalizedOrderType = String(order?.orderType ?? "").toUpperCase();
-  const isRepetitiveOrderType = normalizedOrderType === "REPETITIVE";
-  const arrivalTime = isRepetitiveOrderType
-    ? formatTimeOnly(order?.startsAt)
-    : formatCompactDateTime(order?.startsAt);
-  const leaveTime = isRepetitiveOrderType
-    ? formatTimeOnly(order?.endsAt)
-    : formatCompactDateTime(order?.endsAt);
   const paidAtText = formatCompactDateTime(order?.paidAt);
   const providerSelectionReminder1SentAtText = formatCompactDateTime(
     order?.providerSelectionReminder1SentAt,
@@ -578,11 +571,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   );
   const shouldShowOrderTypeCard =
     normalizedOrderType === "CONTINUOUS" || normalizedOrderType === "REPETITIVE";
-  const selectedDays = Array.isArray(order?.selectedDays)
-    ? order.selectedDays.filter((day): day is string => typeof day === "string")
-    : [];
-  const shouldShowSelectedDaysCard =
-    normalizedOrderType === "REPETITIVE" && selectedDays.length > 0;
+  const orderPeriods =
+    Array.isArray(order?.periods) && order.periods.length > 0
+      ? order.periods
+      : [{ startsAt: order?.startsAt, endsAt: order?.endsAt }];
   const orderStatusUpper = normalizeOrderStatus(order?.status);
   const isCanceledOrder = orderStatusUpper.includes("CANCELED");
   const isCanceledByClient = orderStatusUpper === "CANCELED_BY_CLIENT";
@@ -870,35 +862,20 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               info={normalizedOrderType}
             />
           )}
-          {shouldShowSelectedDaysCard && (
-            <InfoCard
-              title="Selected days"
-              iconImgUrl={calendarImg.src}
-              type={isMobile ? "SPAN2" : "SPAN3"}
-              isCentered={true}
-              info={
-                <div className={styles.stripeInfoList}>
-                  {selectedDays.map((day, index) => (
-                    <div key={`${day}-${index}`}>{formatDateOnly(day)}</div>
-                  ))}
-                </div>
-              }
-            />
-          )}
           <InfoCard
-            title="Time"
+            title="Schedule"
             iconImgUrl={arriveImg.src}
             type={isMobile ? "SPAN2" : "SPAN2"}
+            isMultiline={true}
             info={
               <div className={styles.stripeInfoList}>
-                <div>
-                  <span className={styles.stripeInfoLabel}>Arrival:</span>{" "}
-                  {arrivalTime}
-                </div>
-                <div>
-                  <span className={styles.stripeInfoLabel}>Leaving:</span>{" "}
-                  {leaveTime}
-                </div>
+                {orderPeriods.map((period, index) => (
+                  <div key={`${period?.startsAt ?? "start"}-${index}`}>
+                    {formatPeriodDate(period?.startsAt)}{" "}
+                    {formatTimeOnly(period?.startsAt)} -{" "}
+                    {formatTimeOnly(period?.endsAt)}
+                  </div>
+                ))}
               </div>
             }
           />
