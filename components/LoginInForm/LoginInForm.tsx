@@ -158,7 +158,7 @@ const LoginForm = () => {
 
   const completeLogin = (jwt: string) => {
     Cookies.set("@user_jwt", jwt);
-    setTimeout(() => router.push("/users"), 500);
+    setTimeout(() => router.push("/orders"), 500);
   };
 
   const handleAuthResponse = (response: {

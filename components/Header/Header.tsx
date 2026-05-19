@@ -616,9 +616,9 @@ const Header = () => {
         <aside className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
             <Link
-              href="/users"
+              href="/orders"
               className={styles.logoLink}
-              aria-label="Users"
+              aria-label="Orders"
             >
               <HeaderLogo mode={apiMode} className={styles.logoImg} />
             </Link>
@@ -784,9 +784,9 @@ const Header = () => {
           </button>
           <div className={styles.mobileLogoWrap}>
             <Link
-              href="/users"
+              href="/orders"
               className={styles.logoLink}
-              aria-label="Users"
+              aria-label="Orders"
             >
               <HeaderLogo mode={apiMode} className={styles.logoImg} />
             </Link>

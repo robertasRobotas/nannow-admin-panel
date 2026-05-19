@@ -187,9 +187,9 @@ const HeaderMenu = ({
             <img src={crossImg.src} alt="" />
           </button>
           <Link
-            href="/users"
+            href="/orders"
             className={headerStyles.logoLink}
-            aria-label="Users"
+            aria-label="Orders"
             onClick={() => onClose()}
           >
             <HeaderLogo
