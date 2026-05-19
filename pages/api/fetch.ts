@@ -239,6 +239,20 @@ export const regenerateAllAddressesPublicLocation = async (payload: {
   return response;
 };
 
+export const regenerateUsersFullNameSearch = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/super/users/regenerate-full-name-search`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getUsersByCriminalRecordStatus = async (
   status: string,
   startIndex: number,

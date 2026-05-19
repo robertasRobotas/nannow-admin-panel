@@ -17,6 +17,7 @@ import {
   postAdminMessage,
   regenerateAddressPublicLocation,
   regenerateAllAddressesPublicLocation,
+  regenerateUsersFullNameSearch,
   rebuildAllFinancialLedgerOrders,
   rebuildFinancialLedgerForOrder,
   runChatsNormalization,
@@ -525,6 +526,8 @@ const SuperAccess = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isRegeneratingAddress, setIsRegeneratingAddress] = useState(false);
   const [isRegeneratingAllAddresses, setIsRegeneratingAllAddresses] =
+    useState(false);
+  const [isRegeneratingUsersFullNameSearch, setIsRegeneratingUsersFullNameSearch] =
     useState(false);
   const [isRegenerateAddressModalOpen, setIsRegenerateAddressModalOpen] =
     useState(false);
@@ -1947,6 +1950,44 @@ const SuperAccess = () => {
     }
   };
 
+  const handleRegenerateUsersFullNameSearch = async () => {
+    if (entity !== "users" || isRegeneratingUsersFullNameSearch) return;
+    try {
+      setIsRegeneratingUsersFullNameSearch(true);
+      setError("");
+      setNotice("");
+      const response = await regenerateUsersFullNameSearch();
+      const result = response.data?.result as
+        | {
+            scanned?: number;
+            modified?: number;
+            indexesEnsured?: boolean;
+          }
+        | undefined;
+
+      const scanned = Number(result?.scanned ?? 0);
+      const modified = Number(result?.modified ?? 0);
+      setNotice(
+        `Name index regenerated. Scanned ${scanned}, modified ${modified}.`,
+      );
+      await fetchList();
+      if (selectedId) {
+        await fetchItem();
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const message =
+          (err.response?.data as { error?: string })?.error ??
+          "Failed to regenerate name index.";
+        setError(message);
+        return;
+      }
+      setError("Failed to regenerate name index.");
+    } finally {
+      setIsRegeneratingUsersFullNameSearch(false);
+    }
+  };
+
   const openRegenerateModal = (target: "ONE" | "ALL") => {
     setRegenerateTarget(target);
     setMinDistanceMeters("60");
@@ -2247,6 +2288,19 @@ const SuperAccess = () => {
                     onClick={() => openRegenerateModal("ALL")}
                     isDisabled={isRegeneratingAllAddresses}
                     isLoading={isRegeneratingAllAddresses}
+                  />
+                )}
+                {entity === "users" && (
+                  <Button
+                    title={
+                      isRegeneratingUsersFullNameSearch
+                        ? "Regenerating..."
+                        : "Regenerate name index"
+                    }
+                    type="OUTLINED"
+                    onClick={handleRegenerateUsersFullNameSearch}
+                    isDisabled={isRegeneratingUsersFullNameSearch}
+                    isLoading={isRegeneratingUsersFullNameSearch}
                   />
                 )}
                 {entity === "chats" && (
