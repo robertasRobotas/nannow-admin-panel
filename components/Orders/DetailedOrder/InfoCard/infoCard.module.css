@@ -50,7 +50,8 @@
 
 .info {
   color: #000;
-  font-family: Nunito;
+  font-family: Nunito, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+    sans-serif;
   font-size: 14px;
   font-weight: 800;
   line-height: 18px; /* 128.571% */

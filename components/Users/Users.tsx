@@ -123,6 +123,12 @@ type RawAppVersionStatItem = {
   totalUsersByLoginMode?: unknown;
 };
 type RawNestedAppVersionItem = { appVersion: string; count: number };
+type RawFlatAppVersionStats = {
+  items?: unknown[];
+  withoutAppVersionCount?: unknown;
+  totalUsers?: unknown;
+  totalUsersByLoginMode?: unknown;
+};
 const normalizePlatform = (platform: unknown): AppVersionPlatform =>
   platform === "IOS" || platform === "ANDROID" ? platform : null;
 
@@ -723,7 +729,7 @@ const Users = () => {
         )
           ? ((appVersionStatsResult as { items: unknown[] }).items as unknown[])
           : [];
-        const appVersionItems: AppVersionStatGroup[] = rawAppVersionItems
+        let appVersionItems: AppVersionStatGroup[] = rawAppVersionItems
           .filter(
             (item: unknown): item is RawAppVersionStatItem =>
               typeof item === "object" &&
@@ -740,6 +746,30 @@ const Users = () => {
               item.totalUsersByLoginMode,
             ),
           }));
+        const looksLikeLegacyFlatShape =
+          rawAppVersionItems.length > 0 &&
+          appVersionItems.length === 0 &&
+          rawAppVersionItems.every(
+            (item) =>
+              typeof item === "object" &&
+              item !== null &&
+              typeof (item as { appVersion?: unknown }).appVersion === "string",
+          );
+        if (looksLikeLegacyFlatShape) {
+          const legacy = appVersionStatsResult as RawFlatAppVersionStats;
+          appVersionItems = [
+            {
+              platform: null,
+              items: normalizeAppVersionItems(rawAppVersionItems),
+              withoutAppVersionCount:
+                Number(legacy.withoutAppVersionCount ?? 0) || 0,
+              totalUsers: Number(legacy.totalUsers ?? 0) || 0,
+              totalUsersByLoginMode: normalizeLoginModeTotals(
+                legacy.totalUsersByLoginMode,
+              ),
+            },
+          ];
+        }
         const appVersionTotalUsers = Number(
           (appVersionStatsResult as { totalUsers?: unknown }).totalUsers ?? 0,
         );
