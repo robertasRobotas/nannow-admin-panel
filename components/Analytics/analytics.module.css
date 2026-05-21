@@ -315,6 +315,18 @@
   background: #19ad3e;
 }
 
+.legendDotOnboardingRaw,
+.onboardingRawBar {
+  fill: #2367c8;
+  background: #2367c8;
+}
+
+.legendDotOnboardingFinished,
+.onboardingFinishedBar {
+  fill: #19ad3e;
+  background: #19ad3e;
+}
+
 .revenueBar {
   fill: #2367c8;
 }

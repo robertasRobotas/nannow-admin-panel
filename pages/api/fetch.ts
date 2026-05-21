@@ -1402,6 +1402,30 @@ export const getMarketplaceAnalyticsLocations = async () => {
   return response;
 };
 
+export const getOnboardingRegistrationsByDay = async (params?: {
+  period?: "current_month" | "custom";
+  dateFrom?: string;
+  dateTo?: string;
+  timezone?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/onboarding/registrations-by-day`,
+    {
+      params: {
+        period: params?.period ?? "current_month",
+        dateFrom: params?.dateFrom,
+        dateTo: params?.dateTo,
+        timezone: params?.timezone ?? "Europe/Vilnius",
+      },
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const previewBroadcastNotifications = async (payload: {
   filters?: {
     country?: string;

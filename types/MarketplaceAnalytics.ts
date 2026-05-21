@@ -152,3 +152,21 @@ export type MarketplaceAnalyticsRebuildResponse = {
     snapshotTimezone: string;
   };
 };
+
+export type OnboardingRegistrationsByDayPeriod = "current_month" | "custom";
+
+export type OnboardingRegistrationsByDayItem = {
+  day: string;
+  clientRawRegistrations: number;
+  clientFinishedOnboarding: number;
+  providerRawRegistrations: number;
+  providerFinishedOnboarding: number;
+};
+
+export type GetOnboardingRegistrationsByDayResponse = {
+  period: OnboardingRegistrationsByDayPeriod;
+  timezone: string;
+  dateFrom: string;
+  dateTo: string;
+  items: OnboardingRegistrationsByDayItem[];
+};

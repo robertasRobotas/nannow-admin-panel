@@ -10,6 +10,7 @@ import {
   getCurrentAdminRolesFromJwt,
   getMarketplaceAnalytics,
   getMarketplaceAnalyticsLocations,
+  getOnboardingRegistrationsByDay,
   rebuildMarketplaceAnalyticsDailySnapshots,
 } from "@/pages/api/fetch";
 import {
@@ -17,6 +18,7 @@ import {
   options as orderStatusOptions,
 } from "@/data/orderStatusOptions";
 import {
+  GetOnboardingRegistrationsByDayResponse,
   GetMarketplaceAnalyticsResponse,
   GetMarketplaceAnalyticsLocationsResponse,
   MarketplaceAnalyticsAppliedFilters,
@@ -28,6 +30,7 @@ import {
   MarketplaceAnalyticsResponseData,
   MarketplaceAnalyticsSitterTopItem,
   MarketplaceAnalyticsTimeseriesItem,
+  OnboardingRegistrationsByDayItem,
 } from "@/types/MarketplaceAnalytics";
 import calendarImg from "@/assets/images/calendar.svg";
 import defaultAvatarImg from "@/assets/images/default-avatar.png";
@@ -670,6 +673,144 @@ const RevenueChart = ({
   );
 };
 
+const OnboardingSeriesChart = ({
+  items,
+  kind,
+}: {
+  items: OnboardingRegistrationsByDayItem[];
+  kind: "client" | "provider";
+}) => {
+  if (items.length === 0) {
+    return (
+      <div className={styles.chartEmpty}>No onboarding data for selected period</div>
+    );
+  }
+
+  const width = 900;
+  const height = 280;
+  const padding = { top: 18, right: 20, bottom: 54, left: 40 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const maxValue = Math.max(
+    1,
+    ...items.map((item) =>
+      Math.max(
+        kind === "client"
+          ? item.clientRawRegistrations
+          : item.providerRawRegistrations,
+        kind === "client"
+          ? item.clientFinishedOnboarding
+          : item.providerFinishedOnboarding,
+      ),
+    ),
+  );
+  const slotWidth = chartWidth / items.length;
+  const barWidth = Math.max(8, Math.min(18, slotWidth * 0.24));
+  const dayBuckets = items.map((point) => ({
+    bucket: point.day,
+    totalOrders: 0,
+    paidOrders: 0,
+    revenueCents: 0,
+  }));
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
+      {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+        const y = padding.top + chartHeight * ratio;
+        const label = Math.round(maxValue * (1 - ratio));
+        return (
+          <g key={ratio}>
+            <line
+              x1={padding.left}
+              y1={y}
+              x2={width - padding.right}
+              y2={y}
+              className={styles.chartGridLine}
+            />
+            <text x={padding.left - 8} y={y + 4} className={styles.chartAxisLabel}>
+              {label}
+            </text>
+          </g>
+        );
+      })}
+
+      {items.map((item, index) => {
+        const dayDate = getBucketDate(item.day);
+        const baseX = padding.left + slotWidth * index;
+        const bucketCenterX = baseX + slotWidth / 2;
+        const rawCount =
+          kind === "client"
+            ? item.clientRawRegistrations
+            : item.providerRawRegistrations;
+        const finishedCount =
+          kind === "client"
+            ? item.clientFinishedOnboarding
+            : item.providerFinishedOnboarding;
+        const rawHeight = (rawCount / maxValue) * chartHeight;
+        const finishedHeight = (finishedCount / maxValue) * chartHeight;
+        const rawX = baseX + slotWidth * 0.18;
+        const finishedX = baseX + slotWidth * 0.52;
+        const rawY = padding.top + chartHeight - rawHeight;
+        const finishedY = padding.top + chartHeight - finishedHeight;
+        const shouldShowLabel = shouldShowBucketLabel(dayBuckets, index, "day");
+        const labelLines = dayDate
+          ? [formatWeekday(dayDate), formatShortDate(dayDate)]
+          : [item.day];
+        const shouldShowWeekBoundary =
+          index > 0 && dayDate?.getDay() === 1;
+
+        return (
+          <g key={`${item.day}-${index}`}>
+            {shouldShowWeekBoundary && (
+              <line
+                x1={bucketCenterX}
+                y1={padding.top}
+                x2={bucketCenterX}
+                y2={padding.top + chartHeight}
+                className={styles.chartWeekBoundaryLine}
+              />
+            )}
+            <rect
+              x={rawX}
+              y={rawY}
+              width={barWidth}
+              height={Math.max(rawHeight, 1)}
+              rx={barWidth / 2}
+              className={styles.onboardingRawBar}
+            />
+            <rect
+              x={finishedX}
+              y={finishedY}
+              width={barWidth}
+              height={Math.max(finishedHeight, 1)}
+              rx={barWidth / 2}
+              className={styles.onboardingFinishedBar}
+            />
+            {shouldShowLabel && (
+              <text
+                x={bucketCenterX}
+                y={height - (labelLines.length > 1 ? 28 : 18)}
+                textAnchor="middle"
+                className={styles.chartAxisLabel}
+              >
+                {labelLines.map((line, lineIndex) => (
+                  <tspan
+                    key={`${item.day}-${line}`}
+                    x={bucketCenterX}
+                    dy={lineIndex === 0 ? 0 : 13}
+                  >
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
 const TopUsersTable = ({
   title,
   items,
@@ -943,10 +1084,15 @@ const Analytics = () => {
   const defaultRange = useMemo(() => getPresetRange("this_month"), []);
   const [analytics, setAnalytics] =
     useState<MarketplaceAnalyticsResponseData>(EMPTY_ANALYTICS_DATA);
+  const [onboardingByDayItems, setOnboardingByDayItems] = useState<
+    OnboardingRegistrationsByDayItem[]
+  >([]);
   const [appliedFilters, setAppliedFilters] =
     useState<MarketplaceAnalyticsAppliedFilters>(EMPTY_APPLIED_FILTERS);
   const [loading, setLoading] = useState(false);
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
   const [error, setError] = useState("");
+  const [onboardingError, setOnboardingError] = useState("");
   const [validationError, setValidationError] = useState("");
   const [selectedPeriod, setSelectedPeriod] =
     useState<PeriodPreset>("this_month");
@@ -1183,9 +1329,63 @@ const Analytics = () => {
     selectedTopLimit,
   ]);
 
+  const fetchOnboardingByDay = useCallback(async () => {
+    try {
+      setOnboardingLoading(true);
+      setOnboardingError("");
+
+      const shouldUseCurrentMonthPreset =
+        selectedPeriod === "this_month" &&
+        !selectedCountryCode &&
+        !selectedCityName &&
+        selectedStatuses.length === 0 &&
+        selectedPaymentStatuses.length === 0;
+
+      const response = await getOnboardingRegistrationsByDay(
+        shouldUseCurrentMonthPreset
+          ? {
+              period: "current_month",
+              timezone: TIMEZONE,
+            }
+          : {
+              period: "custom",
+              dateFrom: appliedStartDate,
+              dateTo: appliedEndDate,
+              timezone: TIMEZONE,
+            },
+      );
+
+      const payload = response.data as GetOnboardingRegistrationsByDayResponse;
+      setOnboardingByDayItems(Array.isArray(payload?.items) ? payload.items : []);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      console.log(err);
+      setOnboardingError("Failed to load onboarding registrations.");
+      setOnboardingByDayItems([]);
+    } finally {
+      setOnboardingLoading(false);
+    }
+  }, [
+    appliedEndDate,
+    appliedStartDate,
+    router,
+    selectedCityName,
+    selectedCountryCode,
+    selectedPaymentStatuses.length,
+    selectedPeriod,
+    selectedStatuses.length,
+  ]);
+
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
+
+  useEffect(() => {
+    fetchOnboardingByDay();
+  }, [fetchOnboardingByDay]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -1341,6 +1541,22 @@ const Analytics = () => {
   );
 
   const timeseries = analytics.overview.timeseries ?? [];
+  const clientRawRegistrationsTotal = onboardingByDayItems.reduce(
+    (sum, item) => sum + (item.clientRawRegistrations || 0),
+    0,
+  );
+  const clientFinishedOnboardingTotal = onboardingByDayItems.reduce(
+    (sum, item) => sum + (item.clientFinishedOnboarding || 0),
+    0,
+  );
+  const providerRawRegistrationsTotal = onboardingByDayItems.reduce(
+    (sum, item) => sum + (item.providerRawRegistrations || 0),
+    0,
+  );
+  const providerFinishedOnboardingTotal = onboardingByDayItems.reduce(
+    (sum, item) => sum + (item.providerFinishedOnboarding || 0),
+    0,
+  );
   const kpis = analytics.overview.kpis;
   const funnel = analytics.overview.funnel;
   const cancellationBreakdown = analytics.overview.cancellationBreakdown;
@@ -1582,6 +1798,66 @@ const Analytics = () => {
 
       {!loading && !error && (
         <>
+          <section className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Onboarding by day</h3>
+              <div className={styles.sectionSubtle}>
+                Raw registrations vs finished onboarding
+              </div>
+            </div>
+
+            {onboardingLoading && (
+              <div className={styles.loadingState}>Loading onboarding analytics...</div>
+            )}
+            {!onboardingLoading && onboardingError && (
+              <div className={styles.loadingState}>{onboardingError}</div>
+            )}
+            {!onboardingLoading && !onboardingError && (
+              <div className={styles.chartGrid}>
+                <div className={styles.panelCard}>
+                  <div className={styles.panelHeader}>
+                    <h3 className={styles.panelTitle}>Client onboarding</h3>
+                    <div className={styles.chartLegend}>
+                      <span className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.legendDotOnboardingRaw}`}
+                        />
+                        {`Registrations ${formatNumber(clientRawRegistrationsTotal)}`}
+                      </span>
+                      <span className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.legendDotOnboardingFinished}`}
+                        />
+                        {`Finished ${formatNumber(clientFinishedOnboardingTotal)}`}
+                      </span>
+                    </div>
+                  </div>
+                  <OnboardingSeriesChart items={onboardingByDayItems} kind="client" />
+                </div>
+                <div className={styles.panelCard}>
+                  <div className={styles.panelHeader}>
+                    <h3 className={styles.panelTitle}>Provider onboarding</h3>
+                    <div className={styles.chartLegend}>
+                      <span className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.legendDotOnboardingRaw}`}
+                        />
+                        {`Registrations ${formatNumber(providerRawRegistrationsTotal)}`}
+                      </span>
+                      <span className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.legendDotOnboardingFinished}`}
+                        />
+                        {`Finished ${formatNumber(providerFinishedOnboardingTotal)}`}
+                      </span>
+                    </div>
+                  </div>
+                  <OnboardingSeriesChart items={onboardingByDayItems} kind="provider" />
+                </div>
+              </div>
+            )}
+          </section>
+
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Overview</h3>
