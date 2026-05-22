@@ -208,6 +208,17 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
         trackingMode: String(message.trackingMode ?? ""),
       };
     }
+
+    if (parsed.messageType === "ORDER_TRACKING_POLICY_UPDATED") {
+      return {
+        type: "ORDER_TRACKING_POLICY_UPDATED",
+        orderId,
+        sessionId,
+        intervalSeconds: Number(message.intervalSeconds ?? 0) || 0,
+        expiresAt: String(message.expiresAt ?? ""),
+        requestImmediateLocation: Boolean(message.requestImmediateLocation),
+      };
+    }
   }
 
   if (
@@ -514,6 +525,16 @@ const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
         linkHref: `/orders/${event.orderId}`,
         linkLabel: "Open order",
       };
+    case "ORDER_TRACKING_POLICY_UPDATED":
+      return {
+        ...event,
+        title: "Provider tracking policy updated",
+        description: event.requestImmediateLocation
+          ? "Immediate location requested"
+          : `Interval ${event.intervalSeconds}s`,
+        linkHref: `/orders/${event.orderId}`,
+        linkLabel: "Open order",
+      };
   }
 };
 
@@ -567,6 +588,7 @@ export const AdminSocketProvider = ({
       case "ORDER_TRACKING_LOCATION_UPDATED":
       case "ORDER_TRACKING_PROVIDER_STATUS_UPDATED":
       case "ORDER_TRACKING_STOPPED":
+      case "ORDER_TRACKING_POLICY_UPDATED":
         return `${event.type}:${event.sessionId}:${event.orderId}`;
     }
   };
@@ -651,6 +673,16 @@ export const AdminSocketProvider = ({
         return;
       }
 
+      if (
+        normalizedEvent.type === "ORDER_TRACKING_STARTED" ||
+        normalizedEvent.type === "ORDER_TRACKING_LOCATION_UPDATED" ||
+        normalizedEvent.type === "ORDER_TRACKING_PROVIDER_STATUS_UPDATED" ||
+        normalizedEvent.type === "ORDER_TRACKING_STOPPED" ||
+        normalizedEvent.type === "ORDER_TRACKING_POLICY_UPDATED"
+      ) {
+        return;
+      }
+
       toast.info(
         <div>
           <div style={{ fontWeight: 800 }}>{normalizedEvent.title}</div>
@@ -685,10 +717,35 @@ export const AdminSocketProvider = ({
       );
     };
 
+    const handleDirectTrackingEvent = (
+      eventType: string,
+      payload: unknown,
+    ) => {
+      handleAdminEvent({
+        messageType: eventType,
+        message: payload,
+      });
+    };
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
     socket.on("ADMIN_EVENT", handleAdminEvent);
+    socket.on("ORDER_TRACKING_STARTED", (payload: unknown) =>
+      handleDirectTrackingEvent("ORDER_TRACKING_STARTED", payload),
+    );
+    socket.on("ORDER_TRACKING_LOCATION_UPDATED", (payload: unknown) =>
+      handleDirectTrackingEvent("ORDER_TRACKING_LOCATION_UPDATED", payload),
+    );
+    socket.on("ORDER_TRACKING_PROVIDER_STATUS_UPDATED", (payload: unknown) =>
+      handleDirectTrackingEvent("ORDER_TRACKING_PROVIDER_STATUS_UPDATED", payload),
+    );
+    socket.on("ORDER_TRACKING_STOPPED", (payload: unknown) =>
+      handleDirectTrackingEvent("ORDER_TRACKING_STOPPED", payload),
+    );
+    socket.on("ORDER_TRACKING_POLICY_UPDATED", (payload: unknown) =>
+      handleDirectTrackingEvent("ORDER_TRACKING_POLICY_UPDATED", payload),
+    );
 
     if (!socket.connected) {
       socket.connect();
@@ -699,6 +756,11 @@ export const AdminSocketProvider = ({
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
       socket.off("ADMIN_EVENT", handleAdminEvent);
+      socket.off("ORDER_TRACKING_STARTED");
+      socket.off("ORDER_TRACKING_LOCATION_UPDATED");
+      socket.off("ORDER_TRACKING_PROVIDER_STATUS_UPDATED");
+      socket.off("ORDER_TRACKING_STOPPED");
+      socket.off("ORDER_TRACKING_POLICY_UPDATED");
     };
   }, [router.isReady, socketConnectionKey]);
 

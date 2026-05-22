@@ -1,6 +1,6 @@
 export type TrackingPin = {
   id: string;
-  kind: "CLIENT" | "PROVIDER" | "ORDER";
+  kind: "CLIENT" | "PROVIDER" | "ORDER" | "LAST_KNOWN_PROVIDER";
   label: string;
   latitude: number;
   longitude: number;

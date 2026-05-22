@@ -86,6 +86,14 @@ export type AdminEvent =
       status: string;
       reason: string;
       trackingMode: string;
+    }
+  | {
+      type: "ORDER_TRACKING_POLICY_UPDATED";
+      orderId: string;
+      sessionId: string;
+      intervalSeconds: number;
+      expiresAt: string;
+      requestImmediateLocation: boolean;
     };
 
 export type AdminSocketEvent = AdminEvent & {

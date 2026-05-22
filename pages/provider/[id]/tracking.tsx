@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
+import { toast } from "react-toastify";
 import ModalPageTemplate from "@/components/ModalPageTemplate/ModalPageTemplate";
 import Button from "@/components/Button/Button";
 import OsmMap from "@/components/Tracking/OsmMap";
 import {
+  getProviderById,
   heartbeatProviderTracking,
   ProviderTrackingSession,
   startProviderTracking,
   stopProviderTracking,
 } from "@/pages/api/fetch";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
-import { TrackingPoint } from "@/types/Tracking";
+import { TrackingPin, TrackingPoint } from "@/types/Tracking";
 
 const formatDateTime = (value?: string) => {
   if (!value) return "—";
@@ -43,17 +45,199 @@ const getApiErrorMessage = (
   return fallback;
 };
 
+const extractProviderNameFromUnknown = (payload: unknown) => {
+  const root = payload as {
+    providerDetails?: unknown;
+    result?: { providerDetails?: unknown };
+    firstName?: unknown;
+    lastName?: unknown;
+    first_name?: unknown;
+    last_name?: unknown;
+    user?: {
+      firstName?: unknown;
+      lastName?: unknown;
+      first_name?: unknown;
+      last_name?: unknown;
+    };
+    provider?: {
+      firstName?: unknown;
+      lastName?: unknown;
+      first_name?: unknown;
+      last_name?: unknown;
+      user?: {
+        firstName?: unknown;
+        lastName?: unknown;
+        first_name?: unknown;
+        last_name?: unknown;
+      };
+    };
+  };
+  const details = (root.providerDetails ?? root.result?.providerDetails ?? payload) as {
+    firstName?: unknown;
+    lastName?: unknown;
+    first_name?: unknown;
+    last_name?: unknown;
+    user?: {
+      firstName?: unknown;
+      lastName?: unknown;
+      first_name?: unknown;
+      last_name?: unknown;
+    };
+    provider?: {
+      firstName?: unknown;
+      lastName?: unknown;
+      first_name?: unknown;
+      last_name?: unknown;
+      user?: {
+        firstName?: unknown;
+        lastName?: unknown;
+        first_name?: unknown;
+        last_name?: unknown;
+      };
+    };
+  };
+  const firstNameCandidates = [
+    details?.user?.firstName,
+    details?.user?.first_name,
+    details?.provider?.user?.firstName,
+    details?.provider?.user?.first_name,
+    details?.provider?.firstName,
+    details?.provider?.first_name,
+    details?.firstName,
+    details?.first_name,
+    root?.user?.firstName,
+    root?.user?.first_name,
+    root?.provider?.user?.firstName,
+    root?.provider?.user?.first_name,
+    root?.provider?.firstName,
+    root?.provider?.first_name,
+    root?.firstName,
+    root?.first_name,
+  ];
+  const lastNameCandidates = [
+    details?.user?.lastName,
+    details?.user?.last_name,
+    details?.provider?.user?.lastName,
+    details?.provider?.user?.last_name,
+    details?.provider?.lastName,
+    details?.provider?.last_name,
+    details?.lastName,
+    details?.last_name,
+    root?.user?.lastName,
+    root?.user?.last_name,
+    root?.provider?.user?.lastName,
+    root?.provider?.user?.last_name,
+    root?.provider?.lastName,
+    root?.provider?.last_name,
+    root?.lastName,
+    root?.last_name,
+  ];
+  const firstName = String(firstNameCandidates.find((value) => !!value) ?? "").trim();
+  const lastName = String(lastNameCandidates.find((value) => !!value) ?? "").trim();
+  return `${String(firstName).trim()} ${String(lastName).trim()}`.trim();
+};
+
+const extractProviderLastLocationFromUnknown = (payload: unknown) => {
+  const root = payload as {
+    providerDetails?: unknown;
+    result?: { providerDetails?: unknown };
+    provider?: { lastTrackingLocation?: unknown };
+    user?: { lastTrackingLocation?: unknown };
+    lastTrackingLocation?: unknown;
+  };
+  const details = (root.providerDetails ?? root.result?.providerDetails ?? payload) as {
+    provider?: { lastTrackingLocation?: unknown };
+    user?: { lastTrackingLocation?: unknown };
+    lastTrackingLocation?: unknown;
+  };
+  return (
+    details?.provider?.lastTrackingLocation ??
+    details?.lastTrackingLocation ??
+    details?.user?.lastTrackingLocation ??
+    null
+  ) as
+    | {
+        latitude?: unknown;
+        longitude?: unknown;
+        accuracy?: unknown;
+        timestamp?: unknown;
+        updatedAt?: unknown;
+      }
+    | null;
+};
+
 const ProviderTrackingPage = () => {
   const router = useRouter();
   const providerId = typeof router.query.id === "string" ? router.query.id : "";
+  const providerUserIdFromQuery =
+    typeof router.query.providerUserId === "string"
+      ? router.query.providerUserId
+      : "";
   const { lastEvent } = useAdminSocket();
 
   const [session, setSession] = useState<ProviderTrackingSession | null>(null);
   const [livePoint, setLivePoint] = useState<TrackingPoint | null>(null);
+  const [lastKnownPoint, setLastKnownPoint] = useState<TrackingPoint | null>(null);
+  const [providerDisplayName, setProviderDisplayName] = useState("");
   const [statusText, setStatusText] = useState("");
+  const [warningText, setWarningText] = useState("");
+  const [lastWsCoordsText, setLastWsCoordsText] = useState("");
+  const [hasLiveLocationUpdates, setHasLiveLocationUpdates] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const heartbeatTimerRef = useRef<number | null>(null);
+
+  const applyProviderMeta = useCallback((payload: unknown, fallbackId: string) => {
+    const fullName = extractProviderNameFromUnknown(payload);
+    setProviderDisplayName(fullName || fallbackId);
+
+    const location = extractProviderLastLocationFromUnknown(payload);
+    const latitude = Number(location?.latitude);
+    const longitude = Number(location?.longitude);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      setLastKnownPoint({
+        latitude,
+        longitude,
+        accuracy: Number.isFinite(Number(location?.accuracy))
+          ? Number(location?.accuracy)
+          : undefined,
+        timestamp:
+          typeof location?.timestamp === "string"
+            ? location.timestamp
+            : typeof location?.updatedAt === "string"
+              ? location.updatedAt
+              : undefined,
+      });
+    }
+  }, []);
+
+  const fetchProviderMetaById = useCallback(async (id: string, fallbackId: string) => {
+    const response = await getProviderById(id);
+    applyProviderMeta(response.data, fallbackId);
+  }, [applyProviderMeta]);
+
+  useEffect(() => {
+    if (!providerId && !providerUserIdFromQuery) return;
+    let isCancelled = false;
+
+    const loadProviderLastKnownLocation = async () => {
+      try {
+        const lookupId = providerUserIdFromQuery || providerId;
+        await fetchProviderMetaById(lookupId, providerId || lookupId);
+      } catch (error) {
+        console.error("Failed to fetch provider last tracking location", error);
+        if (!isCancelled) {
+          setProviderDisplayName(providerId);
+        }
+      }
+    };
+
+    void loadProviderLastKnownLocation();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [fetchProviderMetaById, providerId, providerUserIdFromQuery]);
 
   useEffect(() => {
     return () => {
@@ -64,7 +248,7 @@ const ProviderTrackingPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!session || !providerId) return;
+    if (!session?.sessionId || !providerId) return;
 
     const heartbeatEveryMs = Math.max(5, session.intervalSeconds || 20) * 1000;
     if (heartbeatTimerRef.current) {
@@ -77,8 +261,29 @@ const ProviderTrackingPage = () => {
         const response = await heartbeatProviderTracking(providerId, session.sessionId);
         const nextSession = response.data as ProviderTrackingSession;
         setSession(nextSession);
+        if (
+          nextSession.providerUserId &&
+          (!providerDisplayName || providerDisplayName === providerId)
+        ) {
+          try {
+            await fetchProviderMetaById(nextSession.providerUserId, providerId);
+          } catch (error) {
+            console.error("Failed to fetch provider meta by providerUserId", error);
+          }
+        }
         if (nextSession.lastLocation) {
-          setLivePoint(nextSession.lastLocation);
+          setLastKnownPoint(nextSession.lastLocation);
+          if (hasLiveLocationUpdates) {
+            setLivePoint(nextSession.lastLocation);
+          }
+        }
+        const nextWarning =
+          nextSession.warning ||
+          (String(nextSession.trackingMode).toUpperCase() === "FOREGROUND_ONLY"
+            ? "Provider location updates are available only while provider app is open"
+            : "");
+        if (!hasLiveLocationUpdates) {
+          setWarningText(nextWarning);
         }
       } catch (error) {
         console.error("Failed to heartbeat tracking session", error);
@@ -91,19 +296,33 @@ const ProviderTrackingPage = () => {
         heartbeatTimerRef.current = null;
       }
     };
-  }, [providerId, session, session?.sessionId, session?.intervalSeconds]);
+  }, [
+    fetchProviderMetaById,
+    hasLiveLocationUpdates,
+    providerDisplayName,
+    providerId,
+    session?.sessionId,
+    session?.intervalSeconds,
+  ]);
 
   useEffect(() => {
-    if (!lastEvent || !session) return;
-    if (!("sessionId" in lastEvent) || lastEvent.sessionId !== session.sessionId) return;
+    if (!lastEvent || !session?.sessionId) return;
+    if (!("sessionId" in lastEvent)) return;
+    if (lastEvent.sessionId !== session.sessionId) return;
 
     if (lastEvent.type === "ORDER_TRACKING_LOCATION_UPDATED") {
+      const coordsText = `${lastEvent.latitude.toFixed(6)}, ${lastEvent.longitude.toFixed(6)}`;
+      setLastWsCoordsText(coordsText);
+      toast(`Tracking WS: ${coordsText}`);
       setLivePoint({
         latitude: lastEvent.latitude,
         longitude: lastEvent.longitude,
         accuracy: lastEvent.accuracy,
         timestamp: lastEvent.timestamp,
       });
+      setHasLiveLocationUpdates(true);
+      setWarningText("");
+      setStatusText("Live provider location updates are active");
       return;
     }
 
@@ -120,11 +339,40 @@ const ProviderTrackingPage = () => {
             }
           : prev,
       );
+      if (
+        String(lastEvent.trackingMode).toUpperCase() === "FOREGROUND_ONLY" ||
+        String(lastEvent.reason).toUpperCase().includes("BACKGROUND")
+      ) {
+        if (!hasLiveLocationUpdates) {
+          setWarningText(
+            "Provider location updates are available only while provider app is open",
+          );
+        }
+      } else {
+        setWarningText("");
+      }
+      return;
+    }
+
+    if (lastEvent.type === "ORDER_TRACKING_POLICY_UPDATED") {
+      setSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              intervalSeconds: lastEvent.intervalSeconds,
+              expiresAt: lastEvent.expiresAt,
+            }
+          : prev,
+      );
+      if (lastEvent.requestImmediateLocation) {
+        setStatusText("Provider connected. Waiting immediate location update...");
+      }
       return;
     }
 
     if (lastEvent.type === "ORDER_TRACKING_STOPPED") {
       setStatusText(`${lastEvent.status} (${lastEvent.reason})`);
+      setHasLiveLocationUpdates(false);
       setSession((prev) =>
         prev
           ? {
@@ -136,7 +384,7 @@ const ProviderTrackingPage = () => {
           : prev,
       );
     }
-  }, [lastEvent, session]);
+  }, [hasLiveLocationUpdates, lastEvent, session?.sessionId]);
 
   const startTracking = async () => {
     if (!providerId || isStarting) return;
@@ -146,7 +394,24 @@ const ProviderTrackingPage = () => {
       const response = await startProviderTracking(providerId);
       const nextSession = response.data as ProviderTrackingSession;
       setSession(nextSession);
-      setLivePoint(nextSession.lastLocation);
+      if (nextSession.providerUserId) {
+        try {
+          await fetchProviderMetaById(nextSession.providerUserId, providerId);
+        } catch (error) {
+          console.error("Failed to fetch provider meta by providerUserId", error);
+        }
+      }
+      if (nextSession.lastLocation) {
+        setLastKnownPoint(nextSession.lastLocation);
+      }
+      setLivePoint(null);
+      setHasLiveLocationUpdates(false);
+      const nextWarning =
+        nextSession.warning ||
+        (String(nextSession.trackingMode).toUpperCase() === "FOREGROUND_ONLY"
+          ? "Provider location updates are available only while provider app is open"
+          : "");
+      setWarningText(nextWarning);
       if (nextSession.warning) {
         setStatusText(nextSession.warning);
       }
@@ -165,6 +430,8 @@ const ProviderTrackingPage = () => {
       setIsStopping(true);
       await stopProviderTracking(providerId, session.sessionId);
       setStatusText("Tracking stopped");
+      setWarningText("");
+      setHasLiveLocationUpdates(false);
       setSession(null);
     } catch (error: unknown) {
       setStatusText(getApiErrorMessage(error, "Failed to stop tracking"));
@@ -175,8 +442,45 @@ const ProviderTrackingPage = () => {
 
   const headerStatus = useMemo(() => {
     if (!session) return "Not tracking";
+    if (hasLiveLocationUpdates) return `${session.trackingStatus} (LIVE_LOCATION_UPDATES)`;
     return `${session.trackingStatus} (${session.trackingReason})`;
-  }, [session]);
+  }, [session, hasLiveLocationUpdates]);
+
+  const showLastKnownNotice = !livePoint && !!lastKnownPoint;
+  const hasLimitedTrackingWarning = warningText.length > 0 && !hasLiveLocationUpdates;
+  const lastKnownAtText = lastKnownPoint?.timestamp
+    ? formatDateTime(lastKnownPoint.timestamp)
+    : "unknown time";
+  const attentionPoint = livePoint ?? lastKnownPoint;
+  const mapPins: TrackingPin[] = showLastKnownNotice
+    ? [
+        {
+          id: "last-known-provider-location",
+          kind: "LAST_KNOWN_PROVIDER",
+          label: "Provider last known position",
+          latitude: lastKnownPoint!.latitude,
+          longitude: lastKnownPoint!.longitude,
+          subtitle: lastKnownPoint?.timestamp
+            ? `Updated ${formatDateTime(lastKnownPoint.timestamp)}`
+            : "No live tracking yet",
+        },
+      ]
+    : hasLimitedTrackingWarning && attentionPoint
+      ? [
+          {
+            id: "limited-tracking-provider-location",
+            kind: "LAST_KNOWN_PROVIDER",
+            label: "Provider last known location",
+            latitude: attentionPoint.latitude,
+            longitude: attentionPoint.longitude,
+            subtitle: attentionPoint.timestamp
+              ? `Updated ${formatDateTime(attentionPoint.timestamp)}`
+              : "Limited location updates",
+          },
+        ]
+      : [];
+  const activeMapPoint =
+    showLastKnownNotice || hasLimitedTrackingWarning ? null : livePoint ?? lastKnownPoint;
 
   return (
     <ModalPageTemplate>
@@ -185,7 +489,7 @@ const ProviderTrackingPage = () => {
           <div>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Provider tracking</h1>
             <p style={{ margin: "8px 0 0", color: "#4b5563" }}>
-              Provider ID: {providerId || "—"}
+              Provider: {providerDisplayName || providerId || "—"}
             </p>
             <p style={{ margin: "4px 0 0", color: "#4b5563" }}>Status: {headerStatus}</p>
           </div>
@@ -200,7 +504,7 @@ const ProviderTrackingPage = () => {
           </div>
         </div>
 
-        {statusText ? (
+        {statusText && statusText !== warningText ? (
           <div
             style={{
               border: "1px solid #e5e7eb",
@@ -211,6 +515,23 @@ const ProviderTrackingPage = () => {
             }}
           >
             {statusText}
+          </div>
+        ) : null}
+
+        {showLastKnownNotice || hasLimitedTrackingWarning ? (
+          <div
+            style={{
+              border: "1px solid #fecaca",
+              borderRadius: 10,
+              padding: "10px 12px",
+              backgroundColor: "#fef2f2",
+              color: "#991b1b",
+              fontWeight: 700,
+            }}
+          >
+            {warningText
+              ? `${warningText}. Last known position: ${lastKnownAtText}`
+              : `Live tracking is not available right now. Showing last known provider position (${lastKnownAtText}).`}
           </div>
         ) : null}
 
@@ -233,11 +554,16 @@ const ProviderTrackingPage = () => {
             <div>Expires: {formatDateTime(session.expiresAt)}</div>
           </div>
         ) : null}
+        {lastWsCoordsText ? (
+          <div style={{ color: "#1f2937", fontSize: 14 }}>
+            WS coords: <strong>{lastWsCoordsText}</strong>
+          </div>
+        ) : null}
 
         <OsmMap
-          focusPoint={livePoint}
-          focusLabel="Provider live location"
-          pins={[]}
+          focusPoint={activeMapPoint}
+          focusLabel={livePoint ? "Provider live location" : "Provider last known location"}
+          pins={mapPins}
           height={680}
           zoom={14}
         />

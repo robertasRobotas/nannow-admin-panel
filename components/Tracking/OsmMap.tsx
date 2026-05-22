@@ -174,6 +174,12 @@ const getPinPalette = (pin: TrackingPin) => {
       fill: "#2563eb",
     };
   }
+  if (pin.kind === "LAST_KNOWN_PROVIDER") {
+    return {
+      stroke: "#991b1b",
+      fill: "#ef4444",
+    };
+  }
   if (pin.kind === "CLIENT") {
     return {
       stroke: "#14532d",

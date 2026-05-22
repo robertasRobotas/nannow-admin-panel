@@ -352,7 +352,9 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             title="Track provider"
             type="BLACK"
             onClick={() => {
-              router.push(`/provider/${user.provider!.id}/tracking`);
+              router.push(
+                `/provider/${user.provider!.id}/tracking?providerUserId=${user.user.id}`,
+              );
             }}
           />
         )}
