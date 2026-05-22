@@ -9,7 +9,7 @@ export const links: HeaderLink[] = [
   { title: "Financial ledger", link: "/financial-ledger" },
   { title: "Earned profit", link: "/financial-profit-earned" },
   { title: "Analytics", link: "/analytics" },
-  { title: "Map", link: "/tracking" },
+  { title: "Map", link: "/map" },
   { title: "Invoices", link: "/invoices" },
   //{ title: "Kids", link: "/kids" },
   //{ title: "Payments", link: "/payments" },
