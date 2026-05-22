@@ -125,6 +125,90 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
   }
 
   const parsed = parsedPayload as Record<string, unknown>;
+  if (
+    typeof parsed.messageType === "string" &&
+    parsed.messageType.startsWith("ORDER_TRACKING_")
+  ) {
+    let message: Record<string, unknown> | null = null;
+    if (typeof parsed.message === "string") {
+      try {
+        message = JSON.parse(parsed.message) as Record<string, unknown>;
+      } catch (error) {
+        console.error("Failed to parse tracking message payload", error);
+      }
+    } else if (typeof parsed.message === "object" && parsed.message !== null) {
+      message = parsed.message as Record<string, unknown>;
+    }
+    if (!message) return null;
+
+    const orderId = typeof message.orderId === "string" ? message.orderId : "";
+    const sessionId =
+      typeof message.sessionId === "string" ? message.sessionId : "";
+    if (!orderId || !sessionId) return null;
+
+    if (parsed.messageType === "ORDER_TRACKING_STARTED") {
+      return {
+        type: "ORDER_TRACKING_STARTED",
+        orderId,
+        sessionId,
+        intervalSeconds: Number(message.intervalSeconds ?? 0) || 0,
+        expiresAt: String(message.expiresAt ?? ""),
+        trackingMode: String(message.trackingMode ?? ""),
+        status: String(message.status ?? ""),
+        reason: String(message.reason ?? ""),
+      };
+    }
+
+    if (parsed.messageType === "ORDER_TRACKING_LOCATION_UPDATED") {
+      const latitude = Number(message.latitude);
+      const longitude = Number(message.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return null;
+      }
+      return {
+        type: "ORDER_TRACKING_LOCATION_UPDATED",
+        orderId,
+        sessionId,
+        latitude,
+        longitude,
+        accuracy: Number.isFinite(Number(message.accuracy))
+          ? Number(message.accuracy)
+          : undefined,
+        timestamp: String(message.timestamp ?? ""),
+        intervalSeconds: Number.isFinite(Number(message.intervalSeconds))
+          ? Number(message.intervalSeconds)
+          : undefined,
+      };
+    }
+
+    if (parsed.messageType === "ORDER_TRACKING_PROVIDER_STATUS_UPDATED") {
+      return {
+        type: "ORDER_TRACKING_PROVIDER_STATUS_UPDATED",
+        orderId,
+        sessionId,
+        status: String(message.status ?? ""),
+        reason: String(message.reason ?? ""),
+        trackingMode: String(message.trackingMode ?? ""),
+        timestamp: String(message.timestamp ?? ""),
+        intervalSeconds: Number.isFinite(Number(message.intervalSeconds))
+          ? Number(message.intervalSeconds)
+          : undefined,
+        expiresAt:
+          typeof message.expiresAt === "string" ? message.expiresAt : undefined,
+      };
+    }
+
+    if (parsed.messageType === "ORDER_TRACKING_STOPPED") {
+      return {
+        type: "ORDER_TRACKING_STOPPED",
+        orderId,
+        sessionId,
+        status: String(message.status ?? ""),
+        reason: String(message.reason ?? ""),
+        trackingMode: String(message.trackingMode ?? ""),
+      };
+    }
+  }
 
   if (
     parsed.type === "ADMIN_CONNECTED" &&
@@ -398,6 +482,38 @@ const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
         linkHref: `/client/${event.userId}`,
         linkLabel: "Open client profile",
       };
+    case "ORDER_TRACKING_STARTED":
+      return {
+        ...event,
+        title: "Provider tracking started",
+        description: `${event.trackingMode} (${event.reason})`,
+        linkHref: `/orders/${event.orderId}`,
+        linkLabel: "Open order",
+      };
+    case "ORDER_TRACKING_LOCATION_UPDATED":
+      return {
+        ...event,
+        title: "Provider location updated",
+        description: event.orderId,
+        linkHref: `/orders/${event.orderId}`,
+        linkLabel: "Open order",
+      };
+    case "ORDER_TRACKING_PROVIDER_STATUS_UPDATED":
+      return {
+        ...event,
+        title: "Provider tracking status updated",
+        description: `${event.status} (${event.reason})`,
+        linkHref: `/orders/${event.orderId}`,
+        linkLabel: "Open order",
+      };
+    case "ORDER_TRACKING_STOPPED":
+      return {
+        ...event,
+        title: "Provider tracking stopped",
+        description: `${event.status} (${event.reason})`,
+        linkHref: `/orders/${event.orderId}`,
+        linkLabel: "Open order",
+      };
   }
 };
 
@@ -447,6 +563,11 @@ export const AdminSocketProvider = ({
         return `${event.type}:${event.reportId}:${event.userId}`;
       case "CLIENT_REQUESTED_COMPENSATION_INFO":
         return `${event.type}:${event.clientId}:${event.requestedCompensationInfoAt}`;
+      case "ORDER_TRACKING_STARTED":
+      case "ORDER_TRACKING_LOCATION_UPDATED":
+      case "ORDER_TRACKING_PROVIDER_STATUS_UPDATED":
+      case "ORDER_TRACKING_STOPPED":
+        return `${event.type}:${event.sessionId}:${event.orderId}`;
     }
   };
 

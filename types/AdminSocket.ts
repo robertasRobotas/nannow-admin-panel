@@ -47,6 +47,45 @@ export type AdminEvent =
       userId: string;
       clientId: string;
       requestedCompensationInfoAt: string;
+    }
+  | {
+      type: "ORDER_TRACKING_STARTED";
+      orderId: string;
+      sessionId: string;
+      intervalSeconds: number;
+      expiresAt: string;
+      trackingMode: string;
+      status: string;
+      reason: string;
+    }
+  | {
+      type: "ORDER_TRACKING_LOCATION_UPDATED";
+      orderId: string;
+      sessionId: string;
+      latitude: number;
+      longitude: number;
+      accuracy?: number;
+      timestamp: string;
+      intervalSeconds?: number;
+    }
+  | {
+      type: "ORDER_TRACKING_PROVIDER_STATUS_UPDATED";
+      orderId: string;
+      sessionId: string;
+      status: string;
+      reason: string;
+      trackingMode: string;
+      timestamp: string;
+      intervalSeconds?: number;
+      expiresAt?: string;
+    }
+  | {
+      type: "ORDER_TRACKING_STOPPED";
+      orderId: string;
+      sessionId: string;
+      status: string;
+      reason: string;
+      trackingMode: string;
     };
 
 export type AdminSocketEvent = AdminEvent & {

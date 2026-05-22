@@ -202,6 +202,75 @@ export const getProviderById = async (id: string) => {
   return response;
 };
 
+export type ProviderTrackingSession = {
+  sessionId: string;
+  orderId: string;
+  clientUserId: string;
+  providerUserId: string;
+  approvedProviderId: string;
+  intervalSeconds: number;
+  expiresAt: string;
+  startedAt: string;
+  updatedAt: string;
+  lastLocation: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    timestamp: string;
+  } | null;
+  trackingMode: string;
+  trackingStatus: string;
+  trackingReason: string;
+  warning?: string;
+};
+
+export const startProviderTracking = async (providerId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/providers/${providerId}/tracking/start`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const heartbeatProviderTracking = async (
+  providerId: string,
+  sessionId: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/providers/${providerId}/tracking/${sessionId}/heartbeat`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const stopProviderTracking = async (
+  providerId: string,
+  sessionId: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.delete(
+    `${BASE_URL}/admin/providers/${providerId}/tracking/${sessionId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const regenerateAddressPublicLocation = async (
   id: string,
   payload: {

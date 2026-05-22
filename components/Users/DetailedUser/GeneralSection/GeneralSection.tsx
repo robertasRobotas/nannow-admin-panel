@@ -345,7 +345,18 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
 
   return (
     <div className={styles.main}>
-      <h3 className={`${styles.title} ${nunito.className}`}>General info</h3>
+      <div className={styles.titleRow}>
+        <h3 className={`${styles.title} ${nunito.className}`}>General info</h3>
+        {mode === "provider" && user?.provider?.id && (
+          <Button
+            title="Track provider"
+            type="BLACK"
+            onClick={() => {
+              router.push(`/provider/${user.provider!.id}/tracking`);
+            }}
+          />
+        )}
+      </div>
       <div className={styles.infoCardsWrapper}>
         {cards.map((c, i) => (
           <div key={i} className={styles.card}>
