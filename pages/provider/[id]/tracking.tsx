@@ -402,6 +402,8 @@ const ProviderTrackingPage = () => {
     if (lastEvent.type === "ORDER_TRACKING_STOPPED") {
       setStatusText(`${lastEvent.status} (${lastEvent.reason})`);
       setHasLiveLocationUpdates(false);
+      setLivePoint(null);
+      setWarningText("Tracking stopped. Showing last known provider position.");
       setSession((prev) =>
         prev
           ? {
@@ -459,8 +461,9 @@ const ProviderTrackingPage = () => {
       setIsStopping(true);
       await stopProviderTracking(providerId, session.sessionId);
       setStatusText("Tracking stopped");
-      setWarningText("");
+      setWarningText("Tracking stopped. Showing last known provider position.");
       setHasLiveLocationUpdates(false);
+      setLivePoint(null);
       setSession(null);
     } catch (error: unknown) {
       setStatusText(getApiErrorMessage(error, "Failed to stop tracking"));
@@ -475,25 +478,44 @@ const ProviderTrackingPage = () => {
     return `${session.trackingStatus} (${session.trackingReason})`;
   }, [session, hasLiveLocationUpdates]);
 
-  const showLastKnownNotice = !livePoint && !!lastKnownPoint;
+  const isTrackingExpiredWithoutFreshLocation = useMemo(() => {
+    if (!session?.expiresAt || hasLiveLocationUpdates) return false;
+    const expiresAtMs = new Date(session.expiresAt).getTime();
+    if (!Number.isFinite(expiresAtMs)) return false;
+    return Date.now() > expiresAtMs;
+  }, [session?.expiresAt, hasLiveLocationUpdates]);
+
+  const showLastKnownNotice =
+    (!livePoint && !!lastKnownPoint) || (!session && !!lastKnownPoint);
   const hasLimitedTrackingWarning = warningText.length > 0 && !hasLiveLocationUpdates;
   const lastKnownAtText = lastKnownPoint?.timestamp
     ? formatDateTime(lastKnownPoint.timestamp)
     : "unknown time";
+  const lastKnownReasonText = !session
+    ? `Tracking stopped. Last known position: ${lastKnownAtText}.`
+    : isTrackingExpiredWithoutFreshLocation
+      ? `Live tracking session expired and no new coordinates were received. Showing last known provider position (${lastKnownAtText}).`
+      : warningText
+        ? `${warningText}. Last known position: ${lastKnownAtText}`
+        : `Live tracking is not available right now. Showing last known provider position (${lastKnownAtText}).`;
   const attentionPoint = livePoint ?? lastKnownPoint;
   const mapPins: TrackingPin[] = showLastKnownNotice
     ? [
-        {
-          id: "last-known-provider-location",
-          kind: "LAST_KNOWN_PROVIDER",
-          label: "Provider last known position",
-          latitude: lastKnownPoint!.latitude,
-          longitude: lastKnownPoint!.longitude,
-          subtitle: lastKnownPoint?.timestamp
-            ? `Updated ${formatDateTime(lastKnownPoint.timestamp)}`
-            : "No live tracking yet",
-        },
-      ]
+          {
+            id: "last-known-provider-location",
+            kind: "LAST_KNOWN_PROVIDER",
+            label: "Provider last known position",
+            latitude: lastKnownPoint!.latitude,
+            longitude: lastKnownPoint!.longitude,
+            subtitle: !session
+              ? `Tracking stopped • Updated ${lastKnownAtText}`
+              : isTrackingExpiredWithoutFreshLocation
+                ? `Tracking expired • Updated ${lastKnownAtText}`
+                : lastKnownPoint?.timestamp
+                  ? `Updated ${formatDateTime(lastKnownPoint.timestamp)}`
+                  : "No live tracking yet",
+          },
+        ]
     : hasLimitedTrackingWarning && attentionPoint
       ? [
           {
@@ -558,9 +580,7 @@ const ProviderTrackingPage = () => {
               fontWeight: 700,
             }}
           >
-            {warningText
-              ? `${warningText}. Last known position: ${lastKnownAtText}`
-              : `Live tracking is not available right now. Showing last known provider position (${lastKnownAtText}).`}
+            {lastKnownReasonText}
           </div>
         ) : null}
 
