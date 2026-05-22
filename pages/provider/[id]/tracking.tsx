@@ -186,6 +186,8 @@ const ProviderTrackingPage = () => {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const heartbeatTimerRef = useRef<number | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const [mapHeight, setMapHeight] = useState(680);
 
   const applyProviderMeta = useCallback((payload: unknown, fallbackId: string) => {
     const fullName = extractProviderNameFromUnknown(payload);
@@ -244,6 +246,33 @@ const ProviderTrackingPage = () => {
       if (heartbeatTimerRef.current) {
         window.clearInterval(heartbeatTimerRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateMapHeight = () => {
+      if (!mapContainerRef.current) return;
+      const rect = mapContainerRef.current.getBoundingClientRect();
+      const availableHeight = Math.floor(window.innerHeight - rect.top - 16);
+      setMapHeight(Math.max(320, availableHeight));
+    };
+
+    updateMapHeight();
+    window.addEventListener("resize", updateMapHeight);
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            updateMapHeight();
+          })
+        : null;
+    if (resizeObserver) {
+      resizeObserver.observe(document.body);
+    }
+
+    return () => {
+      window.removeEventListener("resize", updateMapHeight);
+      resizeObserver?.disconnect();
     };
   }, []);
 
@@ -484,7 +513,7 @@ const ProviderTrackingPage = () => {
 
   return (
     <ModalPageTemplate>
-      <div style={{ display: "grid", gap: 16 }}>
+      <div style={{ display: "grid", gap: 16, minHeight: "calc(100dvh - 120px)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Provider tracking</h1>
@@ -560,13 +589,15 @@ const ProviderTrackingPage = () => {
           </div>
         ) : null}
 
-        <OsmMap
-          focusPoint={activeMapPoint}
-          focusLabel={livePoint ? "Provider live location" : "Provider last known location"}
-          pins={mapPins}
-          height={680}
-          zoom={14}
-        />
+        <div ref={mapContainerRef}>
+          <OsmMap
+            focusPoint={activeMapPoint}
+            focusLabel={livePoint ? "Provider live location" : "Provider last known location"}
+            pins={mapPins}
+            height={mapHeight}
+            zoom={14}
+          />
+        </div>
       </div>
     </ModalPageTemplate>
   );
