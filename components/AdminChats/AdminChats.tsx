@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import SearchBar from "@/components/SearchBar/SearchBar";
+import Button from "@/components/Button/Button";
 import { getAdminChats, getChatById, getCurrentAdminRolesFromJwt } from "@/pages/api/fetch";
 import { ChatMessageType, ChatType, GetAdminChatsResponse } from "@/types/Chats";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
@@ -22,6 +23,21 @@ type ChatDetailsResponse = {
   user1?: ChatType["user1"];
   user2?: ChatType["user2"];
   messages?: ChatMessageType[];
+};
+
+type ChatMessageExportRow = {
+  chatId: string;
+  user1Id: string;
+  user1NameWithRole: string;
+  user2Id: string;
+  user2NameWithRole: string;
+  senderId: string;
+  senderNameWithRole: string;
+  receiverId: string;
+  receiverNameWithRole: string;
+  messageFlow: string;
+  messageCreatedAt: string;
+  messageContent: string;
 };
 
 const formatDateTime = (value?: string | null) =>
@@ -60,6 +76,7 @@ const AdminChats = () => {
   const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedSortOption, setSelectedSortOption] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [loadingChat, setLoadingChat] = useState(false);
   const [error, setError] = useState("");
   const currentSort = SORT_OPTIONS[selectedSortOption]?.value ?? "latest";
@@ -248,6 +265,165 @@ const AdminChats = () => {
     },
   });
 
+  const escapeCsvCell = (value: string | number | null | undefined) =>
+    `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+  const downloadCsv = useCallback((rows: ChatMessageExportRow[]) => {
+    const headers = [
+      "Chat ID",
+      "User 1 ID",
+      "User 1 Name (Client)",
+      "User 2 ID",
+      "User 2 Name (Provider)",
+      "Sender ID",
+      "Sender Name (Client/Provider)",
+      "Receiver ID",
+      "Receiver Name (Client/Provider)",
+      "Message Flow",
+      "Message Created At",
+      "Message Content",
+    ];
+
+    const lines = [
+      headers.join(","),
+      ...rows.map((row) => {
+        const values = [
+          row.chatId,
+          row.user1Id,
+          row.user1NameWithRole,
+          row.user2Id,
+          row.user2NameWithRole,
+          row.senderId,
+          row.senderNameWithRole,
+          row.receiverId,
+          row.receiverNameWithRole,
+          row.messageFlow,
+          row.messageCreatedAt,
+          row.messageContent,
+        ];
+        return values.map(escapeCsvCell).join(",");
+      }),
+    ];
+
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "chats-export.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const exportAllChats = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      setError("");
+      const collected: ChatType[] = [];
+      let startIndex = 0;
+      let total = Number.MAX_SAFE_INTEGER;
+      const requestedPageSize = 200;
+
+      while (startIndex < total) {
+        const response = await getAdminChats({
+          startIndex,
+          pageSize: requestedPageSize,
+          sort: selectedSort,
+          search: appliedSearch,
+        });
+        const payload = response.data as
+          | GetAdminChatsResponse
+          | { result?: GetAdminChatsResponse };
+        const data =
+          (payload as { result?: GetAdminChatsResponse }).result ??
+          (payload as GetAdminChatsResponse);
+        const nextItems = Array.isArray(data?.items) ? data.items : [];
+        const nextPageSize = Number(data?.pageSize ?? nextItems.length);
+        total = Number(data?.total ?? collected.length + nextItems.length);
+
+        collected.push(...nextItems);
+        if (nextItems.length === 0 || nextPageSize <= 0) break;
+        startIndex += nextPageSize;
+      }
+      const exportRows: ChatMessageExportRow[] = [];
+
+      for (let index = 0; index < collected.length; index += 8) {
+        const batch = collected.slice(index, index + 8);
+        const detailsResponses = await Promise.all(
+          batch.map((chat) => getChatById(chat.chatId ?? chat.id)),
+        );
+
+        detailsResponses.forEach((response, detailIndex) => {
+          const chat = batch[detailIndex];
+          const result = (response.data?.result ?? {}) as ChatDetailsResponse;
+          const chatId = chat.chatId ?? chat.id;
+          const user1 = result.user1 ?? chat.user1;
+          const user2 = result.user2 ?? chat.user2;
+          const user1Name = `${user1?.firstName ?? "Deleted"} ${
+            user1?.lastName ?? "User"
+          }`.trim();
+          const user2Name = `${user2?.firstName ?? "Deleted"} ${
+            user2?.lastName ?? "User"
+          }`.trim();
+          const user1NameWithRole = `${user1Name} (Client)`;
+          const user2NameWithRole = `${user2Name} (Provider)`;
+          const messages = Array.isArray(result.messages) ? result.messages : [];
+
+          messages.forEach((message) => {
+            const rawTextPart = message.content?.trim() ?? "";
+            const imagePart = message.imageUrl?.trim() ?? "";
+            const textPart = imagePart
+              ? rawTextPart
+                  .replace(/🎆/g, "")
+                  .replace(/\|\s*$/g, "")
+                  .trim()
+              : rawTextPart;
+            const senderIsUser1 = message.senderId === (user1?.id ?? "");
+            const receiverIsUser1 = message.receiverId === (user1?.id ?? "");
+            const senderNameWithRole = senderIsUser1
+              ? user1NameWithRole
+              : user2NameWithRole;
+            const receiverNameWithRole = receiverIsUser1
+              ? user1NameWithRole
+              : user2NameWithRole;
+            exportRows.push({
+              chatId,
+              user1Id: user1?.id ?? "",
+              user1NameWithRole,
+              user2Id: user2?.id ?? "",
+              user2NameWithRole,
+              senderId: message.senderId ?? "",
+              senderNameWithRole,
+              receiverId: message.receiverId ?? "",
+              receiverNameWithRole,
+              messageFlow: `${senderNameWithRole} -> ${receiverNameWithRole}`,
+              messageCreatedAt: message.createdAt
+                ? new Date(message.createdAt).toISOString()
+                : "",
+              messageContent:
+                textPart && imagePart
+                  ? `${textPart} | ${imagePart}`
+                  : textPart || imagePart,
+            });
+          });
+        });
+      }
+
+      downloadCsv(exportRows);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        routerRef.current.push("/");
+        return;
+      }
+      setError("Failed to export chats.");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [appliedSearch, downloadCsv, selectedSort]);
+
   return (
     <div className={styles.main}>
       <div className={styles.headerRow}>
@@ -299,6 +475,12 @@ const AdminChats = () => {
                 id: selectedChatId,
               });
             }}
+          />
+          <Button
+            title={isExporting ? "Exporting..." : "Export CSV"}
+            type="BLACK"
+            onClick={exportAllChats}
+            isDisabled={loading || isExporting}
           />
         </div>
       </div>
