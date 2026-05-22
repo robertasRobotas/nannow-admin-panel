@@ -62,7 +62,7 @@ type OsmMapProps = {
   pins?: TrackingPin[];
   focusPoint?: TrackingPoint | null;
   focusLabel?: string;
-  height?: number;
+  height?: number | string;
   zoom?: number;
 };
 
@@ -462,7 +462,8 @@ const OsmMap = ({
         fillOpacity: 0.85,
         weight: 2,
       }).addTo(map);
-      focusMarkerRef.current.bindPopup(popupHtml).openPopup();
+      focusMarkerRef.current.bindPopup(popupHtml);
+      focusMarkerRef.current.openPopup?.();
     } else {
       focusMarkerRef.current.setLatLng([focusPoint.latitude, focusPoint.longitude]);
       focusMarkerRef.current.bindPopup(popupHtml);
@@ -489,7 +490,7 @@ const OsmMap = ({
         ref={mapContainerRef}
         style={{
           width: "100%",
-          height: `${height}px`,
+          height: typeof height === "number" ? `${height}px` : height,
           borderRadius: 12,
           border: "1px solid #e5e7eb",
           overflow: "hidden",

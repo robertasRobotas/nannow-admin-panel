@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Template from "@/components/Template/Template";
 import OsmMap from "@/components/Tracking/OsmMap";
 import {
@@ -52,6 +52,47 @@ const readDetail = (payload: unknown, type: "client" | "provider"): UserDetails 
       : (root.providerDetails ?? root.result?.providerDetails);
   if (!detail || typeof detail !== "object") return null;
   return detail as UserDetails;
+};
+
+type UserListItemWithMap = User & {
+  firstName?: string;
+  lastName?: string;
+  imgUrl?: string;
+  defaultAddress?: {
+    latitude?: number;
+    longitude?: number;
+    city?: string;
+    country?: string;
+  };
+};
+
+const toPinFromUserList = (
+  kind: "CLIENT" | "PROVIDER",
+  user: UserListItemWithMap,
+): TrackingPin | null => {
+  const address = user.defaultAddress;
+  if (!address) return null;
+  const latitude = Number(address.latitude);
+  const longitude = Number(address.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  const userId = user.userId || user.id;
+  const label =
+    `${String(user.firstName ?? "").trim()} ${String(user.lastName ?? "").trim()}`.trim() ||
+    userId ||
+    "Unknown";
+  const subtitle = [address.city, address.country].filter(Boolean).join(", ");
+
+  return {
+    id: `${kind}:${userId}`,
+    kind,
+    label,
+    subtitle,
+    latitude,
+    longitude,
+    avatarUrl: user.imgUrl || undefined,
+    profileUrl: userId ? `/${kind === "CLIENT" ? "client" : "provider"}/${userId}` : undefined,
+  };
 };
 
 const toPin = (kind: "CLIENT" | "PROVIDER", detail: UserDetails): TrackingPin | null => {
@@ -111,13 +152,21 @@ const isActiveOrder = (order: OrderType) => {
   return true;
 };
 
+type OrderWithMapData = OrderType & {
+  address?: {
+    latitude?: unknown;
+    longitude?: unknown;
+    city?: string;
+    country?: string;
+  };
+  location?: { coordinates?: unknown };
+  clientLatitude?: unknown;
+  clientLongitude?: unknown;
+  orderPrettyId?: string;
+};
+
 const extractOrderCoordinates = (
-  order: OrderType & {
-    address?: { latitude?: unknown; longitude?: unknown };
-    location?: { coordinates?: unknown };
-    clientLatitude?: unknown;
-    clientLongitude?: unknown;
-  },
+  order: OrderWithMapData,
 ): { latitude: number; longitude: number } | null => {
   const addressLatitude = Number(order.address?.latitude);
   const addressLongitude = Number(order.address?.longitude);
@@ -158,10 +207,7 @@ const readOrderDetails = (payload: unknown): OrderType | null => {
 };
 
 const toOrderPin = (
-  order: OrderType & {
-    address?: { city?: string; country?: string };
-    orderPrettyId?: string;
-  },
+  order: OrderWithMapData,
 ): TrackingPin | null => {
   const coordinates = extractOrderCoordinates(order);
   if (!coordinates) return null;
@@ -196,10 +242,7 @@ const TrackingPage = () => {
   const [userPins, setUserPins] = useState<TrackingPin[]>([]);
   const [orderPins, setOrderPins] = useState<TrackingPin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [mapHeight, setMapHeight] = useState(680);
   const { lastEvent } = useAdminSocket();
-  const pageRootRef = useRef<HTMLDivElement | null>(null);
-  const headerRef = useRef<HTMLDivElement | null>(null);
 
   const loadByType = useCallback(async (type: "client" | "provider") => {
     const collected: User[] = [];
@@ -231,6 +274,25 @@ const TrackingPage = () => {
           loadByType("provider"),
         ]);
 
+        const listPins = [
+          ...clients
+            .map((item) => toPinFromUserList("CLIENT", item as UserListItemWithMap))
+            .filter((item): item is TrackingPin => !!item),
+          ...providers
+            .map((item) => toPinFromUserList("PROVIDER", item as UserListItemWithMap))
+            .filter((item): item is TrackingPin => !!item),
+        ];
+
+        const hasPinForUser = (kind: "CLIENT" | "PROVIDER", id?: string) =>
+          !!id && listPins.some((pin) => pin.id === `${kind}:${id}`);
+
+        const clientsMissing = clients.filter(
+          (user) => !hasPinForUser("CLIENT", user.userId || user.id),
+        );
+        const providersMissing = providers.filter(
+          (user) => !hasPinForUser("PROVIDER", user.userId || user.id),
+        );
+
         const fetchDetails = async (
           users: User[],
           type: "client" | "provider",
@@ -261,13 +323,13 @@ const TrackingPage = () => {
         };
 
         const [clientDetails, providerDetails] = await Promise.all([
-          fetchDetails(clients, "client"),
-          fetchDetails(providers, "provider"),
+          fetchDetails(clientsMissing, "client"),
+          fetchDetails(providersMissing, "provider"),
         ]);
 
         if (isCancelled) return;
 
-        const nextPins = [
+        const fallbackPins = [
           ...clientDetails
             .map((detail) => toPin("CLIENT", detail))
             .filter((item): item is TrackingPin => !!item),
@@ -276,7 +338,7 @@ const TrackingPage = () => {
             .filter((item): item is TrackingPin => !!item),
         ];
 
-        setUserPins(nextPins);
+        setUserPins([...listPins, ...fallbackPins]);
       } catch (error) {
         console.error("Failed to load tracking pins", error);
         if (!isCancelled) {
@@ -337,7 +399,7 @@ const TrackingPage = () => {
     }
 
     const pins = enrichedOrders
-      .map((order) => toOrderPin(order))
+      .map((order) => toOrderPin(order as OrderWithMapData))
       .filter((item): item is TrackingPin => !!item);
 
     setOrderPins(pins);
@@ -359,32 +421,6 @@ const TrackingPage = () => {
     void loadActiveOrderPins();
   }, [lastEvent, loadActiveOrderPins]);
 
-  useEffect(() => {
-    const updateMapHeight = () => {
-      const root = pageRootRef.current;
-      const header = headerRef.current;
-      if (!root || !header) return;
-      const styles = window.getComputedStyle(root);
-      const rowGap = Number.parseFloat(styles.rowGap || "16") || 16;
-      const available = root.clientHeight - header.clientHeight - rowGap;
-      setMapHeight(Math.max(300, available));
-    };
-
-    updateMapHeight();
-
-    const observer = new ResizeObserver(() => {
-      updateMapHeight();
-    });
-    if (pageRootRef.current) observer.observe(pageRootRef.current);
-    if (headerRef.current) observer.observe(headerRef.current);
-
-    window.addEventListener("resize", updateMapHeight);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateMapHeight);
-    };
-  }, [isLoading]);
-
   const providerCount = useMemo(
     () => userPins.filter((pin) => pin.kind === "PROVIDER").length,
     [userPins],
@@ -405,15 +441,15 @@ const TrackingPage = () => {
   return (
     <Template>
       <div
-        ref={pageRootRef}
         style={{
-          display: "grid",
+          display: "flex",
+          flexDirection: "column",
           gap: 16,
           height: "100%",
           minHeight: 0,
         }}
       >
-        <div ref={headerRef}>
+        <div>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>Map</h1>
           <p style={{ margin: "8px 0 0", color: "#4b5563" }}>
             Clients: {clientCount}, providers: {providerCount}, active orders: {orderCount}
@@ -471,11 +507,13 @@ const TrackingPage = () => {
           </div>
         </div>
 
-        {isLoading ? (
-          <div style={{ color: "#4b5563" }}>Loading map data...</div>
-        ) : (
-          <OsmMap pins={pins} height={mapHeight} />
-        )}
+        <div style={{ flex: 1, minHeight: 300 }}>
+          {isLoading ? (
+            <div style={{ color: "#4b5563" }}>Loading map data...</div>
+          ) : (
+            <OsmMap pins={pins} height="100%" />
+          )}
+        </div>
       </div>
     </Template>
   );
