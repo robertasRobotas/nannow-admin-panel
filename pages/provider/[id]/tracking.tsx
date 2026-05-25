@@ -21,6 +21,16 @@ const formatDateTime = (value?: string) => {
   return date.toLocaleString();
 };
 
+const FOREGROUND_STALE_REASON = "FOREGROUND_APP_CLOSED_OR_NO_SIGNAL";
+
+const isForegroundStaleReason = (reason?: string) =>
+  String(reason ?? "").toUpperCase() === FOREGROUND_STALE_REASON;
+
+const getForegroundOnlyWarning = (isStale: boolean) =>
+  isStale
+    ? "Provider app is closed or has no signal. Live location is temporarily unavailable"
+    : "Provider location updates are available only while provider app is open";
+
 const getApiErrorMessage = (
   error: unknown,
   fallback: string,
@@ -305,11 +315,29 @@ const ProviderTrackingPage = () => {
           if (hasLiveLocationUpdates) {
             setLivePoint(nextSession.lastLocation);
           }
+        } else if (typeof nextSession.lastLocationTimestamp === "string") {
+          setLastKnownPoint((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  timestamp: nextSession.lastLocationTimestamp ?? prev.timestamp,
+                }
+              : prev,
+          );
         }
+        if (nextSession.locationStale) {
+          setHasLiveLocationUpdates(false);
+          setLivePoint(null);
+        }
+        const isForegroundOnlyMode =
+          String(nextSession.trackingMode).toUpperCase() === "FOREGROUND_ONLY";
+        const isForegroundStale =
+          isForegroundStaleReason(nextSession.trackingReason) ||
+          !!nextSession.locationStale;
         const nextWarning =
           nextSession.warning ||
-          (String(nextSession.trackingMode).toUpperCase() === "FOREGROUND_ONLY"
-            ? "Provider location updates are available only while provider app is open"
+          (isForegroundOnlyMode
+            ? getForegroundOnlyWarning(isForegroundStale)
             : "");
         if (!hasLiveLocationUpdates) {
           setWarningText(nextWarning);
@@ -357,6 +385,9 @@ const ProviderTrackingPage = () => {
 
     if (lastEvent.type === "ORDER_TRACKING_PROVIDER_STATUS_UPDATED") {
       setStatusText(`${lastEvent.status} (${lastEvent.reason})`);
+      const isForegroundOnlyMode =
+        String(lastEvent.trackingMode).toUpperCase() === "FOREGROUND_ONLY";
+      const isForegroundStale = isForegroundStaleReason(lastEvent.reason);
       setSession((prev) =>
         prev
           ? {
@@ -364,17 +395,23 @@ const ProviderTrackingPage = () => {
               trackingStatus: lastEvent.status,
               trackingReason: lastEvent.reason,
               trackingMode: lastEvent.trackingMode,
+              locationStale: isForegroundStale,
+              lastLocationTimestamp:
+                prev.lastLocation?.timestamp ?? prev.lastLocationTimestamp ?? null,
               expiresAt: lastEvent.expiresAt ?? prev.expiresAt,
             }
           : prev,
       );
-      if (
-        String(lastEvent.trackingMode).toUpperCase() === "FOREGROUND_ONLY" ||
-        String(lastEvent.reason).toUpperCase().includes("BACKGROUND")
-      ) {
+      if (isForegroundStale) {
+        setHasLiveLocationUpdates(false);
+        setLivePoint(null);
+      }
+      if (isForegroundOnlyMode || String(lastEvent.reason).toUpperCase().includes("BACKGROUND")) {
         if (!hasLiveLocationUpdates) {
           setWarningText(
-            "Provider location updates are available only while provider app is open",
+            isForegroundOnlyMode
+              ? getForegroundOnlyWarning(isForegroundStale)
+              : "Provider location updates are available only while provider app is open",
           );
         }
       } else {
@@ -440,7 +477,10 @@ const ProviderTrackingPage = () => {
       const nextWarning =
         nextSession.warning ||
         (String(nextSession.trackingMode).toUpperCase() === "FOREGROUND_ONLY"
-          ? "Provider location updates are available only while provider app is open"
+          ? getForegroundOnlyWarning(
+              isForegroundStaleReason(nextSession.trackingReason) ||
+                !!nextSession.locationStale,
+            )
           : "");
       setWarningText(nextWarning);
       if (nextSession.warning) {
@@ -493,6 +533,8 @@ const ProviderTrackingPage = () => {
     : "unknown time";
   const lastKnownReasonText = !session
     ? `Tracking stopped. Last known position: ${lastKnownAtText}.`
+    : isForegroundStaleReason(session.trackingReason) || !!session.locationStale
+      ? `Provider app is closed or has no signal. Showing last known provider position (${lastKnownAtText}).`
     : isTrackingExpiredWithoutFreshLocation
       ? `Live tracking session expired and no new coordinates were received. Showing last known provider position (${lastKnownAtText}).`
       : warningText
@@ -601,6 +643,10 @@ const ProviderTrackingPage = () => {
             <div>Started: {formatDateTime(session.startedAt)}</div>
             <div>Updated: {formatDateTime(session.updatedAt)}</div>
             <div>Expires: {formatDateTime(session.expiresAt)}</div>
+            <div>Location stale: {session.locationStale ? "YES" : "NO"}</div>
+            <div>
+              Last location timestamp: {formatDateTime(session.lastLocationTimestamp ?? undefined)}
+            </div>
           </div>
         ) : null}
         {lastWsCoordsText ? (

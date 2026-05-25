@@ -221,6 +221,8 @@ export type ProviderTrackingSession = {
   trackingMode: string;
   trackingStatus: string;
   trackingReason: string;
+  locationStale?: boolean;
+  lastLocationTimestamp?: string | null;
   warning?: string;
 };
 

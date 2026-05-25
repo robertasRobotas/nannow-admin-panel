@@ -162,7 +162,8 @@ export type UserDetails = {
       | "DISCLOSURE_DISMISSED"
       | "BACKGROUND_PERMISSION_DENIED"
       | "FOREGROUND_PERMISSION_DENIED"
-      | "BACKGROUND_START_FAILED";
+      | "BACKGROUND_START_FAILED"
+      | "FOREGROUND_APP_CLOSED_OR_NO_SIGNAL";
     trackingUpdatedAt?: string;
     lastTrackingPermissions?: {
       status?: "CONTINUE" | "STOP_FOR_SESSION";
@@ -171,7 +172,8 @@ export type UserDetails = {
         | "DISCLOSURE_DISMISSED"
         | "BACKGROUND_PERMISSION_DENIED"
         | "FOREGROUND_PERMISSION_DENIED"
-        | "BACKGROUND_START_FAILED";
+        | "BACKGROUND_START_FAILED"
+        | "FOREGROUND_APP_CLOSED_OR_NO_SIGNAL";
       trackingMode?: "UNAVAILABLE" | "FOREGROUND_ONLY" | "BACKGROUND";
       foregroundPermission?: {
         status?: string;
