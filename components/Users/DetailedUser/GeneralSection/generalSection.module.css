@@ -39,6 +39,10 @@
   line-break: anywhere;
 }
 
+.cardWide {
+  width: 394px;
+}
+
 .card img {
   width: 24px;
   height: 24px;
@@ -63,6 +67,12 @@
   color: #000;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.cardValueLines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .suspendSwitch {

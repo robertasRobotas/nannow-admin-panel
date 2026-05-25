@@ -155,6 +155,44 @@ export type UserDetails = {
         verifiedByAdminId?: string;
       };
     };
+    trackingStatus?: "CONTINUE" | "STOP_FOR_SESSION";
+    trackingMode?: "UNAVAILABLE" | "FOREGROUND_ONLY" | "BACKGROUND";
+    trackingReason?:
+      | "BACKGROUND_TRACKING_STARTED"
+      | "DISCLOSURE_DISMISSED"
+      | "BACKGROUND_PERMISSION_DENIED"
+      | "FOREGROUND_PERMISSION_DENIED"
+      | "BACKGROUND_START_FAILED";
+    trackingUpdatedAt?: string;
+    lastTrackingPermissions?: {
+      status?: "CONTINUE" | "STOP_FOR_SESSION";
+      reason?:
+        | "BACKGROUND_TRACKING_STARTED"
+        | "DISCLOSURE_DISMISSED"
+        | "BACKGROUND_PERMISSION_DENIED"
+        | "FOREGROUND_PERMISSION_DENIED"
+        | "BACKGROUND_START_FAILED";
+      trackingMode?: "UNAVAILABLE" | "FOREGROUND_ONLY" | "BACKGROUND";
+      foregroundPermission?: {
+        status?: string;
+        canAskAgain?: boolean;
+      } | null;
+      backgroundPermission?: {
+        status?: string;
+        canAskAgain?: boolean;
+      } | null;
+      timestamp?: string;
+      orderId?: string;
+      sessionId?: string;
+      updatedAt?: string;
+    };
+    lastTrackingLocation?: {
+      latitude: number;
+      longitude: number;
+      accuracy?: number | null;
+      timestamp: string;
+      updatedAt: string;
+    };
   };
   client?: {
     id: string;

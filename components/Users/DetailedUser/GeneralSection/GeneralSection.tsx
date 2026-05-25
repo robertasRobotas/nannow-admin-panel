@@ -361,13 +361,36 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       </div>
       <div className={styles.infoCardsWrapper}>
         {cards.map((c, i) => (
-          <div key={i} className={styles.card}>
+          <div key={i} className={`${styles.card} ${c.isWide ? styles.cardWide : ""}`}>
             <img src={c.icon.src} alt="Icon" />
 
             <span className={styles.cardTitle}>{c.title}</span>
+            {!!c.valueLines?.length && (
+              <div className={`${styles.cardValueLines} ${nunito.className}`}>
+                {c.valueLines.map((line, lineIndex) =>
+                  line.link ? (
+                    <a
+                      key={lineIndex}
+                      href={line.link}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        router.push(line.link!);
+                      }}
+                      className={`${styles.cardValue} ${styles.cardValueLink}`}
+                    >
+                      {line.text}
+                    </a>
+                  ) : (
+                    <span key={lineIndex} className={styles.cardValue}>
+                      {line.text}
+                    </span>
+                  ),
+                )}
+              </div>
+            )}
             {!c.hideValue && !c.linkValueText && (
               <span className={`${styles.cardValue} ${nunito.className}`}>
-                {c.value}
+                {!c.valueLines?.length ? c.value : null}
               </span>
             )}
             {!c.hideValue && c.link && c.linkValueText && (
