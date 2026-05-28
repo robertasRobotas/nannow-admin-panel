@@ -69,6 +69,17 @@ const getDateInputValueAfterDays = (days: number) => {
 
 const dateInputValueToIsoDate = (value: string) => `${value}T00:00:00.000Z`;
 
+const LANGUAGE_LABELS: Record<string, string> = {
+  LT: "Lietuvių",
+  EN: "English",
+  DE: "Deutsch",
+  FR: "Français",
+  UA: "Українська",
+  PL: "Polski",
+  LV: "Latvian",
+  EE: "Eesti",
+};
+
 const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const [isSuspendedLocal, setIsSuspendedLocal] = useState(
     user?.user?.isSuspendedByAdmin ?? false,
@@ -141,6 +152,10 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
   console.log(user);
+  const languages =
+    mode === "provider"
+      ? (user?.provider?.languages ?? [])
+      : (user?.client?.languages ?? []);
 
   const openDeleteStripeModal = () => {
     setIsDeleteStripeModalOpen(true);
@@ -461,6 +476,23 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
           </div>
         ))}
       </div>
+      <section className={styles.languagesSection}>
+        <div className={styles.languagesSectionHeader}>
+          <span className={styles.languagesLabel}>Languages</span>
+          <span className={styles.languagesCounter}>{languages.length}</span>
+        </div>
+        {languages.length > 0 ? (
+          <div className={styles.languagesList}>
+            {languages.map((language) => (
+              <span key={language} className={styles.language}>
+                {LANGUAGE_LABELS[language] ?? language}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.languagesEmpty}>No languages selected</div>
+        )}
+      </section>
       {isMobile && (
         <div className={styles.backBtnWrapper}>
           <Button title="Back" onClick={onBackClick} type="OUTLINED" />

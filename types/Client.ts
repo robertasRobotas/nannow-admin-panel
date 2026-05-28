@@ -83,6 +83,7 @@ export type UserDetails = {
     stripeAccountVerifiedAt?: string;
     isAvailableStatusChangedAt?: string;
     isAvailableStatus?: boolean;
+    languages?: string[];
     baseProviderRate: number;
     finalPrice?: number;
     providerPriceCalculationMethod?: ProviderPriceCalculationMethod;
