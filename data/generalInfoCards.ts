@@ -87,6 +87,22 @@ const formatTrackingPermissions = (
   };
 };
 
+const hasTrackingPermissionsInfo = (
+  value?: NonNullable<UserDetails["provider"]>["lastTrackingPermissions"],
+) => {
+  if (!value) return false;
+  return Boolean(
+    value.status ||
+      value.trackingMode ||
+      value.reason ||
+      value.foregroundPermission?.status ||
+      value.backgroundPermission?.status ||
+      value.orderId ||
+      value.timestamp ||
+      value.updatedAt,
+  );
+};
+
 const formatTrackingLocation = (
   value?: NonNullable<UserDetails["provider"]>["lastTrackingLocation"],
 ) => {
@@ -118,6 +134,19 @@ const formatTrackingLocation = (
     timeText: `time: ${formatDateTime(value.timestamp)}`,
     updatedText: `updated: ${formatDateTime(value.updatedAt)}`,
   };
+};
+
+const hasTrackingLocationInfo = (
+  value?: NonNullable<UserDetails["provider"]>["lastTrackingLocation"],
+) => {
+  if (!value) return false;
+  return Boolean(
+    (typeof value.latitude === "number" && Number.isFinite(value.latitude)) ||
+      (typeof value.longitude === "number" && Number.isFinite(value.longitude)) ||
+      (typeof value.accuracy === "number" && Number.isFinite(value.accuracy)) ||
+      value.timestamp ||
+      value.updatedAt,
+  );
 };
 
 export const getInfoCards = (
@@ -223,6 +252,12 @@ export const getInfoCards = (
     const trackingPermissions = formatTrackingPermissions(
       data?.provider?.lastTrackingPermissions,
     );
+    const showTrackingPermissionsCard = hasTrackingPermissionsInfo(
+      data?.provider?.lastTrackingPermissions,
+    );
+    const showTrackingLocationCard = hasTrackingLocationInfo(
+      data?.provider?.lastTrackingLocation,
+    );
 
     return [
       ...baseCards,
@@ -327,40 +362,48 @@ export const getInfoCards = (
         icon: locationPinImg,
         value: formatDateTime(data?.provider?.trackingUpdatedAt),
       },
-      {
-        title: "Last tracking permissions",
-        icon: locationPinImg,
-        isWide: true,
-        value: trackingPermissions.statusText,
-        valueLines: [
-          { text: trackingPermissions.statusText },
-          { text: trackingPermissions.modeText },
-          { text: trackingPermissions.reasonText },
-          { text: trackingPermissions.fgText },
-          { text: trackingPermissions.bgText },
-          {
-            text: trackingPermissions.orderText,
-            link: trackingPermissions.orderLink,
-          },
-          { text: trackingPermissions.timeText },
-          { text: trackingPermissions.updatedText },
-        ],
-      },
-      {
-        title: "Last tracking location",
-        icon: locationPinImg,
-        isWide: true,
-        value: trackingLocation.latLngText,
-        valueLines: [
-          {
-            text: trackingLocation.latLngText,
-            link: trackingPageLink,
-          },
-          { text: trackingLocation.accuracyText },
-          { text: trackingLocation.timeText },
-          { text: trackingLocation.updatedText },
-        ],
-      },
+      ...(showTrackingPermissionsCard
+        ? [
+            {
+              title: "Last tracking permissions",
+              icon: locationPinImg,
+              isWide: true,
+              value: trackingPermissions.statusText,
+              valueLines: [
+                { text: trackingPermissions.statusText },
+                { text: trackingPermissions.modeText },
+                { text: trackingPermissions.reasonText },
+                { text: trackingPermissions.fgText },
+                { text: trackingPermissions.bgText },
+                {
+                  text: trackingPermissions.orderText,
+                  link: trackingPermissions.orderLink,
+                },
+                { text: trackingPermissions.timeText },
+                { text: trackingPermissions.updatedText },
+              ],
+            } satisfies InfoCard,
+          ]
+        : []),
+      ...(showTrackingLocationCard
+        ? [
+            {
+              title: "Last tracking location",
+              icon: locationPinImg,
+              isWide: true,
+              value: trackingLocation.latLngText,
+              valueLines: [
+                {
+                  text: trackingLocation.latLngText,
+                  link: trackingPageLink,
+                },
+                { text: trackingLocation.accuracyText },
+                { text: trackingLocation.timeText },
+                { text: trackingLocation.updatedText },
+              ],
+            } satisfies InfoCard,
+          ]
+        : []),
     ];
   }
 
