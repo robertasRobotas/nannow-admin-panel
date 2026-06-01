@@ -2,7 +2,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import styles from "./loginForm.module.css";
 import Cookies from "js-cookie";
 import { useRouter } from "next/router";
-import { login, loginWithFirebase, verifyAdminLoginTotp } from "@/pages/api/fetch";
+import {
+  AdminApiMode,
+  getAdminApiMode,
+  login,
+  loginWithFirebase,
+  setAdminApiMode,
+  verifyAdminLoginTotp,
+} from "@/pages/api/fetch";
 import { HeaderLogo } from "@/components/Header/HeaderLogo";
 import { Button } from "@/components/ui/button";
 import { getFirebaseAuth } from "@/helpers/firebaseClient";
@@ -52,6 +59,7 @@ const LoginForm = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [apiMode, setApiMode] = useState<AdminApiMode>("production");
   const [totpCode, setTotpCode] = useState("");
   const [isTotpVerifying, setIsTotpVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -62,6 +70,10 @@ const LoginForm = () => {
     try {
       if (localStorage.getItem("ceo_stalker_mode") === "true") setStalkerMode(true);
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    setApiMode(getAdminApiMode());
   }, []);
   const [eyeMode, setEyeMode] = useState<"hidden" | "tracking" | "away">("hidden");
   const [leftEyeAngle, setLeftEyeAngle] = useState(0);
@@ -181,6 +193,16 @@ const LoginForm = () => {
     setAuthErrorMessage("Login response was incomplete. Check API mode (prod vs test).");
   };
 
+  const toggleApiMode = () => {
+    const nextMode: AdminApiMode = apiMode === "test" ? "production" : "test";
+    setAdminApiMode(nextMode);
+    setApiMode(nextMode);
+    setMfaToken(null);
+    setTotpCode("");
+    setError(false);
+    setAuthErrorMessage("");
+  };
+
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isLoading) return;
@@ -294,7 +316,20 @@ const LoginForm = () => {
       {/* Card */}
       <form className={styles.card} onSubmit={onSubmit}>
         {/* Logo */}
-        <HeaderLogo mode="production" />
+        <HeaderLogo mode={apiMode} />
+        <button
+          type="button"
+          className={styles.apiModeRow}
+          onClick={toggleApiMode}
+        >
+          <span className={styles.apiModeLabel}>Use Test API</span>
+          <span
+            role="switch"
+            aria-checked={apiMode === "test"}
+            aria-label="Use Test API"
+            className={`${styles.apiModeSwitch} ${apiMode === "test" ? styles.apiModeSwitchOn : ""}`}
+          />
+        </button>
 
         {!mfaToken ? (
           <>
