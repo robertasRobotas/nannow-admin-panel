@@ -139,6 +139,26 @@
   justify-content: flex-start;
 }
 
+.debugToggleButton {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  background: rgba(0, 0, 0, 0.03);
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.debugToggleButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .validationError {
   flex-basis: 100%;
   color: #ff3b30;
@@ -290,6 +310,57 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 1.45;
+}
+
+.debugTableWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.debugTableTitle {
+  margin: 0;
+  color: #000;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.debugTableScroll {
+  overflow-x: auto;
+}
+
+.debugTable {
+  min-width: 860px;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.debugTable th,
+.debugTable td {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.debugTable th {
+  color: rgba(0, 0, 0, 0.58);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.debugTable td {
+  color: rgba(0, 0, 0, 0.82);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.debugEmpty {
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (max-width: 1280px) {

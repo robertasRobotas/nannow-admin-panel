@@ -6,6 +6,9 @@ import Button from "@/components/Button/Button";
 import { nunito } from "@/helpers/fonts";
 import { getEarnedProfit } from "@/pages/api/fetch";
 import type {
+  EarnedProfitAdditionalPaymentNegativeContributor,
+  EarnedProfitDebug,
+  EarnedProfitNormalServiceNegativeContributor,
   EarnedProfitResponse,
   EarnedProfitSummary,
   EarnedProfitTotals,
@@ -50,6 +53,15 @@ const EMPTY_SECTION: EarnedProfitSummary = {
   netProfitCents: null,
   stripeFeeUnknownPaymentCount: 0,
   recordsWithUnknownStripeFee: 0,
+};
+
+const EMPTY_DEBUG: EarnedProfitDebug = {
+  enabled: false,
+  breakdownLimit: 50,
+  negativeContributors: {
+    normalServices: [],
+    additionalProviderPayments: [],
+  },
 };
 
 const toInputDate = (date: Date) => {
@@ -232,6 +244,72 @@ const SectionSummary = ({
   </section>
 );
 
+const NegativeContributorsTable = ({
+  title,
+  rows,
+  currency,
+}: {
+  title: string;
+  rows:
+    | EarnedProfitNormalServiceNegativeContributor[]
+    | EarnedProfitAdditionalPaymentNegativeContributor[];
+  currency: string;
+}) => (
+  <section className={styles.debugTableWrap}>
+    <h4 className={styles.debugTableTitle}>{title}</h4>
+    {rows.length === 0 ? (
+      <div className={styles.debugEmpty}>No negative contributors in this period.</div>
+    ) : (
+      <div className={styles.debugTableScroll}>
+        <table className={styles.debugTable}>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>ID</th>
+              <th>Order</th>
+              <th>Date</th>
+              <th>Client paid</th>
+              <th>Provider earned</th>
+              <th>Gross</th>
+              <th>Stripe fee</th>
+              <th>Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const isNormalService = row.kind === "NORMAL_SERVICE";
+              const primaryId = isNormalService ? row.orderId : row.paymentId;
+              const orderId = row.orderId ?? "—";
+              const completedAt = isNormalService
+                ? row.serviceCompletedAt
+                : row.paymentCompletedAt;
+
+              return (
+                <tr key={`${row.kind}-${primaryId}`}>
+                  <td>{row.kind}</td>
+                  <td>{primaryId}</td>
+                  <td>{orderId}</td>
+                  <td>{formatDate(completedAt)}</td>
+                  <td>{formatMoneyFromCents(row.clientPaidCents, currency)}</td>
+                  <td>{formatMoneyFromCents(row.providerEarnedCents, currency)}</td>
+                  <td>
+                    {formatMoneyFromCents(
+                      row.grossProfitBeforeStripeFeesCents,
+                      currency,
+                    )}
+                  </td>
+                  <td>{formatMoneyFromCents(row.knownStripeFeeCents, currency)}</td>
+                  <td>{formatMoneyFromCents(row.netProfitCents, currency)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+);
+
 const EarnedProfit = () => {
   const router = useRouter();
   const defaultRange = useMemo(() => getPresetRange("this_month"), []);
@@ -247,6 +325,9 @@ const EarnedProfit = () => {
     defaultRange.startIso,
   );
   const [appliedEndDate, setAppliedEndDate] = useState(defaultRange.endIso);
+  const [showDebugData, setShowDebugData] = useState(false);
+  const [breakdownLimitInput, setBreakdownLimitInput] = useState("50");
+  const [appliedBreakdownLimit, setAppliedBreakdownLimit] = useState(50);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -257,6 +338,8 @@ const EarnedProfit = () => {
       const response = await getEarnedProfit({
         startDate: appliedStartDate,
         endDate: appliedEndDate,
+        includeBreakdown: showDebugData,
+        breakdownLimit: showDebugData ? appliedBreakdownLimit : undefined,
       });
       const payload = response.data as
         | EarnedProfitResponse
@@ -276,7 +359,13 @@ const EarnedProfit = () => {
     } finally {
       setLoading(false);
     }
-  }, [appliedEndDate, appliedStartDate, router]);
+  }, [
+    appliedBreakdownLimit,
+    appliedEndDate,
+    appliedStartDate,
+    router,
+    showDebugData,
+  ]);
 
   useEffect(() => {
     fetchEarnedProfit();
@@ -309,11 +398,24 @@ const EarnedProfit = () => {
     setValidationError("");
   };
 
+  const applyBreakdownLimit = () => {
+    const parsed = Number.parseInt(breakdownLimitInput, 10);
+    if (Number.isNaN(parsed)) {
+      setValidationError("Breakdown limit must be a number between 1 and 500.");
+      return;
+    }
+    const clamped = Math.min(500, Math.max(1, parsed));
+    setAppliedBreakdownLimit(clamped);
+    setBreakdownLimitInput(String(clamped));
+    setValidationError("");
+  };
+
   const currency = data?.currency ?? "eur";
   const totals = data?.totals ?? EMPTY_TOTALS;
   const normalServices = data?.normalServices ?? EMPTY_SECTION;
   const additionalProviderPayments =
     data?.additionalProviderPayments ?? EMPTY_SECTION;
+  const debug = data?.debug ?? EMPTY_DEBUG;
   const netProfitPercent = getPercent(
     totals.netProfitCents,
     totals.clientPaidCents,
@@ -410,6 +512,39 @@ const EarnedProfit = () => {
               onClick={applyCustomDateRange}
             />
           </div>
+
+          <button
+            type="button"
+            className={styles.debugToggleButton}
+            onClick={() => setShowDebugData((prev) => !prev)}
+          >
+            {showDebugData ? "Hide debug data" : "Show debug data"}
+          </button>
+
+          {showDebugData && (
+            <>
+              <div className={styles.dateField}>
+                <span>Breakdown limit (1-500)</span>
+                <div className={styles.dateInputWrap}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={500}
+                    className={styles.dateInput}
+                    value={breakdownLimitInput}
+                    onChange={(e) => setBreakdownLimitInput(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className={styles.applyDateButtonWrap}>
+                <Button
+                  title="Apply limit"
+                  type="OUTLINED"
+                  onClick={applyBreakdownLimit}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {validationError && (
@@ -509,6 +644,27 @@ const EarnedProfit = () => {
                   </div>
                 ))}
               </div>
+            </section>
+          )}
+
+          {showDebugData && (
+            <section className={styles.assumptionsSection}>
+              <div className={styles.totalsHeader}>
+                <h3 className={styles.assumptionsTitle}>Debug breakdown</h3>
+                <span className={styles.sectionSubtitle}>
+                  enabled: {String(debug.enabled)} | limit: {debug.breakdownLimit}
+                </span>
+              </div>
+              <NegativeContributorsTable
+                title="Normal services (worst losses first)"
+                rows={debug.negativeContributors.normalServices}
+                currency={currency}
+              />
+              <NegativeContributorsTable
+                title="Additional provider payments (worst losses first)"
+                rows={debug.negativeContributors.additionalProviderPayments}
+                currency={currency}
+              />
             </section>
           )}
         </>

@@ -1405,6 +1405,8 @@ export const getFinancialForecasts = async (params?: { now?: string }) => {
 export const getEarnedProfit = async (params?: {
   startDate?: string;
   endDate?: string;
+  includeBreakdown?: boolean;
+  breakdownLimit?: number;
 }) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
@@ -1413,6 +1415,8 @@ export const getEarnedProfit = async (params?: {
       params: {
         startDate: params?.startDate,
         endDate: params?.endDate,
+        includeBreakdown: params?.includeBreakdown,
+        breakdownLimit: params?.breakdownLimit,
       },
       headers: {
         Authorization: jwt,
