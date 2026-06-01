@@ -64,6 +64,24 @@ const EMPTY_DEBUG: EarnedProfitDebug = {
   },
 };
 
+const toSafeDebug = (debug?: EarnedProfitResponse["debug"]): EarnedProfitDebug => ({
+  enabled: Boolean(debug?.enabled),
+  breakdownLimit:
+    typeof debug?.breakdownLimit === "number"
+      ? debug.breakdownLimit
+      : EMPTY_DEBUG.breakdownLimit,
+  negativeContributors: {
+    normalServices: Array.isArray(debug?.negativeContributors?.normalServices)
+      ? debug.negativeContributors.normalServices
+      : [],
+    additionalProviderPayments: Array.isArray(
+      debug?.negativeContributors?.additionalProviderPayments,
+    )
+      ? debug.negativeContributors.additionalProviderPayments
+      : [],
+  },
+});
+
 const toInputDate = (date: Date) => {
   const year = date.getUTCFullYear();
   const month = `${date.getUTCMonth() + 1}`.padStart(2, "0");
@@ -331,15 +349,18 @@ const EarnedProfit = () => {
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchEarnedProfit = useCallback(async () => {
+  const fetchEarnedProfit = useCallback(
+    async (options?: { includeBreakdown?: boolean; breakdownLimit?: number }) => {
     try {
       setLoading(true);
       setError("");
+      const includeBreakdown = options?.includeBreakdown ?? showDebugData;
+      const breakdownLimit = options?.breakdownLimit ?? appliedBreakdownLimit;
       const response = await getEarnedProfit({
         startDate: appliedStartDate,
         endDate: appliedEndDate,
-        includeBreakdown: showDebugData,
-        breakdownLimit: showDebugData ? appliedBreakdownLimit : undefined,
+        includeBreakdown,
+        breakdownLimit: includeBreakdown ? breakdownLimit : undefined,
       });
       const payload = response.data as
         | EarnedProfitResponse
@@ -359,13 +380,15 @@ const EarnedProfit = () => {
     } finally {
       setLoading(false);
     }
-  }, [
-    appliedBreakdownLimit,
-    appliedEndDate,
-    appliedStartDate,
-    router,
-    showDebugData,
-  ]);
+    },
+    [
+      appliedBreakdownLimit,
+      appliedEndDate,
+      appliedStartDate,
+      router,
+      showDebugData,
+    ],
+  );
 
   useEffect(() => {
     fetchEarnedProfit();
@@ -408,6 +431,18 @@ const EarnedProfit = () => {
     setAppliedBreakdownLimit(clamped);
     setBreakdownLimitInput(String(clamped));
     setValidationError("");
+    if (showDebugData) {
+      fetchEarnedProfit({ includeBreakdown: true, breakdownLimit: clamped });
+    }
+  };
+
+  const toggleDebugData = () => {
+    const nextShowDebugData = !showDebugData;
+    setShowDebugData(nextShowDebugData);
+    fetchEarnedProfit({
+      includeBreakdown: nextShowDebugData,
+      breakdownLimit: appliedBreakdownLimit,
+    });
   };
 
   const currency = data?.currency ?? "eur";
@@ -415,7 +450,7 @@ const EarnedProfit = () => {
   const normalServices = data?.normalServices ?? EMPTY_SECTION;
   const additionalProviderPayments =
     data?.additionalProviderPayments ?? EMPTY_SECTION;
-  const debug = data?.debug ?? EMPTY_DEBUG;
+  const debug = toSafeDebug(data?.debug);
   const netProfitPercent = getPercent(
     totals.netProfitCents,
     totals.clientPaidCents,
@@ -516,7 +551,7 @@ const EarnedProfit = () => {
           <button
             type="button"
             className={styles.debugToggleButton}
-            onClick={() => setShowDebugData((prev) => !prev)}
+            onClick={toggleDebugData}
           >
             {showDebugData ? "Hide debug data" : "Show debug data"}
           </button>
