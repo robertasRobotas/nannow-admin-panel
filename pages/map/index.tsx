@@ -241,50 +241,73 @@ const toOrderPin = (
 const TrackingPage = () => {
   const [userPins, setUserPins] = useState<TrackingPin[]>([]);
   const [orderPins, setOrderPins] = useState<TrackingPin[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+  const [showClients, setShowClients] = useState(true);
+  const [showProviders, setShowProviders] = useState(true);
+  const [showOrders, setShowOrders] = useState(true);
   const { lastEvent } = useAdminSocket();
 
-  const loadByType = useCallback(async (type: "client" | "provider") => {
-    const collected: User[] = [];
-    let startIndex = 0;
-    let total = PAGE_SIZE;
-
-    while (startIndex < total) {
-      const response = await getAllUsers(
-        `admin/users?type=${type}&startIndex=${startIndex}&pageSize=${PAGE_SIZE}`,
-      );
-      const items = readItems(response.data);
-      total = readTotal(response.data);
-      collected.push(...items);
-      startIndex += PAGE_SIZE;
-      if (items.length === 0) break;
-    }
-
-    return collected;
+  const upsertPins = useCallback((nextPins: TrackingPin[]) => {
+    if (nextPins.length === 0) return;
+    setUserPins((prev) => {
+      const byId = new Map(prev.map((pin) => [pin.id, pin]));
+      nextPins.forEach((pin) => byId.set(pin.id, pin));
+      return Array.from(byId.values());
+    });
   }, []);
 
   useEffect(() => {
     let isCancelled = false;
 
+    const loadByType = async (type: "client" | "provider") => {
+      const collected: User[] = [];
+      let startIndex = 0;
+      let total = PAGE_SIZE;
+
+      while (startIndex < total && !isCancelled) {
+        const response = await getAllUsers(
+          `admin/users?type=${type}&startIndex=${startIndex}&pageSize=${PAGE_SIZE}`,
+        );
+        const items = readItems(response.data);
+        total = readTotal(response.data);
+        collected.push(...items);
+        if (!isCancelled) {
+          upsertPins(
+            items
+              .map((item) =>
+                toPinFromUserList(type === "client" ? "CLIENT" : "PROVIDER", item as UserListItemWithMap),
+              )
+              .filter((item): item is TrackingPin => !!item),
+          );
+        }
+        startIndex += PAGE_SIZE;
+        if (items.length === 0) break;
+      }
+
+      return collected;
+    };
+
     const load = async () => {
       try {
-        setIsLoading(true);
+        setIsUsersLoading(true);
+        setUserPins([]);
         const [clients, providers] = await Promise.all([
           loadByType("client"),
           loadByType("provider"),
         ]);
 
-        const listPins = [
+        const listedPinIds = new Set([
           ...clients
-            .map((item) => toPinFromUserList("CLIENT", item as UserListItemWithMap))
-            .filter((item): item is TrackingPin => !!item),
+            .map((user) => toPinFromUserList("CLIENT", user as UserListItemWithMap)?.id)
+            .filter((id): id is string => !!id),
           ...providers
-            .map((item) => toPinFromUserList("PROVIDER", item as UserListItemWithMap))
-            .filter((item): item is TrackingPin => !!item),
-        ];
+            .map((user) => toPinFromUserList("PROVIDER", user as UserListItemWithMap)?.id)
+            .filter((id): id is string => !!id),
+        ]);
 
         const hasPinForUser = (kind: "CLIENT" | "PROVIDER", id?: string) =>
-          !!id && listPins.some((pin) => pin.id === `${kind}:${id}`);
+          !!id && listedPinIds.has(`${kind}:${id}`);
 
         const clientsMissing = clients.filter(
           (user) => !hasPinForUser("CLIENT", user.userId || user.id),
@@ -329,16 +352,16 @@ const TrackingPage = () => {
 
         if (isCancelled) return;
 
-        const fallbackPins = [
-          ...clientDetails
-            .map((detail) => toPin("CLIENT", detail))
-            .filter((item): item is TrackingPin => !!item),
-          ...providerDetails
-            .map((detail) => toPin("PROVIDER", detail))
-            .filter((item): item is TrackingPin => !!item),
-        ];
-
-        setUserPins([...listPins, ...fallbackPins]);
+        upsertPins(
+          [
+            ...clientDetails
+              .map((detail) => toPin("CLIENT", detail))
+              .filter((item): item is TrackingPin => !!item),
+            ...providerDetails
+              .map((detail) => toPin("PROVIDER", detail))
+              .filter((item): item is TrackingPin => !!item),
+          ],
+        );
       } catch (error) {
         console.error("Failed to load tracking pins", error);
         if (!isCancelled) {
@@ -346,7 +369,7 @@ const TrackingPage = () => {
         }
       } finally {
         if (!isCancelled) {
-          setIsLoading(false);
+          setIsUsersLoading(false);
         }
       }
     };
@@ -356,53 +379,65 @@ const TrackingPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [loadByType]);
+  }, [upsertPins]);
 
   const loadActiveOrderPins = useCallback(async () => {
-    const collected: OrderType[] = [];
-    let startIndex = 0;
-    let total = ORDER_PAGE_SIZE;
-    while (startIndex < total) {
-      const response = await getOrders("", startIndex);
-      const result = response.data?.result ?? {};
-      const items = Array.isArray(result.items) ? (result.items as OrderType[]) : [];
-      total = Number(result.total ?? 0);
-      collected.push(...items);
-      startIndex += Number(result.pageSize ?? ORDER_PAGE_SIZE);
-      if (items.length === 0) break;
-    }
+    setIsOrdersLoading(true);
+    try {
+      const collected: OrderType[] = [];
+      let startIndex = 0;
+      let total = ORDER_PAGE_SIZE;
+      while (startIndex < total) {
+        const response = await getOrders("", startIndex);
+        const result = response.data?.result ?? {};
+        const items = Array.isArray(result.items) ? (result.items as OrderType[]) : [];
+        total = Number(result.total ?? 0);
+        collected.push(...items);
+        startIndex += Number(result.pageSize ?? ORDER_PAGE_SIZE);
+        if (items.length === 0) break;
+      }
 
-    const activeOrders = collected.filter(isActiveOrder);
-    const enrichedOrders: OrderType[] = [];
+      const activeOrders = collected.filter(isActiveOrder);
 
-    for (
-      let index = 0;
-      index < activeOrders.length;
-      index += ORDER_DETAIL_CONCURRENCY
-    ) {
-      const chunk = activeOrders.slice(index, index + ORDER_DETAIL_CONCURRENCY);
-      const results = await Promise.all(
-        chunk.map(async (order) => {
-          const existingCoordinates = extractOrderCoordinates(order);
-          if (existingCoordinates) return order;
-
-          try {
-            const response = await getOrderById(order.id);
-            const detailedOrder = readOrderDetails(response.data);
-            return detailedOrder ?? order;
-          } catch {
-            return order;
-          }
-        }),
+      setOrderPins(
+        activeOrders
+          .map((order) => toOrderPin(order as OrderWithMapData))
+          .filter((item): item is TrackingPin => !!item),
       );
-      enrichedOrders.push(...results);
+
+      const enrichedOrders: OrderType[] = [];
+
+      for (
+        let index = 0;
+        index < activeOrders.length;
+        index += ORDER_DETAIL_CONCURRENCY
+      ) {
+        const chunk = activeOrders.slice(index, index + ORDER_DETAIL_CONCURRENCY);
+        const results = await Promise.all(
+          chunk.map(async (order) => {
+            const existingCoordinates = extractOrderCoordinates(order);
+            if (existingCoordinates) return order;
+
+            try {
+              const response = await getOrderById(order.id);
+              const detailedOrder = readOrderDetails(response.data);
+              return detailedOrder ?? order;
+            } catch {
+              return order;
+            }
+          }),
+        );
+        enrichedOrders.push(...results);
+
+        setOrderPins(
+          enrichedOrders
+            .map((order) => toOrderPin(order as OrderWithMapData))
+            .filter((item): item is TrackingPin => !!item),
+        );
+      }
+    } finally {
+      setIsOrdersLoading(false);
     }
-
-    const pins = enrichedOrders
-      .map((order) => toOrderPin(order as OrderWithMapData))
-      .filter((item): item is TrackingPin => !!item);
-
-    setOrderPins(pins);
   }, []);
 
   useEffect(() => {
@@ -434,9 +469,19 @@ const TrackingPage = () => {
     [orderPins],
   );
   const pins = useMemo(
-    () => [...userPins, ...orderPins],
-    [orderPins, userPins],
+    () => [
+      ...(showClients
+        ? userPins.filter((pin) => pin.kind === "CLIENT")
+        : []),
+      ...(showProviders
+        ? userPins.filter((pin) => pin.kind === "PROVIDER")
+        : []),
+      ...(showOrders ? orderPins : []),
+    ],
+    [orderPins, showClients, showOrders, showProviders, userPins],
   );
+  const isLoading = isUsersLoading || isOrdersLoading;
+  const hasVisiblePins = pins.length > 0;
 
   return (
     <Template>
@@ -465,7 +510,20 @@ const TrackingPage = () => {
               fontSize: 13,
             }}
           >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                opacity: showClients ? 1 : 0.55,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={showClients}
+                onChange={(event) => setShowClients(event.target.checked)}
+              />
               <span
                 style={{
                   width: 12,
@@ -477,8 +535,21 @@ const TrackingPage = () => {
                 }}
               />
               Client pin
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            </label>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                opacity: showProviders ? 1 : 0.55,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={showProviders}
+                onChange={(event) => setShowProviders(event.target.checked)}
+              />
               <span
                 style={{
                   width: 12,
@@ -490,8 +561,21 @@ const TrackingPage = () => {
                 }}
               />
               Provider pin
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            </label>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                opacity: showOrders ? 1 : 0.55,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={showOrders}
+                onChange={(event) => setShowOrders(event.target.checked)}
+              />
               <span
                 style={{
                   width: 13,
@@ -503,15 +587,20 @@ const TrackingPage = () => {
                 }}
               />
               Active order pin
-            </span>
+            </label>
           </div>
         </div>
 
         <div style={{ flex: 1, minHeight: 300 }}>
-          {isLoading ? (
-            <div style={{ color: "#4b5563" }}>Loading map data...</div>
-          ) : (
+          {hasVisiblePins || !isLoading ? (
             <OsmMap pins={pins} height="100%" />
+          ) : (
+            <div style={{ color: "#4b5563" }}>Loading map data...</div>
+          )}
+          {isLoading && hasVisiblePins && (
+            <div style={{ color: "#4b5563", marginTop: hasVisiblePins ? 8 : 0 }}>
+              Loading map data...
+            </div>
           )}
         </div>
       </div>
