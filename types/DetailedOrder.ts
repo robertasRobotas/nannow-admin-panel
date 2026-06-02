@@ -178,6 +178,8 @@ export type DetailedOrderType = {
   }[];
   isProviderIgnoredEndNotification?: boolean;
   providerIgnoredEndNotificationResolvedReason?: string;
+  providerCancelReason?: string | null;
+  providerCancelReasonText?: string | null;
   isReleasedFundsToProvider: boolean;
   releasedFundsToProviderAt: string | null;
   isOrderCanceledLessThan12hBeforeStart?: boolean;

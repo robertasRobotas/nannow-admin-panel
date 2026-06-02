@@ -593,6 +593,17 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     : isCanceledLate12h
       ? "Canceled less than 12h before start"
       : null;
+  const providerCancelReason = String(order?.providerCancelReason ?? "").trim();
+  const providerCancelReasonText = String(
+    order?.providerCancelReasonText ?? "",
+  ).trim();
+  const hasProviderCancelReason =
+    isCanceledByProvider && providerCancelReason.length > 0;
+  const formatProviderCancelReason = (value: string) =>
+    value
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const formatCents = (value?: number | null) =>
     typeof value === "number" ? `€${(value / 100).toFixed(2)}` : "-";
@@ -827,6 +838,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 {order?.isProviderIgnoredEndNotification && (
                   <div className={styles.statusAttention}>
                     Provider ignored end notification
+                  </div>
+                )}
+                {hasProviderCancelReason && (
+                  <div className={styles.statusAttention}>
+                    Provider cancel reason:{" "}
+                    {formatProviderCancelReason(providerCancelReason)}
+                    {providerCancelReasonText && (
+                      <span>
+                        {" "}
+                        - {providerCancelReasonText}
+                      </span>
+                    )}
                   </div>
                 )}
               </>
