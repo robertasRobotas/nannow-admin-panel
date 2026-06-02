@@ -2,6 +2,7 @@ import axios from "axios";
 
 import Cookies from "js-cookie";
 import { ADMIN_API_CONFIG, AdminApiMode } from "@/helpers/adminApiConfig";
+import { CompensationRequestStatus } from "@/types/Client";
 
 export type { AdminApiMode } from "@/helpers/adminApiConfig";
 
@@ -183,6 +184,27 @@ export const getRequestedCompensationInfoAtCount = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
     `${BASE_URL}/admin/clients/requested-compensation-info-at/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const updateClientCompensationRequestStatus = async (
+  clientId: string,
+  requestId: string,
+  payload: {
+    status: CompensationRequestStatus;
+    comment: string;
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/clients/${clientId}/compensation-request/${requestId}/status`,
+    payload,
     {
       headers: {
         Authorization: jwt,

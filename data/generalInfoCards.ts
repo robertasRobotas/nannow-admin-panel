@@ -11,12 +11,15 @@ import walletImg from "../assets/images/wallet.svg";
 import emailAutoImg from "../assets/images/email-auto.svg";
 import loginTypeImg from "../assets/images/login-type.svg";
 import type { StaticImageData } from "next/image";
+import { getCompensationRequestSummaryLines } from "@/data/compensationRequests";
 
 export type InfoCard = {
   title: string;
   icon: StaticImageData;
   value: string | number;
   isWide?: boolean;
+  cardLink?: string;
+  alertDot?: boolean;
   valueLines?: {
     text: string;
     link?: string;
@@ -34,18 +37,6 @@ export type InfoCard = {
     onChange: () => void;
     disabled?: boolean;
   };
-};
-
-const formatShortDate = (value?: string | null) => {
-  if (!value) return "Not requested";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  if (date.getTime() === 0) return "Not requested";
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 };
 
 const formatDateTime = (value?: string | null) => {
@@ -163,7 +154,6 @@ export const getInfoCards = (
       onChange: () => void;
       disabled?: boolean;
     };
-    requestedCompensationInfoAt?: string | null;
   },
 ): InfoCard[] => {
   const isSuspended =
@@ -408,16 +398,19 @@ export const getInfoCards = (
   }
 
   // client
+  const compensationSummary = getCompensationRequestSummaryLines(data?.client);
+  const hasCompensationAlert = compensationSummary.hasAlert;
   return [
     ...baseCards,
     {
       title: "Compensation request",
       icon: walletImg,
-      value: formatShortDate(
-        options?.requestedCompensationInfoAt ??
-          data?.client?.requestedCompensationInfoAt,
-      ),
-      booleanSwitch: options?.compensationRequestSwitch,
+      value: "Requests",
+      valueLines: compensationSummary.lines,
+      cardLink: data?.user?.id
+        ? `/client/${data.user.id}/compensation-requests`
+        : undefined,
+      alertDot: hasCompensationAlert,
     },
     {
       title: "Children",

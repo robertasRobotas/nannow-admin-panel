@@ -22,6 +22,22 @@ import { ReviewType } from "./Reviews";
 
 export type ProviderPriceCalculationMethod = "DYNAMIC" | "CUSTOM";
 
+export type CompensationRequestStatus =
+  | "REQUESTED"
+  | "CONTACTED"
+  | "IN_PROGRESS"
+  | "COMPLETED";
+
+export type CompensationRequest = {
+  id?: string;
+  _id?: string;
+  requestId?: string;
+  requestedCompensationInfoAt: string;
+  status: CompensationRequestStatus;
+  comments: string;
+  changedAt: string;
+};
+
 export type QualityType =
   | "CAN_BABYSIT_AT_HOME"
   | "LT_LANGUAGE"
@@ -69,6 +85,7 @@ export type User = {
   finalPrice?: number;
   locale?: string;
   requestedCompensationInfoAt?: string | null;
+  contactedRegardingCompensationAt?: string | null;
 };
 
 export type UserDetails = {
@@ -201,6 +218,8 @@ export type UserDetails = {
     id: string;
     userId: string;
     requestedCompensationInfoAt?: string | null;
+    contactedRegardingCompensationAt?: string | null;
+    compensationRequests?: CompensationRequest[];
     languages: string[];
     badgesIds: string[];
     animals: string[];

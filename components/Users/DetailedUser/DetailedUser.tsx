@@ -20,15 +20,19 @@ import { useRouter } from "next/router";
 import { getButtonsData } from "@/data/userProfileMenu";
 import ProviderInfoSection from "./ProviderInfoSection/ProviderInfoSection";
 import NannowChatSection from "./NannowChatSection/NannowChatSection";
+import CompensationRequests from "@/components/Users/CompensationRequests/CompensationRequests";
 
 type DetailedClientProps = {
   user: UserDetails;
   mode: "client" | "provider";
+  initialSection?: string;
 };
 
-const DetailedClient = ({ user, mode }: DetailedClientProps) => {
+const DetailedClient = ({ user, mode, initialSection }: DetailedClientProps) => {
   const router = useRouter();
-  const [selectedSection, setSelectedSectionState] = useState("general");
+  const [selectedSection, setSelectedSectionState] = useState(
+    initialSection ?? "general",
+  );
   const validSectionIds = useMemo(
     () => getButtonsData(user, mode).map((button) => button.id),
     [mode, user],
@@ -61,12 +65,14 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
   useEffect(() => {
     if (!router.isReady) return;
     const sectionFromQuery =
-      typeof router.query.section === "string" ? router.query.section : "general";
+      typeof router.query.section === "string"
+        ? router.query.section
+        : initialSection ?? "general";
     const safeSection = validSectionIds.includes(sectionFromQuery)
       ? sectionFromQuery
       : "general";
     setSelectedSectionState((prev) => (prev === safeSection ? prev : safeSection));
-  }, [router.isReady, router.query.section, validSectionIds]);
+  }, [initialSection, router.isReady, router.query.section, validSectionIds]);
 
   const renderSelectedSection = () => {
     switch (selectedSection) {
@@ -130,6 +136,17 @@ const DetailedClient = ({ user, mode }: DetailedClientProps) => {
         return (
           <PaymentsSection
             user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+            }}
+          />
+        );
+      }
+
+      case "compensation_requests": {
+        return (
+          <CompensationRequests
+            clientId={user.user.id}
             onBackClick={() => {
               setSelectedSection("");
             }}

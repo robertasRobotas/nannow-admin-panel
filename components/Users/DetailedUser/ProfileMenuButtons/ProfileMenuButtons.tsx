@@ -1,6 +1,7 @@
 import { getButtonsData } from "@/data/userProfileMenu";
 import styles from "./profileMenuButtons.module.css";
 import { UserDetails } from "@/types/Client";
+import { useRouter } from "next/router";
 
 type ProfileMenuButtonsProps = {
   user: UserDetails;
@@ -18,12 +19,18 @@ const ProfileMenuButtons = ({
   mode,
 }: ProfileMenuButtonsProps) => {
   const buttonsData = getButtonsData(user, mode);
+  const router = useRouter();
 
   return (
     <div className={styles.main}>
       {buttonsData.map((b, i) => (
         <button
           onClick={() => {
+            if (b.id === "compensation_requests" && mode === "client") {
+              setIsSelectedMenu();
+              router.push(`/client/${user.user.id}/compensation-requests`);
+              return;
+            }
             setIsSelectedMenu();
             setSelectedSection(b.id);
           }}

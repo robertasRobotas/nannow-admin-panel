@@ -147,7 +147,6 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             disabled: isCompensationSaving,
           }
         : undefined,
-    requestedCompensationInfoAt: requestedCompensationInfoAtLocal,
   });
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
@@ -376,7 +375,26 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       </div>
       <div className={styles.infoCardsWrapper}>
         {cards.map((c, i) => (
-          <div key={i} className={`${styles.card} ${c.isWide ? styles.cardWide : ""}`}>
+          <div
+            key={i}
+            className={`${styles.card} ${c.isWide ? styles.cardWide : ""} ${
+              c.cardLink ? styles.cardClickable : ""
+            }`}
+            role={c.cardLink ? "button" : undefined}
+            tabIndex={c.cardLink ? 0 : undefined}
+            onClick={() => {
+              if (!c.cardLink) return;
+              router.push(c.cardLink);
+            }}
+            onKeyDown={(event) => {
+              if (!c.cardLink) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                router.push(c.cardLink);
+              }
+            }}
+          >
+            {c.alertDot && <span className={styles.cardAlertDot} />}
             <img src={c.icon.src} alt="Icon" />
 
             <span className={styles.cardTitle}>{c.title}</span>

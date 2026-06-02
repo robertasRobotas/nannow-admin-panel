@@ -7,6 +7,7 @@ import DocWithPencilIcon from "@/components/Icons/DocWithPencilIcon";
 import BadgeIcon from "@/components/Icons/BadgeIcon";
 import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
 import ChildrenIcon from "@/components/Icons/ChildrenIcon";
+import { normalizeCompensationRequests } from "@/data/compensationRequests";
 
 const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
 
@@ -72,6 +73,13 @@ export const getButtonsData = (
       icon: DocWithCheckmarkIcon,
       number: user?.orders?.length ?? 0,
       id: "client_orders",
+      visibleFor: ["client"],
+    },
+    {
+      title: "Compensation requests",
+      icon: DocWithPencilIcon,
+      number: normalizeCompensationRequests(user?.client).length,
+      id: "compensation_requests",
       visibleFor: ["client"],
     },
     {
