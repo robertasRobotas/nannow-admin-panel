@@ -3,9 +3,9 @@ import axios from "axios";
 import Button from "@/components/Button/Button";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
 import {
-  getAdminChats,
   getChatById,
   getCurrentAdminRolesFromJwt,
+  getUserChatsById,
   markSystemNannowChatRead,
   replySystemNannowChat,
 } from "@/pages/api/fetch";
@@ -72,6 +72,24 @@ const isSystemChatForUser = (chat: ChatType, userId: string) => {
   );
 };
 
+const parseUserChatsResponse = (data: unknown): ChatType[] => {
+  if (Array.isArray(data)) return data as ChatType[];
+  if (typeof data !== "object" || data === null) return [];
+
+  const record = data as Record<string, unknown>;
+  const result = record.result;
+  if (Array.isArray(result)) return result as ChatType[];
+  if (typeof result === "object" && result !== null) {
+    const resultRecord = result as Record<string, unknown>;
+    if (Array.isArray(resultRecord.items)) return resultRecord.items as ChatType[];
+    if (Array.isArray(resultRecord.chats)) return resultRecord.chats as ChatType[];
+  }
+
+  if (Array.isArray(record.items)) return record.items as ChatType[];
+  if (Array.isArray(record.chats)) return record.chats as ChatType[];
+  return [];
+};
+
 const NannowChatSection = ({ user, onBackClick }: NannowChatSectionProps) => {
   const userId = user.user.id;
   const [chat, setChat] = useState<ChatDetails | null>(null);
@@ -101,13 +119,8 @@ const NannowChatSection = ({ user, onBackClick }: NannowChatSectionProps) => {
     try {
       setIsLoading(true);
       setError("");
-      const response = await getAdminChats({
-        startIndex: 0,
-        pageSize: 200,
-        sort: "latest",
-        search: userId,
-      });
-      const items = response.data?.result?.items ?? response.data?.items ?? [];
+      const response = await getUserChatsById(userId);
+      const items = parseUserChatsResponse(response.data);
       const nextChat = Array.isArray(items)
         ? items.find((item) => isSystemChatForUser(item, userId)) ?? null
         : null;
