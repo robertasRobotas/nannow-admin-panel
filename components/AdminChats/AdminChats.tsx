@@ -13,6 +13,8 @@ import paginateStyles from "@/styles/paginate.module.css";
 import styles from "./adminChats.module.css";
 import defaultAvatarImg from "@/assets/images/default-avatar.png";
 
+const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
+
 const SORT_OPTIONS = [
   { title: "Latest", value: "latest" },
   { title: "Name", value: "name" },
@@ -61,6 +63,16 @@ const getChatReadAt = (
   chat: ChatType,
   lastMessage?: ChatMessageType | null,
 ) => lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+
+const getChatParticipantId = (chat: ChatType, key: "user1" | "user2") =>
+  chat[key]?.id ?? (key === "user1" ? chat.user1Id : chat.user2Id) ?? "";
+
+const isSystemNannowChat = (chat: ChatType) => {
+  const user1Id = getChatParticipantId(chat, "user1");
+  const user2Id = getChatParticipantId(chat, "user2");
+
+  return user1Id === SYSTEM_NANNOW_ID || user2Id === SYSTEM_NANNOW_ID;
+};
 
 const AdminChats = () => {
   const router = useRouter();
@@ -144,17 +156,18 @@ const AdminChats = () => {
         (payload as GetAdminChatsResponse);
 
       const nextItems = Array.isArray(data?.items) ? data.items : [];
+      const visibleItems = nextItems.filter((item) => !isSystemNannowChat(item));
       const nextTotal = Number(data?.total ?? nextItems.length);
       const nextPageSize = Number(data?.pageSize ?? pageSize) || pageSize;
 
-      setItems(nextItems);
+      setItems(visibleItems);
       setPageSize(nextPageSize);
       setPageCount(Math.max(1, Math.ceil(nextTotal / nextPageSize)));
       setSelectedChatId((prev) => {
-        if (prev && nextItems.some((item) => (item.chatId ?? item.id) === prev)) {
+        if (prev && visibleItems.some((item) => (item.chatId ?? item.id) === prev)) {
           return prev;
         }
-        return nextItems[0]?.chatId ?? nextItems[0]?.id ?? "";
+        return visibleItems[0]?.chatId ?? visibleItems[0]?.id ?? "";
       });
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -341,10 +354,11 @@ const AdminChats = () => {
           (payload as { result?: GetAdminChatsResponse }).result ??
           (payload as GetAdminChatsResponse);
         const nextItems = Array.isArray(data?.items) ? data.items : [];
+        const filteredItems = nextItems.filter((item) => !isSystemNannowChat(item));
         const nextPageSize = Number(data?.pageSize ?? nextItems.length);
         total = Number(data?.total ?? collected.length + nextItems.length);
 
-        collected.push(...nextItems);
+        collected.push(...filteredItems);
         if (nextItems.length === 0 || nextPageSize <= 0) break;
         startIndex += nextPageSize;
       }

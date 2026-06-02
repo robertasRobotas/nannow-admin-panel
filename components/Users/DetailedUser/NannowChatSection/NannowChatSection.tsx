@@ -3,9 +3,9 @@ import axios from "axios";
 import Button from "@/components/Button/Button";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
 import {
-  getAdminChats,
   getChatById,
   getCurrentAdminRolesFromJwt,
+  getSystemNannowChats,
   markSystemNannowChatRead,
   replySystemNannowChat,
 } from "@/pages/api/fetch";
@@ -14,6 +14,8 @@ import { UserDetails } from "@/types/Client";
 import avatarImg from "@/assets/images/default-avatar.png";
 import messageStyles from "@/components/Users/DetailedUser/MessagesSection/messagesSection.module.css";
 import styles from "./nannowChatSection.module.css";
+
+const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
 
 type NannowChatSectionProps = {
   user: UserDetails;
@@ -57,12 +59,18 @@ const getSystemUser = (chat: ChatDetails | null, userId: string) => {
 
 const getChatId = (chat: ChatDetails | null) => chat?.chatId ?? chat?.id ?? "";
 
-const isUserChat = (chat: ChatType, userId: string) =>
-  chat.user1?.id === userId ||
-  chat.user2?.id === userId ||
-  chat.user1Id === userId ||
-  chat.user2Id === userId ||
-  chat.participants?.some((participant) => participant.id === userId);
+const getChatParticipantId = (chat: ChatType, key: "user1" | "user2") =>
+  chat[key]?.id ?? (key === "user1" ? chat.user1Id : chat.user2Id) ?? "";
+
+const isSystemChatForUser = (chat: ChatType, userId: string) => {
+  const user1Id = getChatParticipantId(chat, "user1");
+  const user2Id = getChatParticipantId(chat, "user2");
+
+  return (
+    (user1Id === userId && user2Id === SYSTEM_NANNOW_ID) ||
+    (user2Id === userId && user1Id === SYSTEM_NANNOW_ID)
+  );
+};
 
 const NannowChatSection = ({ user, onBackClick }: NannowChatSectionProps) => {
   const userId = user.user.id;
@@ -93,16 +101,33 @@ const NannowChatSection = ({ user, onBackClick }: NannowChatSectionProps) => {
     try {
       setIsLoading(true);
       setError("");
-      const response = await getAdminChats({
-        startIndex: 0,
-        pageSize: 10,
-        sort: "latest",
-        search: userId,
-      });
-      const items = response.data?.result?.items ?? response.data?.items ?? [];
-      const nextChat = Array.isArray(items)
-        ? items.find((item) => isUserChat(item, userId)) ?? items[0]
-        : null;
+      const pageSize = 100;
+      let startIndex = 0;
+      let total = Number.POSITIVE_INFINITY;
+      let nextChat: ChatType | null = null;
+
+      while (startIndex < total) {
+        const response = await getSystemNannowChats({
+          startIndex,
+          pageSize,
+          sort: "latest",
+        });
+        const payload = response.data as
+          | { result?: { items?: ChatType[]; total?: number; pageSize?: number } }
+          | { items?: ChatType[]; total?: number; pageSize?: number };
+        const data = (payload as { result?: { items?: ChatType[] } }).result ?? payload;
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const nextTotal = Number(data?.total ?? items.length);
+        const nextPageSize = Number(data?.pageSize ?? items.length ?? pageSize) || pageSize;
+
+        nextChat = items.find((item) => isSystemChatForUser(item, userId)) ?? null;
+        if (nextChat) break;
+
+        total = Number.isFinite(nextTotal) && nextTotal > 0 ? nextTotal : startIndex + items.length;
+        if (items.length === 0 || nextPageSize <= 0) break;
+        startIndex += nextPageSize;
+      }
+
       const nextChatId = nextChat?.chatId ?? nextChat?.id ?? "";
 
       if (nextChatId) {
