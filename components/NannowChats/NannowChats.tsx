@@ -236,33 +236,7 @@ const NannowChats = () => {
       setLoading(true);
       setError("");
       if (showUnreadOnly) {
-        try {
-          const response = await getSystemNannowChats({
-            startIndex: itemOffset,
-            pageSize,
-            sort: selectedSort,
-            search: appliedSearch,
-            unreadOnly: true,
-          });
-          const { items: nextItems, total: nextTotal, pageSize: nextPageSize } =
-            parseChatsResponse(response.data);
-
-          setItems(nextItems);
-          setPageSize(nextPageSize);
-          setPageCount(Math.max(1, Math.ceil(nextTotal / nextPageSize)));
-          setSelectedChatId((prev) => {
-            if (prev && nextItems.some((item) => (item.chatId ?? item.id) === prev)) {
-              return prev;
-            }
-            return nextItems[0]?.chatId ?? nextItems[0]?.id ?? "";
-          });
-        } catch (err) {
-          if (axios.isAxiosError(err) && err.response?.status === 404) {
-            await loadUnreadChatsFallback();
-            return;
-          }
-          throw err;
-        }
+        await loadUnreadChatsFallback();
         return;
       }
 

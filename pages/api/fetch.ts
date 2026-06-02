@@ -987,13 +987,11 @@ export const getSystemNannowChats = async ({
   pageSize = 20,
   sort = "latest",
   search,
-  unreadOnly,
 }: {
   startIndex?: number;
   pageSize?: number;
   sort?: "latest" | "name";
   search?: string;
-  unreadOnly?: boolean;
 }) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/chats/system-nannow`, {
@@ -1002,7 +1000,6 @@ export const getSystemNannowChats = async ({
       pageSize,
       sort,
       search: search?.trim() || undefined,
-      unreadOnly: unreadOnly ? "true" : undefined,
     },
     headers: {
       Authorization: jwt,
