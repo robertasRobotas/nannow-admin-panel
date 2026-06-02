@@ -8,6 +8,26 @@ import BadgeIcon from "@/components/Icons/BadgeIcon";
 import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
 import ChildrenIcon from "@/components/Icons/ChildrenIcon";
 
+const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
+
+const getChatParticipantId = (chat: NonNullable<UserDetails["chats"]>[number], key: "user1" | "user2") =>
+  chat[key]?.id ?? (key === "user1" ? chat.user1Id : chat.user2Id) ?? "";
+
+const isSystemNannowChat = (chat: NonNullable<UserDetails["chats"]>[number]) => {
+  const user1Id = getChatParticipantId(chat, "user1");
+  const user2Id = getChatParticipantId(chat, "user2");
+
+  return user1Id === SYSTEM_NANNOW_ID || user2Id === SYSTEM_NANNOW_ID;
+};
+
+const getVisibleChatCount = (user: UserDetails) => {
+  if (Array.isArray(user?.chats)) {
+    return user.chats.filter((chat) => !isSystemNannowChat(chat)).length;
+  }
+
+  return user?.chatCount ?? 0;
+};
+
 export const getButtonsData = (
   user: UserDetails,
   mode: "client" | "provider"
@@ -117,7 +137,7 @@ export const getButtonsData = (
     {
       title: "Chats",
       icon: MessagesIcon,
-      number: user?.chats?.length ?? user?.chatCount ?? 0,
+      number: getVisibleChatCount(user),
       id: "messages",
       visibleFor: ["client", "provider"],
     },
