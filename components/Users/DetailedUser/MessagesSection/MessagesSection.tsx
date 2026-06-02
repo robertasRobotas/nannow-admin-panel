@@ -6,6 +6,8 @@ import { ChatMessageType, ChatType } from "@/types/Chats";
 import { getChatById, getCurrentAdminRolesFromJwt } from "@/pages/api/fetch";
 import avatarImg from "../../../../assets/images/default-avatar.png";
 
+const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
+
 type MessagesSectionProps = {
   onBackClick: () => void;
   chats: ChatType[];
@@ -29,6 +31,16 @@ const getChatReadAt = (
   chat: ChatType,
   lastMessage?: ChatMessageType | null,
 ) => lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+
+const getChatParticipantId = (chat: ChatType, key: "user1" | "user2") =>
+  chat[key]?.id ?? (key === "user1" ? chat.user1Id : chat.user2Id) ?? "";
+
+const isSystemNannowChat = (chat: ChatType) => {
+  const user1Id = getChatParticipantId(chat, "user1");
+  const user2Id = getChatParticipantId(chat, "user2");
+
+  return user1Id === SYSTEM_NANNOW_ID || user2Id === SYSTEM_NANNOW_ID;
+};
 
 const formatDateTime = (value?: string) => {
   if (!value) return "—";
@@ -54,6 +66,10 @@ const MessagesSection = ({
   const [userImgUrl, setUserImgUrl] = useState("");
   const [otherUserImgUrl, setOtherUserImgUrl] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const filteredChats = useMemo(
+    () => chats.filter((chat) => !isSystemNannowChat(chat)),
+    [chats],
+  );
 
   const adminRoles = useMemo(() => getCurrentAdminRolesFromJwt(), []);
   const canModerate =
@@ -61,9 +77,9 @@ const MessagesSection = ({
   const useSuperHistoryRoute = adminRoles.includes("SUPER_ADMIN");
 
   useEffect(() => {
-    if (selectedChatId || chats.length === 0) return;
-    setSelectedChatId(chats[0].chatId ?? chats[0].id);
-  }, [chats, selectedChatId]);
+    if (selectedChatId || filteredChats.length === 0) return;
+    setSelectedChatId(filteredChats[0].chatId ?? filteredChats[0].id);
+  }, [filteredChats, selectedChatId]);
 
   useEffect(() => {
     if (!selectedChatId) return;
@@ -109,8 +125,9 @@ const MessagesSection = ({
 
   const selectedChat = useMemo(
     () =>
-      chats.find((chat) => (chat.chatId ?? chat.id) === selectedChatId) ?? null,
-    [chats, selectedChatId],
+      filteredChats.find((chat) => (chat.chatId ?? chat.id) === selectedChatId) ??
+      null,
+    [filteredChats, selectedChatId],
   );
 
   return (
@@ -119,8 +136,8 @@ const MessagesSection = ({
         <div className={styles.chatListPane}>
           <div className={styles.title}>Chats</div>
           <div className={styles.chatList}>
-            {chats.length > 0 ? (
-              chats.map((chat) => {
+            {filteredChats.length > 0 ? (
+              filteredChats.map((chat) => {
                 const chatId = chat.chatId ?? chat.id;
                 const counterpart = chat.user2?.id === userId ? chat.user1 : chat.user2;
                 const lastMessage = Array.isArray(chat.messages)

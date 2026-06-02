@@ -3,9 +3,9 @@ import axios from "axios";
 import Button from "@/components/Button/Button";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
 import {
+  getAdminChats,
   getChatById,
   getCurrentAdminRolesFromJwt,
-  getSystemNannowChats,
   markSystemNannowChatRead,
   replySystemNannowChat,
 } from "@/pages/api/fetch";
@@ -101,32 +101,16 @@ const NannowChatSection = ({ user, onBackClick }: NannowChatSectionProps) => {
     try {
       setIsLoading(true);
       setError("");
-      const pageSize = 100;
-      let startIndex = 0;
-      let total = Number.POSITIVE_INFINITY;
-      let nextChat: ChatType | null = null;
-
-      while (startIndex < total) {
-        const response = await getSystemNannowChats({
-          startIndex,
-          pageSize,
-          sort: "latest",
-        });
-        const payload = response.data as
-          | { result?: { items?: ChatType[]; total?: number; pageSize?: number } }
-          | { items?: ChatType[]; total?: number; pageSize?: number };
-        const data = (payload as { result?: { items?: ChatType[] } }).result ?? payload;
-        const items = Array.isArray(data?.items) ? data.items : [];
-        const nextTotal = Number(data?.total ?? items.length);
-        const nextPageSize = Number(data?.pageSize ?? items.length ?? pageSize) || pageSize;
-
-        nextChat = items.find((item) => isSystemChatForUser(item, userId)) ?? null;
-        if (nextChat) break;
-
-        total = Number.isFinite(nextTotal) && nextTotal > 0 ? nextTotal : startIndex + items.length;
-        if (items.length === 0 || nextPageSize <= 0) break;
-        startIndex += nextPageSize;
-      }
+      const response = await getAdminChats({
+        startIndex: 0,
+        pageSize: 200,
+        sort: "latest",
+        search: userId,
+      });
+      const items = response.data?.result?.items ?? response.data?.items ?? [];
+      const nextChat = Array.isArray(items)
+        ? items.find((item) => isSystemChatForUser(item, userId)) ?? null
+        : null;
 
       const nextChatId = nextChat?.chatId ?? nextChat?.id ?? "";
 
