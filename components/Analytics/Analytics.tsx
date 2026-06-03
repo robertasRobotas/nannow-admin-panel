@@ -10,6 +10,7 @@ import {
   getCurrentAdminRolesFromJwt,
   getMarketplaceAnalytics,
   getMarketplaceAnalyticsLocations,
+  getNetIncomeDaily,
   getOnboardingRegistrationsByDay,
   rebuildMarketplaceAnalyticsDailySnapshots,
 } from "@/pages/api/fetch";
@@ -32,6 +33,12 @@ import {
   MarketplaceAnalyticsTimeseriesItem,
   OnboardingRegistrationsByDayItem,
 } from "@/types/MarketplaceAnalytics";
+import {
+  NetIncomeDailyItem,
+  NetIncomeDailyResponse,
+  NetIncomePeriod,
+  NetIncomeSummary,
+} from "@/types/NetIncome";
 import calendarImg from "@/assets/images/calendar.svg";
 import defaultAvatarImg from "@/assets/images/default-avatar.png";
 import styles from "./analytics.module.css";
@@ -125,6 +132,12 @@ const EMPTY_APPLIED_FILTERS: MarketplaceAnalyticsAppliedFilters = {
   topLimit: DEFAULT_TOP_LIMIT,
   city: "",
   country: "",
+};
+
+const EMPTY_NET_INCOME_SUMMARY: NetIncomeSummary = {
+  paymentTotalCents: 0,
+  refundTotalCents: 0,
+  netIncomeCents: 0,
 };
 
 const INTERVAL_OPTIONS = [
@@ -280,6 +293,11 @@ const formatWeekday = (date: Date) =>
     weekday: "short",
   });
 
+const formatMonthShort = (date: Date) =>
+  date.toLocaleDateString("en-GB", {
+    month: "short",
+  });
+
 const formatBucketLabel = (
   bucket: string,
   interval: MarketplaceAnalyticsInterval,
@@ -308,6 +326,11 @@ const formatBucketLabel = (
 const isWeekStartBucket = (bucket: string) => {
   const date = getBucketDate(bucket);
   return date?.getDay() === 1;
+};
+
+const isMonthStartBucket = (bucket: string) => {
+  const date = getBucketDate(bucket);
+  return date?.getDate() === 1;
 };
 
 const shouldShowBucketLabel = (
@@ -340,6 +363,32 @@ const openNativeDatePicker = (input: HTMLInputElement | null) => {
     return;
   }
   input.click();
+};
+
+const formatNetIncomeBucketLabel = (bucket: string, density: "tight" | "wide") => {
+  const date = getBucketDate(bucket);
+  if (!date) return [bucket];
+
+  if (density === "wide") {
+    return [
+      formatMonthShort(date),
+      date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+      }),
+    ];
+  }
+
+  return [formatWeekday(date), formatShortDate(date)];
+};
+
+const shouldShowNetIncomeLabel = (data: NetIncomeDailyItem[], index: number) => {
+  if (index === 0 || index === data.length - 1) return true;
+
+  if (data.length <= 10) return true;
+  if (data.length <= 35) return isWeekStartBucket(data[index].day);
+  if (data.length <= 90) return index % 7 === 0;
+
+  return isMonthStartBucket(data[index].day);
 };
 
 const escapeCsvValue = (value: string | number | null | undefined) => {
@@ -661,6 +710,112 @@ const RevenueChart = ({
                     x={bucketCenterX}
                     dy={lineIndex === 0 ? 0 : 13}
                   >
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+const NetIncomeChart = ({
+  data,
+}: {
+  data: NetIncomeDailyItem[];
+}) => {
+  if (data.length === 0) {
+    return <div className={styles.chartEmpty}>No net income data for selected period</div>;
+  }
+
+  const width = 900;
+  const height = 280;
+  const padding = { top: 18, right: 20, bottom: 54, left: 56 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const maxValue = Math.max(0, ...data.map((item) => item.netIncomeCents));
+  const minValue = Math.min(0, ...data.map((item) => item.netIncomeCents));
+  const range = Math.max(1, maxValue - minValue);
+  const slotWidth = chartWidth / data.length;
+  const barWidth = Math.max(3, Math.min(18, slotWidth * 0.7));
+  const zeroY = padding.top + ((maxValue - 0) / range) * chartHeight;
+  const labelDensity = data.length > 90 ? "wide" : "tight";
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
+      {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+        const value = maxValue - range * ratio;
+        const y = padding.top + chartHeight * ratio;
+        return (
+          <g key={ratio}>
+            <line
+              x1={padding.left}
+              y1={y}
+              x2={width - padding.right}
+              y2={y}
+              className={Math.abs(value) < range * 0.02 ? styles.chartZeroLine : styles.chartGridLine}
+            />
+            <text
+              x={padding.left - 8}
+              y={y + 4}
+              className={styles.chartAxisLabel}
+              textAnchor="end"
+            >
+              {formatMoneyFromCents(value)}
+            </text>
+          </g>
+        );
+      })}
+
+      {data.map((item, index) => {
+        const baseX = padding.left + slotWidth * index;
+        const bucketCenterX = baseX + slotWidth / 2;
+        const value = item.netIncomeCents;
+        const valueHeight = (Math.abs(value) / range) * chartHeight;
+        const y =
+          value >= 0
+            ? zeroY - valueHeight
+            : zeroY;
+        const shouldShowLabel = shouldShowNetIncomeLabel(data, index);
+        const labelLines = formatNetIncomeBucketLabel(item.day, labelDensity);
+        const shouldShowMonthBoundary =
+          data.length > 35 && index > 0 && isMonthStartBucket(item.day);
+
+        return (
+          <g key={`${item.day}-${index}`}>
+            {shouldShowMonthBoundary && (
+              <line
+                x1={bucketCenterX}
+                y1={padding.top}
+                x2={bucketCenterX}
+                y2={padding.top + chartHeight}
+                className={styles.chartWeekBoundaryLine}
+              />
+            )}
+            <rect
+              x={baseX + (slotWidth - barWidth) / 2}
+              y={y}
+              width={barWidth}
+              height={Math.max(valueHeight, 1)}
+              rx={Math.min(4, barWidth / 2)}
+              className={
+                value >= 0
+                  ? styles.netIncomeBarPositive
+                  : styles.netIncomeBarNegative
+              }
+            />
+            {shouldShowLabel && (
+              <text
+                x={bucketCenterX}
+                y={height - (labelLines.length > 1 ? 28 : 18)}
+                textAnchor="middle"
+                className={styles.chartAxisLabel}
+              >
+                {labelLines.map((line, lineIndex) => (
+                  <tspan key={`${item.day}-${line}`} x={bucketCenterX} dy={lineIndex === 0 ? 0 : 13}>
                     {line}
                   </tspan>
                 ))}
@@ -1084,14 +1239,19 @@ const Analytics = () => {
   const defaultRange = useMemo(() => getPresetRange("this_month"), []);
   const [analytics, setAnalytics] =
     useState<MarketplaceAnalyticsResponseData>(EMPTY_ANALYTICS_DATA);
+  const [netIncomeSummary, setNetIncomeSummary] =
+    useState<NetIncomeSummary>(EMPTY_NET_INCOME_SUMMARY);
+  const [netIncomeItems, setNetIncomeItems] = useState<NetIncomeDailyItem[]>([]);
   const [onboardingByDayItems, setOnboardingByDayItems] = useState<
     OnboardingRegistrationsByDayItem[]
   >([]);
   const [appliedFilters, setAppliedFilters] =
     useState<MarketplaceAnalyticsAppliedFilters>(EMPTY_APPLIED_FILTERS);
   const [loading, setLoading] = useState(false);
+  const [netIncomeLoading, setNetIncomeLoading] = useState(false);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
   const [error, setError] = useState("");
+  const [netIncomeError, setNetIncomeError] = useState("");
   const [onboardingError, setOnboardingError] = useState("");
   const [validationError, setValidationError] = useState("");
   const [selectedPeriod, setSelectedPeriod] =
@@ -1329,6 +1489,40 @@ const Analytics = () => {
     selectedTopLimit,
   ]);
 
+  const fetchNetIncome = useCallback(async () => {
+    try {
+      setNetIncomeLoading(true);
+      setNetIncomeError("");
+
+      const period =
+        selectedPeriod === "custom"
+          ? "custom"
+          : selectedPeriod;
+
+      const response = await getNetIncomeDaily({
+        period: period as NetIncomePeriod,
+        dateFrom: selectedPeriod === "custom" ? appliedStartDate : undefined,
+        dateTo: selectedPeriod === "custom" ? appliedEndDate : undefined,
+        timezone: TIMEZONE,
+      });
+
+      const payload = response.data as NetIncomeDailyResponse;
+      setNetIncomeSummary(payload?.summary ?? EMPTY_NET_INCOME_SUMMARY);
+      setNetIncomeItems(Array.isArray(payload?.items) ? payload.items : []);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      console.log(err);
+      setNetIncomeError("Failed to load net income.");
+      setNetIncomeSummary(EMPTY_NET_INCOME_SUMMARY);
+      setNetIncomeItems([]);
+    } finally {
+      setNetIncomeLoading(false);
+    }
+  }, [appliedEndDate, appliedStartDate, router, selectedPeriod]);
+
   const fetchOnboardingByDay = useCallback(async () => {
     try {
       setOnboardingLoading(true);
@@ -1382,6 +1576,10 @@ const Analytics = () => {
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
+
+  useEffect(() => {
+    fetchNetIncome();
+  }, [fetchNetIncome]);
 
   useEffect(() => {
     fetchOnboardingByDay();
@@ -1798,6 +1996,73 @@ const Analytics = () => {
 
       {!loading && !error && (
         <>
+          <section className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Net income</h3>
+              <div className={styles.sectionSubtle}>
+                Order payments minus refunds, grouped by day
+              </div>
+            </div>
+
+            {netIncomeLoading && (
+              <div className={styles.loadingState}>Loading net income...</div>
+            )}
+            {!netIncomeLoading && netIncomeError && (
+              <div className={styles.loadingState}>{netIncomeError}</div>
+            )}
+            {!netIncomeLoading && !netIncomeError && (
+              <>
+                <div className={styles.kpiGrid}>
+                  <div className={styles.kpiCard}>
+                    <div className={styles.kpiLabel}>Order payments</div>
+                    <div className={styles.kpiValue}>
+                      {formatMoneyFromCents(netIncomeSummary.paymentTotalCents)}
+                    </div>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <div className={styles.kpiLabel}>Refunds</div>
+                    <div className={styles.kpiValue}>
+                      {formatMoneyFromCents(netIncomeSummary.refundTotalCents)}
+                    </div>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <div className={styles.kpiLabel}>Net income</div>
+                    <div className={styles.kpiValue}>
+                      {formatMoneyFromCents(netIncomeSummary.netIncomeCents)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.panelCard}>
+                  <div className={styles.panelHeader}>
+                    <h3 className={styles.panelTitle}>Net income by day</h3>
+                    <div className={styles.chartLegend}>
+                      <span className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.legendDotPaid}`}
+                        />
+                        {`Payments ${formatMoneyFromCents(netIncomeSummary.paymentTotalCents)}`}
+                      </span>
+                      <span className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.legendDotRefund}`}
+                        />
+                        {`Refunds ${formatMoneyFromCents(netIncomeSummary.refundTotalCents)}`}
+                      </span>
+                      <span className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.legendDotNetIncome}`}
+                        />
+                        {`Net ${formatMoneyFromCents(netIncomeSummary.netIncomeCents)}`}
+                      </span>
+                    </div>
+                  </div>
+                  <NetIncomeChart data={netIncomeItems} />
+                </div>
+              </>
+            )}
+          </section>
+
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Onboarding by day</h3>

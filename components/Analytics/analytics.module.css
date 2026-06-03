@@ -315,6 +315,16 @@
   background: #19ad3e;
 }
 
+.legendDotRefund {
+  fill: #d14343;
+  background: #d14343;
+}
+
+.legendDotNetIncome {
+  fill: #2367c8;
+  background: #2367c8;
+}
+
 .legendDotOnboardingRaw,
 .onboardingRawBar {
   fill: #2367c8;
@@ -345,6 +355,10 @@
   stroke: rgba(0, 0, 0, 0.08);
 }
 
+.chartZeroLine {
+  stroke: rgba(0, 0, 0, 0.24);
+}
+
 .chartWeekBoundaryLine {
   stroke: rgba(0, 0, 0, 0.12);
   stroke-dasharray: 3 5;
@@ -361,6 +375,14 @@
   color: rgba(0, 0, 0, 0.52);
   font-size: 14px;
   font-weight: 700;
+}
+
+.netIncomeBarPositive {
+  fill: #2367c8;
+}
+
+.netIncomeBarNegative {
+  fill: #d14343;
 }
 
 .repeatMetricsGrid {

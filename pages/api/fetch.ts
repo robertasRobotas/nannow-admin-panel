@@ -1451,6 +1451,30 @@ export const getEarnedProfit = async (params?: {
   return response;
 };
 
+export const getNetIncomeDaily = async (params: {
+  period: "today" | "this_week" | "this_month" | "this_year" | "custom";
+  dateFrom?: string;
+  dateTo?: string;
+  timezone?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/financial/net-income/daily`,
+    {
+      params: {
+        period: params.period,
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+        timezone: params.timezone ?? "Europe/Vilnius",
+      },
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getMarketplaceAnalytics = async (params?: {
   dateFrom?: string;
   dateTo?: string;
