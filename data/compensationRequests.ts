@@ -11,6 +11,14 @@ export type NormalizedCompensationRequest = CompensationRequest & {
 
 const LEGACY_REQUEST_ID = "legacy-compensation-request";
 
+const normalizeCommentText = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.filter((comment): comment is string => typeof comment === "string").join("\n");
+  }
+  return "";
+};
+
 const parseDate = (value?: string | null) => {
   if (!value) return null;
   const date = new Date(value);
@@ -47,6 +55,7 @@ export const normalizeCompensationRequests = (
     return [...newRequests]
       .map((request, index) => ({
         ...request,
+        comments: normalizeCommentText((request as { comments?: unknown }).comments),
         id:
           request.requestId?.trim() ||
           request.id?.trim() ||

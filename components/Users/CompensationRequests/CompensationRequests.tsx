@@ -21,6 +21,14 @@ type CompensationRequestsProps = {
   onBackClick?: () => void;
 };
 
+const normalizeCommentText = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.filter((comment): comment is string => typeof comment === "string").join("\n");
+  }
+  return "";
+};
+
 const CompensationRequests = ({
   clientId,
   onBackClick,
@@ -76,7 +84,7 @@ const CompensationRequests = ({
     }
 
     setDraftStatus(activeRequest.status);
-    setDraftComment(activeRequest.comments ?? "");
+    setDraftComment(normalizeCommentText(activeRequest.comments));
   }, [activeRequest]);
 
   const updateRequestQuery = useCallback(
@@ -148,7 +156,7 @@ const CompensationRequests = ({
       return;
     }
 
-    const nextComment = draftComment.trim();
+    const nextComment = normalizeCommentText(draftComment).trim();
     if (!draftStatus.trim()) {
       setSaveError("Status is required.");
       return;
