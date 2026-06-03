@@ -39,6 +39,29 @@
   align-self: stretch;
 }
 
+.compensationMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.compensationMetaLine {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compensationMetaStatus {
+  color: #111;
+  font-weight: 700;
+}
+
 .statsWrapper {
   display: flex;
   flex-direction: column;

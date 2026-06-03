@@ -1,17 +1,24 @@
-import { User } from "@/types/Client";
 import styles from "./userCard.module.css";
 import Link from "next/link";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
 import { useRef, type DragEvent, type MouseEvent } from "react";
+import {
+  getCompensationPreview,
+  UserWithCompensationDetails,
+} from "../CompensationUsers/compensationPreview";
 
 type UserCardProps = {
-  user: User;
+  user: UserWithCompensationDetails;
   mode: "client" | "provider";
+  showCompensationInfo?: boolean;
 };
 
-const UserCard = ({ user, mode }: UserCardProps) => {
+const UserCard = ({ user, mode, showCompensationInfo }: UserCardProps) => {
   const href = `/${mode}/${user.userId}`;
   const hasSelectionRef = useRef(false);
+  const compensationPreview = showCompensationInfo
+    ? getCompensationPreview(user)
+    : null;
 
   const updateSelectionState = () => {
     hasSelectionRef.current =
@@ -53,6 +60,21 @@ const UserCard = ({ user, mode }: UserCardProps) => {
           finalPrice={user.finalPrice}
           enableImageViewer={false}
         />
+        {compensationPreview && (
+          <div className={styles.compensationMeta}>
+            <div
+              className={`${styles.compensationMetaLine} ${styles.compensationMetaStatus}`}
+            >
+              {compensationPreview.status}
+            </div>
+            <div className={styles.compensationMetaLine}>
+              {compensationPreview.changedAt}
+            </div>
+            <div className={styles.compensationMetaLine}>
+              {compensationPreview.comment}
+            </div>
+          </div>
+        )}
       </div>
     </Link>
   );

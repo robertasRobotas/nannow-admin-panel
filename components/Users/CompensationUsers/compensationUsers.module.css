@@ -1,0 +1,200 @@
+.main {
+  padding: 40px 40px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 100%;
+  width: 100%;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.pageHeroRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.pageHeroTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: #000;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.68px;
+  line-height: 1.1;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #111;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pageHeroSearch {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 280px;
+  max-width: 320px;
+  width: 100%;
+  margin-left: auto;
+}
+
+.pageHeroSearchBar {
+  width: 100%;
+}
+
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+}
+
+.toolbarLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.viewToggle {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: 78px;
+  min-width: 78px;
+  max-width: 78px;
+  height: 40px;
+  padding: 3px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.viewToggleSlider {
+  pointer-events: none;
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  z-index: 0;
+  width: calc(50% - 4px);
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease;
+}
+
+.viewToggleSliderRight {
+  transform: translateX(calc(100% + 2px));
+}
+
+.viewToggleBtn {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 35px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.viewToggleBtn:hover {
+  color: #111;
+}
+
+.viewToggleBtn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.viewToggleBtnActive {
+  color: #111;
+}
+
+.emptyState {
+  padding: 24px 4px;
+  color: #777;
+  font-size: 15px;
+}
+
+.paginationDock {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.pagination {
+  margin-top: 0;
+}
+
+@media (max-width: 980px) {
+  .main {
+    padding: 24px 20px 0;
+  }
+
+  .pageHeroRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pageHeroTitleWrap {
+    width: 100%;
+  }
+
+  .pageHeroSearch {
+    max-width: none;
+    min-width: 0;
+  }
+
+  .toolbarRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbarRight {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -16,6 +16,7 @@ type HeaderMenuProps = {
   onClose: () => void;
   ordersAttentionNumber?: number;
   usersAttentionNumber?: number;
+  requestedCompensationAttentionNumber?: number;
   feedbackAttentionNumber?: number;
   criminalCheckAttentionNumber?: number;
   documentsAttentionNumber?: number;
@@ -36,6 +37,7 @@ const getAttentionForLink = (
     HeaderMenuProps,
     | "ordersAttentionNumber"
     | "usersAttentionNumber"
+    | "requestedCompensationAttentionNumber"
     | "feedbackAttentionNumber"
     | "criminalCheckAttentionNumber"
     | "documentsAttentionNumber"
@@ -44,9 +46,11 @@ const getAttentionForLink = (
     | "reportsAttentionNumber"
   >,
 ): number | undefined => {
+  const normalizedLink = link.split("?")[0];
   const {
     ordersAttentionNumber,
     usersAttentionNumber,
+    requestedCompensationAttentionNumber,
     feedbackAttentionNumber,
     criminalCheckAttentionNumber,
     documentsAttentionNumber,
@@ -54,28 +58,34 @@ const getAttentionForLink = (
     nannowChatsAttentionNumber,
     reportsAttentionNumber,
   } = props;
-  if (link === "/orders" && (ordersAttentionNumber ?? 0) > 0) {
+  if (normalizedLink === "/orders" && (ordersAttentionNumber ?? 0) > 0) {
     return ordersAttentionNumber;
   }
-  if (link === "/users" && (usersAttentionNumber ?? 0) > 0) {
+  if (
+    normalizedLink === "/compensation" ||
+    normalizedLink === "/users/compensation-requests"
+  ) {
+    return requestedCompensationAttentionNumber;
+  }
+  if (normalizedLink === "/users" && (usersAttentionNumber ?? 0) > 0) {
     return usersAttentionNumber;
   }
-  if (link === "/feedback" && (feedbackAttentionNumber ?? 0) > 0) {
+  if (normalizedLink === "/feedback" && (feedbackAttentionNumber ?? 0) > 0) {
     return feedbackAttentionNumber;
   }
-  if (link === "/criminal-check" && (criminalCheckAttentionNumber ?? 0) > 0) {
+  if (normalizedLink === "/criminal-check" && (criminalCheckAttentionNumber ?? 0) > 0) {
     return criminalCheckAttentionNumber;
   }
-  if (link === "/documents" && (documentsAttentionNumber ?? 0) > 0) {
+  if (normalizedLink === "/documents" && (documentsAttentionNumber ?? 0) > 0) {
     return documentsAttentionNumber;
   }
-  if (link === "/messages" && (messagesAttentionNumber ?? 0) > 0) {
+  if (normalizedLink === "/messages" && (messagesAttentionNumber ?? 0) > 0) {
     return messagesAttentionNumber;
   }
-  if (link === "/nannow-chats" && (nannowChatsAttentionNumber ?? 0) > 0) {
+  if (normalizedLink === "/nannow-chats" && (nannowChatsAttentionNumber ?? 0) > 0) {
     return nannowChatsAttentionNumber;
   }
-  if (link === "/reports" && (reportsAttentionNumber ?? 0) > 0) {
+  if (normalizedLink === "/reports" && (reportsAttentionNumber ?? 0) > 0) {
     return reportsAttentionNumber;
   }
   return undefined;
@@ -86,6 +96,7 @@ const HeaderMenu = ({
   onClose,
   ordersAttentionNumber,
   usersAttentionNumber,
+  requestedCompensationAttentionNumber,
   feedbackAttentionNumber,
   criminalCheckAttentionNumber,
   documentsAttentionNumber,
@@ -105,6 +116,29 @@ const HeaderMenu = ({
   const [profilePopoverVisible, setProfilePopoverVisible] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const profileRevealRafRef = useRef<number[]>([]);
+  const isLinkActive = (link: string) => {
+    const normalizedLink = link.split("?")[0];
+
+    if (normalizedLink === "/users") {
+      return (
+        pathname === "/users" ||
+        (pathname.startsWith("/users/") &&
+          pathname !== "/users/compensation-requests")
+      );
+    }
+
+    if (
+      normalizedLink === "/compensation" ||
+      normalizedLink === "/users/compensation-requests"
+    ) {
+      return (
+        pathname.startsWith("/compensation") ||
+        pathname.startsWith("/users/compensation-requests")
+      );
+    }
+
+    return pathname === normalizedLink || pathname.startsWith(`${normalizedLink}/`);
+  };
 
   useEffect(() => {
     if (isProfileMenuOpen) {
@@ -145,11 +179,11 @@ const HeaderMenu = ({
     };
   }, [profilePopoverMounted]);
   const { pathname } = useRouter();
-  const activeSegment = `/${pathname.split("/")[1]}`;
 
   const attentionProps = {
     ordersAttentionNumber,
     usersAttentionNumber,
+    requestedCompensationAttentionNumber,
     feedbackAttentionNumber,
     criminalCheckAttentionNumber,
     documentsAttentionNumber,
@@ -201,7 +235,7 @@ const HeaderMenu = ({
         <nav className={styles.nav}>
           <ul>
             {links.map((l) => {
-              const isActive = activeSegment === l.link;
+              const isActive = isLinkActive(l.link);
               const attention = getAttentionForLink(l.link, attentionProps);
               return (
                 <li key={l.link}>

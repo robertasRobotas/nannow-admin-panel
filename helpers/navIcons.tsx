@@ -23,6 +23,8 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/financial-profit-earned": BadgeEuro,
   "/analytics": BarChart3,
   "/users": Users,
+  "/compensation": Receipt,
+  "/users/compensation-requests": Receipt,
   "/campaigns": Megaphone,
   "/orders": ShoppingBag,
   "/criminal-check": Shield,
@@ -44,7 +46,8 @@ export function NavIcon({
   path: string;
   className?: string;
 }) {
-  const Icon = NAV_ICONS[path] ?? CircleHelp;
+  const normalizedPath = path.split("?")[0];
+  const Icon = NAV_ICONS[normalizedPath] ?? CircleHelp;
   return (
     <Icon className={className} size={18} strokeWidth={1.75} aria-hidden />
   );

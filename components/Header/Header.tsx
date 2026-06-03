@@ -497,9 +497,7 @@ const Header = () => {
     additionalPaymentsNotPayoutedCount +
     unfinishedReminderNotifiedCount;
   const usersAttentionNumber =
-    notFinishedOnboardingCount +
-    pendingProviderSpecialSkillsCount +
-    requestedCompensationInfoAtCount;
+    notFinishedOnboardingCount + pendingProviderSpecialSkillsCount;
   const visibleLinks = isSuperAdmin
     ? [{ title: "Super Access", link: "/super-access" }, ...links]
     : links;
@@ -554,28 +552,38 @@ const Header = () => {
   };
 
   const getAttentionForLink = (link: string): number | undefined => {
-    if (link === "/orders" && ordersAttentionNumber > 0) {
+    const normalizedLink = link.split("?")[0];
+
+    if (normalizedLink === "/orders" && ordersAttentionNumber > 0) {
       return ordersAttentionNumber;
     }
-    if (link === "/users" && usersAttentionNumber > 0) {
+    if (
+      normalizedLink === "/compensation" ||
+      normalizedLink === "/users/compensation-requests"
+    ) {
+      return requestedCompensationInfoAtCount > 0
+        ? requestedCompensationInfoAtCount
+        : undefined;
+    }
+    if (normalizedLink === "/users" && usersAttentionNumber > 0) {
       return usersAttentionNumber;
     }
-    if (link === "/feedback" && notSolvedFeedbackCount > 0) {
+    if (normalizedLink === "/feedback" && notSolvedFeedbackCount > 0) {
       return notSolvedFeedbackCount;
     }
-    if (link === "/criminal-check" && pendingCriminalChecksCount > 0) {
+    if (normalizedLink === "/criminal-check" && pendingCriminalChecksCount > 0) {
       return pendingCriminalChecksCount;
     }
-    if (link === "/documents" && notReviewedDocumentsCount > 0) {
+    if (normalizedLink === "/documents" && notReviewedDocumentsCount > 0) {
       return notReviewedDocumentsCount;
     }
-    if (link === "/messages" && unreadAdminMessagesCount > 0) {
+    if (normalizedLink === "/messages" && unreadAdminMessagesCount > 0) {
       return unreadAdminMessagesCount;
     }
-    if (link === "/nannow-chats" && unreadSystemNannowChatsCount > 0) {
+    if (normalizedLink === "/nannow-chats" && unreadSystemNannowChatsCount > 0) {
       return unreadSystemNannowChatsCount;
     }
-    if (link === "/reports" && notResolvedReportsCount > 0) {
+    if (normalizedLink === "/reports" && notResolvedReportsCount > 0) {
       return notResolvedReportsCount;
     }
     return undefined;
@@ -608,7 +616,29 @@ const Header = () => {
     }
   };
 
-  const activeSegment = `/${pathname.split("/")[1]}`;
+  const isLinkActive = (link: string) => {
+    const normalizedLink = link.split("?")[0];
+
+    if (normalizedLink === "/users") {
+      return (
+        pathname === "/users" ||
+        (pathname.startsWith("/users/") &&
+          pathname !== "/users/compensation-requests")
+      );
+    }
+
+    if (
+      normalizedLink === "/compensation" ||
+      normalizedLink === "/users/compensation-requests"
+    ) {
+      return (
+        pathname.startsWith("/compensation") ||
+        pathname.startsWith("/users/compensation-requests")
+      );
+    }
+
+    return pathname === normalizedLink || pathname.startsWith(`${normalizedLink}/`);
+  };
 
   return (
     <>
@@ -626,7 +656,7 @@ const Header = () => {
           <nav className={styles.nav}>
             <ul>
               {visibleLinks.map((l) => {
-                const isActive = activeSegment === l.link;
+                const isActive = isLinkActive(l.link);
                 const attention = getAttentionForLink(l.link);
                 return (
                   <li key={l.link}>
@@ -794,14 +824,17 @@ const Header = () => {
         </div>
       </div>
       {isMenuDisplayed && (
-        <HeaderMenu
-          links={visibleLinks}
-          onClose={() => setMenuDisplayed(false)}
-          ordersAttentionNumber={ordersAttentionNumber}
-          usersAttentionNumber={usersAttentionNumber}
-          feedbackAttentionNumber={notSolvedFeedbackCount}
-          criminalCheckAttentionNumber={pendingCriminalChecksCount}
-          documentsAttentionNumber={notReviewedDocumentsCount}
+          <HeaderMenu
+            links={visibleLinks}
+            onClose={() => setMenuDisplayed(false)}
+            ordersAttentionNumber={ordersAttentionNumber}
+            usersAttentionNumber={usersAttentionNumber}
+            requestedCompensationAttentionNumber={
+              requestedCompensationInfoAtCount
+            }
+            feedbackAttentionNumber={notSolvedFeedbackCount}
+            criminalCheckAttentionNumber={pendingCriminalChecksCount}
+            documentsAttentionNumber={notReviewedDocumentsCount}
           messagesAttentionNumber={unreadAdminMessagesCount}
           nannowChatsAttentionNumber={unreadSystemNannowChatsCount}
           reportsAttentionNumber={notResolvedReportsCount}

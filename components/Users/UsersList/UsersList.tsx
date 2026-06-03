@@ -1,17 +1,21 @@
-import { User } from "@/types/Client";
 import styles from "./usersList.module.css";
 import defaultUserImg from "@/assets/images/default-avatar.png";
 import Link from "next/link";
 import { isRowNavExcluded } from "@/lib/utils";
 import UserEmailIdLine from "../UserEmailIdLine/UserEmailIdLine";
 import { useRef, type DragEvent, type MouseEvent } from "react";
+import {
+  getCompensationPreview,
+  UserWithCompensationDetails,
+} from "../CompensationUsers/compensationPreview";
 
 type UsersListProps = {
-  users: User[];
+  users: UserWithCompensationDetails[];
   mode: "client" | "provider";
+  showCompensationInfo?: boolean;
 };
 
-const UsersList = ({ users, mode }: UsersListProps) => {
+const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
   const hasSelectionRef = useRef(false);
 
   const updateSelectionState = () => {
@@ -29,6 +33,9 @@ const UsersList = ({ users, mode }: UsersListProps) => {
         const displayName =
           `${user.firstName} ${user.lastName}`.trim() || "Unknown user";
         const href = `/${mode}/${user.userId}`;
+        const compensationPreview = showCompensationInfo
+          ? getCompensationPreview(user)
+          : null;
 
         const onRowClick = (e: MouseEvent<HTMLAnchorElement>) => {
           if (isRowNavExcluded(e.target)) {
@@ -71,6 +78,21 @@ const UsersList = ({ users, mode }: UsersListProps) => {
                 )}
               </div>
             </div>
+            {compensationPreview && (
+              <div className={styles.compensationMeta}>
+                <div
+                  className={`${styles.compensationMetaLine} ${styles.compensationMetaStatus}`}
+                >
+                  {compensationPreview.status}
+                </div>
+                <div className={styles.compensationMetaLine}>
+                  {compensationPreview.changedAt}
+                </div>
+                <div className={styles.compensationMetaLine}>
+                  {compensationPreview.comment}
+                </div>
+              </div>
+            )}
           </Link>
         );
       })}

@@ -62,6 +62,31 @@
   flex: 1;
 }
 
+.compensationMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 240px;
+  max-width: 320px;
+  margin-left: auto;
+  padding-left: 16px;
+}
+
+.compensationMetaLine {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compensationMetaStatus {
+  color: #111;
+  font-weight: 700;
+}
+
 .avatar {
   width: 40px;
   height: 40px;
@@ -100,5 +125,12 @@
   .row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .compensationMeta {
+    min-width: 0;
+    max-width: none;
+    margin-left: 0;
+    padding-left: 56px;
   }
 }

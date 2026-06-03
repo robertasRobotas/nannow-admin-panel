@@ -21,7 +21,6 @@ import {
   getPendingProviderSpecialSkillsCount,
   getProviderLocationPermissionsStats,
   getProviderById,
-  getRequestedCompensationInfoAtCount,
   getTestUsers,
   getUsersAppVersionStats,
   setUserBanStatus,
@@ -310,10 +309,6 @@ const Users = () => {
   const [
     pendingProviderSpecialSkillsCount,
     setPendingProviderSpecialSkillsCount,
-  ] = useState(0);
-  const [
-    requestedCompensationInfoAtCount,
-    setRequestedCompensationInfoAtCount,
   ] = useState(0);
   const [isBanConfirmModalOpen, setIsBanConfirmModalOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<BannedUser | null>(null);
@@ -672,14 +667,12 @@ const Users = () => {
         providerResponse,
         statsResponse,
         appVersionStatsResponse,
-        requestedCompensationResponse,
         locationPermissionsStatsResponse,
       ] = await Promise.allSettled([
         getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
         getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
         getOnboardingStats(),
         getUsersAppVersionStats(),
-        getRequestedCompensationInfoAtCount(),
         getProviderLocationPermissionsStats(),
       ]);
 
@@ -796,14 +789,6 @@ const Users = () => {
           totalUsers: 0,
           totalUsersByLoginMode: {},
         });
-      }
-
-      if (requestedCompensationResponse.status === "fulfilled") {
-        const total =
-          requestedCompensationResponse.value.data?.total ??
-          requestedCompensationResponse.value.data?.result?.total ??
-          0;
-        setRequestedCompensationInfoAtCount(Number(total) || 0);
       }
 
       if (locationPermissionsStatsResponse.status === "fulfilled") {
@@ -1122,44 +1107,6 @@ const Users = () => {
   }, [fetchPendingProviderSpecialSkills]);
 
   useEffect(() => {
-    const handleRequestedCompensationInfoRefresh = async (event: Event) => {
-      const delta = (event as CustomEvent<{ delta?: number }>).detail?.delta;
-      if (typeof delta === "number") {
-        setRequestedCompensationInfoAtCount((prev) =>
-          Math.max(prev + delta, 0),
-        );
-        if (clientCompensationFilter === "REQUESTED") {
-          fetchUsers();
-        }
-        return;
-      }
-
-      try {
-        const response = await getRequestedCompensationInfoAtCount();
-        const total = response.data?.total ?? response.data?.result?.total ?? 0;
-        setRequestedCompensationInfoAtCount(Number(total) || 0);
-        if (clientCompensationFilter === "REQUESTED") {
-          fetchUsers();
-        }
-      } catch (err) {
-        console.log(err);
-      }
-    };
-
-    window.addEventListener(
-      "requested-compensation-info-count-refresh",
-      handleRequestedCompensationInfoRefresh,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "requested-compensation-info-count-refresh",
-        handleRequestedCompensationInfoRefresh,
-      );
-    };
-  }, [clientCompensationFilter, fetchUsers]);
-
-  useEffect(() => {
     if (!router.isReady || !modeReady) return;
     if (isActiveUsersSelected) {
       fetchConnectedUsersList();
@@ -1233,7 +1180,6 @@ const Users = () => {
 
   useEffect(() => {
     if (lastEvent?.type !== "CLIENT_REQUESTED_COMPENSATION_INFO") return;
-    setRequestedCompensationInfoAtCount((prev) => prev + 1);
     if (clientCompensationFilter === "REQUESTED") {
       fetchUsers();
     }
@@ -1421,34 +1367,6 @@ const Users = () => {
                   type="OUTLINED"
                   onClick={() => router.push("/users/filter-export")}
                 />
-                {requestedCompensationInfoAtCount > 0 && (
-                  <Button
-                    title="Compensation requests"
-                    type="OUTLINED"
-                    isSelected={
-                      isSelectedClients &&
-                      clientCompensationFilter === "REQUESTED"
-                    }
-                    attentionNumber={requestedCompensationInfoAtCount}
-                    onClick={() => {
-                      setSelectedViewOption(0);
-                      setClientCompensationFilter("REQUESTED");
-                      setItemOffset(0);
-                      router.push(
-                        {
-                          pathname: router.pathname,
-                          query: {
-                            mode: "clients",
-                            hasRequestedCompensationInfoAt: "true",
-                            page: "1",
-                          },
-                        },
-                        undefined,
-                        { shallow: true, scroll: false },
-                      );
-                    }}
-                  />
-                )}
                 {isProvidersSelected && (
                   <>
                     <DropDownButton
