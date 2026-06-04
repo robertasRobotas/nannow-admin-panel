@@ -117,6 +117,20 @@ const ORDER_STATUSES_SUPER = Array.from(
   ]),
 );
 
+const PROVIDER_BANK_ONBOARDING_STATUSES = [
+  "NOT_STARTED",
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+] as const;
+
+const PROVIDER_KYC_STATUSES = [
+  "NOT_SUBMITTED",
+  "PENDING",
+  "VERIFIED",
+  "REJECTED",
+] as const;
+
 const extractArray = (value: unknown): EntityRecord[] => {
   if (Array.isArray(value)) {
     return value.filter(
@@ -509,6 +523,13 @@ const withOrderFinancialFields = (item: EntityRecord): EntityRecord => ({
   cancelFeeAmountCents: item.cancelFeeAmountCents ?? null,
 });
 
+const withProviderStatusFields = (item: EntityRecord): EntityRecord => ({
+  ...item,
+  bankOnboardingStatus:
+    item.bankOnboardingStatus ?? PROVIDER_BANK_ONBOARDING_STATUSES[0],
+  kycStatus: item.kycStatus ?? PROVIDER_KYC_STATUSES[0],
+});
+
 const SuperAccess = () => {
   const router = useRouter();
   const { lastEvent } = useAdminSocket();
@@ -882,6 +903,8 @@ const SuperAccess = () => {
       const normalizedItem =
         entity === "orders" && parsedItem
           ? withOrderFinancialFields(parsedItem)
+          : entity === "providers" && parsedItem
+            ? withProviderStatusFields(parsedItem)
           : parsedItem;
       setSelectedItem(normalizedItem);
       setDraft(normalizedItem ?? {});
@@ -3213,6 +3236,64 @@ const SuperAccess = () => {
                         {optionValues.map((optionValue) => (
                           <option key={optionValue} value={optionValue}>
                             {optionValue}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  );
+                }
+
+                const hasProviderBankOnboardingStatusDropdown =
+                  entity === "providers" &&
+                  key === "bankOnboardingStatus" &&
+                  typeof value === "string";
+                if (hasProviderBankOnboardingStatusDropdown) {
+                  const currentStatus = String(value);
+                  const statusOptions = PROVIDER_BANK_ONBOARDING_STATUSES.includes(
+                    currentStatus as (typeof PROVIDER_BANK_ONBOARDING_STATUSES)[number],
+                  )
+                    ? PROVIDER_BANK_ONBOARDING_STATUSES
+                    : [currentStatus, ...PROVIDER_BANK_ONBOARDING_STATUSES];
+                  return (
+                    <label key={key} htmlFor={fieldId} className={styles.field}>
+                      <span>Bank Onboarding Status</span>
+                      <select
+                        id={fieldId}
+                        value={currentStatus}
+                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                      >
+                        {statusOptions.map((statusValue) => (
+                          <option key={statusValue} value={statusValue}>
+                            {statusValue}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  );
+                }
+
+                const hasProviderKycStatusDropdown =
+                  entity === "providers" &&
+                  key === "kycStatus" &&
+                  typeof value === "string";
+                if (hasProviderKycStatusDropdown) {
+                  const currentStatus = String(value);
+                  const statusOptions = PROVIDER_KYC_STATUSES.includes(
+                    currentStatus as (typeof PROVIDER_KYC_STATUSES)[number],
+                  )
+                    ? PROVIDER_KYC_STATUSES
+                    : [currentStatus, ...PROVIDER_KYC_STATUSES];
+                  return (
+                    <label key={key} htmlFor={fieldId} className={styles.field}>
+                      <span>KYC Status</span>
+                      <select
+                        id={fieldId}
+                        value={currentStatus}
+                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                      >
+                        {statusOptions.map((statusValue) => (
+                          <option key={statusValue} value={statusValue}>
+                            {statusValue}
                           </option>
                         ))}
                       </select>
