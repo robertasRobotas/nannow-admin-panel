@@ -329,6 +329,8 @@ const Users = () => {
     useState<ProviderSpecialSkillsFilter>("ALL");
   const [clientCompensationFilter, setClientCompensationFilter] =
     useState<ClientCompensationFilter>("ALL");
+  const [showFinishedOnboardingOnly, setShowFinishedOnboardingOnly] =
+    useState(false);
   const [newTestUserEmail, setNewTestUserEmail] = useState("");
   const [testUserEditValues, setTestUserEditValues] = useState<
     Record<string, string>
@@ -520,12 +522,17 @@ const Users = () => {
       params: {
         viewOptionIndex?: number;
         page?: number;
+        showFinishedOnboardingOnly?: boolean;
       },
       method: "push" | "replace" = "push",
     ) => {
       if (!router.isReady) return;
 
       const nextQuery = { ...router.query };
+      const shouldShowFinishedOnboarding =
+        typeof params.showFinishedOnboardingOnly === "boolean"
+          ? params.showFinishedOnboardingOnly
+          : showFinishedOnboardingOnly;
       const nextPage = params.page;
       if (typeof nextPage === "number" && nextPage > 0) {
         nextQuery.page = String(nextPage);
@@ -556,6 +563,19 @@ const Users = () => {
         }
       }
 
+      const targetView = typeof params.viewOptionIndex === "number"
+        ? viewOptions[params.viewOptionIndex]?.value
+        : currentView;
+      if (targetView === "CLIENTS" || targetView === "PROVIDERS") {
+        if (shouldShowFinishedOnboarding) {
+          nextQuery.isOnboardingFinished = "true";
+        } else {
+          delete nextQuery.isOnboardingFinished;
+        }
+      } else {
+        delete nextQuery.isOnboardingFinished;
+      }
+
       router[method](
         {
           pathname: router.pathname,
@@ -565,7 +585,7 @@ const Users = () => {
         { shallow: true, scroll: false },
       );
     },
-    [router, viewOptions],
+    [currentView, router, showFinishedOnboardingOnly, viewOptions],
   );
 
   // Sync selected mode with URL query
@@ -599,10 +619,15 @@ const Users = () => {
         hasRequested ? "REQUESTED" : withoutRequested ? "WITHOUT" : "ALL",
       );
     }
+    setShowFinishedOnboardingOnly(
+      router.query.isOnboardingFinished === "true" ||
+        router.query.isOnboardingFinished === "1",
+    );
     setModeReady(true);
   }, [
     router.isReady,
     router.query.hasRequestedCompensationInfoAt,
+    router.query.isOnboardingFinished,
     router.query.mode,
     router.query.requestedCompensationInfoAt,
     router.query.view,
@@ -864,6 +889,10 @@ const Users = () => {
         } else if (clientCompensationFilter === "WITHOUT") {
           searchParams.set("requestedCompensationInfoAt", "false");
         }
+
+        if (showFinishedOnboardingOnly) {
+          searchParams.set("isOnboardingFinished", "true");
+        }
       } else {
         if (providerVideoFilter === "WITH_VIDEO") {
           searchParams.set("hasVideo", "true");
@@ -873,6 +902,10 @@ const Users = () => {
 
         if (providerSpecialSkillsFilter === "PENDING_SPECIAL_SKILLS") {
           searchParams.set("hasPendingSpecialSkills", "true");
+        }
+
+        if (showFinishedOnboardingOnly) {
+          searchParams.set("isOnboardingFinished", "true");
         }
       }
 
@@ -925,6 +958,7 @@ const Users = () => {
     appliedSearchText,
     selectedCountryName,
     selectedCityName,
+    showFinishedOnboardingOnly,
   ]);
 
   const fetchOnboardingUsers = useCallback(async () => {
@@ -1367,6 +1401,34 @@ const Users = () => {
                   type="OUTLINED"
                   onClick={() => router.push("/users/filter-export")}
                 />
+                {(isSelectedClients || isProvidersSelected) && (
+                  <Button
+                    title="Finished onboarding"
+                    type="OUTLINED"
+                    isSelected={showFinishedOnboardingOnly}
+                    className={
+                      showFinishedOnboardingOnly
+                        ? "!border-neutral-900 !bg-neutral-900 !text-white hover:!bg-neutral-800"
+                        : "!border-neutral-200 !bg-white !text-neutral-900 hover:!bg-neutral-50"
+                    }
+                    onClick={() => {
+                      const nextShowFinishedOnboardingOnly =
+                        !showFinishedOnboardingOnly;
+                      setItemOffset(0);
+                      setShowFinishedOnboardingOnly(
+                        nextShowFinishedOnboardingOnly,
+                      );
+                      updateUsersUrlQuery(
+                        {
+                          page: 1,
+                          showFinishedOnboardingOnly:
+                            nextShowFinishedOnboardingOnly,
+                        },
+                        "push",
+                      );
+                    }}
+                  />
+                )}
                 {isProvidersSelected && (
                   <>
                     <DropDownButton

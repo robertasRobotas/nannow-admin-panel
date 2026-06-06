@@ -267,7 +267,7 @@ const TrackingPage = () => {
 
       while (startIndex < total && !isCancelled) {
         const response = await getAllUsers(
-          `admin/users?type=${type}&startIndex=${startIndex}&pageSize=${PAGE_SIZE}`,
+          `admin/users?type=${type}&isOnboardingFinished=true&startIndex=${startIndex}&pageSize=${PAGE_SIZE}`,
         );
         const items = readItems(response.data);
         total = readTotal(response.data);
