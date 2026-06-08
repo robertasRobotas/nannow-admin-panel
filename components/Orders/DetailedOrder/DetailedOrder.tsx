@@ -25,6 +25,7 @@ import {
   getOrderProviderInvoice,
   getOrderProviderReceipt,
   openOrderByAdmin,
+  regenerateAdditionalPaymentInvoices,
   payoutAdditionalPaymentsByOrderId,
   payoutCancelFeeByOrderId,
   refundOrderById,
@@ -79,6 +80,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     useState(false);
   const [openingAdditionalPaymentInvoiceId, setOpeningAdditionalPaymentInvoiceId] =
     useState<string | null>(null);
+  const [additionalPaymentInvoiceRegenerationTarget, setAdditionalPaymentInvoiceRegenerationTarget] =
+    useState<{
+      id: string;
+      title: string;
+      paidOutAt?: string | null;
+    } | null>(null);
+  const [isRegeneratingAdditionalPaymentInvoices, setIsRegeneratingAdditionalPaymentInvoices] =
+    useState(false);
   const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
@@ -501,8 +510,44 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     }
   };
 
-  const openOrderInvoicesPage = () => {
-    window.open(`/invoices?orderId=${order.id}`, "_blank", "noopener,noreferrer");
+  const openAdditionalPaymentInvoiceRegenerationModal = (payment: {
+    id?: string | null;
+    note?: string | null;
+    description?: string | null;
+    reason?: string | null;
+    paidOutAt?: string | null;
+  }) => {
+    const paymentId = payment.id;
+    if (!paymentId) return;
+
+    setAdditionalPaymentInvoiceRegenerationTarget({
+      id: paymentId,
+      title: payment.note || payment.description || payment.reason || "Additional payment",
+      paidOutAt: payment.paidOutAt ?? null,
+    });
+  };
+
+  const closeAdditionalPaymentInvoiceRegenerationModal = () => {
+    if (isRegeneratingAdditionalPaymentInvoices) return;
+    setAdditionalPaymentInvoiceRegenerationTarget(null);
+  };
+
+  const confirmAdditionalPaymentInvoiceRegeneration = async () => {
+    const target = additionalPaymentInvoiceRegenerationTarget;
+    if (!target || isRegeneratingAdditionalPaymentInvoices) return;
+
+    try {
+      setIsRegeneratingAdditionalPaymentInvoices(true);
+      const response = await regenerateAdditionalPaymentInvoices(target.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to regenerate additional payment invoices", error);
+    } finally {
+      setIsRegeneratingAdditionalPaymentInvoices(false);
+      setAdditionalPaymentInvoiceRegenerationTarget(null);
+    }
   };
 
   const getAdditionalPaymentInvoiceTitle = (invoice: {
@@ -1259,16 +1304,11 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                   "Additional payment";
                 const paymentCompletedAt =
                   payment.payment_completed_at ?? payment.paidAt;
-                const paymentInvoiceId =
-                  payment.invoiceId ?? payment.additionalPaymentInvoiceId ?? null;
                 const paymentInvoices = Array.isArray(payment.invoices)
                   ? payment.invoices
                   : [];
-                const hasPaymentInvoice =
-                  paymentInvoices.length > 0 ||
-                  !!paymentInvoiceId ||
-                  !!payment.invoiceNo ||
-                  !!payment.invoiceDate;
+                const hasPaymentInvoices = paymentInvoices.length > 0;
+                const canRegeneratePaymentInvoices = !!payment.paidOutAt;
                 return (
                   <div key={paymentKey} className={styles.additionalPaymentCard}>
                     <div className={styles.additionalPaymentTop}>
@@ -1294,7 +1334,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                         >
                           {payment.payoutState ?? "NOT_PAYABLE"}
                         </span>
-                        {hasPaymentInvoice && (
+                        {hasPaymentInvoices && (
                           <>
                             {paymentInvoices.map((invoice, invoiceIndex) => {
                               const invoiceId = invoice.id ?? invoice._id ?? null;
@@ -1320,36 +1360,31 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                                 />
                               );
                             })}
-                            {paymentInvoices.length === 0 && (
-                              <Button
-                                title={
-                                  paymentInvoiceId
-                                    ? "Open invoice"
-                                    : "Open invoices"
-                                }
-                                type="OUTLINED"
-                                height={24}
-                                className={styles.additionalPaymentInvoiceButton}
-                                onClick={() => {
-                                  if (paymentInvoiceId) {
-                                    openAdditionalPaymentInvoice(paymentInvoiceId);
-                                    return;
-                                  }
-                                  openOrderInvoicesPage();
-                                }}
-                                isLoading={
-                                  !!paymentInvoiceId &&
-                                  openingAdditionalPaymentInvoiceId ===
-                                    paymentInvoiceId
-                                }
-                                isDisabled={
-                                  !!openingAdditionalPaymentInvoiceId &&
-                                  openingAdditionalPaymentInvoiceId !==
-                                    paymentInvoiceId
-                                }
-                              />
-                            )}
                           </>
+                        )}
+                        {canRegeneratePaymentInvoices && (
+                          <Button
+                            title={
+                              isRegeneratingAdditionalPaymentInvoices &&
+                              additionalPaymentInvoiceRegenerationTarget?.id === payment.id
+                                ? "Regenerating..."
+                                : "Regenerate invoices"
+                            }
+                            type="OUTLINED"
+                            height={24}
+                            className={styles.additionalPaymentInvoiceButton}
+                            onClick={() =>
+                              openAdditionalPaymentInvoiceRegenerationModal(payment)
+                            }
+                            isLoading={
+                              isRegeneratingAdditionalPaymentInvoices &&
+                              additionalPaymentInvoiceRegenerationTarget?.id === payment.id
+                            }
+                            isDisabled={
+                              isRegeneratingAdditionalPaymentInvoices &&
+                              additionalPaymentInvoiceRegenerationTarget?.id !== payment.id
+                            }
+                          />
                         )}
                       </div>
                     </div>
@@ -1410,6 +1445,39 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+        {additionalPaymentInvoiceRegenerationTarget && (
+          <div className={styles.confirmationBackdrop}>
+            <div className={`${styles.confirmationModal} ${nunito.className}`}>
+              <h2 className={styles.confirmationTitle}>Regenerate invoices?</h2>
+              <p className={styles.confirmationBody}>
+                Regenerate invoices for <b>{additionalPaymentInvoiceRegenerationTarget.title}</b>
+                {additionalPaymentInvoiceRegenerationTarget.paidOutAt
+                  ? ` paid out at ${formatCompactDateTime(
+                      additionalPaymentInvoiceRegenerationTarget.paidOutAt,
+                    )}.`
+                  : "."}
+              </p>
+              <div className={styles.confirmationActions}>
+                <Button
+                  title="Cancel"
+                  type="OUTLINED"
+                  onClick={closeAdditionalPaymentInvoiceRegenerationModal}
+                  isDisabled={isRegeneratingAdditionalPaymentInvoices}
+                />
+                <Button
+                  title={
+                    isRegeneratingAdditionalPaymentInvoices
+                      ? "Regenerating..."
+                      : "Confirm regenerate"
+                  }
+                  type="BLACK"
+                  onClick={confirmAdditionalPaymentInvoiceRegeneration}
+                  isDisabled={isRegeneratingAdditionalPaymentInvoices}
+                />
+              </div>
             </div>
           </div>
         )}

@@ -1381,6 +1381,30 @@ export const getInvoicePdf = async (id: string) => {
   return response;
 };
 
+export const regenerateAdditionalPaymentInvoices = async (additionalPaymentId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/additional-payments/${additionalPaymentId}/regenerate-invoices`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getOrdersWithMissingAdditionalPaymentInvoices = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/orders/additional-payments/missing-invoices`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
 export const getFinancialOrders = async (params?: {
   startIndex?: number;
   pageSize?: number;
