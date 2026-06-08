@@ -3,6 +3,7 @@ import axios from "axios";
 import Link from "next/link";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
+import { FileText, Wallet } from "lucide-react";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import Button from "@/components/Button/Button";
@@ -12,7 +13,13 @@ import {
   getOrderStatusTitle,
   options as orderStatusOptions,
 } from "@/data/orderStatusOptions";
-import { getFinancialForecasts, getFinancialOrders } from "@/pages/api/fetch";
+import {
+  downloadPlatformFeeInvoiceReport,
+  getFinancialForecasts,
+  getFinancialOrders,
+  getPlatformFeeInvoiceReports,
+  regeneratePlatformFeeInvoiceReport,
+} from "@/pages/api/fetch";
 import {
   FinancialForecastsResponse,
   FinancialOrderMode,
@@ -20,6 +27,10 @@ import {
   FinancialOrdersSubtotal,
   GetFinancialOrdersResponse,
 } from "@/types/FinancialOrder";
+import {
+  GetPlatformFeeInvoiceReportsResponse,
+  PlatformFeeInvoiceReport,
+} from "@/types/PlatformFeeInvoiceReport";
 import calendarImg from "@/assets/images/calendar.svg";
 import defaultAvatarImg from "@/assets/images/default-avatar.png";
 import styles from "./financialLedger.module.css";
@@ -55,6 +66,26 @@ type DateRange = {
   startIso: string;
   endIso: string;
 };
+
+type LedgerView = "ledger" | "monthly-reports";
+
+const LEDGER_VIEW_KEY = "view";
+const LEDGER_REPORTS_VIEW: LedgerView = "monthly-reports";
+const LEDGER_DEFAULT_VIEW: LedgerView = "ledger";
+const MONTH_OPTIONS = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" },
+] as const;
 
 const EMPTY_SUBTOTAL: FinancialOrdersSubtotal = {
   totalOrders: 0,
@@ -339,6 +370,42 @@ const openNativeDatePicker = (input: HTMLInputElement | null) => {
   input.click();
 };
 
+const formatLedgerReportMonth = (year: number, month: number) =>
+  new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
+
+const formatLedgerReportDate = (value: string, timeZone: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone,
+  }).format(new Date(value));
+
+const formatLedgerReportDateTime = (value: string, timeZone: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone,
+  }).format(new Date(value));
+
+const triggerBlobDownload = (blob: Blob, fileName: string) => {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+};
+
 const FinancialLedger = () => {
   const router = useRouter();
   const defaultRange = useMemo(() => getPresetRange("this_month"), []);
@@ -370,15 +437,31 @@ const FinancialLedger = () => {
     defaultRange.startIso,
   );
   const [appliedEndDate, setAppliedEndDate] = useState(defaultRange.endIso);
+  const [activeView, setActiveView] = useState<LedgerView>(LEDGER_DEFAULT_VIEW);
+  const [reports, setReports] = useState<PlatformFeeInvoiceReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState("");
+  const [regeneratingReportKey, setRegeneratingReportKey] = useState("");
+  const [downloadingReportKey, setDownloadingReportKey] = useState("");
+  const [reportRegenerationTarget, setReportRegenerationTarget] =
+    useState<{ year: number; month: number; label: string } | null>(null);
+  const [selectedReportMonth, setSelectedReportMonth] = useState(() =>
+    `${defaultRange.endInput.slice(0, 4)}-${defaultRange.endInput.slice(5, 7)}`,
+  );
+  const [hasSyncedViewFromQuery, setHasSyncedViewFromQuery] = useState(false);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
   const selectedSort = SORT_OPTIONS[selectedSortOption]?.value ?? "paidAt_desc";
   const selectedStatus = STATUS_OPTIONS[selectedStatusOption]?.value ?? "";
   const selectedMode = MODE_OPTIONS[selectedModeOption]?.value ?? "";
+  const [selectedReportYear, selectedReportMonthValue] =
+    selectedReportMonth.split("-");
+  const selectedReportYearNumber = Number(selectedReportYear);
+  const selectedReportMonthNumber = Number(selectedReportMonthValue);
 
   const fetchForecasts = useCallback(async () => {
-    if (!router.isReady) return;
+    if (!router.isReady || activeView !== LEDGER_DEFAULT_VIEW) return;
 
     try {
       setForecastsLoading(true);
@@ -405,7 +488,42 @@ const FinancialLedger = () => {
     } finally {
       setForecastsLoading(false);
     }
-  }, [router]);
+  }, [activeView, router]);
+
+  const fetchPlatformFeeInvoiceReports = useCallback(async () => {
+    if (!router.isReady || activeView !== LEDGER_REPORTS_VIEW) return;
+
+    try {
+      setReportsLoading(true);
+      setReportsError("");
+      const response = await getPlatformFeeInvoiceReports();
+      const payload = response.data as
+        | GetPlatformFeeInvoiceReportsResponse
+        | { result?: GetPlatformFeeInvoiceReportsResponse };
+      const data =
+        (payload as { result?: GetPlatformFeeInvoiceReportsResponse }).result ??
+        (payload as GetPlatformFeeInvoiceReportsResponse);
+
+      const nextReports = Array.isArray(data?.reports) ? [...data.reports] : [];
+      nextReports.sort((left, right) => {
+        if (left.periodYear !== right.periodYear) {
+          return right.periodYear - left.periodYear;
+        }
+        return right.periodMonth - left.periodMonth;
+      });
+      setReports(nextReports);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      console.log(err);
+      setReports([]);
+      setReportsError("Failed to load monthly reports.");
+    } finally {
+      setReportsLoading(false);
+    }
+  }, [activeView, router]);
 
   const updateLedgerQuery = useCallback(
     (
@@ -418,6 +536,7 @@ const FinancialLedger = () => {
         period?: PeriodPreset;
         start?: string;
         end?: string;
+        view?: LedgerView;
       },
       method: "push" | "replace" = "push",
     ) => {
@@ -466,6 +585,11 @@ const FinancialLedger = () => {
       } else if (nextEnd !== undefined) {
         delete nextQuery.end;
       }
+      if (typeof params.view === "string") {
+        nextQuery[LEDGER_VIEW_KEY] = params.view;
+      } else if (params.view !== undefined) {
+        delete nextQuery[LEDGER_VIEW_KEY];
+      }
       router[method](
         { pathname: router.pathname, query: nextQuery },
         undefined,
@@ -476,6 +600,8 @@ const FinancialLedger = () => {
   );
 
   const fetchFinancialOrders = useCallback(async () => {
+    if (activeView !== LEDGER_DEFAULT_VIEW) return;
+
     try {
       setLoading(true);
       setError("");
@@ -520,6 +646,7 @@ const FinancialLedger = () => {
       setLoading(false);
     }
   }, [
+    activeView,
     appliedEndDate,
     appliedSearch,
     appliedStartDate,
@@ -531,39 +658,71 @@ const FinancialLedger = () => {
     selectedStatus,
   ]);
 
-  useEffect(() => {
-    fetchFinancialOrders();
-  }, [fetchFinancialOrders]);
+  const ledgerQueryView =
+    typeof router.query[LEDGER_VIEW_KEY] === "string"
+      ? router.query[LEDGER_VIEW_KEY]
+      : "";
+  const ledgerQueryQ =
+    typeof router.query.q === "string" ? router.query.q : "";
+  const ledgerQueryStatus =
+    typeof router.query.status === "string" ? router.query.status : "";
+  const ledgerQueryMode =
+    typeof router.query.mode === "string" ? router.query.mode : "";
+  const ledgerQuerySort =
+    typeof router.query.sort === "string" ? router.query.sort : "paidAt_desc";
+  const ledgerQueryPeriod =
+    typeof router.query.period === "string" ? router.query.period : "this_month";
+  const ledgerQueryStart =
+    typeof router.query.start === "string" ? router.query.start : "";
+  const ledgerQueryEnd =
+    typeof router.query.end === "string" ? router.query.end : "";
+  const ledgerQueryPage =
+    typeof router.query.page === "string" ? router.query.page : "";
 
   useEffect(() => {
-    fetchForecasts();
-  }, [fetchForecasts]);
+    if (router.isReady && hasSyncedViewFromQuery && activeView === LEDGER_DEFAULT_VIEW) {
+      fetchFinancialOrders();
+    }
+  }, [activeView, fetchFinancialOrders, hasSyncedViewFromQuery, router.isReady]);
+
+  useEffect(() => {
+    if (router.isReady && hasSyncedViewFromQuery && activeView === LEDGER_DEFAULT_VIEW) {
+      fetchForecasts();
+    }
+  }, [activeView, fetchForecasts, hasSyncedViewFromQuery, router.isReady]);
+
+  useEffect(() => {
+    if (router.isReady && hasSyncedViewFromQuery && activeView === LEDGER_REPORTS_VIEW) {
+      fetchPlatformFeeInvoiceReports();
+    }
+  }, [activeView, fetchPlatformFeeInvoiceReports, hasSyncedViewFromQuery, router.isReady]);
 
   useEffect(() => {
     if (!router.isReady) return;
-    const qFromQuery = typeof router.query.q === "string" ? router.query.q : "";
-    setSearchText(qFromQuery);
-    setAppliedSearch(qFromQuery);
+    setActiveView(
+      ledgerQueryView === LEDGER_REPORTS_VIEW
+        ? LEDGER_REPORTS_VIEW
+        : LEDGER_DEFAULT_VIEW,
+    );
 
-    const statusFromQuery =
-      typeof router.query.status === "string" ? router.query.status : "";
+    setSearchText(ledgerQueryQ);
+    setAppliedSearch(ledgerQueryQ);
+
+    const statusFromQuery = ledgerQueryStatus;
     const statusIndex = STATUS_OPTIONS.findIndex(
       (option) => option.value === statusFromQuery,
     );
     setSelectedStatusOption(statusIndex >= 0 ? statusIndex : 0);
 
-    const modeFromQuery =
-      typeof router.query.mode === "string" ? router.query.mode : "";
+    const modeFromQuery = ledgerQueryMode;
     const modeIndex = MODE_OPTIONS.findIndex((option) => option.value === modeFromQuery);
     setSelectedModeOption(modeIndex >= 0 ? modeIndex : 0);
 
-    const sortFromQuery =
-      typeof router.query.sort === "string" ? router.query.sort : "paidAt_desc";
+    const sortFromQuery = ledgerQuerySort;
     const sortIndex = SORT_OPTIONS.findIndex((option) => option.value === sortFromQuery);
     setSelectedSortOption(sortIndex >= 0 ? sortIndex : 0);
 
-    const periodFromQuery =
-      typeof router.query.period === "string" ? router.query.period : "this_month";
+    const periodFromQuery = ledgerQueryPeriod;
     const safePeriod: PeriodPreset =
       periodFromQuery === "today" ||
       periodFromQuery === "this_week" ||
@@ -574,9 +733,8 @@ const FinancialLedger = () => {
         : "this_month";
 
     if (safePeriod === "custom") {
-      const startFromQuery =
-        typeof router.query.start === "string" ? router.query.start : "";
-      const endFromQuery = typeof router.query.end === "string" ? router.query.end : "";
+      const startFromQuery = ledgerQueryStart;
+      const endFromQuery = ledgerQueryEnd;
       const hasValidInputs = startFromQuery.length > 0 && endFromQuery.length > 0;
       if (hasValidInputs) {
         setSelectedPeriod("custom");
@@ -594,24 +752,25 @@ const FinancialLedger = () => {
       setAppliedEndDate(range.endIso);
     }
 
-    const pageFromQuery =
-      typeof router.query.page === "string" ? Number(router.query.page) : 1;
+    const pageFromQuery = ledgerQueryPage ? Number(ledgerQueryPage) : 1;
     const safePage =
       Number.isFinite(pageFromQuery) && pageFromQuery > 0
         ? Math.floor(pageFromQuery)
         : 1;
     setItemOffset((safePage - 1) * pageSize);
+    setHasSyncedViewFromQuery(true);
   }, [
     pageSize,
     router.isReady,
-    router.query.mode,
-    router.query.page,
-    router.query.period,
-    router.query.q,
-    router.query.sort,
-    router.query.start,
-    router.query.status,
-    router.query.end,
+    ledgerQueryView,
+    ledgerQueryMode,
+    ledgerQueryPage,
+    ledgerQueryPeriod,
+    ledgerQueryQ,
+    ledgerQuerySort,
+    ledgerQueryStart,
+    ledgerQueryStatus,
+    ledgerQueryEnd,
   ]);
 
   const applyCustomDateRange = () => {
@@ -683,6 +842,92 @@ const FinancialLedger = () => {
     );
   };
 
+  const switchView = (view: LedgerView) => {
+    setActiveView(view);
+    updateLedgerQuery(
+      {
+        page: 1,
+        view,
+      },
+      "push",
+    );
+  };
+
+  const handleDownloadReport = async (report: PlatformFeeInvoiceReport) => {
+    const downloadKey = `${report.periodYear}-${report.periodMonth}`;
+    if (downloadingReportKey) return;
+
+    try {
+      setDownloadingReportKey(downloadKey);
+      const response = await downloadPlatformFeeInvoiceReport(
+        report.periodYear,
+        report.periodMonth,
+      );
+      triggerBlobDownload(
+        response.data as Blob,
+        report.fileName || `platform-fee-invoices-${report.periodKey}.csv`,
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      console.log(err);
+      setReportsError("Failed to download the report.");
+    } finally {
+      setDownloadingReportKey("");
+    }
+  };
+
+  const handleRegenerateReport = async (report: PlatformFeeInvoiceReport) => {
+    setReportRegenerationTarget({
+      year: report.periodYear,
+      month: report.periodMonth,
+      label: formatLedgerReportMonth(report.periodYear, report.periodMonth),
+    });
+  };
+
+  const regenerateSelectedReportMonth = async () => {
+    if (!selectedReportYearNumber || !selectedReportMonthNumber) return;
+    setReportRegenerationTarget({
+      year: selectedReportYearNumber,
+      month: selectedReportMonthNumber,
+      label: formatLedgerReportMonth(
+        selectedReportYearNumber,
+        selectedReportMonthNumber,
+      ),
+    });
+  };
+
+  const closeReportRegenerationModal = () => {
+    if (regeneratingReportKey) return;
+    setReportRegenerationTarget(null);
+  };
+
+  const confirmReportRegeneration = async () => {
+    if (!reportRegenerationTarget || regeneratingReportKey) return;
+
+    const { year, month } = reportRegenerationTarget;
+    const downloadKey = `${year}-${month}`;
+
+    try {
+      setRegeneratingReportKey(downloadKey);
+      setReportsError("");
+      await regeneratePlatformFeeInvoiceReport(year, month);
+      await fetchPlatformFeeInvoiceReports();
+      setReportRegenerationTarget(null);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      console.log(err);
+      setReportsError("Failed to regenerate the report.");
+    } finally {
+      setRegeneratingReportKey("");
+    }
+  };
+
   const currentPage =
     pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize) + 1;
   const appliedStartLabel = toInputDate(new Date(appliedStartDate));
@@ -697,682 +942,967 @@ const FinancialLedger = () => {
   const forecastCounts = forecasts?.counts;
   const forecastCrossChecks = forecasts?.crossChecks;
   const stripeFeeForecast = forecasts?.assumptions.stripeFeeForecast;
+  const selectedReportMonthKey = `${selectedReportYearNumber}-${selectedReportMonthNumber}`;
+  const selectedReportMonthLabel =
+    selectedReportYearNumber && selectedReportMonthNumber
+      ? formatLedgerReportMonth(
+          selectedReportYearNumber,
+          selectedReportMonthNumber,
+        )
+      : "Selected month";
+  const currentYear = new Date().getFullYear();
+  const reportYearOptions = Array.from({ length: 10 }, (_, index) => currentYear - index);
 
   return (
     <div className={styles.main}>
       <div className={styles.ledgerColumn}>
-      <div className={styles.headerRow}>
-        <div className={styles.titleWrap}>
-          <h2 className={`${styles.title} ${nunito.className}`}>
-            Financial ledger
-          </h2>
-          <div className={styles.subtitle}>
-            {`${total} ledger rows, page ${currentPage}/${pageCount}`}
-          </div>
-        </div>
-        <SearchBar
-          placeholder="Search order ID or user"
-          searchText={searchText}
-          setSearchText={setSearchText}
-          onButtonClick={() => {
-            setAppliedSearch(searchText);
-            updateLedgerQuery({
-              page: 1,
-              q: searchText,
-              status: selectedStatus,
-              mode: selectedMode,
-              sort: selectedSort,
-            });
-          }}
-        />
-      </div>
-
-      <div className={styles.filtersPanel}>
-        <div className={styles.periodRow}>
-          <div className={styles.periodButtons}>
-            {PERIOD_OPTIONS.map((option) => (
+        <div className={styles.headerRow}>
+          <div className={styles.titleWrap}>
+            <h2 className={`${styles.title} ${nunito.className}`}>
+              {activeView === LEDGER_DEFAULT_VIEW
+                ? "Financial ledger"
+                : "Platform fee invoice reports"}
+            </h2>
+            <div className={styles.subtitle}>
+              {activeView === LEDGER_DEFAULT_VIEW
+                ? `${total} ledger rows, page ${currentPage}/${pageCount}`
+                : `${reports.length} monthly report${reports.length === 1 ? "" : "s"}`}
+            </div>
+            <div className={styles.viewTabs}>
               <button
-                key={option.value}
                 type="button"
-                className={`${styles.periodButton} ${
-                  selectedPeriod === option.value
-                    ? styles.periodButtonActive
+                className={`${styles.viewTab} ${
+                  activeView === LEDGER_DEFAULT_VIEW
+                    ? styles.viewTabActive
                     : ""
                 }`}
-                onClick={() => applyPresetRange(option.value)}
+                onClick={() => switchView(LEDGER_DEFAULT_VIEW)}
               >
-                {option.label}
+                <Wallet size={16} strokeWidth={2} />
+                <span>Ledger</span>
               </button>
-            ))}
+              <button
+                type="button"
+                className={`${styles.viewTab} ${
+                  activeView === LEDGER_REPORTS_VIEW
+                    ? styles.viewTabActive
+                    : ""
+                }`}
+                onClick={() => switchView(LEDGER_REPORTS_VIEW)}
+              >
+                <FileText size={16} strokeWidth={2} />
+                <span>Monthly reports</span>
+              </button>
+            </div>
           </div>
-
-          <div className={styles.customDateControls}>
-            <div className={styles.dateField}>
-              <span>Start</span>
-              <div className={styles.dateInputWrap}>
-                <input
-                  ref={startDateInputRef}
-                  type="date"
-                  className={styles.dateInput}
-                  value={startDateInput}
-                  onChange={(e) => {
-                    setSelectedPeriod("custom");
-                    setStartDateInput(e.target.value);
-                  }}
-                />
-                <button
-                  type="button"
-                  className={styles.datePickerBtn}
-                  onClick={() =>
-                    openNativeDatePicker(startDateInputRef.current)
-                  }
-                  aria-label="Open start date picker"
-                >
-                  <img src={calendarImg.src} alt="" />
-                </button>
+          {activeView === LEDGER_DEFAULT_VIEW ? (
+            <SearchBar
+              placeholder="Search order ID or user"
+              searchText={searchText}
+              setSearchText={setSearchText}
+              onButtonClick={() => {
+                setAppliedSearch(searchText);
+                updateLedgerQuery({
+                  page: 1,
+                  q: searchText,
+                  status: selectedStatus,
+                  mode: selectedMode,
+                  sort: selectedSort,
+                });
+              }}
+            />
+          ) : (
+            <div className={styles.reportHeaderMeta}>
+              <div className={styles.reportHeaderMetaLabel}>
+                Regenerate any month or download the generated CSV.
+              </div>
+              <div className={styles.reportHeaderMetaValue}>
+                Latest month in view: {selectedReportMonthLabel}
               </div>
             </div>
+          )}
+        </div>
 
-            <div className={styles.dateField}>
-              <span>End</span>
-              <div className={styles.dateInputWrap}>
-                <input
-                  ref={endDateInputRef}
-                  type="date"
-                  className={styles.dateInput}
-                  value={endDateInput}
-                  onChange={(e) => {
-                    setSelectedPeriod("custom");
-                    setEndDateInput(e.target.value);
-                  }}
+        <div className={styles.viewBody}>
+          {activeView === LEDGER_DEFAULT_VIEW ? (
+            <>
+              <div className={styles.filtersPanel}>
+                <div className={styles.periodRow}>
+                  <div className={styles.periodButtons}>
+                    {PERIOD_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`${styles.periodButton} ${
+                          selectedPeriod === option.value
+                            ? styles.periodButtonActive
+                            : ""
+                        }`}
+                        onClick={() => applyPresetRange(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className={styles.customDateControls}>
+                    <div className={styles.dateField}>
+                      <span>Start</span>
+                      <div className={styles.dateInputWrap}>
+                        <input
+                          ref={startDateInputRef}
+                          type="date"
+                          className={styles.dateInput}
+                          value={startDateInput}
+                          onChange={(e) => {
+                            setSelectedPeriod("custom");
+                            setStartDateInput(e.target.value);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.datePickerBtn}
+                          onClick={() =>
+                            openNativeDatePicker(startDateInputRef.current)
+                          }
+                          aria-label="Open start date picker"
+                        >
+                          <img src={calendarImg.src} alt="" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.dateField}>
+                      <span>End</span>
+                      <div className={styles.dateInputWrap}>
+                        <input
+                          ref={endDateInputRef}
+                          type="date"
+                          className={styles.dateInput}
+                          value={endDateInput}
+                          onChange={(e) => {
+                            setSelectedPeriod("custom");
+                            setEndDateInput(e.target.value);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.datePickerBtn}
+                          onClick={() =>
+                            openNativeDatePicker(endDateInputRef.current)
+                          }
+                          aria-label="Open end date picker"
+                        >
+                          <img src={calendarImg.src} alt="" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.applyDateButtonWrap}>
+                      <Button
+                        title="Apply dates"
+                        type="OUTLINED"
+                        onClick={applyCustomDateRange}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.filtersRow}>
+                  <DropDownButton
+                    options={STATUS_OPTIONS.map((option) => ({
+                      title: option.title,
+                      value: option.value,
+                    }))}
+                    selectedOption={selectedStatusOption}
+                    setSelectedOption={(nextOption) => {
+                      setSelectedStatusOption(nextOption as number);
+                      const nextStatus =
+                        STATUS_OPTIONS[nextOption as number]?.value ?? "";
+                      updateLedgerQuery({
+                        page: 1,
+                        q: appliedSearch,
+                        status: nextStatus,
+                        mode: selectedMode,
+                        sort: selectedSort,
+                      });
+                    }}
+                    onClickOption={() => {
+                      updateLedgerQuery({
+                        page: 1,
+                        q: appliedSearch,
+                        status: selectedStatus,
+                        mode: selectedMode,
+                        sort: selectedSort,
+                      });
+                    }}
+                  />
+                  <DropDownButton
+                    options={MODE_OPTIONS.map((option) => ({
+                      title: option.title,
+                      value: option.value,
+                    }))}
+                    selectedOption={selectedModeOption}
+                    setSelectedOption={(nextOption) => {
+                      setSelectedModeOption(nextOption as number);
+                      const nextMode =
+                        MODE_OPTIONS[nextOption as number]?.value ?? "";
+                      updateLedgerQuery({
+                        page: 1,
+                        q: appliedSearch,
+                        status: selectedStatus,
+                        mode: nextMode,
+                        sort: selectedSort,
+                      });
+                    }}
+                    onClickOption={() => {
+                      updateLedgerQuery({
+                        page: 1,
+                        q: appliedSearch,
+                        status: selectedStatus,
+                        mode: selectedMode,
+                        sort: selectedSort,
+                      });
+                    }}
+                  />
+                  <DropDownButton
+                    options={SORT_OPTIONS.map((option) => ({
+                      title: option.title,
+                      value: option.value,
+                    }))}
+                    selectedOption={selectedSortOption}
+                    setSelectedOption={(nextOption) => {
+                      setSelectedSortOption(nextOption as number);
+                      const nextSort =
+                        SORT_OPTIONS[nextOption as number]?.value ??
+                        "paidAt_desc";
+                      updateLedgerQuery({
+                        page: 1,
+                        q: appliedSearch,
+                        status: selectedStatus,
+                        mode: selectedMode,
+                        sort: nextSort,
+                      });
+                    }}
+                    onClickOption={() => {
+                      updateLedgerQuery({
+                        page: 1,
+                        q: appliedSearch,
+                        status: selectedStatus,
+                        mode: selectedMode,
+                        sort: selectedSort,
+                      });
+                    }}
+                  />
+                </div>
+
+                {validationError && (
+                  <div className={styles.validationError}>{validationError}</div>
+                )}
+              </div>
+
+              <div className={styles.tableWrap}>
+                <div className={styles.tableHeader}>
+                  <div>Order</div>
+                  <div>Paid amount</div>
+                  <div>Payout</div>
+                  <div>Refund</div>
+                  <div>Stripe fee</div>
+                  <div>Net profit</div>
+                </div>
+
+                <div className={styles.tableBody}>
+                  {loading && (
+                    <div className={styles.emptyState}>
+                      Loading financial orders...
+                    </div>
+                  )}
+                  {!loading && error && (
+                    <div className={styles.emptyState}>{error}</div>
+                  )}
+                  {!loading && !error && items.length === 0 && (
+                    <div className={styles.emptyState}>
+                      No financial orders for selected filters
+                    </div>
+                  )}
+
+                  {!loading &&
+                    !error &&
+                    items.map((order, index) => {
+                      const clientName = getUserName(
+                        order.clientUser?.firstName,
+                        order.clientUser?.lastName,
+                      );
+                      const providerName = getUserName(
+                        order.providerUser?.firstName,
+                        order.providerUser?.lastName,
+                      );
+                      const { paid, payout, refund, stripeFee, netProfit } =
+                        getAmountPresentation(order);
+
+                      return (
+                        <div
+                          key={getLedgerRowKey(order, index)}
+                          className={`${styles.row} ${
+                            order.financialMode === "REAL"
+                              ? styles.rowReal
+                              : ""
+                          } ${
+                            isAdditionalPaymentRow(order)
+                              ? styles.rowAdditional
+                              : ""
+                          }`}
+                        >
+                          <div className={styles.orderCell} data-label="Order">
+                            <div className={styles.orderUsersWrap}>
+                              <div className={styles.profilePics}>
+                                <img
+                                  className={styles.providerImg}
+                                  src={
+                                    order.providerUser?.imgUrl ||
+                                    defaultAvatarImg.src
+                                  }
+                                  alt={providerName}
+                                />
+                                <img
+                                  className={styles.clientImg}
+                                  src={
+                                    order.clientUser?.imgUrl ||
+                                    defaultAvatarImg.src
+                                  }
+                                  alt={clientName}
+                                />
+                              </div>
+                              <div className={styles.orderInfo}>
+                                <Link
+                                  href={`/orders/${order.id}`}
+                                  className={styles.orderIdLink}
+                                >
+                                  {order.orderPrettyId}
+                                </Link>
+                                <div
+                                  className={styles.orderNames}
+                                >{`${providerName} / ${clientName}`}</div>
+                                <div className={styles.orderMeta}>
+                                  Paid: {formatDateTime(order.paidAt)}
+                                </div>
+                                <div className={styles.orderMeta}>
+                                  {`${formatDateTime(order.startsAt)} - ${formatDateTime(order.endsAt)}`}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={styles.orderBadges}>
+                              <span
+                                className={`${styles.recordTypeBadge} ${
+                                  isAdditionalPaymentRow(order)
+                                    ? styles.recordTypeAdditional
+                                    : styles.recordTypeOrder
+                                }`}
+                              >
+                                {getRecordTypeLabel(order)}
+                              </span>
+                              <span className={styles.statusBadge}>
+                                {getOrderStatusTitle(order.status)}
+                              </span>
+                              {isAdditionalPaymentRow(order) &&
+                                order.payoutStatus && (
+                                  <span className={styles.statusBadge}>
+                                    Payout {order.payoutStatus}
+                                  </span>
+                                )}
+                              {order.financialMode && (
+                                <span
+                                  className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}
+                                >
+                                  {order.financialMode}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div
+                            className={styles.valueCell}
+                            data-label="Paid amount"
+                          >
+                            <div
+                              className={`${styles.valueMain} ${getToneClassName(paid.tone)}`}
+                            >
+                              {paid.amount}
+                            </div>
+                            <div className={styles.valueSub}>{paid.subtitle}</div>
+                          </div>
+
+                          <div className={styles.valueCell} data-label="Payout">
+                            <div
+                              className={`${styles.valueMain} ${getToneClassName(payout.tone)}`}
+                            >
+                              {payout.amount}
+                            </div>
+                            <div className={styles.valueSub}>
+                              {payout.subtitle}
+                            </div>
+                          </div>
+
+                          <div className={styles.valueCell} data-label="Refund">
+                            <div
+                              className={`${styles.valueMain} ${getToneClassName(refund.tone)}`}
+                            >
+                              {refund.amount}
+                            </div>
+                            <div className={styles.valueSub}>
+                              {refund.subtitle}
+                            </div>
+                          </div>
+
+                          <div
+                            className={styles.valueCell}
+                            data-label="Stripe fee"
+                          >
+                            <div
+                              className={`${styles.valueMain} ${getToneClassName(stripeFee.tone)}`}
+                            >
+                              {stripeFee.amount}
+                            </div>
+                            <div className={styles.valueSub}>
+                              {stripeFee.subtitle}
+                            </div>
+                          </div>
+
+                          <div
+                            className={styles.valueCell}
+                            data-label="Net profit"
+                          >
+                            <div
+                              className={`${styles.valueMain} ${getToneClassName(netProfit.tone)}`}
+                            >
+                              {netProfit.amount}
+                            </div>
+                            <div className={styles.valueSub}>
+                              {netProfit.subtitle}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {total > pageSize && (
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel=""
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={5}
+                  pageCount={pageCount}
+                  previousLabel=""
+                  renderOnZeroPageCount={null}
+                  containerClassName={paginateStyles.paginateWrapper}
+                  pageClassName={paginateStyles.pageBtn}
+                  pageLinkClassName={paginateStyles.pageLink}
+                  previousClassName={paginateStyles.prevPageBtn}
+                  previousLinkClassName={paginateStyles.prevLink}
+                  nextClassName={paginateStyles.nextPageBtn}
+                  nextLinkClassName={paginateStyles.nextLink}
+                  breakClassName={paginateStyles.break}
+                  activeClassName={paginateStyles.activePage}
+                  forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize)}
                 />
-                <button
-                  type="button"
-                  className={styles.datePickerBtn}
-                  onClick={() => openNativeDatePicker(endDateInputRef.current)}
-                  aria-label="Open end date picker"
-                >
-                  <img src={calendarImg.src} alt="" />
-                </button>
+              )}
+
+              <div className={styles.totalsSection}>
+                <div className={styles.totalsHeader}>
+                  <h3 className={styles.totalsTitle}>
+                    Totals for selected period
+                  </h3>
+                  <div
+                    className={styles.totalsSubtitle}
+                  >{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
+                </div>
+                <div className={styles.totalsGrid}>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Orders</div>
+                    <div className={styles.totalValue}>{subtotal.totalOrders}</div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Ledger rows</div>
+                    <div className={styles.modeCountsWrap}>
+                      <span
+                        className={`${styles.modeCountChip} ${styles.recordTypeOrder}`}
+                      >
+                        Orders {subtotal.orderPaymentCount ?? 0}
+                      </span>
+                      <span
+                        className={`${styles.modeCountChip} ${styles.recordTypeAdditional}`}
+                      >
+                        Additional {subtotal.additionalPaymentCount ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Client paid</div>
+                    <div className={`${styles.totalValue} ${styles.valueReal}`}>
+                      {formatMoneyFromCents(subtotal.clientPaidCents)}
+                    </div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Refunded</div>
+                    <div className={styles.totalValue}>
+                      {formatMoneyFromCents(subtotal.refundCents)}
+                    </div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Payouts</div>
+                    <div className={styles.totalValue}>
+                      {formatMoneyFromCents(subtotal.payoutCents)}
+                    </div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Stripe fees</div>
+                    <div className={styles.totalValue}>
+                      {formatMoneyFromCents(subtotal.stripeFeeCents)}
+                    </div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Gross revenue</div>
+                    <div className={styles.totalValue}>
+                      {formatMoneyFromCents(subtotal.grossPlatformRevenueCents)}
+                    </div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Net revenue</div>
+                    <div className={`${styles.totalValue} ${styles.valueReal}`}>
+                      {formatMoneyFromCents(subtotal.netPlatformRevenueCents)}
+
+                      {subtotalPercent && (
+                        <span style={{ marginLeft: 6 }}>
+                          ({subtotalPercent}%)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.totalCard}>
+                    <div className={styles.totalLabel}>Mode counts</div>
+                    <div className={styles.modeCountsWrap}>
+                      <span
+                        className={`${styles.modeCountChip} ${styles.modeForecast}`}
+                      >
+                        Forecast {subtotal.forecastCount}
+                      </span>
+                      <span
+                        className={`${styles.modeCountChip} ${styles.modePartialReal}`}
+                      >
+                        Partial {subtotal.partialRealCount}
+                      </span>
+                      <span className={`${styles.modeCountChip} ${styles.modeReal}`}>
+                        Real {subtotal.realCount}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className={styles.reportsSection}>
+              <div className={styles.reportsToolbar}>
+                <div className={styles.reportControls}>
+                  <div className={styles.reportField}>
+                    <span>Year</span>
+                    <select
+                      value={selectedReportYearNumber || currentYear}
+                      onChange={(event) =>
+                        setSelectedReportMonth(
+                          `${event.target.value}-${String(
+                            selectedReportMonthNumber || 1,
+                          ).padStart(2, "0")}`,
+                        )
+                      }
+                    >
+                      {reportYearOptions.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={styles.reportField}>
+                    <span>Month</span>
+                    <select
+                      value={selectedReportMonthNumber || 1}
+                      onChange={(event) =>
+                        setSelectedReportMonth(
+                          `${selectedReportYearNumber || currentYear}-${String(
+                            Number(event.target.value),
+                          ).padStart(2, "0")}`,
+                        )
+                      }
+                    >
+                      {MONTH_OPTIONS.map((month) => (
+                        <option key={month.value} value={month.value}>
+                          {month.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    title="Regenerate month"
+                    type="BLACK"
+                    onClick={regenerateSelectedReportMonth}
+                    isLoading={
+                      regeneratingReportKey === selectedReportMonthKey
+                    }
+                    isDisabled={reportsLoading}
+                  />
+                </div>
+                <div className={styles.reportToolbarMeta}>
+                  {selectedReportMonthLabel}
+                </div>
+              </div>
+
+              <div className={styles.reportsTableWrap}>
+                <div className={styles.reportsTableHeader}>
+                  <div>Period</div>
+                  <div>Range</div>
+                  <div>Rows</div>
+                  <div>Generated</div>
+                  <div>File</div>
+                  <div>Actions</div>
+                </div>
+
+                <div className={styles.reportsTableBody}>
+                  {reportsLoading && (
+                    <div className={styles.emptyState}>Loading reports...</div>
+                  )}
+                  {!reportsLoading && reportsError && (
+                    <div className={styles.emptyState}>{reportsError}</div>
+                  )}
+                  {!reportsLoading && !reportsError && reports.length === 0 && (
+                    <div className={styles.emptyState}>
+                      No monthly reports have been generated yet.
+                    </div>
+                  )}
+
+                  {!reportsLoading &&
+                    !reportsError &&
+                    reports.map((report) => {
+                      const reportKey = `${report.periodYear}-${report.periodMonth}`;
+                      const inclusiveEnd = new Date(
+                        new Date(report.periodEnd).getTime() - 1,
+                      ).toISOString();
+                      return (
+                        <div key={report.id} className={styles.reportRow}>
+                          <div className={styles.reportCell} data-label="Period">
+                            <div className={styles.reportPrimary}>
+                              {formatLedgerReportMonth(
+                                report.periodYear,
+                                report.periodMonth,
+                              )}
+                            </div>
+                            <div className={styles.reportSecondary}>
+                              {report.timezone}
+                            </div>
+                          </div>
+                          <div className={styles.reportCell} data-label="Range">
+                            <div className={styles.reportPrimary}>
+                              {`${formatLedgerReportDate(report.periodStart, report.timezone)} - ${formatLedgerReportDate(inclusiveEnd, report.timezone)}`}
+                            </div>
+                            <div className={styles.reportSecondary}>
+                              {report.periodKey}
+                            </div>
+                          </div>
+                          <div className={styles.reportCell} data-label="Rows">
+                            <div className={styles.reportPrimary}>
+                              {report.rowCount}
+                            </div>
+                            <div className={styles.reportSecondary}>
+                              Ledger entries
+                            </div>
+                          </div>
+                          <div className={styles.reportCell} data-label="Generated">
+                            <div className={styles.reportPrimary}>
+                              {formatLedgerReportDateTime(
+                                report.generatedAt,
+                                report.timezone,
+                              )}
+                            </div>
+                            <div className={styles.reportSecondary}>
+                              {report.timezone}
+                            </div>
+                          </div>
+                          <div className={styles.reportCell} data-label="File">
+                            <div className={styles.reportPrimary}>
+                              {report.fileName}
+                            </div>
+                            <div className={styles.reportSecondary}>
+                              {report.downloadPath}
+                            </div>
+                          </div>
+                          <div className={styles.reportActions} data-label="Actions">
+                            <Button
+                              title="Download CSV"
+                              type="OUTLINED"
+                              onClick={() => handleDownloadReport(report)}
+                              isLoading={downloadingReportKey === reportKey}
+                              isDisabled={
+                                Boolean(downloadingReportKey) ||
+                                Boolean(regeneratingReportKey)
+                              }
+                            />
+                            <Button
+                              title="Regenerate"
+                              type="BLACK"
+                              onClick={() => handleRegenerateReport(report)}
+                              isLoading={regeneratingReportKey === reportKey}
+                              isDisabled={
+                                Boolean(regeneratingReportKey) ||
+                                Boolean(downloadingReportKey)
+                              }
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             </div>
+          )}
+        </div>
+      </div>
 
-            <div className={styles.applyDateButtonWrap}>
+      {reportRegenerationTarget && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Regenerate report?</h2>
+            <p className={styles.confirmationBody}>
+              {`This will regenerate the ${reportRegenerationTarget.label} platform fee invoice CSV.`}
+            </p>
+            <div className={styles.confirmationActions}>
               <Button
-                title="Apply dates"
+                title="Cancel"
                 type="OUTLINED"
-                onClick={applyCustomDateRange}
+                onClick={closeReportRegenerationModal}
+                isDisabled={Boolean(regeneratingReportKey)}
+              />
+              <Button
+                title={regeneratingReportKey ? "Regenerating..." : "Confirm"}
+                type="BLACK"
+                onClick={confirmReportRegeneration}
+                isDisabled={Boolean(regeneratingReportKey)}
               />
             </div>
           </div>
         </div>
-
-        <div className={styles.filtersRow}>
-          <DropDownButton
-            options={STATUS_OPTIONS.map((option) => ({
-              title: option.title,
-              value: option.value,
-            }))}
-            selectedOption={selectedStatusOption}
-            setSelectedOption={(nextOption) => {
-            setSelectedStatusOption(nextOption as number);
-            const nextStatus =
-              STATUS_OPTIONS[nextOption as number]?.value ?? "";
-            updateLedgerQuery({
-              page: 1,
-              q: appliedSearch,
-              status: nextStatus,
-              mode: selectedMode,
-              sort: selectedSort,
-            });
-          }}
-          onClickOption={() => {
-              updateLedgerQuery({
-                page: 1,
-                q: appliedSearch,
-                status: selectedStatus,
-                mode: selectedMode,
-                sort: selectedSort,
-              });
-          }}
-        />
-          <DropDownButton
-            options={MODE_OPTIONS.map((option) => ({
-              title: option.title,
-              value: option.value,
-            }))}
-            selectedOption={selectedModeOption}
-            setSelectedOption={(nextOption) => {
-            setSelectedModeOption(nextOption as number);
-            const nextMode = MODE_OPTIONS[nextOption as number]?.value ?? "";
-            updateLedgerQuery({
-              page: 1,
-              q: appliedSearch,
-              status: selectedStatus,
-              mode: nextMode,
-              sort: selectedSort,
-            });
-          }}
-          onClickOption={() => {
-              updateLedgerQuery({
-                page: 1,
-                q: appliedSearch,
-                status: selectedStatus,
-                mode: selectedMode,
-                sort: selectedSort,
-              });
-          }}
-        />
-          <DropDownButton
-            options={SORT_OPTIONS.map((option) => ({
-              title: option.title,
-              value: option.value,
-            }))}
-            selectedOption={selectedSortOption}
-            setSelectedOption={(nextOption) => {
-            setSelectedSortOption(nextOption as number);
-            const nextSort =
-              SORT_OPTIONS[nextOption as number]?.value ?? "paidAt_desc";
-            updateLedgerQuery({
-              page: 1,
-              q: appliedSearch,
-              status: selectedStatus,
-              mode: selectedMode,
-              sort: nextSort,
-            });
-          }}
-          onClickOption={() => {
-              updateLedgerQuery({
-                page: 1,
-                q: appliedSearch,
-                status: selectedStatus,
-                mode: selectedMode,
-                sort: selectedSort,
-              });
-          }}
-        />
-        </div>
-
-        {validationError && (
-          <div className={styles.validationError}>{validationError}</div>
-        )}
-      </div>
-
-      <div className={styles.tableWrap}>
-        <div className={styles.tableHeader}>
-          <div>Order</div>
-          <div>Paid amount</div>
-          <div>Payout</div>
-          <div>Refund</div>
-          <div>Stripe fee</div>
-          <div>Net profit</div>
-        </div>
-
-        <div className={styles.tableBody}>
-          {loading && (
-            <div className={styles.emptyState}>Loading financial orders...</div>
-          )}
-          {!loading && error && (
-            <div className={styles.emptyState}>{error}</div>
-          )}
-          {!loading && !error && items.length === 0 && (
-            <div className={styles.emptyState}>
-              No financial orders for selected filters
-            </div>
-          )}
-
-          {!loading &&
-            !error &&
-            items.map((order, index) => {
-              const clientName = getUserName(
-                order.clientUser?.firstName,
-                order.clientUser?.lastName,
-              );
-              const providerName = getUserName(
-                order.providerUser?.firstName,
-                order.providerUser?.lastName,
-              );
-              const { paid, payout, refund, stripeFee, netProfit } =
-                getAmountPresentation(order);
-
-              return (
-                <div
-                  key={getLedgerRowKey(order, index)}
-                  className={`${styles.row} ${
-                    order.financialMode === "REAL" ? styles.rowReal : ""
-                  } ${
-                    isAdditionalPaymentRow(order) ? styles.rowAdditional : ""
-                  }`}
-                >
-                  <div className={styles.orderCell} data-label="Order">
-                    <div className={styles.orderUsersWrap}>
-                      <div className={styles.profilePics}>
-                        <img
-                          className={styles.providerImg}
-                          src={
-                            order.providerUser?.imgUrl || defaultAvatarImg.src
-                          }
-                          alt={providerName}
-                        />
-                        <img
-                          className={styles.clientImg}
-                          src={order.clientUser?.imgUrl || defaultAvatarImg.src}
-                          alt={clientName}
-                        />
-                      </div>
-                      <div className={styles.orderInfo}>
-                        <Link
-                          href={`/orders/${order.id}`}
-                          className={styles.orderIdLink}
-                        >
-                          {order.orderPrettyId}
-                        </Link>
-                        <div
-                          className={styles.orderNames}
-                        >{`${providerName} / ${clientName}`}</div>
-                        <div className={styles.orderMeta}>
-                          Paid: {formatDateTime(order.paidAt)}
-                        </div>
-                        <div className={styles.orderMeta}>
-                          {`${formatDateTime(order.startsAt)} - ${formatDateTime(order.endsAt)}`}
-                        </div>
-                      </div>
-                    </div>
-                    <div className={styles.orderBadges}>
-                      <span
-                        className={`${styles.recordTypeBadge} ${
-                          isAdditionalPaymentRow(order)
-                            ? styles.recordTypeAdditional
-                            : styles.recordTypeOrder
-                        }`}
-                      >
-                        {getRecordTypeLabel(order)}
-                      </span>
-                      <span className={styles.statusBadge}>
-                        {getOrderStatusTitle(order.status)}
-                      </span>
-                      {isAdditionalPaymentRow(order) && order.payoutStatus && (
-                        <span className={styles.statusBadge}>
-                          Payout {order.payoutStatus}
-                        </span>
-                      )}
-                      {order.financialMode && (
-                        <span
-                          className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}
-                        >
-                          {order.financialMode}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className={styles.valueCell} data-label="Paid amount">
-                    <div
-                      className={`${styles.valueMain} ${getToneClassName(paid.tone)}`}
-                    >
-                      {paid.amount}
-                    </div>
-                    <div className={styles.valueSub}>{paid.subtitle}</div>
-                  </div>
-
-                  <div className={styles.valueCell} data-label="Payout">
-                    <div
-                      className={`${styles.valueMain} ${getToneClassName(payout.tone)}`}
-                    >
-                      {payout.amount}
-                    </div>
-                    <div className={styles.valueSub}>{payout.subtitle}</div>
-                  </div>
-
-                  <div className={styles.valueCell} data-label="Refund">
-                    <div
-                      className={`${styles.valueMain} ${getToneClassName(refund.tone)}`}
-                    >
-                      {refund.amount}
-                    </div>
-                    <div className={styles.valueSub}>{refund.subtitle}</div>
-                  </div>
-
-                  <div className={styles.valueCell} data-label="Stripe fee">
-                    <div
-                      className={`${styles.valueMain} ${getToneClassName(stripeFee.tone)}`}
-                    >
-                      {stripeFee.amount}
-                    </div>
-                    <div className={styles.valueSub}>{stripeFee.subtitle}</div>
-                  </div>
-
-                  <div className={styles.valueCell} data-label="Net profit">
-                    <div
-                      className={`${styles.valueMain} ${getToneClassName(netProfit.tone)}`}
-                    >
-                      {netProfit.amount}
-                    </div>
-                    <div className={styles.valueSub}>{netProfit.subtitle}</div>
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-      </div>
-
-      {total > pageSize && (
-        <ReactPaginate
-          breakLabel="..."
-          nextLabel=""
-          onPageChange={handlePageClick}
-          pageRangeDisplayed={5}
-          pageCount={pageCount}
-          previousLabel=""
-          renderOnZeroPageCount={null}
-          containerClassName={paginateStyles.paginateWrapper}
-          pageClassName={paginateStyles.pageBtn}
-          pageLinkClassName={paginateStyles.pageLink}
-          previousClassName={paginateStyles.prevPageBtn}
-          previousLinkClassName={paginateStyles.prevLink}
-          nextClassName={paginateStyles.nextPageBtn}
-          nextLinkClassName={paginateStyles.nextLink}
-          breakClassName={paginateStyles.break}
-          activeClassName={paginateStyles.activePage}
-          forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize)}
-        />
       )}
 
-      <div className={styles.totalsSection}>
-        <div className={styles.totalsHeader}>
-          <h3 className={styles.totalsTitle}>Totals for selected period</h3>
-          <div
-            className={styles.totalsSubtitle}
-          >{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
-        </div>
-        <div className={styles.totalsGrid}>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Orders</div>
-            <div className={styles.totalValue}>{subtotal.totalOrders}</div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Ledger rows</div>
-            <div className={styles.modeCountsWrap}>
-              <span className={`${styles.modeCountChip} ${styles.recordTypeOrder}`}>
-                Orders {subtotal.orderPaymentCount ?? 0}
-              </span>
-              <span
-                className={`${styles.modeCountChip} ${styles.recordTypeAdditional}`}
-              >
-                Additional {subtotal.additionalPaymentCount ?? 0}
-              </span>
-            </div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Client paid</div>
-            <div className={`${styles.totalValue} ${styles.valueReal}`}>
-              {formatMoneyFromCents(subtotal.clientPaidCents)}
-            </div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Refunded</div>
-            <div className={styles.totalValue}>
-              {formatMoneyFromCents(subtotal.refundCents)}
-            </div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Payouts</div>
-            <div className={styles.totalValue}>
-              {formatMoneyFromCents(subtotal.payoutCents)}
-            </div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Stripe fees</div>
-            <div className={styles.totalValue}>
-              {formatMoneyFromCents(subtotal.stripeFeeCents)}
-            </div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Gross revenue</div>
-            <div className={styles.totalValue}>
-              {formatMoneyFromCents(subtotal.grossPlatformRevenueCents)}
-            </div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Net revenue</div>
-            <div className={`${styles.totalValue} ${styles.valueReal}`}>
-              {formatMoneyFromCents(subtotal.netPlatformRevenueCents)}
-
-              {subtotalPercent && (
-                <span style={{ marginLeft: 6 }}>({subtotalPercent}%)</span>
-              )}
-            </div>
-          </div>
-          <div className={styles.totalCard}>
-            <div className={styles.totalLabel}>Mode counts</div>
-            <div className={styles.modeCountsWrap}>
-              <span
-                className={`${styles.modeCountChip} ${styles.modeForecast}`}
-              >
-                Forecast {subtotal.forecastCount}
-              </span>
-              <span
-                className={`${styles.modeCountChip} ${styles.modePartialReal}`}
-              >
-                Partial {subtotal.partialRealCount}
-              </span>
-              <span className={`${styles.modeCountChip} ${styles.modeReal}`}>
-                Real {subtotal.realCount}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-
-      <aside
-        className={styles.forecastsAside}
-        aria-label="Financial forecasts"
-        aria-busy={forecastsLoading}
-      >
-        {forecastsLoading ? (
-          <div
-            className={styles.forecastsAsideLoading}
-            role="status"
-            aria-live="polite"
-          >
-            <p className={styles.forecastsAsideShimmerTitle}>
-              Information incoming...
-            </p>
-          </div>
-        ) : forecastsError ? (
-          <div className={styles.forecastsAsideError}>{forecastsError}</div>
-        ) : forecasts && forecastTotals && forecastCounts ? (
-          <div className={styles.forecastsAsideContent}>
-            <div className={styles.forecastsHeader}>
-              <h3 className={styles.forecastsTitle}>Forecasts</h3>
-              <div className={styles.forecastsGenerated}>
-                {formatDateTime(forecasts.generatedAt)}
-              </div>
-            </div>
-
-            <div className={styles.forecastSummaryGrid}>
-              <div className={styles.forecastStatTile}>
-                <span className={styles.forecastStatTileLabel}>
-                  Outstanding
-                </span>
-                <span className={styles.forecastStatTileValue}>
-                  {formatMoneyFromCents(
-                    forecastTotals.totalOutstandingPayoutLiabilityCents,
-                  )}
-                </span>
-              </div>
-              <div className={styles.forecastStatTile}>
-                <span className={styles.forecastStatTileLabel}>
-                  Net revenue
-                </span>
-                <span
-                  className={`${styles.forecastStatTileValue} ${styles.valueReal}`}
-                >
-                  {formatMoneyFromCents(
-                    forecastTotals.totalNetPlatformRevenueRemainingCents,
-                  )}
-                </span>
-              </div>
-            </div>
-
-            <section className={styles.forecastSection}>
-              <h4 className={styles.forecastSectionHeading}>Payouts</h4>
-              <div className={styles.forecastRows}>
-                <div className={styles.forecastRow}>
-                  <span>Already paid</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.alreadyPaidOutToSittersCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Scheduled</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.scheduledOutstandingPayoutsCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Future events</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.futureConfirmedEventPayoutLiabilityCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Additional payments</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.additionalProviderPaymentOutstandingCents,
-                    )}
-                  </strong>
-                </div>
-              </div>
-            </section>
-
-            <section className={styles.forecastSection}>
-              <h4 className={styles.forecastSectionHeading}>Revenue</h4>
-              <div className={styles.forecastRows}>
-                <div className={styles.forecastRow}>
-                  <span>Future gross</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.futureConfirmedGrossPlatformRevenueCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Future Stripe fees</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.futureConfirmedForecastStripeFeeCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Future net</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.futureConfirmedNetPlatformRevenueCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Additional gross</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.additionalPaymentsGrossPlatformRevenueCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Additional fees</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.additionalPaymentsForecastStripeFeeCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Additional net</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.additionalPaymentsNetPlatformRevenueCents,
-                    )}
-                  </strong>
-                </div>
-                <div className={styles.forecastRow}>
-                  <span>Total gross</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastTotals.totalGrossPlatformRevenueRemainingCents,
-                    )}
-                  </strong>
-                </div>
-              </div>
-            </section>
-
-            <section className={styles.forecastSection}>
-              <h4 className={styles.forecastSectionHeading}>Counts</h4>
-              <div className={styles.forecastChipGrid}>
-                <span className={styles.forecastChip}>
-                  Paid {forecastCounts.paidOutPayouts}
-                </span>
-                <span className={styles.forecastChip}>
-                  Scheduled {forecastCounts.scheduledOutstandingPayouts}
-                </span>
-                <span className={styles.forecastChip}>
-                  Future {forecastCounts.futureConfirmedEvents}
-                </span>
-                <span className={styles.forecastChip}>
-                  Additional{" "}
-                  {forecastCounts.additionalProviderPaymentsOutstanding}
-                </span>
-                <span className={styles.forecastChip}>
-                  Ledger {forecastCounts.ledgerPaidOutEntries}
-                </span>
-              </div>
-            </section>
-
-            <section className={styles.forecastSection}>
-              <h4 className={styles.forecastSectionHeading}>Cross-check</h4>
-              <div className={styles.forecastRows}>
-                <div className={styles.forecastRow}>
-                  <span>Ledger paid</span>
-                  <strong>
-                    {formatMoneyFromCents(
-                      forecastCrossChecks
-                        ?.ledgerAlreadyPaidOutToSittersCents ?? 0,
-                    )}
-                  </strong>
-                </div>
-              </div>
-            </section>
-
-            <section className={styles.forecastSection}>
-              <h4 className={styles.forecastSectionHeading}>Assumptions</h4>
-              <p className={styles.forecastAssumption}>
-                Refunds: {forecasts.assumptions.refunds}
+      {activeView === LEDGER_DEFAULT_VIEW && (
+        <aside
+          className={styles.forecastsAside}
+          aria-label="Financial forecasts"
+          aria-busy={forecastsLoading}
+        >
+          {forecastsLoading ? (
+            <div
+              className={styles.forecastsAsideLoading}
+              role="status"
+              aria-live="polite"
+            >
+              <p className={styles.forecastsAsideShimmerTitle}>
+                Information incoming...
               </p>
-              {stripeFeeForecast && (
+            </div>
+          ) : forecastsError ? (
+            <div className={styles.forecastsAsideError}>{forecastsError}</div>
+          ) : forecasts && forecastTotals && forecastCounts ? (
+            <div className={styles.forecastsAsideContent}>
+              <div className={styles.forecastsHeader}>
+                <h3 className={styles.forecastsTitle}>Forecasts</h3>
+                <div className={styles.forecastsGenerated}>
+                  {formatDateTime(forecasts.generatedAt)}
+                </div>
+              </div>
+
+              <div className={styles.forecastSummaryGrid}>
+                <div className={styles.forecastStatTile}>
+                  <span className={styles.forecastStatTileLabel}>
+                    Outstanding
+                  </span>
+                  <span className={styles.forecastStatTileValue}>
+                    {formatMoneyFromCents(
+                      forecastTotals.totalOutstandingPayoutLiabilityCents,
+                    )}
+                  </span>
+                </div>
+                <div className={styles.forecastStatTile}>
+                  <span className={styles.forecastStatTileLabel}>
+                    Net revenue
+                  </span>
+                  <span
+                    className={`${styles.forecastStatTileValue} ${styles.valueReal}`}
+                  >
+                    {formatMoneyFromCents(
+                      forecastTotals.totalNetPlatformRevenueRemainingCents,
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <section className={styles.forecastSection}>
+                <h4 className={styles.forecastSectionHeading}>Payouts</h4>
+                <div className={styles.forecastRows}>
+                  <div className={styles.forecastRow}>
+                    <span>Already paid</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.alreadyPaidOutToSittersCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Scheduled</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.scheduledOutstandingPayoutsCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Future events</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.futureConfirmedEventPayoutLiabilityCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Additional payments</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.additionalProviderPaymentOutstandingCents,
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className={styles.forecastSection}>
+                <h4 className={styles.forecastSectionHeading}>Revenue</h4>
+                <div className={styles.forecastRows}>
+                  <div className={styles.forecastRow}>
+                    <span>Future gross</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.futureConfirmedGrossPlatformRevenueCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Future Stripe fees</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.futureConfirmedForecastStripeFeeCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Future net</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.futureConfirmedNetPlatformRevenueCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Additional gross</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.additionalPaymentsGrossPlatformRevenueCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Additional fees</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.additionalPaymentsForecastStripeFeeCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Additional net</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.additionalPaymentsNetPlatformRevenueCents,
+                      )}
+                    </strong>
+                  </div>
+                  <div className={styles.forecastRow}>
+                    <span>Total gross</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastTotals.totalGrossPlatformRevenueRemainingCents,
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className={styles.forecastSection}>
+                <h4 className={styles.forecastSectionHeading}>Counts</h4>
+                <div className={styles.forecastChipGrid}>
+                  <span className={styles.forecastChip}>
+                    Paid {forecastCounts.paidOutPayouts}
+                  </span>
+                  <span className={styles.forecastChip}>
+                    Scheduled {forecastCounts.scheduledOutstandingPayouts}
+                  </span>
+                  <span className={styles.forecastChip}>
+                    Future {forecastCounts.futureConfirmedEvents}
+                  </span>
+                  <span className={styles.forecastChip}>
+                    Additional{" "}
+                    {forecastCounts.additionalProviderPaymentsOutstanding}
+                  </span>
+                  <span className={styles.forecastChip}>
+                    Ledger {forecastCounts.ledgerPaidOutEntries}
+                  </span>
+                </div>
+              </section>
+
+              <section className={styles.forecastSection}>
+                <h4 className={styles.forecastSectionHeading}>Cross-check</h4>
+                <div className={styles.forecastRows}>
+                  <div className={styles.forecastRow}>
+                    <span>Ledger paid</span>
+                    <strong>
+                      {formatMoneyFromCents(
+                        forecastCrossChecks
+                          ?.ledgerAlreadyPaidOutToSittersCents ?? 0,
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className={styles.forecastSection}>
+                <h4 className={styles.forecastSectionHeading}>Assumptions</h4>
                 <p className={styles.forecastAssumption}>
-                  Stripe fees: {(stripeFeeForecast.percent * 100).toFixed(2)}%
-                  {" + "}
-                  {formatMoneyFromCents(stripeFeeForecast.fixedCents)}
+                  Refunds: {forecasts.assumptions.refunds}
                 </p>
-              )}
-            </section>
-          </div>
-        ) : (
-          <div className={styles.forecastsAsideError}>
-            No forecasts available.
-          </div>
-        )}
-      </aside>
+                {stripeFeeForecast && (
+                  <p className={styles.forecastAssumption}>
+                    Stripe fees: {(stripeFeeForecast.percent * 100).toFixed(2)}%
+                    {" + "}
+                    {formatMoneyFromCents(stripeFeeForecast.fixedCents)}
+                  </p>
+                )}
+              </section>
+            </div>
+          ) : (
+            <div className={styles.forecastsAsideError}>
+              No forecasts available.
+            </div>
+          )}
+        </aside>
+      )}
     </div>
   );
 };

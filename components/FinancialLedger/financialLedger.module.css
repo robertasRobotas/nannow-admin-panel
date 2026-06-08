@@ -43,6 +43,43 @@
   font-weight: 600;
 }
 
+.viewTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.viewTab {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.02);
+  color: rgba(0, 0, 0, 0.74);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.viewTab:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.viewTabActive {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
+.viewTab svg {
+  flex-shrink: 0;
+}
+
 .filtersPanel {
   display: flex;
   flex-direction: column;
@@ -161,6 +198,12 @@
   color: #ff3b30;
   font-size: 13px;
   font-weight: 700;
+}
+
+.viewBody {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .tableWrap {
@@ -387,6 +430,50 @@
   color: rgba(0, 0, 0, 0.5);
   font-size: 14px;
   font-weight: 700;
+}
+
+.confirmationBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.confirmationModal {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.confirmationTitle {
+  margin: 0;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.confirmationBody {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.confirmationActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .totalsSection {
@@ -669,6 +756,165 @@
   line-height: 1.35;
 }
 
+.reportHeaderMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  max-width: 320px;
+  text-align: right;
+}
+
+.reportHeaderMetaLabel {
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.reportHeaderMetaValue {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.reportsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.reportsToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
+    0 2px 10px 0 rgba(0, 0, 0, 0.04);
+}
+
+.reportControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.reportField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.reportField span {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.reportField select {
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  padding: 0 12px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+
+.reportToolbarMeta {
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.reportsTableWrap {
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
+    0 2px 10px 0 rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.reportsTableHeader,
+.reportRow {
+  display: grid;
+  grid-template-columns:
+    minmax(160px, 1.1fr)
+    minmax(220px, 1.6fr)
+    80px
+    minmax(180px, 1.2fr)
+    minmax(170px, 1.1fr)
+    minmax(220px, 1.5fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.reportsTableHeader {
+  padding: 14px 20px;
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reportsTableBody {
+  display: flex;
+  flex-direction: column;
+}
+
+.reportRow {
+  padding: 18px 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  transition: background-color 0.2s ease;
+}
+
+.reportRow:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.reportCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reportPrimary {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.reportSecondary {
+  color: rgba(0, 0, 0, 0.56);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.reportActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .forecastsAsideShimmerTitle {
     animation: none;
@@ -693,6 +939,17 @@
   .tableHeader,
   .row {
     grid-template-columns: minmax(320px, 2.4fr) repeat(5, minmax(110px, 0.85fr));
+  }
+
+  .reportsTableHeader,
+  .reportRow {
+    grid-template-columns:
+      minmax(150px, 1.05fr)
+      minmax(200px, 1.45fr)
+      72px
+      minmax(170px, 1.15fr)
+      minmax(160px, 1fr)
+      minmax(200px, 1.3fr);
   }
 }
 
@@ -732,7 +989,16 @@
     display: none;
   }
 
+  .reportsTableHeader {
+    display: none;
+  }
+
   .row {
+    gap: 14px;
+  }
+
+  .reportRow {
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
 
@@ -756,6 +1022,33 @@
     text-transform: uppercase;
     margin-bottom: 2px;
   }
+
+  .reportCell,
+  .reportActions {
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .reportCell:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .reportCell::before,
+  .reportActions::before {
+    content: attr(data-label);
+    color: rgba(0, 0, 0, 0.56);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .reportActions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 936px) {
@@ -777,6 +1070,20 @@
     font-size: 32px;
   }
 
+  .headerRow {
+    align-items: stretch;
+  }
+
+  .reportHeaderMeta {
+    align-items: flex-start;
+    text-align: left;
+    max-width: none;
+  }
+
+  .reportsToolbar {
+    align-items: stretch;
+  }
+
   .customDateControls {
     flex-direction: column;
     align-items: stretch;
@@ -793,5 +1100,23 @@
   .totalCard {
     flex-basis: 100%;
     max-width: none;
+  }
+
+  .reportControls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reportField {
+    min-width: 0;
+  }
+
+  .reportActions {
+    width: 100%;
+  }
+
+  .reportActions > * {
+    width: 100%;
   }
 }

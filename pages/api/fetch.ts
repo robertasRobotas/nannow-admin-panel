@@ -1730,6 +1730,53 @@ export const rebuildFinancialLedgerForOrder = async (orderId: string) => {
   return response;
 };
 
+export const getPlatformFeeInvoiceReports = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/accounting/platform-fee-invoice-reports`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const regeneratePlatformFeeInvoiceReport = async (
+  year: number,
+  month: number,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/accounting/platform-fee-invoice-reports/${year}/${month}/regenerate`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const downloadPlatformFeeInvoiceReport = async (
+  year: number,
+  month: number,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/accounting/platform-fee-invoice-reports/${year}/${month}/download`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+      responseType: "blob",
+    },
+  );
+  return response;
+};
+
 export const deleteFinancialLedgerOrders = async (orderIds: string[]) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.delete(
