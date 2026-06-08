@@ -2,18 +2,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
+import Link from "next/link";
+import { FileText, Wallet } from "lucide-react";
 import Button from "@/components/Button/Button";
 import { nunito } from "@/helpers/fonts";
 import { getEarnedProfit } from "@/pages/api/fetch";
 import type {
-  EarnedProfitAdditionalPaymentNegativeContributor,
-  EarnedProfitDebug,
-  EarnedProfitNormalServiceNegativeContributor,
+  EarnedProfitBreakdownRow,
   EarnedProfitResponse,
-  EarnedProfitSummary,
   EarnedProfitTotals,
 } from "@/types/EarnedProfit";
 import calendarImg from "@/assets/images/calendar.svg";
+import MonthlyReports from "./MonthlyReports";
 import styles from "./earnedProfit.module.css";
 
 type PeriodPreset = "this_month" | "last_month" | "this_year" | "custom";
@@ -25,6 +25,8 @@ type DateRange = {
   endIso: string;
 };
 
+type EarnedProfitView = "profit" | "monthly-reports";
+
 const PERIOD_OPTIONS: Array<{
   label: string;
   value: Exclude<PeriodPreset, "custom">;
@@ -35,52 +37,13 @@ const PERIOD_OPTIONS: Array<{
 ];
 
 const EMPTY_TOTALS: EarnedProfitTotals = {
-  clientPaidCents: 0,
-  providerEarnedCents: 0,
-  grossProfitBeforeStripeFeesCents: 0,
-  knownStripeFeeCents: 0,
-  netProfitCents: null,
-  stripeFeeUnknownPaymentCount: 0,
+  rowCount: 0,
+  invoiceCount: 0,
+  refundCount: 0,
+  profitCents: 0,
+  stripeFeeCents: 0,
+  netProfitCents: 0,
 };
-
-const EMPTY_SECTION: EarnedProfitSummary = {
-  count: 0,
-  paymentCount: 0,
-  clientPaidCents: 0,
-  providerEarnedCents: 0,
-  grossProfitBeforeStripeFeesCents: 0,
-  knownStripeFeeCents: 0,
-  netProfitCents: null,
-  stripeFeeUnknownPaymentCount: 0,
-  recordsWithUnknownStripeFee: 0,
-};
-
-const EMPTY_DEBUG: EarnedProfitDebug = {
-  enabled: false,
-  breakdownLimit: 50,
-  negativeContributors: {
-    normalServices: [],
-    additionalProviderPayments: [],
-  },
-};
-
-const toSafeDebug = (debug?: EarnedProfitResponse["debug"]): EarnedProfitDebug => ({
-  enabled: Boolean(debug?.enabled),
-  breakdownLimit:
-    typeof debug?.breakdownLimit === "number"
-      ? debug.breakdownLimit
-      : EMPTY_DEBUG.breakdownLimit,
-  negativeContributors: {
-    normalServices: Array.isArray(debug?.negativeContributors?.normalServices)
-      ? debug.negativeContributors.normalServices
-      : [],
-    additionalProviderPayments: Array.isArray(
-      debug?.negativeContributors?.additionalProviderPayments,
-    )
-      ? debug.negativeContributors.additionalProviderPayments
-      : [],
-  },
-});
 
 const toInputDate = (date: Date) => {
   const year = date.getUTCFullYear();
@@ -145,6 +108,22 @@ const formatMoneyFromCents = (value?: number | null, currency = "eur") => {
   }).format(value / 100);
 };
 
+const formatMoneyFromDecimal = (
+  value?: string | null,
+  currency = "eur",
+  fallback = "—",
+) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return fallback;
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(parsed);
+};
+
 const formatDate = (value?: string | null) =>
   value
     ? new Date(value).toLocaleDateString("en-GB", {
@@ -155,10 +134,18 @@ const formatDate = (value?: string | null) =>
       })
     : "—";
 
-const getPercent = (value?: number | null, total?: number | null) => {
-  if (typeof value !== "number" || !total) return null;
-  return ((value / total) * 100).toFixed(2);
-};
+const formatDateTime = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleString("en-GB", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "UTC",
+      })
+    : "—";
 
 const openNativeDatePicker = (input: HTMLInputElement | null) => {
   if (!input) return;
@@ -199,134 +186,83 @@ const MetricCard = ({
   </div>
 );
 
-const SectionSummary = ({
-  title,
-  summary,
-  currency,
-}: {
-  title: string;
-  summary: EarnedProfitSummary;
-  currency: string;
-}) => (
-  <section className={styles.sectionCard}>
-    <div className={styles.sectionHeader}>
-      <div>
-        <h3 className={styles.sectionTitle}>{title}</h3>
-        <div className={styles.sectionSubtitle}>
-          {summary.count} records, {summary.paymentCount} payments
-        </div>
-      </div>
-      {summary.stripeFeeUnknownPaymentCount > 0 && (
-        <span className={styles.warningBadge}>
-          {summary.stripeFeeUnknownPaymentCount} unknown fees
-        </span>
-      )}
-    </div>
-    <div className={styles.sectionGrid}>
-      <MetricCard
-        label="Client paid"
-        value={formatMoneyFromCents(summary.clientPaidCents, currency)}
-      />
-      <MetricCard
-        label="Provider earned"
-        value={formatMoneyFromCents(summary.providerEarnedCents, currency)}
-      />
-      <MetricCard
-        label="Gross profit"
-        value={formatMoneyFromCents(
-          summary.grossProfitBeforeStripeFeesCents,
-          currency,
-        )}
-        subtitle="Before Stripe fees"
-        tone="positive"
-      />
-      <MetricCard
-        label="Known Stripe fees"
-        value={formatMoneyFromCents(summary.knownStripeFeeCents, currency)}
-      />
-      <MetricCard
-        label="Net profit"
-        value={formatMoneyFromCents(summary.netProfitCents, currency)}
-        subtitle={
-          summary.netProfitCents === null
-            ? "Waiting for missing Stripe fees"
-            : undefined
-        }
-        tone={summary.netProfitCents === null ? "warning" : "positive"}
-      />
-      <MetricCard
-        label="Records with unknown fee"
-        value={summary.recordsWithUnknownStripeFee}
-      />
-    </div>
-  </section>
-);
-
-const NegativeContributorsTable = ({
-  title,
+const BreakdownTable = ({
   rows,
   currency,
 }: {
-  title: string;
-  rows:
-    | EarnedProfitNormalServiceNegativeContributor[]
-    | EarnedProfitAdditionalPaymentNegativeContributor[];
+  rows: EarnedProfitBreakdownRow[];
   currency: string;
 }) => (
-  <section className={styles.debugTableWrap}>
-    <h4 className={styles.debugTableTitle}>{title}</h4>
+  <section className={styles.breakdownSection}>
+    <div className={styles.breakdownHeader}>
+      <div>
+        <h3 className={styles.breakdownTitle}>Breakdown</h3>
+        <div className={styles.sectionSubtitle}>
+          {rows.length} row{rows.length === 1 ? "" : "s"}
+        </div>
+      </div>
+    </div>
     {rows.length === 0 ? (
-      <div className={styles.debugEmpty}>No negative contributors in this period.</div>
+      <div className={styles.emptyState}>No breakdown rows for this period.</div>
     ) : (
-      <div className={styles.debugTableScroll}>
-        <table className={styles.debugTable}>
+      <div className={styles.breakdownTableScroll}>
+        <table className={styles.breakdownTable}>
           <thead>
             <tr>
-              <th>Type</th>
-              <th>ID</th>
-              <th>Order</th>
+              <th>Kind</th>
+              <th>Invoice / order</th>
               <th>Date</th>
-              <th>Client paid</th>
-              <th>Provider earned</th>
-              <th>Gross</th>
+              <th>Timestamp</th>
+              <th>Client</th>
+              <th>Provider</th>
+              <th>Total amount</th>
+              <th>Profit</th>
               <th>Stripe fee</th>
-              <th>Net</th>
+              <th>Net profit</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
-              const isNormalService = row.kind === "NORMAL_SERVICE";
-              const primaryId = isNormalService ? row.orderId : row.paymentId;
-              const orderId = row.orderId ?? "—";
-              const completedAt = isNormalService
-                ? row.serviceCompletedAt
-                : row.paymentCompletedAt;
-
-              return (
-                <tr key={`${row.kind}-${primaryId}`}>
-                  <td>{row.kind}</td>
-                  <td>{primaryId}</td>
-                  <td>{orderId}</td>
-                  <td>{formatDate(completedAt)}</td>
-                  <td>{formatMoneyFromCents(row.clientPaidCents, currency)}</td>
-                  <td>{formatMoneyFromCents(row.providerEarnedCents, currency)}</td>
-                  <td>
-                    {formatMoneyFromCents(
-                      row.grossProfitBeforeStripeFeesCents,
-                      currency,
-                    )}
-                  </td>
-                  <td>{formatMoneyFromCents(row.knownStripeFeeCents, currency)}</td>
-                  <td>{formatMoneyFromCents(row.netProfitCents, currency)}</td>
-                </tr>
-              );
-            })}
+            {rows.map((row) => (
+              <tr key={`${row.entryKind}-${row.invoiceOrOrderNumber}-${row.dateTime}`}>
+                <td>
+                  <span
+                    className={`${styles.entryKindBadge} ${
+                      row.entryKind === "REFUND"
+                        ? styles.entryKindRefund
+                        : styles.entryKindInvoice
+                    }`}
+                  >
+                    {row.entryKind}
+                  </span>
+                </td>
+                <td>
+                  <Link
+                    href={`/orders/${row.orderId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.orderNumberLink}
+                  >
+                    {row.invoiceOrOrderNumber}
+                  </Link>
+                </td>
+                <td>{row.date}</td>
+                <td>{formatDateTime(row.dateTime)}</td>
+                <td>{row.client}</td>
+                <td>{row.provider}</td>
+                <td>{formatMoneyFromDecimal(row.totalAmount, currency)}</td>
+                <td>{formatMoneyFromDecimal(row.profit, currency)}</td>
+                <td>{formatMoneyFromDecimal(row.stripeFee, currency)}</td>
+                <td>{formatMoneyFromDecimal(row.netProfit, currency)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
     )}
   </section>
 );
+
+const BREAKDOWN_LIMIT = 200;
 
 const EarnedProfit = () => {
   const router = useRouter();
@@ -337,30 +273,25 @@ const EarnedProfit = () => {
   const [validationError, setValidationError] = useState("");
   const [selectedPeriod, setSelectedPeriod] =
     useState<PeriodPreset>("this_month");
+  const [activeView, setActiveView] = useState<EarnedProfitView>("profit");
   const [startDateInput, setStartDateInput] = useState(defaultRange.startInput);
   const [endDateInput, setEndDateInput] = useState(defaultRange.endInput);
   const [appliedStartDate, setAppliedStartDate] = useState(
     defaultRange.startIso,
   );
   const [appliedEndDate, setAppliedEndDate] = useState(defaultRange.endIso);
-  const [showDebugData, setShowDebugData] = useState(false);
-  const [breakdownLimitInput, setBreakdownLimitInput] = useState("50");
-  const [appliedBreakdownLimit, setAppliedBreakdownLimit] = useState(50);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchEarnedProfit = useCallback(
-    async (options?: { includeBreakdown?: boolean; breakdownLimit?: number }) => {
+  const fetchEarnedProfit = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const includeBreakdown = options?.includeBreakdown ?? showDebugData;
-      const breakdownLimit = options?.breakdownLimit ?? appliedBreakdownLimit;
       const response = await getEarnedProfit({
         startDate: appliedStartDate,
         endDate: appliedEndDate,
-        includeBreakdown,
-        breakdownLimit: includeBreakdown ? breakdownLimit : undefined,
+        includeBreakdown: true,
+        breakdownLimit: BREAKDOWN_LIMIT,
       });
       const payload = response.data as
         | EarnedProfitResponse
@@ -380,15 +311,7 @@ const EarnedProfit = () => {
     } finally {
       setLoading(false);
     }
-    },
-    [
-      appliedBreakdownLimit,
-      appliedEndDate,
-      appliedStartDate,
-      router,
-      showDebugData,
-    ],
-  );
+  }, [appliedEndDate, appliedStartDate, router]);
 
   useEffect(() => {
     fetchEarnedProfit();
@@ -421,288 +344,172 @@ const EarnedProfit = () => {
     setValidationError("");
   };
 
-  const applyBreakdownLimit = () => {
-    const parsed = Number.parseInt(breakdownLimitInput, 10);
-    if (Number.isNaN(parsed)) {
-      setValidationError("Breakdown limit must be a number between 1 and 500.");
-      return;
-    }
-    const clamped = Math.min(500, Math.max(1, parsed));
-    setAppliedBreakdownLimit(clamped);
-    setBreakdownLimitInput(String(clamped));
-    setValidationError("");
-    if (showDebugData) {
-      fetchEarnedProfit({ includeBreakdown: true, breakdownLimit: clamped });
-    }
-  };
-
-  const toggleDebugData = () => {
-    const nextShowDebugData = !showDebugData;
-    setShowDebugData(nextShowDebugData);
-    fetchEarnedProfit({
-      includeBreakdown: nextShowDebugData,
-      breakdownLimit: appliedBreakdownLimit,
-    });
-  };
-
   const currency = data?.currency ?? "eur";
   const totals = data?.totals ?? EMPTY_TOTALS;
-  const normalServices = data?.normalServices ?? EMPTY_SECTION;
-  const additionalProviderPayments =
-    data?.additionalProviderPayments ?? EMPTY_SECTION;
-  const debug = toSafeDebug(data?.debug);
-  const netProfitPercent = getPercent(
-    totals.netProfitCents,
-    totals.clientPaidCents,
-  );
-  const grossProfitPercent = getPercent(
-    totals.grossProfitBeforeStripeFeesCents,
-    totals.clientPaidCents,
-  );
+  const breakdown = data?.breakdown ?? [];
 
   return (
     <div className={styles.main}>
       <div className={styles.headerRow}>
         <div className={styles.titleWrap}>
           <h2 className={`${styles.title} ${nunito.className}`}>
-            Earned profit
+            {activeView === "profit" ? "Earned profit" : "Monthly reports"}
           </h2>
           <div className={styles.subtitle}>
-            {data
-              ? `${formatDate(data.period.startDate)} - ${formatDate(data.period.endDate)} UTC, end exclusive`
-              : "Earned profit for completed services and additional payments"}
+            {activeView === "profit"
+              ? data
+                ? `${formatDate(data.period.startDate)} - ${formatDate(data.period.endDate)} UTC, end exclusive`
+                : "Earned profit report for issued invoices and refund-period losses"
+              : "Monthly platform fee invoice reports"}
           </div>
+        </div>
+        <div className={styles.headerActions}>
+          <div className={styles.viewTabs}>
+            <button
+              type="button"
+              className={`${styles.viewTab} ${
+                activeView === "profit" ? styles.viewTabActive : ""
+              }`}
+              onClick={() => setActiveView("profit")}
+            >
+              <Wallet size={16} strokeWidth={2} />
+              <span>Earned profit</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewTab} ${
+                activeView === "monthly-reports" ? styles.viewTabActive : ""
+              }`}
+              onClick={() => setActiveView("monthly-reports")}
+            >
+              <FileText size={16} strokeWidth={2} />
+              <span>Monthly reports</span>
+            </button>
+          </div>
+          {activeView === "profit" && (
+            <div className={styles.periodButtons}>
+              {PERIOD_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`${styles.periodButton} ${
+                    selectedPeriod === option.value ? styles.periodButtonActive : ""
+                  }`}
+                  onClick={() => applyPresetRange(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className={styles.filtersPanel}>
-        <div className={styles.periodButtons}>
-          {PERIOD_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`${styles.periodButton} ${
-                selectedPeriod === option.value ? styles.periodButtonActive : ""
-              }`}
-              onClick={() => applyPresetRange(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.customDateControls}>
-          <div className={styles.dateField}>
-            <span>Start</span>
-            <div className={styles.dateInputWrap}>
-              <input
-                ref={startDateInputRef}
-                type="date"
-                className={styles.dateInput}
-                value={startDateInput}
-                onChange={(e) => {
-                  setSelectedPeriod("custom");
-                  setStartDateInput(e.target.value);
-                }}
-              />
-              <button
-                type="button"
-                className={styles.datePickerBtn}
-                onClick={() => openNativeDatePicker(startDateInputRef.current)}
-                aria-label="Open start date picker"
-              >
-                <img src={calendarImg.src} alt="" />
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.dateField}>
-            <span>End</span>
-            <div className={styles.dateInputWrap}>
-              <input
-                ref={endDateInputRef}
-                type="date"
-                className={styles.dateInput}
-                value={endDateInput}
-                onChange={(e) => {
-                  setSelectedPeriod("custom");
-                  setEndDateInput(e.target.value);
-                }}
-              />
-              <button
-                type="button"
-                className={styles.datePickerBtn}
-                onClick={() => openNativeDatePicker(endDateInputRef.current)}
-                aria-label="Open end date picker"
-              >
-                <img src={calendarImg.src} alt="" />
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.applyDateButtonWrap}>
-            <Button
-              title="Apply dates"
-              type="OUTLINED"
-              onClick={applyCustomDateRange}
-            />
-          </div>
-
-          <button
-            type="button"
-            className={styles.debugToggleButton}
-            onClick={toggleDebugData}
-          >
-            {showDebugData ? "Hide debug data" : "Show debug data"}
-          </button>
-
-          {showDebugData && (
-            <>
+      {activeView === "profit" ? (
+        <>
+          <div className={styles.filtersPanel}>
+            <div className={styles.customDateControls}>
               <div className={styles.dateField}>
-                <span>Breakdown limit (1-500)</span>
+                <span>Start</span>
                 <div className={styles.dateInputWrap}>
                   <input
-                    type="number"
-                    min={1}
-                    max={500}
+                    ref={startDateInputRef}
+                    type="date"
                     className={styles.dateInput}
-                    value={breakdownLimitInput}
-                    onChange={(e) => setBreakdownLimitInput(e.target.value)}
+                    value={startDateInput}
+                    onChange={(e) => {
+                      setSelectedPeriod("custom");
+                      setStartDateInput(e.target.value);
+                    }}
                   />
+                  <button
+                    type="button"
+                    className={styles.datePickerBtn}
+                    onClick={() => openNativeDatePicker(startDateInputRef.current)}
+                    aria-label="Open start date picker"
+                  >
+                    <img src={calendarImg.src} alt="" />
+                  </button>
                 </div>
               </div>
+
+              <div className={styles.dateField}>
+                <span>End</span>
+                <div className={styles.dateInputWrap}>
+                  <input
+                    ref={endDateInputRef}
+                    type="date"
+                    className={styles.dateInput}
+                    value={endDateInput}
+                    onChange={(e) => {
+                      setSelectedPeriod("custom");
+                      setEndDateInput(e.target.value);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.datePickerBtn}
+                    onClick={() => openNativeDatePicker(endDateInputRef.current)}
+                    aria-label="Open end date picker"
+                  >
+                    <img src={calendarImg.src} alt="" />
+                  </button>
+                </div>
+              </div>
+
               <div className={styles.applyDateButtonWrap}>
                 <Button
-                  title="Apply limit"
+                  title="Apply dates"
                   type="OUTLINED"
-                  onClick={applyBreakdownLimit}
+                  onClick={applyCustomDateRange}
                 />
               </div>
-            </>
-          )}
-        </div>
-
-        {validationError && (
-          <div className={styles.validationError}>{validationError}</div>
-        )}
-      </div>
-
-      {loading && <div className={styles.emptyState}>Loading earned profit...</div>}
-      {!loading && error && <div className={styles.emptyState}>{error}</div>}
-
-      {!loading && !error && (
-        <>
-          <section className={styles.totalsSection}>
-            <div className={styles.totalsHeader}>
-              <h3 className={styles.totalsTitle}>Totals</h3>
-              {totals.stripeFeeUnknownPaymentCount > 0 && (
-                <span className={styles.warningBadge}>
-                  {totals.stripeFeeUnknownPaymentCount} payments missing Stripe
-                  fee
-                </span>
-              )}
             </div>
-            <div className={styles.totalsGrid}>
-              <MetricCard
-                label="Client paid"
-                value={formatMoneyFromCents(totals.clientPaidCents, currency)}
-              />
-              <MetricCard
-                label="Provider earned"
-                value={formatMoneyFromCents(
-                  totals.providerEarnedCents,
-                  currency,
-                )}
-              />
-              <MetricCard
-                label="Gross profit"
-                value={formatMoneyFromCents(
-                  totals.grossProfitBeforeStripeFeesCents,
-                  currency,
-                )}
-                subtitle={
-                  grossProfitPercent
-                    ? `${grossProfitPercent}% of client paid`
-                    : undefined
-                }
-                tone="positive"
-              />
-              <MetricCard
-                label="Known Stripe fees"
-                value={formatMoneyFromCents(
-                  totals.knownStripeFeeCents,
-                  currency,
-                )}
-              />
-              <MetricCard
-                label="Net profit"
-                value={formatMoneyFromCents(totals.netProfitCents, currency)}
-                subtitle={
-                  totals.netProfitCents === null
-                    ? "Null until all included Stripe fees are known"
-                    : netProfitPercent
-                      ? `${netProfitPercent}% of client paid`
-                      : undefined
-                }
-                tone={totals.netProfitCents === null ? "warning" : "positive"}
-              />
-              <MetricCard
-                label="Unknown fee payments"
-                value={totals.stripeFeeUnknownPaymentCount}
-              />
-            </div>
-          </section>
 
-          <div className={styles.sectionsGrid}>
-            <SectionSummary
-              title="Normal services"
-              summary={normalServices}
-              currency={currency}
-            />
-            <SectionSummary
-              title="Additional provider payments"
-              summary={additionalProviderPayments}
-              currency={currency}
-            />
+            {validationError && (
+              <div className={styles.validationError}>{validationError}</div>
+            )}
           </div>
 
-          {data?.assumptions && (
-            <section className={styles.assumptionsSection}>
-              <h3 className={styles.assumptionsTitle}>Assumptions</h3>
-              <div className={styles.assumptionsGrid}>
-                {Object.entries(data.assumptions).map(([key, value]) => (
-                  <div key={key} className={styles.assumptionItem}>
-                    <div className={styles.assumptionLabel}>
-                      {key.replace(/([A-Z])/g, " $1")}
-                    </div>
-                    <div className={styles.assumptionText}>{value}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+          {loading && <div className={styles.emptyState}>Loading earned profit...</div>}
+          {!loading && error && <div className={styles.emptyState}>{error}</div>}
 
-          {showDebugData && (
-            <section className={styles.assumptionsSection}>
-              <div className={styles.totalsHeader}>
-                <h3 className={styles.assumptionsTitle}>Debug breakdown</h3>
-                <span className={styles.sectionSubtitle}>
-                  enabled: {String(debug.enabled)} | limit: {debug.breakdownLimit}
-                </span>
-              </div>
-              <NegativeContributorsTable
-                title="Normal services (worst losses first)"
-                rows={debug.negativeContributors.normalServices}
-                currency={currency}
-              />
-              <NegativeContributorsTable
-                title="Additional provider payments (worst losses first)"
-                rows={debug.negativeContributors.additionalProviderPayments}
-                currency={currency}
-              />
-            </section>
+          {!loading && !error && data && (
+            <>
+              <BreakdownTable rows={breakdown} currency={currency} />
+
+              <section className={styles.totalsSection}>
+                <div className={styles.totalsHeader}>
+                  <h3 className={styles.totalsTitle}>Totals</h3>
+                  <div className={styles.sectionSubtitle}>
+                    {formatDate(data.period.startDate)} - {formatDate(data.period.endDate)} UTC, end exclusive
+                  </div>
+                </div>
+                <div className={styles.totalsGrid}>
+                  <MetricCard label="Rows" value={totals.rowCount} />
+                  <MetricCard label="Invoices" value={totals.invoiceCount} />
+                  <MetricCard label="Refunds" value={totals.refundCount} />
+                  <MetricCard
+                    label="Profit"
+                    value={formatMoneyFromCents(totals.profitCents, currency)}
+                    tone="positive"
+                  />
+                  <MetricCard
+                    label="Stripe fees"
+                    value={formatMoneyFromCents(totals.stripeFeeCents, currency)}
+                  />
+                  <MetricCard
+                    label="Net profit"
+                    value={formatMoneyFromCents(totals.netProfitCents, currency)}
+                    tone="positive"
+                  />
+                </div>
+              </section>
+            </>
           )}
         </>
+      ) : (
+        <MonthlyReports />
       )}
     </div>
   );

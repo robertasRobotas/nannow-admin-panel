@@ -459,9 +459,8 @@ const FinancialLedger = () => {
     selectedReportMonth.split("-");
   const selectedReportYearNumber = Number(selectedReportYear);
   const selectedReportMonthNumber = Number(selectedReportMonthValue);
-
   const fetchForecasts = useCallback(async () => {
-    if (!router.isReady || activeView !== LEDGER_DEFAULT_VIEW) return;
+    if (!router.isReady) return;
 
     try {
       setForecastsLoading(true);
@@ -699,11 +698,7 @@ const FinancialLedger = () => {
 
   useEffect(() => {
     if (!router.isReady) return;
-    setActiveView(
-      ledgerQueryView === LEDGER_REPORTS_VIEW
-        ? LEDGER_REPORTS_VIEW
-        : LEDGER_DEFAULT_VIEW,
-    );
+    setActiveView(LEDGER_DEFAULT_VIEW);
 
     setSearchText(ledgerQueryQ);
     setAppliedSearch(ledgerQueryQ);
@@ -952,746 +947,358 @@ const FinancialLedger = () => {
       : "Selected month";
   const currentYear = new Date().getFullYear();
   const reportYearOptions = Array.from({ length: 10 }, (_, index) => currentYear - index);
-
   return (
     <div className={styles.main}>
       <div className={styles.ledgerColumn}>
         <div className={styles.headerRow}>
           <div className={styles.titleWrap}>
-            <h2 className={`${styles.title} ${nunito.className}`}>
-              {activeView === LEDGER_DEFAULT_VIEW
-                ? "Financial ledger"
-                : "Platform fee invoice reports"}
-            </h2>
+            <h2 className={`${styles.title} ${nunito.className}`}>Financial ledger</h2>
             <div className={styles.subtitle}>
-              {activeView === LEDGER_DEFAULT_VIEW
-                ? `${total} ledger rows, page ${currentPage}/${pageCount}`
-                : `${reports.length} monthly report${reports.length === 1 ? "" : "s"}`}
-            </div>
-            <div className={styles.viewTabs}>
-              <button
-                type="button"
-                className={`${styles.viewTab} ${
-                  activeView === LEDGER_DEFAULT_VIEW
-                    ? styles.viewTabActive
-                    : ""
-                }`}
-                onClick={() => switchView(LEDGER_DEFAULT_VIEW)}
-              >
-                <Wallet size={16} strokeWidth={2} />
-                <span>Ledger</span>
-              </button>
-              <button
-                type="button"
-                className={`${styles.viewTab} ${
-                  activeView === LEDGER_REPORTS_VIEW
-                    ? styles.viewTabActive
-                    : ""
-                }`}
-                onClick={() => switchView(LEDGER_REPORTS_VIEW)}
-              >
-                <FileText size={16} strokeWidth={2} />
-                <span>Monthly reports</span>
-              </button>
+              {`${total} ledger rows, page ${currentPage}/${pageCount}`}
             </div>
           </div>
-          {activeView === LEDGER_DEFAULT_VIEW ? (
-            <SearchBar
-              placeholder="Search order ID or user"
-              searchText={searchText}
-              setSearchText={setSearchText}
-              onButtonClick={() => {
-                setAppliedSearch(searchText);
-                updateLedgerQuery({
-                  page: 1,
-                  q: searchText,
-                  status: selectedStatus,
-                  mode: selectedMode,
-                  sort: selectedSort,
-                });
-              }}
-            />
-          ) : (
-            <div className={styles.reportHeaderMeta}>
-              <div className={styles.reportHeaderMetaLabel}>
-                Regenerate any month or download the generated CSV.
-              </div>
-              <div className={styles.reportHeaderMetaValue}>
-                Latest month in view: {selectedReportMonthLabel}
-              </div>
-            </div>
-          )}
+          <SearchBar
+            placeholder="Search order ID or user"
+            searchText={searchText}
+            setSearchText={setSearchText}
+            onButtonClick={() => {
+              setAppliedSearch(searchText);
+              updateLedgerQuery({
+                page: 1,
+                q: searchText,
+                status: selectedStatus,
+                mode: selectedMode,
+                sort: selectedSort,
+              });
+            }}
+          />
         </div>
 
         <div className={styles.viewBody}>
-          {activeView === LEDGER_DEFAULT_VIEW ? (
-            <>
-              <div className={styles.filtersPanel}>
-                <div className={styles.periodRow}>
-                  <div className={styles.periodButtons}>
-                    {PERIOD_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`${styles.periodButton} ${
-                          selectedPeriod === option.value
-                            ? styles.periodButtonActive
-                            : ""
-                        }`}
-                        onClick={() => applyPresetRange(option.value)}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className={styles.customDateControls}>
-                    <div className={styles.dateField}>
-                      <span>Start</span>
-                      <div className={styles.dateInputWrap}>
-                        <input
-                          ref={startDateInputRef}
-                          type="date"
-                          className={styles.dateInput}
-                          value={startDateInput}
-                          onChange={(e) => {
-                            setSelectedPeriod("custom");
-                            setStartDateInput(e.target.value);
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className={styles.datePickerBtn}
-                          onClick={() =>
-                            openNativeDatePicker(startDateInputRef.current)
-                          }
-                          aria-label="Open start date picker"
-                        >
-                          <img src={calendarImg.src} alt="" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className={styles.dateField}>
-                      <span>End</span>
-                      <div className={styles.dateInputWrap}>
-                        <input
-                          ref={endDateInputRef}
-                          type="date"
-                          className={styles.dateInput}
-                          value={endDateInput}
-                          onChange={(e) => {
-                            setSelectedPeriod("custom");
-                            setEndDateInput(e.target.value);
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className={styles.datePickerBtn}
-                          onClick={() =>
-                            openNativeDatePicker(endDateInputRef.current)
-                          }
-                          aria-label="Open end date picker"
-                        >
-                          <img src={calendarImg.src} alt="" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className={styles.applyDateButtonWrap}>
-                      <Button
-                        title="Apply dates"
-                        type="OUTLINED"
-                        onClick={applyCustomDateRange}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.filtersRow}>
-                  <DropDownButton
-                    options={STATUS_OPTIONS.map((option) => ({
-                      title: option.title,
-                      value: option.value,
-                    }))}
-                    selectedOption={selectedStatusOption}
-                    setSelectedOption={(nextOption) => {
-                      setSelectedStatusOption(nextOption as number);
-                      const nextStatus =
-                        STATUS_OPTIONS[nextOption as number]?.value ?? "";
-                      updateLedgerQuery({
-                        page: 1,
-                        q: appliedSearch,
-                        status: nextStatus,
-                        mode: selectedMode,
-                        sort: selectedSort,
-                      });
-                    }}
-                    onClickOption={() => {
-                      updateLedgerQuery({
-                        page: 1,
-                        q: appliedSearch,
-                        status: selectedStatus,
-                        mode: selectedMode,
-                        sort: selectedSort,
-                      });
-                    }}
-                  />
-                  <DropDownButton
-                    options={MODE_OPTIONS.map((option) => ({
-                      title: option.title,
-                      value: option.value,
-                    }))}
-                    selectedOption={selectedModeOption}
-                    setSelectedOption={(nextOption) => {
-                      setSelectedModeOption(nextOption as number);
-                      const nextMode =
-                        MODE_OPTIONS[nextOption as number]?.value ?? "";
-                      updateLedgerQuery({
-                        page: 1,
-                        q: appliedSearch,
-                        status: selectedStatus,
-                        mode: nextMode,
-                        sort: selectedSort,
-                      });
-                    }}
-                    onClickOption={() => {
-                      updateLedgerQuery({
-                        page: 1,
-                        q: appliedSearch,
-                        status: selectedStatus,
-                        mode: selectedMode,
-                        sort: selectedSort,
-                      });
-                    }}
-                  />
-                  <DropDownButton
-                    options={SORT_OPTIONS.map((option) => ({
-                      title: option.title,
-                      value: option.value,
-                    }))}
-                    selectedOption={selectedSortOption}
-                    setSelectedOption={(nextOption) => {
-                      setSelectedSortOption(nextOption as number);
-                      const nextSort =
-                        SORT_OPTIONS[nextOption as number]?.value ??
-                        "paidAt_desc";
-                      updateLedgerQuery({
-                        page: 1,
-                        q: appliedSearch,
-                        status: selectedStatus,
-                        mode: selectedMode,
-                        sort: nextSort,
-                      });
-                    }}
-                    onClickOption={() => {
-                      updateLedgerQuery({
-                        page: 1,
-                        q: appliedSearch,
-                        status: selectedStatus,
-                        mode: selectedMode,
-                        sort: selectedSort,
-                      });
-                    }}
-                  />
-                </div>
-
-                {validationError && (
-                  <div className={styles.validationError}>{validationError}</div>
-                )}
+          <div className={styles.filtersPanel}>
+            <div className={styles.periodRow}>
+              <div className={styles.periodButtons}>
+                {PERIOD_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`${styles.periodButton} ${
+                      selectedPeriod === option.value
+                        ? styles.periodButtonActive
+                        : ""
+                    }`}
+                    onClick={() => applyPresetRange(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
 
-              <div className={styles.tableWrap}>
-                <div className={styles.tableHeader}>
-                  <div>Order</div>
-                  <div>Paid amount</div>
-                  <div>Payout</div>
-                  <div>Refund</div>
-                  <div>Stripe fee</div>
-                  <div>Net profit</div>
+              <div className={styles.customDateControls}>
+                <div className={styles.dateField}>
+                  <span>Start</span>
+                  <div className={styles.dateInputWrap}>
+                    <input
+                      ref={startDateInputRef}
+                      type="date"
+                      className={styles.dateInput}
+                      value={startDateInput}
+                      onChange={(e) => {
+                        setSelectedPeriod("custom");
+                        setStartDateInput(e.target.value);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.datePickerBtn}
+                      onClick={() =>
+                        openNativeDatePicker(startDateInputRef.current)
+                      }
+                      aria-label="Open start date picker"
+                    >
+                      <img src={calendarImg.src} alt="" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className={styles.tableBody}>
-                  {loading && (
-                    <div className={styles.emptyState}>
-                      Loading financial orders...
-                    </div>
-                  )}
-                  {!loading && error && (
-                    <div className={styles.emptyState}>{error}</div>
-                  )}
-                  {!loading && !error && items.length === 0 && (
-                    <div className={styles.emptyState}>
-                      No financial orders for selected filters
-                    </div>
-                  )}
+                <div className={styles.dateField}>
+                  <span>End</span>
+                  <div className={styles.dateInputWrap}>
+                    <input
+                      ref={endDateInputRef}
+                      type="date"
+                      className={styles.dateInput}
+                      value={endDateInput}
+                      onChange={(e) => {
+                        setSelectedPeriod("custom");
+                        setEndDateInput(e.target.value);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.datePickerBtn}
+                      onClick={() => openNativeDatePicker(endDateInputRef.current)}
+                      aria-label="Open end date picker"
+                    >
+                      <img src={calendarImg.src} alt="" />
+                    </button>
+                  </div>
+                </div>
 
-                  {!loading &&
-                    !error &&
-                    items.map((order, index) => {
-                      const clientName = getUserName(
-                        order.clientUser?.firstName,
-                        order.clientUser?.lastName,
-                      );
-                      const providerName = getUserName(
-                        order.providerUser?.firstName,
-                        order.providerUser?.lastName,
-                      );
-                      const { paid, payout, refund, stripeFee, netProfit } =
-                        getAmountPresentation(order);
+                <div className={styles.applyDateButtonWrap}>
+                  <Button
+                    title="Apply dates"
+                    type="OUTLINED"
+                    onClick={applyCustomDateRange}
+                  />
+                </div>
+              </div>
+            </div>
 
-                      return (
-                        <div
-                          key={getLedgerRowKey(order, index)}
-                          className={`${styles.row} ${
-                            order.financialMode === "REAL"
-                              ? styles.rowReal
-                              : ""
-                          } ${
-                            isAdditionalPaymentRow(order)
-                              ? styles.rowAdditional
-                              : ""
-                          }`}
-                        >
-                          <div className={styles.orderCell} data-label="Order">
-                            <div className={styles.orderUsersWrap}>
-                              <div className={styles.profilePics}>
-                                <img
-                                  className={styles.providerImg}
-                                  src={
-                                    order.providerUser?.imgUrl ||
-                                    defaultAvatarImg.src
-                                  }
-                                  alt={providerName}
-                                />
-                                <img
-                                  className={styles.clientImg}
-                                  src={
-                                    order.clientUser?.imgUrl ||
-                                    defaultAvatarImg.src
-                                  }
-                                  alt={clientName}
-                                />
-                              </div>
-                              <div className={styles.orderInfo}>
-                                <Link
-                                  href={`/orders/${order.id}`}
-                                  className={styles.orderIdLink}
-                                >
-                                  {order.orderPrettyId}
-                                </Link>
-                                <div
-                                  className={styles.orderNames}
-                                >{`${providerName} / ${clientName}`}</div>
-                                <div className={styles.orderMeta}>
-                                  Paid: {formatDateTime(order.paidAt)}
-                                </div>
-                                <div className={styles.orderMeta}>
-                                  {`${formatDateTime(order.startsAt)} - ${formatDateTime(order.endsAt)}`}
-                                </div>
-                              </div>
-                            </div>
-                            <div className={styles.orderBadges}>
-                              <span
-                                className={`${styles.recordTypeBadge} ${
-                                  isAdditionalPaymentRow(order)
-                                    ? styles.recordTypeAdditional
-                                    : styles.recordTypeOrder
-                                }`}
-                              >
-                                {getRecordTypeLabel(order)}
-                              </span>
-                              <span className={styles.statusBadge}>
-                                {getOrderStatusTitle(order.status)}
-                              </span>
-                              {isAdditionalPaymentRow(order) &&
-                                order.payoutStatus && (
-                                  <span className={styles.statusBadge}>
-                                    Payout {order.payoutStatus}
-                                  </span>
-                                )}
-                              {order.financialMode && (
-                                <span
-                                  className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}
-                                >
-                                  {order.financialMode}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+            {validationError && (
+              <div className={styles.validationError}>{validationError}</div>
+            )}
+          </div>
 
-                          <div
-                            className={styles.valueCell}
-                            data-label="Paid amount"
-                          >
-                            <div
-                              className={`${styles.valueMain} ${getToneClassName(paid.tone)}`}
-                            >
-                              {paid.amount}
-                            </div>
-                            <div className={styles.valueSub}>{paid.subtitle}</div>
-                          </div>
+          {loading && <div className={styles.emptyState}>Loading financial orders...</div>}
+          {!loading && error && <div className={styles.emptyState}>{error}</div>}
+          {!loading && !error && items.length === 0 && (
+            <div className={styles.emptyState}>
+              No financial orders for selected filters
+            </div>
+          )}
 
-                          <div className={styles.valueCell} data-label="Payout">
-                            <div
-                              className={`${styles.valueMain} ${getToneClassName(payout.tone)}`}
-                            >
-                              {payout.amount}
-                            </div>
-                            <div className={styles.valueSub}>
-                              {payout.subtitle}
-                            </div>
-                          </div>
+          {!loading &&
+            !error &&
+            items.map((order, index) => {
+              const clientName = getUserName(
+                order.clientUser?.firstName,
+                order.clientUser?.lastName,
+              );
+              const providerName = getUserName(
+                order.providerUser?.firstName,
+                order.providerUser?.lastName,
+              );
+              const { paid, payout, refund, stripeFee, netProfit } =
+                getAmountPresentation(order);
 
-                          <div className={styles.valueCell} data-label="Refund">
-                            <div
-                              className={`${styles.valueMain} ${getToneClassName(refund.tone)}`}
-                            >
-                              {refund.amount}
-                            </div>
-                            <div className={styles.valueSub}>
-                              {refund.subtitle}
-                            </div>
-                          </div>
-
-                          <div
-                            className={styles.valueCell}
-                            data-label="Stripe fee"
-                          >
-                            <div
-                              className={`${styles.valueMain} ${getToneClassName(stripeFee.tone)}`}
-                            >
-                              {stripeFee.amount}
-                            </div>
-                            <div className={styles.valueSub}>
-                              {stripeFee.subtitle}
-                            </div>
-                          </div>
-
-                          <div
-                            className={styles.valueCell}
-                            data-label="Net profit"
-                          >
-                            <div
-                              className={`${styles.valueMain} ${getToneClassName(netProfit.tone)}`}
-                            >
-                              {netProfit.amount}
-                            </div>
-                            <div className={styles.valueSub}>
-                              {netProfit.subtitle}
-                            </div>
-                          </div>
+              return (
+                <div
+                  key={getLedgerRowKey(order, index)}
+                  className={`${styles.row} ${
+                    order.financialMode === "REAL" ? styles.rowReal : ""
+                  } ${
+                    isAdditionalPaymentRow(order) ? styles.rowAdditional : ""
+                  }`}
+                >
+                  <div className={styles.orderCell} data-label="Order">
+                    <div className={styles.orderUsersWrap}>
+                      <div className={styles.profilePics}>
+                        <img
+                          className={styles.providerImg}
+                          src={order.providerUser?.imgUrl || defaultAvatarImg.src}
+                          alt={providerName}
+                        />
+                        <img
+                          className={styles.clientImg}
+                          src={order.clientUser?.imgUrl || defaultAvatarImg.src}
+                          alt={clientName}
+                        />
+                      </div>
+                      <div className={styles.orderInfo}>
+                        <Link href={`/orders/${order.id}`} className={styles.orderIdLink}>
+                          {order.orderPrettyId}
+                        </Link>
+                        <div className={styles.orderNames}>{`${providerName} / ${clientName}`}</div>
+                        <div className={styles.orderMeta}>
+                          Paid: {formatDateTime(order.paidAt)}
                         </div>
-                      );
-                    })}
-                </div>
-              </div>
-
-              {total > pageSize && (
-                <ReactPaginate
-                  breakLabel="..."
-                  nextLabel=""
-                  onPageChange={handlePageClick}
-                  pageRangeDisplayed={5}
-                  pageCount={pageCount}
-                  previousLabel=""
-                  renderOnZeroPageCount={null}
-                  containerClassName={paginateStyles.paginateWrapper}
-                  pageClassName={paginateStyles.pageBtn}
-                  pageLinkClassName={paginateStyles.pageLink}
-                  previousClassName={paginateStyles.prevPageBtn}
-                  previousLinkClassName={paginateStyles.prevLink}
-                  nextClassName={paginateStyles.nextPageBtn}
-                  nextLinkClassName={paginateStyles.nextLink}
-                  breakClassName={paginateStyles.break}
-                  activeClassName={paginateStyles.activePage}
-                  forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize)}
-                />
-              )}
-
-              <div className={styles.totalsSection}>
-                <div className={styles.totalsHeader}>
-                  <h3 className={styles.totalsTitle}>
-                    Totals for selected period
-                  </h3>
-                  <div
-                    className={styles.totalsSubtitle}
-                  >{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
-                </div>
-                <div className={styles.totalsGrid}>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Orders</div>
-                    <div className={styles.totalValue}>{subtotal.totalOrders}</div>
-                  </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Ledger rows</div>
-                    <div className={styles.modeCountsWrap}>
+                        <div className={styles.orderMeta}>
+                          {`${formatDateTime(order.startsAt)} - ${formatDateTime(order.endsAt)}`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={styles.orderBadges}>
                       <span
-                        className={`${styles.modeCountChip} ${styles.recordTypeOrder}`}
+                        className={`${styles.recordTypeBadge} ${
+                          isAdditionalPaymentRow(order)
+                            ? styles.recordTypeAdditional
+                            : styles.recordTypeOrder
+                        }`}
                       >
-                        Orders {subtotal.orderPaymentCount ?? 0}
+                        {getRecordTypeLabel(order)}
                       </span>
-                      <span
-                        className={`${styles.modeCountChip} ${styles.recordTypeAdditional}`}
-                      >
-                        Additional {subtotal.additionalPaymentCount ?? 0}
+                      <span className={styles.statusBadge}>
+                        {getOrderStatusTitle(order.status)}
                       </span>
-                    </div>
-                  </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Client paid</div>
-                    <div className={`${styles.totalValue} ${styles.valueReal}`}>
-                      {formatMoneyFromCents(subtotal.clientPaidCents)}
-                    </div>
-                  </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Refunded</div>
-                    <div className={styles.totalValue}>
-                      {formatMoneyFromCents(subtotal.refundCents)}
-                    </div>
-                  </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Payouts</div>
-                    <div className={styles.totalValue}>
-                      {formatMoneyFromCents(subtotal.payoutCents)}
-                    </div>
-                  </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Stripe fees</div>
-                    <div className={styles.totalValue}>
-                      {formatMoneyFromCents(subtotal.stripeFeeCents)}
-                    </div>
-                  </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Gross revenue</div>
-                    <div className={styles.totalValue}>
-                      {formatMoneyFromCents(subtotal.grossPlatformRevenueCents)}
-                    </div>
-                  </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Net revenue</div>
-                    <div className={`${styles.totalValue} ${styles.valueReal}`}>
-                      {formatMoneyFromCents(subtotal.netPlatformRevenueCents)}
-
-                      {subtotalPercent && (
-                        <span style={{ marginLeft: 6 }}>
-                          ({subtotalPercent}%)
+                      {isAdditionalPaymentRow(order) && order.payoutStatus && (
+                        <span className={styles.statusBadge}>
+                          Payout {order.payoutStatus}
+                        </span>
+                      )}
+                      {order.financialMode && (
+                        <span
+                          className={`${styles.modeBadge} ${getModeClassName(order.financialMode)}`}
+                        >
+                          {order.financialMode}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className={styles.totalCard}>
-                    <div className={styles.totalLabel}>Mode counts</div>
-                    <div className={styles.modeCountsWrap}>
-                      <span
-                        className={`${styles.modeCountChip} ${styles.modeForecast}`}
-                      >
-                        Forecast {subtotal.forecastCount}
-                      </span>
-                      <span
-                        className={`${styles.modeCountChip} ${styles.modePartialReal}`}
-                      >
-                        Partial {subtotal.partialRealCount}
-                      </span>
-                      <span className={`${styles.modeCountChip} ${styles.modeReal}`}>
-                        Real {subtotal.realCount}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className={styles.reportsSection}>
-              <div className={styles.reportsToolbar}>
-                <div className={styles.reportControls}>
-                  <div className={styles.reportField}>
-                    <span>Year</span>
-                    <select
-                      value={selectedReportYearNumber || currentYear}
-                      onChange={(event) =>
-                        setSelectedReportMonth(
-                          `${event.target.value}-${String(
-                            selectedReportMonthNumber || 1,
-                          ).padStart(2, "0")}`,
-                        )
-                      }
+
+                  <div className={styles.valueCell} data-label="Paid amount">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(paid.tone)}`}
                     >
-                      {reportYearOptions.map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className={styles.reportField}>
-                    <span>Month</span>
-                    <select
-                      value={selectedReportMonthNumber || 1}
-                      onChange={(event) =>
-                        setSelectedReportMonth(
-                          `${selectedReportYearNumber || currentYear}-${String(
-                            Number(event.target.value),
-                          ).padStart(2, "0")}`,
-                        )
-                      }
-                    >
-                      {MONTH_OPTIONS.map((month) => (
-                        <option key={month.value} value={month.value}>
-                          {month.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button
-                    title="Regenerate month"
-                    type="BLACK"
-                    onClick={regenerateSelectedReportMonth}
-                    isLoading={
-                      regeneratingReportKey === selectedReportMonthKey
-                    }
-                    isDisabled={reportsLoading}
-                  />
-                </div>
-                <div className={styles.reportToolbarMeta}>
-                  {selectedReportMonthLabel}
-                </div>
-              </div>
-
-              <div className={styles.reportsTableWrap}>
-                <div className={styles.reportsTableHeader}>
-                  <div>Period</div>
-                  <div>Range</div>
-                  <div>Rows</div>
-                  <div>Generated</div>
-                  <div>File</div>
-                  <div>Actions</div>
-                </div>
-
-                <div className={styles.reportsTableBody}>
-                  {reportsLoading && (
-                    <div className={styles.emptyState}>Loading reports...</div>
-                  )}
-                  {!reportsLoading && reportsError && (
-                    <div className={styles.emptyState}>{reportsError}</div>
-                  )}
-                  {!reportsLoading && !reportsError && reports.length === 0 && (
-                    <div className={styles.emptyState}>
-                      No monthly reports have been generated yet.
+                      {paid.amount}
                     </div>
-                  )}
+                    <div className={styles.valueSub}>{paid.subtitle}</div>
+                  </div>
 
-                  {!reportsLoading &&
-                    !reportsError &&
-                    reports.map((report) => {
-                      const reportKey = `${report.periodYear}-${report.periodMonth}`;
-                      const inclusiveEnd = new Date(
-                        new Date(report.periodEnd).getTime() - 1,
-                      ).toISOString();
-                      return (
-                        <div key={report.id} className={styles.reportRow}>
-                          <div className={styles.reportCell} data-label="Period">
-                            <div className={styles.reportPrimary}>
-                              {formatLedgerReportMonth(
-                                report.periodYear,
-                                report.periodMonth,
-                              )}
-                            </div>
-                            <div className={styles.reportSecondary}>
-                              {report.timezone}
-                            </div>
-                          </div>
-                          <div className={styles.reportCell} data-label="Range">
-                            <div className={styles.reportPrimary}>
-                              {`${formatLedgerReportDate(report.periodStart, report.timezone)} - ${formatLedgerReportDate(inclusiveEnd, report.timezone)}`}
-                            </div>
-                            <div className={styles.reportSecondary}>
-                              {report.periodKey}
-                            </div>
-                          </div>
-                          <div className={styles.reportCell} data-label="Rows">
-                            <div className={styles.reportPrimary}>
-                              {report.rowCount}
-                            </div>
-                            <div className={styles.reportSecondary}>
-                              Ledger entries
-                            </div>
-                          </div>
-                          <div className={styles.reportCell} data-label="Generated">
-                            <div className={styles.reportPrimary}>
-                              {formatLedgerReportDateTime(
-                                report.generatedAt,
-                                report.timezone,
-                              )}
-                            </div>
-                            <div className={styles.reportSecondary}>
-                              {report.timezone}
-                            </div>
-                          </div>
-                          <div className={styles.reportCell} data-label="File">
-                            <div className={styles.reportPrimary}>
-                              {report.fileName}
-                            </div>
-                            <div className={styles.reportSecondary}>
-                              {report.downloadPath}
-                            </div>
-                          </div>
-                          <div className={styles.reportActions} data-label="Actions">
-                            <Button
-                              title="Download CSV"
-                              type="OUTLINED"
-                              onClick={() => handleDownloadReport(report)}
-                              isLoading={downloadingReportKey === reportKey}
-                              isDisabled={
-                                Boolean(downloadingReportKey) ||
-                                Boolean(regeneratingReportKey)
-                              }
-                            />
-                            <Button
-                              title="Regenerate"
-                              type="BLACK"
-                              onClick={() => handleRegenerateReport(report)}
-                              isLoading={regeneratingReportKey === reportKey}
-                              isDisabled={
-                                Boolean(regeneratingReportKey) ||
-                                Boolean(downloadingReportKey)
-                              }
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className={styles.valueCell} data-label="Payout">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(payout.tone)}`}
+                    >
+                      {payout.amount}
+                    </div>
+                    <div className={styles.valueSub}>{payout.subtitle}</div>
+                  </div>
+
+                  <div className={styles.valueCell} data-label="Refund">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(refund.tone)}`}
+                    >
+                      {refund.amount}
+                    </div>
+                    <div className={styles.valueSub}>{refund.subtitle}</div>
+                  </div>
+
+                  <div className={styles.valueCell} data-label="Stripe fee">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(stripeFee.tone)}`}
+                    >
+                      {stripeFee.amount}
+                    </div>
+                    <div className={styles.valueSub}>{stripeFee.subtitle}</div>
+                  </div>
+
+                  <div className={styles.valueCell} data-label="Net profit">
+                    <div
+                      className={`${styles.valueMain} ${getToneClassName(netProfit.tone)}`}
+                    >
+                      {netProfit.amount}
+                    </div>
+                    <div className={styles.valueSub}>{netProfit.subtitle}</div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
+
+          {total > pageSize && (
+            <ReactPaginate
+              breakLabel="..."
+              nextLabel=""
+              onPageChange={handlePageClick}
+              pageRangeDisplayed={5}
+              pageCount={pageCount}
+              previousLabel=""
+              renderOnZeroPageCount={null}
+              containerClassName={paginateStyles.paginateWrapper}
+              pageClassName={paginateStyles.pageBtn}
+              pageLinkClassName={paginateStyles.pageLink}
+              previousClassName={paginateStyles.prevPageBtn}
+              previousLinkClassName={paginateStyles.prevLink}
+              nextClassName={paginateStyles.nextPageBtn}
+              nextLinkClassName={paginateStyles.nextLink}
+              breakClassName={paginateStyles.break}
+              activeClassName={paginateStyles.activePage}
+              forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize)}
+            />
           )}
-        </div>
-      </div>
 
-      {reportRegenerationTarget && (
-        <div className={styles.confirmationBackdrop}>
-          <div className={`${styles.confirmationModal} ${nunito.className}`}>
-            <h2 className={styles.confirmationTitle}>Regenerate report?</h2>
-            <p className={styles.confirmationBody}>
-              {`This will regenerate the ${reportRegenerationTarget.label} platform fee invoice CSV.`}
-            </p>
-            <div className={styles.confirmationActions}>
-              <Button
-                title="Cancel"
-                type="OUTLINED"
-                onClick={closeReportRegenerationModal}
-                isDisabled={Boolean(regeneratingReportKey)}
-              />
-              <Button
-                title={regeneratingReportKey ? "Regenerating..." : "Confirm"}
-                type="BLACK"
-                onClick={confirmReportRegeneration}
-                isDisabled={Boolean(regeneratingReportKey)}
-              />
+          <div className={styles.totalsSection}>
+            <div className={styles.totalsHeader}>
+              <h3 className={styles.totalsTitle}>Totals for selected period</h3>
+              <div className={styles.totalsSubtitle}>{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
+            </div>
+            <div className={styles.totalsGrid}>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Orders</div>
+                <div className={styles.totalValue}>{subtotal.totalOrders}</div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Ledger rows</div>
+                <div className={styles.modeCountsWrap}>
+                  <span className={`${styles.modeCountChip} ${styles.recordTypeOrder}`}>
+                    Orders {subtotal.orderPaymentCount ?? 0}
+                  </span>
+                  <span
+                    className={`${styles.modeCountChip} ${styles.recordTypeAdditional}`}
+                  >
+                    Additional {subtotal.additionalPaymentCount ?? 0}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Client paid</div>
+                <div className={`${styles.totalValue} ${styles.valueReal}`}>
+                  {formatMoneyFromCents(subtotal.clientPaidCents)}
+                </div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Refunded</div>
+                <div className={styles.totalValue}>
+                  {formatMoneyFromCents(subtotal.refundCents)}
+                </div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Payouts</div>
+                <div className={styles.totalValue}>
+                  {formatMoneyFromCents(subtotal.payoutCents)}
+                </div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Stripe fees</div>
+                <div className={styles.totalValue}>
+                  {formatMoneyFromCents(subtotal.stripeFeeCents)}
+                </div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Gross revenue</div>
+                <div className={styles.totalValue}>
+                  {formatMoneyFromCents(subtotal.grossPlatformRevenueCents)}
+                </div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Net revenue</div>
+                <div className={`${styles.totalValue} ${styles.valueReal}`}>
+                  {formatMoneyFromCents(subtotal.netPlatformRevenueCents)}
+
+                  {subtotalPercent && (
+                    <span style={{ marginLeft: 6 }}>({subtotalPercent}%)</span>
+                  )}
+                </div>
+              </div>
+              <div className={styles.totalCard}>
+                <div className={styles.totalLabel}>Mode counts</div>
+                <div className={styles.modeCountsWrap}>
+                  <span className={`${styles.modeCountChip} ${styles.modeForecast}`}>
+                    Forecast {subtotal.forecastCount}
+                  </span>
+                  <span
+                    className={`${styles.modeCountChip} ${styles.modePartialReal}`}
+                  >
+                    Partial {subtotal.partialRealCount}
+                  </span>
+                  <span className={`${styles.modeCountChip} ${styles.modeReal}`}>
+                    Real {subtotal.realCount}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {activeView === LEDGER_DEFAULT_VIEW && (
         <aside
