@@ -11,22 +11,8 @@ import type {
   GetPlatformFeeInvoiceReportsResponse,
   PlatformFeeInvoiceReport,
 } from "@/types/PlatformFeeInvoiceReport";
+import ReportMonthControls from "./ReportMonthControls";
 import styles from "./earnedProfit.module.css";
-
-const MONTH_OPTIONS = [
-  { value: 1, label: "January" },
-  { value: 2, label: "February" },
-  { value: 3, label: "March" },
-  { value: 4, label: "April" },
-  { value: 5, label: "May" },
-  { value: 6, label: "June" },
-  { value: 7, label: "July" },
-  { value: 8, label: "August" },
-  { value: 9, label: "September" },
-  { value: 10, label: "October" },
-  { value: 11, label: "November" },
-  { value: 12, label: "December" },
-] as const;
 
 const formatLedgerReportMonth = (year: number, month: number) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -207,56 +193,26 @@ const MonthlyReports = () => {
 
   return (
     <section className={styles.reportsSection}>
-      <div className={styles.reportsToolbar}>
-        <div className={styles.reportControls}>
-          <div className={styles.reportField}>
-            <span>Year</span>
-            <select
-              value={selectedReportYearNumber || currentYear}
-              onChange={(event) =>
-                setSelectedReportMonth(
-                  `${event.target.value}-${String(
-                    selectedReportMonthNumber || 1,
-                  ).padStart(2, "0")}`,
-                )
-              }
-            >
-              {reportYearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={styles.reportField}>
-            <span>Month</span>
-            <select
-              value={selectedReportMonthNumber || 1}
-              onChange={(event) =>
-                setSelectedReportMonth(
-                  `${selectedReportYearNumber || currentYear}-${String(
-                    Number(event.target.value),
-                  ).padStart(2, "0")}`,
-                )
-              }
-            >
-              {MONTH_OPTIONS.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button
-            title="Regenerate month"
-            type="BLACK"
-            onClick={regenerateSelectedReportMonth}
-            isLoading={regeneratingReportKey === selectedReportMonthKey}
-            isDisabled={reportsLoading}
-          />
-        </div>
-        <div className={styles.reportToolbarMeta}>{selectedReportMonthLabel}</div>
-      </div>
+      <ReportMonthControls
+        currentYear={currentYear}
+        reportYearOptions={reportYearOptions}
+        selectedYear={selectedReportYearNumber}
+        selectedMonth={selectedReportMonthNumber}
+        onYearChange={(year) =>
+          setSelectedReportMonth(
+            `${year}-${String(selectedReportMonthNumber || 1).padStart(2, "0")}`,
+          )
+        }
+        onMonthChange={(month) =>
+          setSelectedReportMonth(
+            `${selectedReportYearNumber || currentYear}-${String(month).padStart(2, "0")}`,
+          )
+        }
+        onRegenerate={regenerateSelectedReportMonth}
+        isRegenerating={regeneratingReportKey === selectedReportMonthKey}
+        isRegenerateDisabled={reportsLoading}
+        toolbarMeta={selectedReportMonthLabel}
+      />
 
       <div className={styles.reportsTableWrap}>
         <div className={styles.reportsTableHeader}>

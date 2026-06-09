@@ -1,40 +1,21 @@
-/* eslint-disable @next/next/no-img-element */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { FileText, Wallet } from "lucide-react";
 import Button from "@/components/Button/Button";
 import { nunito } from "@/helpers/fonts";
-import { getEarnedProfit } from "@/pages/api/fetch";
+import { getEarnedProfit, regeneratePlatformFeeInvoiceReport } from "@/pages/api/fetch";
 import type {
   EarnedProfitBreakdownRow,
   EarnedProfitResponse,
   EarnedProfitTotals,
 } from "@/types/EarnedProfit";
-import calendarImg from "@/assets/images/calendar.svg";
 import MonthlyReports from "./MonthlyReports";
+import ReportMonthControls from "./ReportMonthControls";
 import styles from "./earnedProfit.module.css";
 
-type PeriodPreset = "this_month" | "last_month" | "this_year" | "custom";
-
-type DateRange = {
-  startInput: string;
-  endInput: string;
-  startIso: string;
-  endIso: string;
-};
-
 type EarnedProfitView = "profit" | "monthly-reports";
-
-const PERIOD_OPTIONS: Array<{
-  label: string;
-  value: Exclude<PeriodPreset, "custom">;
-}> = [
-  { label: "This month", value: "this_month" },
-  { label: "Last month", value: "last_month" },
-  { label: "This year", value: "this_year" },
-];
 
 const EMPTY_TOTALS: EarnedProfitTotals = {
   rowCount: 0,
@@ -45,58 +26,21 @@ const EMPTY_TOTALS: EarnedProfitTotals = {
   netProfitCents: 0,
 };
 
-const toInputDate = (date: Date) => {
-  const year = date.getUTCFullYear();
-  const month = `${date.getUTCMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getUTCDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const toUtcDayStartIso = (inputDate: string) =>
-  new Date(`${inputDate}T00:00:00.000Z`).toISOString();
-
-const toUtcExclusiveEndIso = (inputDate: string) => {
-  const endDate = new Date(`${inputDate}T00:00:00.000Z`);
-  endDate.setUTCDate(endDate.getUTCDate() + 1);
-  return endDate.toISOString();
-};
-
-const getPresetRange = (preset: Exclude<PeriodPreset, "custom">): DateRange => {
-  const now = new Date();
-  const currentYear = now.getUTCFullYear();
-  const currentMonth = now.getUTCMonth();
-
-  if (preset === "last_month") {
-    const start = new Date(Date.UTC(currentYear, currentMonth - 1, 1));
-    const end = new Date(Date.UTC(currentYear, currentMonth, 1));
-    return {
-      startInput: toInputDate(start),
-      endInput: toInputDate(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
-      startIso: start.toISOString(),
-      endIso: end.toISOString(),
-    };
-  }
-
-  if (preset === "this_year") {
-    const start = new Date(Date.UTC(currentYear, 0, 1));
-    const end = new Date(Date.UTC(currentYear + 1, 0, 1));
-    return {
-      startInput: toInputDate(start),
-      endInput: toInputDate(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
-      startIso: start.toISOString(),
-      endIso: end.toISOString(),
-    };
-  }
-
-  const start = new Date(Date.UTC(currentYear, currentMonth, 1));
-  const end = new Date(Date.UTC(currentYear, currentMonth + 1, 1));
+const getMonthRange = (year: number, month: number) => {
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 1));
   return {
-    startInput: toInputDate(start),
-    endInput: toInputDate(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
     startIso: start.toISOString(),
     endIso: end.toISOString(),
   };
 };
+
+const formatLedgerReportMonth = (year: number, month: number) =>
+  new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
 
 const formatMoneyFromCents = (value?: number | null, currency = "eur") => {
   if (value === null || value === undefined) return "Unknown";
@@ -124,16 +68,6 @@ const formatMoneyFromDecimal = (
   }).format(parsed);
 };
 
-const formatDate = (value?: string | null) =>
-  value
-    ? new Date(value).toLocaleDateString("en-GB", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        timeZone: "UTC",
-      })
-    : "—";
-
 const formatDateTime = (value?: string | null) =>
   value
     ? new Date(value).toLocaleString("en-GB", {
@@ -146,17 +80,6 @@ const formatDateTime = (value?: string | null) =>
         timeZone: "UTC",
       })
     : "—";
-
-const openNativeDatePicker = (input: HTMLInputElement | null) => {
-  if (!input) return;
-  input.focus();
-  const pickerInput = input as HTMLInputElement & { showPicker?: () => void };
-  if (typeof pickerInput.showPicker === "function") {
-    pickerInput.showPicker();
-    return;
-  }
-  input.click();
-};
 
 const MetricCard = ({
   label,
@@ -266,22 +189,33 @@ const BREAKDOWN_LIMIT = 200;
 
 const EarnedProfit = () => {
   const router = useRouter();
-  const defaultRange = useMemo(() => getPresetRange("this_month"), []);
   const [data, setData] = useState<EarnedProfitResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [validationError, setValidationError] = useState("");
-  const [selectedPeriod, setSelectedPeriod] =
-    useState<PeriodPreset>("this_month");
   const [activeView, setActiveView] = useState<EarnedProfitView>("profit");
-  const [startDateInput, setStartDateInput] = useState(defaultRange.startInput);
-  const [endDateInput, setEndDateInput] = useState(defaultRange.endInput);
-  const [appliedStartDate, setAppliedStartDate] = useState(
-    defaultRange.startIso,
+  const [reportRegenerationTarget, setReportRegenerationTarget] = useState<
+    { year: number; month: number; label: string } | null
+  >(null);
+  const [regeneratingReportKey, setRegeneratingReportKey] = useState("");
+  const [selectedReportMonth, setSelectedReportMonth] = useState(() =>
+    `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`,
   );
-  const [appliedEndDate, setAppliedEndDate] = useState(defaultRange.endIso);
-  const startDateInputRef = useRef<HTMLInputElement>(null);
-  const endDateInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedReportYear, selectedReportMonthValue] = selectedReportMonth.split("-");
+  const selectedReportYearNumber = Number(selectedReportYear);
+  const selectedReportMonthNumber = Number(selectedReportMonthValue);
+  const selectedReportMonthKey = `${selectedReportYearNumber}-${selectedReportMonthNumber}`;
+  const selectedReportMonthLabel =
+    selectedReportYearNumber && selectedReportMonthNumber
+      ? formatLedgerReportMonth(
+          selectedReportYearNumber,
+          selectedReportMonthNumber,
+        )
+      : "Selected month";
+  const { startIso: appliedStartDate, endIso: appliedEndDate } = getMonthRange(
+    selectedReportYearNumber || new Date().getUTCFullYear(),
+    selectedReportMonthNumber || new Date().getUTCMonth() + 1,
+  );
 
   const fetchEarnedProfit = useCallback(async () => {
     try {
@@ -317,36 +251,49 @@ const EarnedProfit = () => {
     fetchEarnedProfit();
   }, [fetchEarnedProfit]);
 
-  const applyPresetRange = (preset: Exclude<PeriodPreset, "custom">) => {
-    const nextRange = getPresetRange(preset);
-    setSelectedPeriod(preset);
-    setStartDateInput(nextRange.startInput);
-    setEndDateInput(nextRange.endInput);
-    setAppliedStartDate(nextRange.startIso);
-    setAppliedEndDate(nextRange.endIso);
-    setValidationError("");
-  };
-
-  const applyCustomDateRange = () => {
-    if (!startDateInput || !endDateInput) {
-      setValidationError("Select both start and end dates.");
-      return;
-    }
-    const startIso = toUtcDayStartIso(startDateInput);
-    const endIso = toUtcExclusiveEndIso(endDateInput);
-    if (new Date(startIso).getTime() >= new Date(endIso).getTime()) {
-      setValidationError("End date must be after start date.");
-      return;
-    }
-    setSelectedPeriod("custom");
-    setAppliedStartDate(startIso);
-    setAppliedEndDate(endIso);
-    setValidationError("");
-  };
-
   const currency = data?.currency ?? "eur";
   const totals = data?.totals ?? EMPTY_TOTALS;
   const breakdown = data?.breakdown ?? [];
+  const currentMonthKey = `${new Date().getUTCFullYear()}-${new Date().getUTCMonth() + 1}`;
+  const canRegenerateSelectedMonth = selectedReportMonthKey !== currentMonthKey;
+
+  const openReportRegenerationModal = () => {
+    if (!canRegenerateSelectedMonth || !selectedReportYearNumber || !selectedReportMonthNumber) return;
+    setReportRegenerationTarget({
+      year: selectedReportYearNumber,
+      month: selectedReportMonthNumber,
+      label: selectedReportMonthLabel,
+    });
+  };
+
+  const closeReportRegenerationModal = () => {
+    if (regeneratingReportKey) return;
+    setReportRegenerationTarget(null);
+  };
+
+  const confirmReportRegeneration = async () => {
+    if (!reportRegenerationTarget || regeneratingReportKey) return;
+
+    const { year, month } = reportRegenerationTarget;
+    const regenerationKey = `${year}-${month}`;
+
+    try {
+      setRegeneratingReportKey(regenerationKey);
+      setError("");
+      await regeneratePlatformFeeInvoiceReport(year, month);
+      await fetchEarnedProfit();
+      setReportRegenerationTarget(null);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      console.log(err);
+      setError("Failed to regenerate the monthly report.");
+    } finally {
+      setRegeneratingReportKey("");
+    }
+  };
 
   return (
     <div className={styles.main}>
@@ -358,7 +305,7 @@ const EarnedProfit = () => {
           <div className={styles.subtitle}>
             {activeView === "profit"
               ? data
-                ? `${formatDate(data.period.startDate)} - ${formatDate(data.period.endDate)} UTC, end exclusive`
+                ? `${selectedReportMonthLabel} UTC, end exclusive`
                 : "Earned profit report for issued invoices and refund-period losses"
               : "Monthly platform fee invoice reports"}
           </div>
@@ -386,90 +333,32 @@ const EarnedProfit = () => {
               <span>Monthly reports</span>
             </button>
           </div>
-          {activeView === "profit" && (
-            <div className={styles.periodButtons}>
-              {PERIOD_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`${styles.periodButton} ${
-                    selectedPeriod === option.value ? styles.periodButtonActive : ""
-                  }`}
-                  onClick={() => applyPresetRange(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
       {activeView === "profit" ? (
         <>
-          <div className={styles.filtersPanel}>
-            <div className={styles.customDateControls}>
-              <div className={styles.dateField}>
-                <span>Start</span>
-                <div className={styles.dateInputWrap}>
-                  <input
-                    ref={startDateInputRef}
-                    type="date"
-                    className={styles.dateInput}
-                    value={startDateInput}
-                    onChange={(e) => {
-                      setSelectedPeriod("custom");
-                      setStartDateInput(e.target.value);
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className={styles.datePickerBtn}
-                    onClick={() => openNativeDatePicker(startDateInputRef.current)}
-                    aria-label="Open start date picker"
-                  >
-                    <img src={calendarImg.src} alt="" />
-                  </button>
-                </div>
-              </div>
-
-              <div className={styles.dateField}>
-                <span>End</span>
-                <div className={styles.dateInputWrap}>
-                  <input
-                    ref={endDateInputRef}
-                    type="date"
-                    className={styles.dateInput}
-                    value={endDateInput}
-                    onChange={(e) => {
-                      setSelectedPeriod("custom");
-                      setEndDateInput(e.target.value);
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className={styles.datePickerBtn}
-                    onClick={() => openNativeDatePicker(endDateInputRef.current)}
-                    aria-label="Open end date picker"
-                  >
-                    <img src={calendarImg.src} alt="" />
-                  </button>
-                </div>
-              </div>
-
-              <div className={styles.applyDateButtonWrap}>
-                <Button
-                  title="Apply dates"
-                  type="OUTLINED"
-                  onClick={applyCustomDateRange}
-                />
-              </div>
-            </div>
-
-            {validationError && (
-              <div className={styles.validationError}>{validationError}</div>
-            )}
-          </div>
+          <ReportMonthControls
+            currentYear={new Date().getUTCFullYear()}
+            reportYearOptions={Array.from({ length: 10 }, (_, index) => new Date().getUTCFullYear() - index)}
+            selectedYear={selectedReportYearNumber}
+            selectedMonth={selectedReportMonthNumber}
+            onYearChange={(year) =>
+              setSelectedReportMonth(
+                `${year}-${String(selectedReportMonthNumber || 1).padStart(2, "0")}`,
+              )
+            }
+            onMonthChange={(month) =>
+              setSelectedReportMonth(
+                `${selectedReportYearNumber || new Date().getUTCFullYear()}-${String(month).padStart(2, "0")}`,
+              )
+            }
+            onRegenerate={openReportRegenerationModal}
+            isRegenerating={regeneratingReportKey === selectedReportMonthKey}
+            isRegenerateDisabled={!canRegenerateSelectedMonth}
+            showRegenerateButton={canRegenerateSelectedMonth}
+            toolbarMeta={selectedReportMonthLabel}
+          />
 
           {loading && <div className={styles.emptyState}>Loading earned profit...</div>}
           {!loading && error && <div className={styles.emptyState}>{error}</div>}
@@ -482,7 +371,7 @@ const EarnedProfit = () => {
                 <div className={styles.totalsHeader}>
                   <h3 className={styles.totalsTitle}>Totals</h3>
                   <div className={styles.sectionSubtitle}>
-                    {formatDate(data.period.startDate)} - {formatDate(data.period.endDate)} UTC, end exclusive
+                    {selectedReportMonthLabel} UTC, end exclusive
                   </div>
                 </div>
                 <div className={styles.totalsGrid}>
@@ -510,6 +399,31 @@ const EarnedProfit = () => {
         </>
       ) : (
         <MonthlyReports />
+      )}
+
+      {reportRegenerationTarget && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={styles.confirmationModal}>
+            <h2 className={styles.confirmationTitle}>Regenerate report?</h2>
+            <p className={styles.confirmationBody}>
+              {`This will regenerate the ${reportRegenerationTarget.label} monthly profit cache and make it available for CSV download.`}
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeReportRegenerationModal}
+                isDisabled={Boolean(regeneratingReportKey)}
+              />
+              <Button
+                title={regeneratingReportKey ? "Regenerating..." : "Confirm"}
+                type="BLACK"
+                onClick={confirmReportRegeneration}
+                isDisabled={Boolean(regeneratingReportKey)}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
