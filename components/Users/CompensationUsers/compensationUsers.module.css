@@ -77,8 +77,17 @@
 }
 
 .toolbarLeft {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   flex: 1;
   min-width: 0;
+}
+
+.sortControl {
+  width: 180px;
+  flex-shrink: 0;
 }
 
 .toolbarRight {

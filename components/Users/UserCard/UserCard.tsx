@@ -2,23 +2,24 @@ import styles from "./userCard.module.css";
 import Link from "next/link";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
 import { useRef, type DragEvent, type MouseEvent } from "react";
-import {
-  getCompensationPreview,
-  UserWithCompensationDetails,
-} from "../CompensationUsers/compensationPreview";
+import { UserWithCompensationDetails } from "../CompensationUsers/compensationPreview";
+import CompensationRequestMiniCard from "../CompensationUsers/CompensationRequestMiniCard";
 
 type UserCardProps = {
   user: UserWithCompensationDetails;
   mode: "client" | "provider";
   showCompensationInfo?: boolean;
+  onCompensationRequestUpdated?: () => void;
 };
 
-const UserCard = ({ user, mode, showCompensationInfo }: UserCardProps) => {
+const UserCard = ({
+  user,
+  mode,
+  showCompensationInfo,
+  onCompensationRequestUpdated,
+}: UserCardProps) => {
   const href = `/${mode}/${user.userId}`;
   const hasSelectionRef = useRef(false);
-  const compensationPreview = showCompensationInfo
-    ? getCompensationPreview(user)
-    : null;
 
   const updateSelectionState = () => {
     hasSelectionRef.current =
@@ -60,20 +61,11 @@ const UserCard = ({ user, mode, showCompensationInfo }: UserCardProps) => {
           finalPrice={user.finalPrice}
           enableImageViewer={false}
         />
-        {compensationPreview && (
-          <div className={styles.compensationMeta}>
-            <div
-              className={`${styles.compensationMetaLine} ${styles.compensationMetaStatus}`}
-            >
-              {compensationPreview.status}
-            </div>
-            <div className={styles.compensationMetaLine}>
-              {compensationPreview.changedAt}
-            </div>
-            <div className={styles.compensationMetaLine}>
-              {compensationPreview.comment}
-            </div>
-          </div>
+        {showCompensationInfo && (
+          <CompensationRequestMiniCard
+            user={user}
+            onUpdated={onCompensationRequestUpdated}
+          />
         )}
       </div>
     </Link>

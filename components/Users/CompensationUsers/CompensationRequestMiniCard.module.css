@@ -1,0 +1,223 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fafafa;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dateRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  color: #111;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.meta {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.editorGrid {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.statusField,
+.commentField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.commentRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.statusButton {
+  appearance: none;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.statusButton:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.fieldLabel {
+  color: rgba(0, 0, 0, 0.64);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.textarea {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 86px;
+  resize: vertical;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #111;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+.textarea:disabled {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.error {
+  color: #b00020;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.empty {
+  color: #777;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fallbackNote {
+  color: #666;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mobileStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.statusOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 1200px) {
+  .main {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .header {
+    align-items: center;
+  }
+
+  .titleWrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dateRow {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .dateRow .meta {
+    white-space: nowrap;
+  }
+
+  .editorGrid {
+    grid-template-columns: 136px minmax(0, 1fr);
+    gap: 14px;
+    align-items: end;
+  }
+
+  .commentRow {
+    align-items: flex-end;
+  }
+
+  .textarea {
+    min-height: 42px;
+    height: 42px;
+    resize: none;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 1199px) {
+  .editorGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .commentRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .textarea {
+    min-height: 86px;
+    height: auto;
+    resize: vertical;
+    overflow: auto;
+    white-space: normal;
+  }
+
+  .dateRow {
+    flex-direction: column;
+  }
+}

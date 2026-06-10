@@ -165,11 +165,25 @@ const CompensationRequests = ({
     try {
       setIsSaving(true);
       setSaveError(null);
+      const previousStatus = activeRequest.status;
       await updateClientCompensationRequestStatus(apiClientId, activeRequest.id, {
         status: draftStatus as (typeof activeRequest)["status"],
         comment: nextComment,
       });
       await fetchClient(clientId);
+      const nextStatus = draftStatus as (typeof activeRequest)["status"];
+      const hasAttentionChange =
+        previousStatus !== nextStatus &&
+        (previousStatus === "COMPLETED") !== (nextStatus === "COMPLETED");
+      if (activeRequest.id === requests[0]?.id && hasAttentionChange) {
+        window.dispatchEvent(
+          new CustomEvent("requested-compensation-info-count-refresh", {
+            detail: {
+              delta: nextStatus === "COMPLETED" ? -1 : 1,
+            },
+          }),
+        );
+      }
       setIsSaveConfirmOpen(false);
       setPendingAction(null);
     } catch (error) {

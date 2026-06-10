@@ -4,18 +4,22 @@ import Link from "next/link";
 import { isRowNavExcluded } from "@/lib/utils";
 import UserEmailIdLine from "../UserEmailIdLine/UserEmailIdLine";
 import { useRef, type DragEvent, type MouseEvent } from "react";
-import {
-  getCompensationPreview,
-  UserWithCompensationDetails,
-} from "../CompensationUsers/compensationPreview";
+import { UserWithCompensationDetails } from "../CompensationUsers/compensationPreview";
+import CompensationRequestMiniCard from "../CompensationUsers/CompensationRequestMiniCard";
 
 type UsersListProps = {
   users: UserWithCompensationDetails[];
   mode: "client" | "provider";
   showCompensationInfo?: boolean;
+  onCompensationRequestUpdated?: () => void;
 };
 
-const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
+const UsersList = ({
+  users,
+  mode,
+  showCompensationInfo,
+  onCompensationRequestUpdated,
+}: UsersListProps) => {
   const hasSelectionRef = useRef(false);
 
   const updateSelectionState = () => {
@@ -33,9 +37,6 @@ const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
         const displayName =
           `${user.firstName} ${user.lastName}`.trim() || "Unknown user";
         const href = `/${mode}/${user.userId}`;
-        const compensationPreview = showCompensationInfo
-          ? getCompensationPreview(user)
-          : null;
 
         const onRowClick = (e: MouseEvent<HTMLAnchorElement>) => {
           if (isRowNavExcluded(e.target)) {
@@ -78,19 +79,12 @@ const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
                 )}
               </div>
             </div>
-            {compensationPreview && (
+            {showCompensationInfo && (
               <div className={styles.compensationMeta}>
-                <div
-                  className={`${styles.compensationMetaLine} ${styles.compensationMetaStatus}`}
-                >
-                  {compensationPreview.status}
-                </div>
-                <div className={styles.compensationMetaLine}>
-                  {compensationPreview.changedAt}
-                </div>
-                <div className={styles.compensationMetaLine}>
-                  {compensationPreview.comment}
-                </div>
+                <CompensationRequestMiniCard
+                  user={user}
+                  onUpdated={onCompensationRequestUpdated}
+                />
               </div>
             )}
           </Link>

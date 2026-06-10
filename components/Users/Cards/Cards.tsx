@@ -6,9 +6,15 @@ type CardsProps = {
   users: UserWithCompensationDetails[];
   mode: "client" | "provider";
   showCompensationInfo?: boolean;
+  onCompensationRequestUpdated?: () => void;
 };
 
-const Cards = ({ users, mode, showCompensationInfo }: CardsProps) => {
+const Cards = ({
+  users,
+  mode,
+  showCompensationInfo,
+  onCompensationRequestUpdated,
+}: CardsProps) => {
   return (
     <div className={styles.main}>
       {users.map((c) => (
@@ -17,6 +23,7 @@ const Cards = ({ users, mode, showCompensationInfo }: CardsProps) => {
           user={c}
           mode={mode}
           showCompensationInfo={showCompensationInfo}
+          onCompensationRequestUpdated={onCompensationRequestUpdated}
         />
       ))}
     </div>
