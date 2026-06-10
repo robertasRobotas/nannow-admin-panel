@@ -81,6 +81,7 @@ export type StripeKycAuditMismatch = {
   providerFullName?: string;
   stripeAccountId: string;
   status?: string;
+  alreadyNotifiedAt?: string | null;
   db?: {
     kycStatus?: string | null;
     isBankKycFinished?: boolean | null;

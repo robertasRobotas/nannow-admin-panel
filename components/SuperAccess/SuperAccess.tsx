@@ -91,6 +91,7 @@ type StripeKycAuditMismatch = {
   providerFullName?: string;
   stripeAccountId: string;
   status?: string;
+  alreadyNotifiedAt?: string | null;
   db?: {
     kycStatus?: string | null;
     isBankKycFinished?: boolean | null;
@@ -4530,6 +4531,12 @@ const SuperAccess = () => {
                             {item.status && (
                               <div className={styles.stripeKycRowMeta}>
                                 Status: {item.status}
+                              </div>
+                            )}
+                            {item.alreadyNotifiedAt && (
+                              <div className={styles.stripeKycRowMeta}>
+                                Already notified:{" "}
+                                {formatDateTimeShort(item.alreadyNotifiedAt)}
                               </div>
                             )}
                           </div>
