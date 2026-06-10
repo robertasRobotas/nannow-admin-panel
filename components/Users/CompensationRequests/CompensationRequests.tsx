@@ -172,14 +172,14 @@ const CompensationRequests = ({
       });
       await fetchClient(clientId);
       const nextStatus = draftStatus as (typeof activeRequest)["status"];
-      const hasAttentionChange =
-        previousStatus !== nextStatus &&
-        (previousStatus === "COMPLETED") !== (nextStatus === "COMPLETED");
+      const wasRequested = previousStatus === "REQUESTED";
+      const isRequested = nextStatus === "REQUESTED";
+      const hasAttentionChange = wasRequested !== isRequested;
       if (activeRequest.id === requests[0]?.id && hasAttentionChange) {
         window.dispatchEvent(
           new CustomEvent("requested-compensation-info-count-refresh", {
             detail: {
-              delta: nextStatus === "COMPLETED" ? -1 : 1,
+              delta: isRequested ? 1 : -1,
             },
           }),
         );
