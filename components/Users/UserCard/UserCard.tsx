@@ -55,6 +55,7 @@ const UserCard = ({
           imgUrl={user.imgUrl}
           id={user.userId}
           email={user.email}
+          phoneNumber={user.client?.user?.phoneNumber}
           locale={user.locale}
           appVersion={user.appVersion}
           platform={user.platform}

@@ -103,9 +103,16 @@ const CompensationUsers = () => {
                 detailResponse.data?.clientDetails ??
                 detailResponse.data?.client ??
                 null;
+              const nextClient =
+                clientDetails && typeof clientDetails === "object"
+                  ? {
+                      ...(clientDetails.client ?? {}),
+                      user: clientDetails.user ?? clientDetails.client?.user,
+                    }
+                  : undefined;
               return {
                 ...user,
-                client: clientDetails?.client ?? undefined,
+                client: nextClient,
               };
             } catch (error) {
               console.log(error);

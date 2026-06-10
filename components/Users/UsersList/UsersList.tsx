@@ -68,7 +68,11 @@ const UsersList = ({
               />
               <div className={styles.info}>
                 <div className={styles.name}>{displayName}</div>
-                <UserEmailIdLine email={user.email} userId={user.userId} />
+                <UserEmailIdLine
+                  email={user.email}
+                  userId={user.userId}
+                  phoneNumber={user.client?.user?.phoneNumber}
+                />
                 <div
                   className={styles.meta}
                 >{`APP INFO: ${user.platform ?? "—"} | ${user.appVersion ?? "—"}`}</div>

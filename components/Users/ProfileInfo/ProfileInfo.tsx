@@ -11,6 +11,7 @@ type ProfileInfoProps = {
   id: string;
   mode?: "client" | "provider";
   email: string;
+  phoneNumber?: string | null;
   locale?: string;
   appVersion?: string | null;
   platform?: "IOS" | "ANDROID" | null;
@@ -29,6 +30,7 @@ const ProfileInfo = ({
   id,
   mode,
   email,
+  phoneNumber,
   locale,
   appVersion,
   platform,
@@ -61,6 +63,10 @@ const ProfileInfo = ({
   const hasPlatform = typeof platform === "string" && platform.trim().length > 0;
   const hasAppVersion =
     typeof appVersion === "string" && appVersion.trim().length > 0;
+  const normalizedPhoneNumber = (phoneNumber ?? "").trim();
+  const phoneHref = normalizedPhoneNumber
+    ? normalizedPhoneNumber.replace(/[^\d+]/g, "")
+    : "";
   const appInfoLine =
     hasPlatform || hasAppVersion
       ? `${hasPlatform ? platform : "—"} | ${hasAppVersion ? appVersion : "—"}`
@@ -162,6 +168,29 @@ const ProfileInfo = ({
       </span>
       <span className={styles.email}>{email}</span>
       <span className={styles.id}>{id}</span>
+      {normalizedPhoneNumber && (
+        <button
+          type="button"
+          className={styles.phoneLine}
+          data-row-nav-exclude=""
+          aria-label={`Call ${normalizedPhoneNumber}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (phoneHref.length > 0) {
+              window.location.href = `tel:${phoneHref}`;
+            }
+          }}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          title={normalizedPhoneNumber}
+        >
+          <span className={styles.phoneLabel}>Phone:</span>
+          <span className={styles.phoneValue}>{normalizedPhoneNumber}</span>
+        </button>
+      )}
       <span className={styles.email}>{`APP INFO: ${appInfoLine}`}</span>
       {locale && (
         <span className={styles.email}>{`USER LOCALE: ${locale}`}</span>

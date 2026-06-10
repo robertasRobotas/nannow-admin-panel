@@ -6,7 +6,9 @@ import {
 } from "@/data/compensationRequests";
 
 export type UserWithCompensationDetails = User & {
-  client?: UserDetails["client"];
+  client?: UserDetails["client"] & {
+    user?: UserDetails["user"];
+  };
 };
 
 const getFirstCommentLine = (value?: string | null) => {

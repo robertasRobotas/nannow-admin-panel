@@ -58,6 +58,38 @@
   margin-top: 0;
 }
 
+.phoneLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1a1a1a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.phoneLine:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.phoneLabel {
+  color: #666666;
+  flex-shrink: 0;
+}
+
+.phoneValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .imageModalOverlay {
   position: fixed;
   inset: 0;
