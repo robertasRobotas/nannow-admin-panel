@@ -543,6 +543,195 @@
   gap: 10px;
 }
 
+.stripeKycModalCard {
+  max-width: 980px;
+  height: min(90dvh, 980px);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+
+.stripeKycModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stripeKycModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.stripeKycModalActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stripeKycSummaryCard,
+.stripeKycRow {
+  border-radius: 16px;
+  background: #f6f7fb;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 14px;
+}
+
+.stripeKycSummaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stripeKycSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px 12px;
+  color: rgba(0, 0, 0, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stripeKycSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stripeKycProvidersSection {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stripeKycIssueList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stripeKycIssueRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 12px;
+  background: rgba(255, 59, 48, 0.08);
+  padding: 10px 12px;
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stripeKycSectionTitle {
+  color: #000;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.stripeKycList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+.stripeKycRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stripeKycRowTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stripeKycRowTitle {
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.stripeKycRowMeta {
+  color: rgba(0, 0, 0, 0.68);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+.stripeKycRowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stripeKycFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stripeKycFields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stripeKycFieldLabel {
+  color: rgba(0, 0, 0, 0.68);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stripeKycJson {
+  margin: 0;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.stripeKycProvidersSection .stripeKycList {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+.stripeKycFieldTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stripeKycTag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  color: #000;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .chatProgressList,
 .chatStepsList {
   display: flex;
@@ -787,5 +976,22 @@
 
   .chatNormalizationStats {
     grid-template-columns: 1fr;
+  }
+
+  .stripeKycModalHeader,
+  .stripeKycRowTop {
+    flex-direction: column;
+  }
+
+  .stripeKycModalCard {
+    height: min(94dvh, 980px);
+  }
+
+  .stripeKycFieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .stripeKycModalActions {
+    justify-content: flex-start;
   }
 }

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import axios from "axios";
 import Button from "@/components/Button/Button";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
@@ -24,8 +31,12 @@ import {
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
   getFinancialOrders,
+  getStripeKycAudit,
   getSuperAccessItem,
   getSuperAccessList,
+  reconcileStripeKyc,
+  getCurrentAdminProfileFromJwt,
+  sendStripeKycUpdateEmail,
   updateBroadcastNotificationSender,
   updateSuperAccessItem,
 } from "@/pages/api/fetch";
@@ -72,6 +83,83 @@ type ChatNormalizationJob = {
   warnings?: string[];
   steps?: ChatNormalizationJobStep[];
   progress?: Record<string, unknown> | null;
+};
+
+type StripeKycAuditMismatch = {
+  providerId: string;
+  userId: string;
+  providerFullName?: string;
+  stripeAccountId: string;
+  status?: string;
+  db?: {
+    kycStatus?: string | null;
+    isBankKycFinished?: boolean | null;
+    kycRejectionDetails?: unknown;
+    bankKycUrl?: string | null;
+  };
+  stripe?: {
+    kycStatus?: string | null;
+    isBankKycFinished?: boolean | null;
+    kycRejectionDetails?: unknown;
+    verificationStatus?: string | null;
+    hasIdentityDocumentDue?: boolean | null;
+    hasIdentityDocumentPendingReview?: boolean | null;
+  };
+  mismatchedFields?: string[];
+};
+
+type StripeKycAuditError = {
+  providerId: string;
+  userId: string;
+  providerFullName?: string;
+  status?: string;
+  stripeAccountId: string;
+  error: string;
+};
+
+type StripeKycAuditResult = {
+  totalCount: number;
+  startIndex: number;
+  pageSize: number;
+  hasMore: boolean;
+  checkedCount: number;
+  mismatchCount: number;
+  matchedCount: number;
+  errorCount: number;
+  checkedProviders: StripeKycAuditMismatch[];
+  mismatches: StripeKycAuditMismatch[];
+  errors: StripeKycAuditError[];
+};
+
+type StripeKycReconcileUpdatedProvider = {
+  providerId: string;
+  userId: string;
+  providerFullName?: string;
+  stripeAccountId: string;
+  updatedFields: string[];
+};
+
+type StripeKycReconcileError = {
+  providerId: string;
+  userId: string;
+  providerFullName?: string;
+  stripeAccountId: string;
+  error: string;
+};
+
+type StripeKycReconcileResult = {
+  totalCount: number;
+  startIndex: number;
+  pageSize: number;
+  hasMore: boolean;
+  checkedCount: number;
+  mismatchCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  updatedProviders: StripeKycReconcileUpdatedProvider[];
+  auditErrors: StripeKycAuditError[];
+  updateErrors: StripeKycReconcileError[];
 };
 
 type SuperAccessViewEntity =
@@ -225,6 +313,132 @@ const parseFinancialOrdersResponse = (data: unknown) => {
     pageSize: Number(result.pageSize ?? 20) || 20,
   };
 };
+
+const parseStripeKycAuditResult = (data: unknown): StripeKycAuditResult => {
+  const fallback: StripeKycAuditResult = {
+    totalCount: 0,
+    startIndex: 0,
+    pageSize: 0,
+    hasMore: false,
+    checkedCount: 0,
+    mismatchCount: 0,
+    matchedCount: 0,
+    errorCount: 0,
+    checkedProviders: [],
+    mismatches: [],
+    errors: [],
+  };
+  if (!data || typeof data !== "object") return fallback;
+
+  const payload = data as Record<string, unknown>;
+  const result = (payload.result as Record<string, unknown> | undefined) ?? payload;
+  return {
+    totalCount: Number(result.totalCount ?? 0) || 0,
+    startIndex: Number(result.startIndex ?? 0) || 0,
+    pageSize: Number(result.pageSize ?? 0) || 0,
+    hasMore: Boolean(result.hasMore),
+    checkedCount: Number(result.checkedCount ?? 0) || 0,
+    mismatchCount: Number(result.mismatchCount ?? 0) || 0,
+    matchedCount: Number(result.matchedCount ?? 0) || 0,
+    errorCount: Number(result.errorCount ?? 0) || 0,
+    checkedProviders: Array.isArray(result.checkedProviders)
+      ? (result.checkedProviders as StripeKycAuditMismatch[])
+      : Array.isArray(result.mismatches)
+        ? (result.mismatches as StripeKycAuditMismatch[])
+        : [],
+    mismatches: Array.isArray(result.mismatches)
+      ? (result.mismatches as StripeKycAuditMismatch[])
+      : [],
+    errors: Array.isArray(result.errors)
+      ? (result.errors as StripeKycAuditError[])
+      : [],
+  };
+};
+
+const parseStripeKycReconcileResult = (data: unknown): StripeKycReconcileResult => {
+  const fallback: StripeKycReconcileResult = {
+    totalCount: 0,
+    startIndex: 0,
+    pageSize: 0,
+    hasMore: false,
+    checkedCount: 0,
+    mismatchCount: 0,
+    updatedCount: 0,
+    skippedCount: 0,
+    errorCount: 0,
+    updatedProviders: [],
+    auditErrors: [],
+    updateErrors: [],
+  };
+  if (!data || typeof data !== "object") return fallback;
+
+  const payload = data as Record<string, unknown>;
+  const result = (payload.result as Record<string, unknown> | undefined) ?? payload;
+  return {
+    totalCount: Number(result.totalCount ?? 0) || 0,
+    startIndex: Number(result.startIndex ?? 0) || 0,
+    pageSize: Number(result.pageSize ?? 0) || 0,
+    hasMore: Boolean(result.hasMore),
+    checkedCount: Number(result.checkedCount ?? 0) || 0,
+    mismatchCount: Number(result.mismatchCount ?? 0) || 0,
+    updatedCount: Number(result.updatedCount ?? 0) || 0,
+    skippedCount: Number(result.skippedCount ?? 0) || 0,
+    errorCount: Number(result.errorCount ?? 0) || 0,
+    updatedProviders: Array.isArray(result.updatedProviders)
+      ? (result.updatedProviders as StripeKycReconcileUpdatedProvider[])
+      : [],
+    auditErrors: Array.isArray(result.auditErrors)
+      ? (result.auditErrors as StripeKycAuditError[])
+      : [],
+    updateErrors: Array.isArray(result.updateErrors)
+      ? (result.updateErrors as StripeKycReconcileError[])
+      : [],
+  };
+};
+
+const STRIPE_KYC_AUDIT_PAGE_SIZE = 25;
+const STRIPE_KYC_AUDIT_CONCURRENCY = 5;
+
+const mergeStripeKycAuditResults = (
+  current: StripeKycAuditResult,
+  next: StripeKycAuditResult,
+): StripeKycAuditResult => ({
+  totalCount: next.totalCount || current.totalCount,
+  startIndex: next.startIndex,
+  pageSize: next.pageSize || current.pageSize,
+  hasMore: next.hasMore,
+  checkedCount: current.checkedCount + next.checkedCount,
+  mismatchCount: current.mismatchCount + next.mismatchCount,
+  matchedCount: current.matchedCount + next.matchedCount,
+  errorCount: current.errorCount + next.errorCount,
+  checkedProviders: [...current.checkedProviders, ...next.checkedProviders],
+  mismatches: [...current.mismatches, ...next.mismatches],
+  errors: [...current.errors, ...next.errors],
+});
+
+const mergeStripeKycReconcileResults = (
+  current: StripeKycReconcileResult,
+  next: StripeKycReconcileResult,
+): StripeKycReconcileResult => ({
+  totalCount: next.totalCount || current.totalCount,
+  startIndex: next.startIndex,
+  pageSize: next.pageSize || current.pageSize,
+  hasMore: next.hasMore,
+  checkedCount: current.checkedCount + next.checkedCount,
+  mismatchCount: current.mismatchCount + next.mismatchCount,
+  updatedCount: current.updatedCount + next.updatedCount,
+  skippedCount: current.skippedCount + next.skippedCount,
+  errorCount: current.errorCount + next.errorCount,
+  updatedProviders: [...current.updatedProviders, ...next.updatedProviders],
+  auditErrors: [...current.auditErrors, ...next.auditErrors],
+  updateErrors: [...current.updateErrors, ...next.updateErrors],
+});
+
+const isRequestCanceled = (err: unknown) =>
+  axios.isAxiosError(err) &&
+  (err.code === "ERR_CANCELED" ||
+    err.name === "CanceledError" ||
+    err.message.toLowerCase().includes("canceled"));
 
 const pickId = (item: EntityRecord): string =>
   String(
@@ -579,6 +793,18 @@ const SuperAccess = () => {
   const [regenerateDistanceError, setRegenerateDistanceError] = useState("");
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isStripeKycAuditModalOpen, setIsStripeKycAuditModalOpen] = useState(false);
+  const [isStripeKycAuditLoading, setIsStripeKycAuditLoading] = useState(false);
+  const [isStripeKycReconcileLoading, setIsStripeKycReconcileLoading] = useState(false);
+  const [isStripeKycTestEmailSending, setIsStripeKycTestEmailSending] =
+    useState(false);
+  const [stripeKycAuditResult, setStripeKycAuditResult] =
+    useState<StripeKycAuditResult | null>(null);
+  const [stripeKycReconcileResult, setStripeKycReconcileResult] =
+    useState<StripeKycReconcileResult | null>(null);
+  const [stripeKycAuditFilterUserId, setStripeKycAuditFilterUserId] =
+    useState("");
+  const stripeKycAbortControllerRef = useRef<AbortController | null>(null);
   const [startIndex, setStartIndex] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -601,6 +827,7 @@ const SuperAccess = () => {
   const [ordersById, setOrdersById] = useState<Record<string, EntityRecord>>({});
   const [selectedFinancialLedgerOrderIds, setSelectedFinancialLedgerOrderIds] =
     useState<string[]>([]);
+  const currentAdminProfile = useMemo(() => getCurrentAdminProfileFromJwt(), []);
   const currentPage = Math.floor(startIndex / pageSize) + 1;
 
   const updateSuperAccessQuery = useCallback(
@@ -1637,6 +1864,213 @@ const SuperAccess = () => {
     }
   };
 
+  const cancelStripeKycAuditRun = useCallback(() => {
+    stripeKycAbortControllerRef.current?.abort();
+    stripeKycAbortControllerRef.current = null;
+  }, []);
+
+  const closeStripeKycAuditModal = useCallback(() => {
+    cancelStripeKycAuditRun();
+    setIsStripeKycAuditLoading(false);
+    setIsStripeKycReconcileLoading(false);
+    setIsStripeKycTestEmailSending(false);
+    setIsStripeKycAuditModalOpen(false);
+  }, [cancelStripeKycAuditRun]);
+
+  const refreshStripeKycAudit = useCallback(
+    async (userId?: string, options?: { openModal?: boolean }) => {
+      cancelStripeKycAuditRun();
+      const controller = new AbortController();
+      stripeKycAbortControllerRef.current = controller;
+      try {
+        setIsStripeKycAuditLoading(true);
+        setError("");
+        setStripeKycAuditFilterUserId(userId ?? "");
+        setStripeKycReconcileResult(null);
+        if (options?.openModal ?? true) {
+          setIsStripeKycAuditModalOpen(true);
+        }
+
+        if (userId) {
+          const response = await getStripeKycAudit({
+            userId,
+            startIndex: 0,
+            pageSize: 1,
+            concurrency: 1,
+            signal: controller.signal,
+          });
+          const result = parseStripeKycAuditResult(response.data);
+          setStripeKycAuditResult(result);
+          return result;
+        }
+
+        let startIndex = 0;
+        let aggregated: StripeKycAuditResult | null = null;
+        for (let attempts = 0; attempts < 1000; attempts += 1) {
+          const response = await getStripeKycAudit({
+            startIndex,
+            pageSize: STRIPE_KYC_AUDIT_PAGE_SIZE,
+            concurrency: STRIPE_KYC_AUDIT_CONCURRENCY,
+            signal: controller.signal,
+          });
+          const pageResult = parseStripeKycAuditResult(response.data);
+          aggregated = aggregated
+            ? mergeStripeKycAuditResults(aggregated, pageResult)
+            : pageResult;
+          setStripeKycAuditResult(aggregated);
+
+          if (!pageResult.hasMore || pageResult.pageSize <= 0) {
+            break;
+          }
+          startIndex = pageResult.startIndex + pageResult.pageSize;
+        }
+
+        return aggregated;
+      } catch (err) {
+        if (isRequestCanceled(err)) {
+          return null;
+        }
+        if (axios.isAxiosError(err)) {
+          setError(
+            (err.response?.data as { error?: string })?.error ??
+              "Failed to audit Stripe KYC.",
+          );
+          return null;
+        }
+        setError("Failed to audit Stripe KYC.");
+        return null;
+      } finally {
+        if (stripeKycAbortControllerRef.current === controller) {
+          stripeKycAbortControllerRef.current = null;
+        }
+        setIsStripeKycAuditLoading(false);
+      }
+    },
+    [cancelStripeKycAuditRun],
+  );
+
+  const reconcileStripeKycAudit = useCallback(
+    async (userId?: string) => {
+      cancelStripeKycAuditRun();
+      const controller = new AbortController();
+      stripeKycAbortControllerRef.current = controller;
+      try {
+        setIsStripeKycReconcileLoading(true);
+        setError("");
+        let startIndex = 0;
+        let aggregated: StripeKycReconcileResult | null = null;
+
+        if (userId) {
+          const response = await reconcileStripeKyc({
+            userId,
+            startIndex: 0,
+            pageSize: 1,
+            concurrency: 1,
+            signal: controller.signal,
+          });
+          const result = parseStripeKycReconcileResult(response.data);
+          setStripeKycReconcileResult(result);
+          aggregated = result;
+        } else {
+          for (let attempts = 0; attempts < 1000; attempts += 1) {
+            const response = await reconcileStripeKyc({
+              startIndex,
+              pageSize: STRIPE_KYC_AUDIT_PAGE_SIZE,
+              concurrency: STRIPE_KYC_AUDIT_CONCURRENCY,
+              signal: controller.signal,
+            });
+            const pageResult = parseStripeKycReconcileResult(response.data);
+            aggregated = aggregated
+              ? mergeStripeKycReconcileResults(aggregated, pageResult)
+              : pageResult;
+            setStripeKycReconcileResult(aggregated);
+
+            if (!pageResult.hasMore || pageResult.pageSize <= 0) {
+              break;
+            }
+            startIndex = pageResult.startIndex + pageResult.pageSize;
+          }
+        }
+
+        if (!aggregated) {
+          return null;
+        }
+
+        setNotice(
+          `Stripe KYC reconciled. Updated ${aggregated.updatedCount} provider${
+            aggregated.updatedCount === 1 ? "" : "s"
+          }.`,
+        );
+        await Promise.all([
+          fetchList(),
+          selectedId ? fetchItem() : Promise.resolve(),
+        ]);
+        await refreshStripeKycAudit(stripeKycAuditFilterUserId || undefined, {
+          openModal: true,
+        });
+        return aggregated;
+      } catch (err) {
+        if (isRequestCanceled(err)) {
+          return null;
+        }
+        if (axios.isAxiosError(err)) {
+          setError(
+            (err.response?.data as { error?: string })?.error ??
+              "Failed to reconcile Stripe KYC.",
+          );
+          return null;
+        }
+        setError("Failed to reconcile Stripe KYC.");
+        return null;
+      } finally {
+        if (stripeKycAbortControllerRef.current === controller) {
+          stripeKycAbortControllerRef.current = null;
+        }
+        setIsStripeKycReconcileLoading(false);
+      }
+    },
+    [
+      cancelStripeKycAuditRun,
+      fetchItem,
+      fetchList,
+      refreshStripeKycAudit,
+      selectedId,
+      stripeKycAuditFilterUserId,
+    ],
+  );
+
+  const sendStripeKycTestEmailToCurrentAdmin = useCallback(
+    async (providerId: string) => {
+      const recipientUserId = currentAdminProfile.id.trim();
+      if (!recipientUserId || isStripeKycTestEmailSending) return;
+
+      try {
+        setIsStripeKycTestEmailSending(true);
+        setError("");
+        await sendStripeKycUpdateEmail(providerId, {
+          recipientUserId,
+          includeActionLink: true,
+          notifyReason: "current",
+        });
+        setNotice(
+          `Stripe KYC test email sent to ${currentAdminProfile.email || recipientUserId}.`,
+        );
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          setError(
+            (err.response?.data as { error?: string })?.error ??
+              "Failed to send Stripe KYC test email.",
+          );
+          return;
+        }
+        setError("Failed to send Stripe KYC test email.");
+      } finally {
+        setIsStripeKycTestEmailSending(false);
+      }
+    },
+    [currentAdminProfile.email, currentAdminProfile.id, isStripeKycTestEmailSending],
+  );
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const fields = useMemo(
@@ -2197,6 +2631,13 @@ const SuperAccess = () => {
                 setChatNormalizationAnalysis(null);
                 setChatNormalizationJobId("");
                 setChatNormalizationJob(null);
+                setIsStripeKycAuditModalOpen(false);
+                setIsStripeKycAuditLoading(false);
+                setIsStripeKycReconcileLoading(false);
+                setIsStripeKycTestEmailSending(false);
+                setStripeKycAuditResult(null);
+                setStripeKycReconcileResult(null);
+                setStripeKycAuditFilterUserId("");
                 setIsChatNormalizationConfirmModalOpen(false);
                 setIsChatNormalizationProgressModalOpen(false);
                 setIsCompactListView(menuItem.key === "financial-ledger");
@@ -2346,6 +2787,19 @@ const SuperAccess = () => {
                       isDisabled={isStartingChatNormalization}
                     />
                   </>
+                )}
+                {entity === "providers" && (
+                  <Button
+                    title={
+                      isStripeKycAuditLoading
+                        ? "Scanning..."
+                        : "Scan Stripe status"
+                    }
+                    type="OUTLINED"
+                    onClick={() => refreshStripeKycAudit(undefined, { openModal: true })}
+                    isDisabled={isStripeKycAuditLoading || isStripeKycReconcileLoading}
+                    isLoading={isStripeKycAuditLoading}
+                  />
                 )}
                 <SearchBar
                   placeholder="Type to search"
@@ -2851,6 +3305,30 @@ const SuperAccess = () => {
                   onClick={() => openRegenerateModal("ONE")}
                   isDisabled={loadingItem || isRegeneratingAddress}
                   isLoading={isRegeneratingAddress}
+                />
+              )}
+              {entity === "providers" && selectedId && (
+                <Button
+                  title={
+                    isStripeKycAuditLoading
+                      ? "Scanning..."
+                      : "Scan Stripe status"
+                  }
+                  type="OUTLINED"
+                  onClick={() =>
+                    refreshStripeKycAudit(
+                      String(selectedItem?.userId ?? draft.userId ?? "").trim() ||
+                        undefined,
+                      { openModal: true },
+                    )
+                  }
+                  isDisabled={
+                    loadingItem ||
+                    isStripeKycAuditLoading ||
+                    isStripeKycReconcileLoading ||
+                    !String(selectedItem?.userId ?? draft.userId ?? "").trim()
+                  }
+                  isLoading={isStripeKycAuditLoading}
                 />
               )}
               {(entity === "financial-ledger" || entity === "orders") &&
@@ -3916,6 +4394,249 @@ const SuperAccess = () => {
                 type="OUTLINED"
                 onClick={() => setIsChatNormalizationProgressModalOpen(false)}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      {isStripeKycAuditModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={`${styles.modalCard} ${styles.stripeKycModalCard}`}>
+            <div className={styles.stripeKycModalHeader}>
+              <div>
+                <h3 className={styles.modalTitle}>Stripe KYC audit</h3>
+                <p className={styles.modalText}>
+                  {stripeKycAuditFilterUserId
+                    ? `Filtered by user ${stripeKycAuditFilterUserId}`
+                    : "Scanning all providers with a Stripe account."}
+                </p>
+              </div>
+              <div className={styles.stripeKycModalActions}>
+                <Button
+                  title={isStripeKycAuditLoading ? "Scanning..." : "Refresh"}
+                  type="OUTLINED"
+                  onClick={() =>
+                    refreshStripeKycAudit(
+                      stripeKycAuditFilterUserId || undefined,
+                      { openModal: true },
+                    )
+                  }
+                  isDisabled={isStripeKycAuditLoading || isStripeKycReconcileLoading}
+                  isLoading={isStripeKycAuditLoading}
+                />
+                <Button
+                  title={isStripeKycReconcileLoading ? "Fixing..." : "Fix database"}
+                  type="BLACK"
+                  onClick={() =>
+                    reconcileStripeKycAudit(stripeKycAuditFilterUserId || undefined)
+                  }
+                  isDisabled={
+                    isStripeKycAuditLoading ||
+                    isStripeKycReconcileLoading ||
+                    !stripeKycAuditResult ||
+                    stripeKycAuditResult.mismatchCount === 0
+                  }
+                  isLoading={isStripeKycReconcileLoading}
+                />
+                <Button
+                  title="Close"
+                  type="OUTLINED"
+                  onClick={closeStripeKycAuditModal}
+                />
+              </div>
+            </div>
+            <div className={styles.stripeKycModalBody}>
+              {stripeKycReconcileResult && (
+                <div className={styles.stripeKycSummaryCard}>
+                  <div className={styles.stripeKycSummaryGrid}>
+                    <div>Checked: {stripeKycReconcileResult.checkedCount}</div>
+                    <div>Mismatches: {stripeKycReconcileResult.mismatchCount}</div>
+                    <div>Updated: {stripeKycReconcileResult.updatedCount}</div>
+                    <div>Skipped: {stripeKycReconcileResult.skippedCount}</div>
+                    <div>Errors: {stripeKycReconcileResult.errorCount}</div>
+                  </div>
+                  {stripeKycReconcileResult.updateErrors.length > 0 && (
+                    <div className={styles.stripeKycIssueList}>
+                      {stripeKycReconcileResult.updateErrors.map((item) => (
+                        <div
+                          key={`${item.providerId}-${item.userId}`}
+                          className={styles.stripeKycIssueRow}
+                        >
+                          <strong>
+                            {item.providerFullName
+                              ? `${item.providerFullName} (${item.providerId})`
+                              : item.providerId}
+                          </strong>
+                          <span>{item.error}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {stripeKycReconcileResult.auditErrors.length > 0 && (
+                    <div className={styles.stripeKycIssueList}>
+                      {stripeKycReconcileResult.auditErrors.map((item) => (
+                        <div
+                          key={`${item.providerId}-${item.userId}-${item.error}`}
+                          className={styles.stripeKycIssueRow}
+                        >
+                          <strong>
+                            {item.providerFullName
+                              ? `${item.providerFullName} (${item.providerId})`
+                              : item.providerId}
+                          </strong>
+                          <span>{item.error}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className={styles.stripeKycProvidersSection}>
+                <div className={styles.stripeKycSectionTitle}>
+                  {stripeKycAuditFilterUserId ? "Checked provider" : "Affected providers"}
+                  {stripeKycAuditResult
+                    ? ` (${
+                        stripeKycAuditFilterUserId
+                          ? stripeKycAuditResult.checkedProviders.length
+                          : stripeKycAuditResult.mismatchCount
+                      })`
+                    : ""}
+                </div>
+                {(
+                  stripeKycAuditFilterUserId
+                    ? stripeKycAuditResult?.checkedProviders
+                    : stripeKycAuditResult?.mismatches
+                )?.length ? (
+                  <div className={styles.stripeKycList}>
+                    {(
+                      stripeKycAuditFilterUserId
+                        ? stripeKycAuditResult?.checkedProviders
+                        : stripeKycAuditResult?.mismatches
+                    )?.map((item) => (
+                      <div
+                        key={`${item.providerId}-${item.userId}`}
+                        className={styles.stripeKycRow}
+                      >
+                        <div className={styles.stripeKycRowTop}>
+                          <div>
+                            <div className={styles.stripeKycRowTitle}>
+                              {item.providerFullName
+                                ? item.providerFullName
+                                : `Provider ${item.providerId}`}
+                            </div>
+                            <div className={styles.stripeKycRowMeta}>
+                              Provider ID: {item.providerId} | User: {item.userId} | Stripe account: {item.stripeAccountId}
+                            </div>
+                            {item.status && (
+                              <div className={styles.stripeKycRowMeta}>
+                                Status: {item.status}
+                              </div>
+                            )}
+                          </div>
+                          <div className={styles.stripeKycRowActions}>
+                            <Button
+                              title="Fix"
+                              type="OUTLINED"
+                              onClick={() => reconcileStripeKycAudit(item.userId)}
+                              isDisabled={
+                                isStripeKycAuditLoading || isStripeKycReconcileLoading
+                              }
+                            />
+                            {stripeKycAuditFilterUserId && (
+                              <Button
+                                title={
+                                  isStripeKycTestEmailSending
+                                    ? "Sending..."
+                                    : `Send test email${currentAdminProfile.email ? ` to ${currentAdminProfile.email}` : ""}`
+                                }
+                                type="OUTLINED"
+                                onClick={() =>
+                                  sendStripeKycTestEmailToCurrentAdmin(item.providerId)
+                                }
+                                isDisabled={
+                                  isStripeKycTestEmailSending ||
+                                  !currentAdminProfile.id ||
+                                  isStripeKycAuditLoading ||
+                                  isStripeKycReconcileLoading
+                                }
+                                isLoading={isStripeKycTestEmailSending}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div className={styles.stripeKycFieldGrid}>
+                          <div>
+                            <div className={styles.stripeKycFieldLabel}>DB</div>
+                            <pre className={styles.stripeKycJson}>
+                              {JSON.stringify(item.db ?? {}, null, 2)}
+                            </pre>
+                          </div>
+                          <div>
+                            <div className={styles.stripeKycFieldLabel}>Stripe</div>
+                            <pre className={styles.stripeKycJson}>
+                              {JSON.stringify(item.stripe ?? {}, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                        <div className={styles.stripeKycFields}>
+                          <span className={styles.stripeKycFieldLabel}>
+                            Mismatched fields
+                          </span>
+                          <div className={styles.stripeKycFieldTags}>
+                            {(item.mismatchedFields ?? []).map((field) => (
+                              <span key={field} className={styles.stripeKycTag}>
+                                {field}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.empty}>
+                    {isStripeKycAuditLoading
+                      ? "Scanning providers..."
+                      : "No mismatches found."}
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.stripeKycSection}>
+                <div className={styles.stripeKycSectionTitle}>
+                  Stripe fetch errors
+                  {stripeKycAuditResult ? ` (${stripeKycAuditResult.errorCount})` : ""}
+                </div>
+                {stripeKycAuditResult?.errors.length ? (
+                  <div className={styles.stripeKycList}>
+                    {stripeKycAuditResult.errors.map((item) => (
+                      <div
+                        key={`${item.providerId}-${item.userId}-${item.error}`}
+                        className={styles.stripeKycRow}
+                      >
+                        <div className={styles.stripeKycRowTitle}>
+                          {item.providerFullName
+                            ? item.providerFullName
+                            : `Provider ${item.providerId}`}
+                        </div>
+                        <div className={styles.stripeKycRowMeta}>
+                          Provider ID: {item.providerId} | User: {item.userId} | Stripe account: {item.stripeAccountId}
+                        </div>
+                        {item.status && (
+                          <div className={styles.stripeKycRowMeta}>
+                            Status: {item.status}
+                          </div>
+                        )}
+                        <div className={styles.modalError}>{item.error}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.empty}>
+                    {isStripeKycAuditLoading ? "Scanning errors..." : "No fetch errors."}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

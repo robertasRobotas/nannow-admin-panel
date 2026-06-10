@@ -75,6 +75,82 @@ export type SuperAccessEntity =
   | "orders"
   | "chats";
 
+export type StripeKycAuditMismatch = {
+  providerId: string;
+  userId: string;
+  providerFullName?: string;
+  stripeAccountId: string;
+  status?: string;
+  db?: {
+    kycStatus?: string | null;
+    isBankKycFinished?: boolean | null;
+    kycRejectionDetails?: unknown;
+    bankKycUrl?: string | null;
+  };
+  stripe?: {
+    kycStatus?: string | null;
+    isBankKycFinished?: boolean | null;
+    kycRejectionDetails?: unknown;
+    verificationStatus?: string | null;
+    hasIdentityDocumentDue?: boolean | null;
+    hasIdentityDocumentPendingReview?: boolean | null;
+  };
+  mismatchedFields?: string[];
+};
+
+export type StripeKycAuditError = {
+  providerId: string;
+  userId: string;
+  status?: string;
+  stripeAccountId: string;
+  error: string;
+};
+
+export type StripeKycAuditResponse = {
+  totalCount: number;
+  startIndex: number;
+  pageSize: number;
+  hasMore: boolean;
+  checkedCount: number;
+  mismatchCount: number;
+  matchedCount: number;
+  errorCount: number;
+  checkedProviders: StripeKycAuditMismatch[];
+  mismatches: StripeKycAuditMismatch[];
+  errors: StripeKycAuditError[];
+};
+
+export type StripeKycReconcileUpdatedProvider = {
+  providerId: string;
+  userId: string;
+  providerFullName?: string;
+  stripeAccountId: string;
+  updatedFields: string[];
+};
+
+export type StripeKycReconcileError = {
+  providerId: string;
+  userId: string;
+  providerFullName?: string;
+  stripeAccountId: string;
+  error: string;
+};
+
+export type StripeKycReconcileResponse = {
+  totalCount: number;
+  startIndex: number;
+  pageSize: number;
+  hasMore: boolean;
+  checkedCount: number;
+  mismatchCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  updatedProviders: StripeKycReconcileUpdatedProvider[];
+  auditErrors: StripeKycAuditError[];
+  updateErrors: StripeKycReconcileError[];
+};
+
 export type AdminUserPayload = {
   id?: string;
   _id?: string;
@@ -501,6 +577,23 @@ export const getCurrentAdminRolesFromJwt = (): AdminRole[] => {
   );
 };
 
+export const getCurrentAdminProfileFromJwt = () => {
+  const jwt = Cookies.get("@user_jwt");
+  const payload = parseJwtPayload(jwt);
+  return {
+    id: String(
+      payload?.adminId ?? payload?.id ?? payload?.userId ?? payload?.sub ?? "",
+    ),
+    email: String(payload?.email ?? payload?.admin?.email ?? ""),
+    firstName: String(
+      payload?.firstName ?? payload?.admin?.firstName ?? payload?.name ?? "",
+    ),
+    lastName: String(
+      payload?.lastName ?? payload?.admin?.lastName ?? payload?.surname ?? "",
+    ),
+  };
+};
+
 const getAdminIdFromJwt = () => {
   const jwt = Cookies.get("@user_jwt");
   const payload = parseJwtPayload(jwt);
@@ -534,6 +627,27 @@ export const applyCriminalRecordApplicationDecision = async (
       criminalRejectionText: payload.criminalRejectionText,
       documentIds: payload.documentIds ?? [],
     },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const sendStripeKycUpdateEmail = async (
+  providerId: string,
+  payload: {
+    recipientUserId: string;
+    includeActionLink: boolean;
+    notifyReason?: string;
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/super/providers/${providerId}/stripe-kyc/send-update-email`,
+    payload,
     {
       headers: {
         Authorization: jwt,
@@ -2715,6 +2829,58 @@ export const getChatsNormalizationJob = async (jobId: string) => {
       headers: {
         Authorization: jwt,
       },
+    },
+  );
+  return response;
+};
+
+export const getStripeKycAudit = async (params?: {
+  userId?: string;
+  startIndex?: number;
+  pageSize?: number;
+  concurrency?: number;
+  signal?: AbortSignal;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/super/providers/stripe-kyc/audit`,
+    {
+      params: {
+        userId: params?.userId,
+        startIndex: params?.startIndex,
+        pageSize: params?.pageSize,
+        concurrency: params?.concurrency,
+      },
+      headers: {
+        Authorization: jwt,
+      },
+      signal: params?.signal,
+    },
+  );
+  return response;
+};
+
+export const reconcileStripeKyc = async (params?: {
+  userId?: string;
+  startIndex?: number;
+  pageSize?: number;
+  concurrency?: number;
+  signal?: AbortSignal;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/super/providers/stripe-kyc/reconcile`,
+    {
+      userId: params?.userId,
+      startIndex: params?.startIndex,
+      pageSize: params?.pageSize,
+      concurrency: params?.concurrency,
+    },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+      signal: params?.signal,
     },
   );
   return response;
