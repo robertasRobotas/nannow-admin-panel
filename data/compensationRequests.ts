@@ -39,6 +39,23 @@ export const formatCompensationRequestStatus = (
   return status.replace(/_/g, " ");
 };
 
+export const getCompensationRequestStatusTone = (
+  status?: string | null,
+) => {
+  switch (status) {
+    case "REQUESTED":
+      return "requested";
+    case "CONTACTED":
+      return "contacted";
+    case "IN_PROGRESS":
+      return "inProgress";
+    case "COMPLETED":
+      return "completed";
+    default:
+      return "unknown";
+  }
+};
+
 export const COMPENSATION_REQUEST_STATUS_ORDER = [
   "REQUESTED",
   "CONTACTED",

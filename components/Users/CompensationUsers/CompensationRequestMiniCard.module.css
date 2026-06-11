@@ -94,6 +94,42 @@
   opacity: 0.55;
 }
 
+.statusButton:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+
+.statusRequested {
+  background: hsl(0 72% 51%);
+  border-color: hsl(0 72% 51%);
+  color: #fff;
+}
+
+.statusContacted {
+  background: hsl(38 92% 50%);
+  border-color: hsl(38 92% 50%);
+  color: #111;
+}
+
+.statusInProgress {
+  background: hsl(221 83% 53%);
+  border-color: hsl(221 83% 53%);
+  color: #fff;
+}
+
+.statusCompleted {
+  background: hsl(142 71% 45%);
+  border-color: hsl(142 71% 45%);
+  color: #fff;
+}
+
+.statusUnknown {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+  color: #111;
+}
+
 .fieldLabel {
   color: rgba(0, 0, 0, 0.64);
   font-size: 12px;

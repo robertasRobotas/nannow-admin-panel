@@ -7,6 +7,7 @@ import {
   COMPENSATION_REQUEST_STATUS_ORDER,
   formatCompensationDateTime,
   formatCompensationRequestStatus,
+  getCompensationRequestStatusTone,
   normalizeCompensationRequests,
 } from "@/data/compensationRequests";
 import { updateClientCompensationRequestStatus } from "@/pages/api/fetch";
@@ -24,6 +25,23 @@ const normalizeCommentText = (value: unknown) => {
       .join("\n");
   }
   return "";
+};
+
+const getStatusToneClass = (
+  tone: ReturnType<typeof getCompensationRequestStatusTone>,
+) => {
+  switch (tone) {
+    case "requested":
+      return styles.statusRequested;
+    case "contacted":
+      return styles.statusContacted;
+    case "inProgress":
+      return styles.statusInProgress;
+    case "completed":
+      return styles.statusCompleted;
+    default:
+      return styles.statusUnknown;
+  }
 };
 
 const CompensationRequestMiniCard = ({
@@ -62,6 +80,9 @@ const CompensationRequestMiniCard = ({
 
   const hasRequest = !!request;
   const isFallback = request?.isFallback ?? false;
+  const requestStatusTone = request
+    ? getCompensationRequestStatusTone(request.status)
+    : "unknown";
 
   const handleSaveRequest = async () => {
     if (!request || request.isFallback || isSaving || !apiClientId) return;
@@ -140,7 +161,9 @@ const CompensationRequestMiniCard = ({
                   <div className={styles.fieldLabel}>Status</div>
                   <button
                     type="button"
-                    className={styles.statusButton}
+                    className={`${styles.statusButton} ${getStatusToneClass(
+                      requestStatusTone,
+                    )}`}
                     onClick={() => setIsStatusPickerOpen(true)}
                     disabled={isSaving}
                   >

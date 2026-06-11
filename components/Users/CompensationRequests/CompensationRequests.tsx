@@ -13,6 +13,7 @@ import {
   COMPENSATION_REQUEST_STATUS_ORDER,
   formatCompensationDateTime,
   formatCompensationRequestStatus,
+  getCompensationRequestStatusTone,
   normalizeCompensationRequests,
 } from "@/data/compensationRequests";
 
@@ -27,6 +28,23 @@ const normalizeCommentText = (value: unknown) => {
     return value.filter((comment): comment is string => typeof comment === "string").join("\n");
   }
   return "";
+};
+
+const getStatusToneClass = (
+  tone: ReturnType<typeof getCompensationRequestStatusTone>,
+) => {
+  switch (tone) {
+    case "requested":
+      return styles.statusRequested;
+    case "contacted":
+      return styles.statusContacted;
+    case "inProgress":
+      return styles.statusInProgress;
+    case "completed":
+      return styles.statusCompleted;
+    default:
+      return styles.statusUnknown;
+  }
 };
 
 const CompensationRequests = ({
@@ -206,6 +224,10 @@ const CompensationRequests = ({
     setIsSaveConfirmOpen(true);
   };
 
+  const activeStatusTone = activeRequest
+    ? getCompensationRequestStatusTone(activeRequest.status)
+    : "unknown";
+
   const renderRequestList = () => (
     <div className={styles.listPane}>
       <div className={`${styles.title} ${nunito.className}`}>
@@ -221,6 +243,7 @@ const CompensationRequests = ({
               : activeRequest;
             const isSelected = highlightedRequest?.id === request.id;
             const status = formatCompensationRequestStatus(request.status);
+            const statusTone = getCompensationRequestStatusTone(request.status);
             return (
               <button
                 key={request.id}
@@ -231,7 +254,11 @@ const CompensationRequests = ({
                 onClick={() => selectRequest(request.id)}
               >
                 <div className={styles.requestItemHeader}>
-                  <span className={styles.requestItemTitle}>
+                  <span
+                    className={`${styles.requestItemTitle} ${getStatusToneClass(
+                      statusTone,
+                    )}`}
+                  >
                     {status}
                   </span>
                   {request.isFallback && (
@@ -316,7 +343,9 @@ const CompensationRequests = ({
             <span className={styles.detailLabel}>Status</span>
             <button
               type="button"
-              className={`${styles.detailValue} ${styles.statusButton}`}
+              className={`${styles.detailValue} ${styles.statusButton} ${getStatusToneClass(
+                activeStatusTone,
+              )}`}
               onClick={openStatusPicker}
               disabled={activeRequest.isFallback || isSaving}
             >
