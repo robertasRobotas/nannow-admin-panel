@@ -10,15 +10,13 @@ type DetailedOrderProvider = {
   operationCountry?: string;
   currentOperationalRegion?: string;
   isAvailableStatus: boolean;
-  rating:
-    | {
-        generalRating: number;
-        punctualityRating: number;
-        empathyRating: number;
-        communicationRating: number;
-        cleanlinessRating: number;
-      }
-    | null;
+  rating: {
+    generalRating: number;
+    punctualityRating: number;
+    empathyRating: number;
+    communicationRating: number;
+    cleanlinessRating: number;
+  } | null;
   positiveReviewsCount: number;
   defaultAddressId: string;
   user: {
@@ -180,6 +178,7 @@ export type DetailedOrderType = {
   providerIgnoredEndNotificationResolvedReason?: string;
   providerCancelReason?: string | null;
   providerCancelReasonText?: string | null;
+  providerCanceledAt?: string | null;
   isReleasedFundsToProvider: boolean;
   releasedFundsToProviderAt: string | null;
   isOrderCanceledLessThan12hBeforeStart?: boolean;
@@ -204,10 +203,12 @@ export type DetailedOrderType = {
   invoiceDate?: string;
   orderType?: string | null;
   selectedDays?: string[] | null;
-  periods?: {
-    startsAt?: string | null;
-    endsAt?: string | null;
-  }[] | null;
+  periods?:
+    | {
+        startsAt?: string | null;
+        endsAt?: string | null;
+      }[]
+    | null;
   additionalPayments?: {
     id?: string;
     _id?: string;

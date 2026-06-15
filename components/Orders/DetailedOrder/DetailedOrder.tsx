@@ -7,7 +7,10 @@ import { nunito } from "@/helpers/fonts";
 import defaultUserImg from "../../../assets/images/default-avatar.png";
 import ProfileHeading from "./ProfileHeading/ProfileHeading";
 import flashImg from "../../../assets/images/flash-gray.svg";
-import { getOrderStatusTitle, normalizeOrderStatus } from "@/data/orderStatusOptions";
+import {
+  getOrderStatusTitle,
+  normalizeOrderStatus,
+} from "@/data/orderStatusOptions";
 import InfoCard from "./InfoCard/InfoCard";
 import locationPinImg from "../../../assets/images/location-gray.svg";
 import arriveImg from "../../../assets/images/arrival-gray.svg";
@@ -78,16 +81,22 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isPayingCancelFee, setIsPayingCancelFee] = useState(false);
   const [isPayingAdditionalPayments, setIsPayingAdditionalPayments] =
     useState(false);
-  const [openingAdditionalPaymentInvoiceId, setOpeningAdditionalPaymentInvoiceId] =
-    useState<string | null>(null);
-  const [additionalPaymentInvoiceRegenerationTarget, setAdditionalPaymentInvoiceRegenerationTarget] =
-    useState<{
-      id: string;
-      title: string;
-      paidOutAt?: string | null;
-    } | null>(null);
-  const [isRegeneratingAdditionalPaymentInvoices, setIsRegeneratingAdditionalPaymentInvoices] =
-    useState(false);
+  const [
+    openingAdditionalPaymentInvoiceId,
+    setOpeningAdditionalPaymentInvoiceId,
+  ] = useState<string | null>(null);
+  const [
+    additionalPaymentInvoiceRegenerationTarget,
+    setAdditionalPaymentInvoiceRegenerationTarget,
+  ] = useState<{
+    id: string;
+    title: string;
+    paidOutAt?: string | null;
+  } | null>(null);
+  const [
+    isRegeneratingAdditionalPaymentInvoices,
+    setIsRegeneratingAdditionalPaymentInvoices,
+  ] = useState(false);
   const [problemStatus, setProblemStatus] = useState(order?.status);
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
 
@@ -173,6 +182,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       : "-";
 
   const orderCreatedAt = formatCompactDateTime(order?.createdAt);
+  const orderUpdatedAt = formatCompactDateTime(order?.updatedAt);
   const normalizedOrderType = String(order?.orderType ?? "").toUpperCase();
   const paidAtText = formatCompactDateTime(order?.paidAt);
   const providerSelectionReminder1SentAtText = formatCompactDateTime(
@@ -192,9 +202,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     order?.unfinishedOrderReminderLastEmailSentAt,
   );
   const unfinishedOrderReminderLastNotificationSentAtText =
-    formatCompactDateTime(
-      order?.unfinishedOrderReminderLastNotificationSentAt,
-    );
+    formatCompactDateTime(order?.unfinishedOrderReminderLastNotificationSentAt);
   const unfinishedOrderReminderEmailCount = Number(
     order?.unfinishedOrderReminderEmailCount ?? 0,
   );
@@ -357,7 +365,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     if (isUpdatingOrderStatus) return;
     try {
       setIsUpdatingOrderStatus(true);
-      const response = await updateOrderStatusByAdmin(order.id, selectedOrderStatus);
+      const response = await updateOrderStatusByAdmin(
+        order.id,
+        selectedOrderStatus,
+      );
       if (response.status === 200) {
         setProblemStatus(selectedOrderStatus);
         window.location.reload();
@@ -480,7 +491,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const openPdfBlobInNewTab = (data: BlobPart | Blob) => {
     const pdfBlob =
-      data instanceof Blob ? data : new Blob([data], { type: "application/pdf" });
+      data instanceof Blob
+        ? data
+        : new Blob([data], { type: "application/pdf" });
     const blobUrl = URL.createObjectURL(pdfBlob);
 
     const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
@@ -522,7 +535,11 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
     setAdditionalPaymentInvoiceRegenerationTarget({
       id: paymentId,
-      title: payment.note || payment.description || payment.reason || "Additional payment",
+      title:
+        payment.note ||
+        payment.description ||
+        payment.reason ||
+        "Additional payment",
       paidOutAt: payment.paidOutAt ?? null,
     });
   };
@@ -612,10 +629,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   };
 
   const hasProviderActivityNumber = Boolean(
-    order?.approvedProvider?.activityNumber || order?.approvedProvider?.activityNo,
+    order?.approvedProvider?.activityNumber ||
+    order?.approvedProvider?.activityNo,
   );
   const shouldShowOrderTypeCard =
-    normalizedOrderType === "CONTINUOUS" || normalizedOrderType === "REPETITIVE";
+    normalizedOrderType === "CONTINUOUS" ||
+    normalizedOrderType === "REPETITIVE";
   const orderPeriods =
     Array.isArray(order?.periods) && order.periods.length > 0
       ? order.periods
@@ -668,7 +687,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const hasPendingAdditionalPayout =
     (order?.additionalPaymentsSummary?.payoutPendingCount ?? 0) > 0 ||
     additionalPayments.some(
-      (payment) => String(payment?.payoutState ?? "").toUpperCase() === "PENDING",
+      (payment) =>
+        String(payment?.payoutState ?? "").toUpperCase() === "PENDING",
     );
   const requiresRefund =
     isCanceledByAdmin ||
@@ -676,7 +696,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h);
   const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
   const providerCostAmount =
-    typeof order?.totalProviderPrice === "number" ? order.totalProviderPrice : null;
+    typeof order?.totalProviderPrice === "number"
+      ? order.totalProviderPrice
+      : null;
   const serviceFeeAmount =
     typeof order?.platformFeePrice === "number" ? order.platformFeePrice : null;
   const calculatedCancelFeeAmount = isCanceledLate12h
@@ -712,11 +734,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               : null
           : null;
   const shouldShowInvoiceCards =
-    order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" || requiresCancelFeePayout;
+    order?.status === "PROVIDER_MARKED_AS_SERVICE_ENDED" ||
+    requiresCancelFeePayout;
   const shouldShowProviderDocumentCard =
-    shouldShowInvoiceCards &&
-    !!order?.approvedProviderId;
-  const isOrderPaid = String(order?.paymentStatus ?? "").toUpperCase() === "PAID";
+    shouldShowInvoiceCards && !!order?.approvedProviderId;
+  const isOrderPaid =
+    String(order?.paymentStatus ?? "").toUpperCase() === "PAID";
   const isRejectedDirectOffer =
     orderStatusUpper === "PROVIDER_REJECTED_DIRECT_OFFER";
   const isCanceledNotPaidByClient =
@@ -770,14 +793,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const areCanceledFinancialActionsDone = isCanceledByAdmin
     ? isRefundDone
     : isCanceledByClient
-    ? isCanceledLate2h
-      ? isCancelFeeDone
-      : isCanceledLate12h
-        ? isRefundDone && isCancelFeeDone
-        : isRefundDone
-    : isCanceledByProvider
-      ? isRefundDone
-      : true;
+      ? isCanceledLate2h
+        ? isCancelFeeDone
+        : isCanceledLate12h
+          ? isRefundDone && isCancelFeeDone
+          : isRefundDone
+      : isCanceledByProvider
+        ? isRefundDone
+        : true;
   const refundedAtText = order?.refundedAt
     ? new Date(order.refundedAt).toLocaleString("en-US", {
         year: "numeric",
@@ -858,6 +881,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             info={orderCreatedAt}
           />
           <InfoCard
+            title="Order updated at"
+            iconImgUrl={calendarImg.src}
+            type={isMobile ? "SPAN2" : "SPAN2"}
+            info={orderUpdatedAt}
+          />
+          <InfoCard
             title="Order ID"
             iconImgUrl={documentImg.src}
             type={isMobile ? "SPAN2" : "SPAN2"}
@@ -886,16 +915,19 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                   </div>
                 )}
                 {hasProviderCancelReason && (
-                  <div className={styles.statusAttention}>
-                    Provider cancel reason:{" "}
-                    {formatProviderCancelReason(providerCancelReason)}
-                    {providerCancelReasonText && (
-                      <span>
-                        {" "}
-                        - {providerCancelReasonText}
-                      </span>
-                    )}
-                  </div>
+                  <>
+                    <div className={styles.statusAttention}>
+                      Provider cancel reason:{" "}
+                      {formatProviderCancelReason(providerCancelReason)}
+                      {providerCancelReasonText && (
+                        <span> - {providerCancelReasonText}</span>
+                      )}
+                    </div>
+                    <div className={styles.statusAttention}>
+                      Provider cancel time:{" "}
+                      {formatCompactDateTime(order?.providerCanceledAt)}
+                    </div>
+                  </>
                 )}
               </>
             }
@@ -963,13 +995,17 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 <div className={styles.stripeInfoList}>
                   {!!order?.providerSelectionReminder1SentAt && (
                     <div>
-                      <span className={styles.stripeInfoLabel}>Reminder 1:</span>{" "}
+                      <span className={styles.stripeInfoLabel}>
+                        Reminder 1:
+                      </span>{" "}
                       {providerSelectionReminder1SentAtText}
                     </div>
                   )}
                   {!!order?.providerSelectionReminder2SentAt && (
                     <div>
-                      <span className={styles.stripeInfoLabel}>Reminder 2:</span>{" "}
+                      <span className={styles.stripeInfoLabel}>
+                        Reminder 2:
+                      </span>{" "}
                       {providerSelectionReminder2SentAtText}
                     </div>
                   )}
@@ -1048,37 +1084,37 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             />
           )}
           {shouldShowProviderDocumentCard && (
-              <InfoCard
-                title={
-                  hasProviderActivityNumber
-                    ? "Invoice from provider"
-                    : "Receipt from provider"
-                }
-                iconImgUrl={documentImg.src}
-                type={isMobile ? "SPAN2" : "SPAN1"}
-                info={
-                  <Button
-                    title={
-                      hasProviderActivityNumber
-                        ? order?.invoiceDate
-                          ? "Open invoice"
-                          : "Generate invoice"
-                        : order?.invoiceDate
-                          ? "Open receipt"
-                          : "Generate receipt"
-                    }
-                    type="OUTLINED"
-                    onClick={
-                      hasProviderActivityNumber
-                        ? openProviderInvoice
-                        : openProviderReceipt
-                    }
-                    alignBaseline={true}
-                    isLoading={isProviderInvoiceLoading}
-                    isDisabled={isProviderInvoiceLoading}
-                  />
-                }
-              />
+            <InfoCard
+              title={
+                hasProviderActivityNumber
+                  ? "Invoice from provider"
+                  : "Receipt from provider"
+              }
+              iconImgUrl={documentImg.src}
+              type={isMobile ? "SPAN2" : "SPAN1"}
+              info={
+                <Button
+                  title={
+                    hasProviderActivityNumber
+                      ? order?.invoiceDate
+                        ? "Open invoice"
+                        : "Generate invoice"
+                      : order?.invoiceDate
+                        ? "Open receipt"
+                        : "Generate receipt"
+                  }
+                  type="OUTLINED"
+                  onClick={
+                    hasProviderActivityNumber
+                      ? openProviderInvoice
+                      : openProviderReceipt
+                  }
+                  alignBaseline={true}
+                  isLoading={isProviderInvoiceLoading}
+                  isDisabled={isProviderInvoiceLoading}
+                />
+              }
+            />
           )}
           {!!order?.paidAt && (
             <InfoCard
@@ -1288,7 +1324,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             )}
             <div className={styles.additionalPaymentsList}>
               {additionalPayments.map((payment, index) => {
-                const paymentKey = payment.id ?? payment._id ?? `payment-${index}`;
+                const paymentKey =
+                  payment.id ?? payment._id ?? `payment-${index}`;
                 const paymentAmount =
                   typeof payment.amountCents === "number"
                     ? formatCents(payment.amountCents)
@@ -1310,7 +1347,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 const hasPaymentInvoices = paymentInvoices.length > 0;
                 const canRegeneratePaymentInvoices = !!payment.paidOutAt;
                 return (
-                  <div key={paymentKey} className={styles.additionalPaymentCard}>
+                  <div
+                    key={paymentKey}
+                    className={styles.additionalPaymentCard}
+                  >
                     <div className={styles.additionalPaymentTop}>
                       <div>
                         <div className={styles.additionalPaymentTitle}>
@@ -1326,8 +1366,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                             String(payment.payoutState ?? "").toUpperCase() ===
                             "PAID"
                               ? styles.additionalPaymentBadgePaid
-                              : String(payment.payoutState ?? "").toUpperCase() ===
-                                  "PENDING"
+                              : String(
+                                    payment.payoutState ?? "",
+                                  ).toUpperCase() === "PENDING"
                                 ? styles.additionalPaymentBadgePending
                                 : styles.additionalPaymentBadgeMuted
                           }`}
@@ -1337,25 +1378,32 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                         {hasPaymentInvoices && (
                           <>
                             {paymentInvoices.map((invoice, invoiceIndex) => {
-                              const invoiceId = invoice.id ?? invoice._id ?? null;
+                              const invoiceId =
+                                invoice.id ?? invoice._id ?? null;
                               if (!invoiceId) return null;
 
                               return (
                                 <Button
                                   key={`${invoiceId}-${invoiceIndex}`}
-                                  title={getAdditionalPaymentInvoiceTitle(invoice)}
+                                  title={getAdditionalPaymentInvoiceTitle(
+                                    invoice,
+                                  )}
                                   type="OUTLINED"
                                   height={24}
-                                  className={styles.additionalPaymentInvoiceButton}
+                                  className={
+                                    styles.additionalPaymentInvoiceButton
+                                  }
                                   onClick={() =>
                                     openAdditionalPaymentInvoice(invoiceId)
                                   }
                                   isLoading={
-                                    openingAdditionalPaymentInvoiceId === invoiceId
+                                    openingAdditionalPaymentInvoiceId ===
+                                    invoiceId
                                   }
                                   isDisabled={
                                     !!openingAdditionalPaymentInvoiceId &&
-                                    openingAdditionalPaymentInvoiceId !== invoiceId
+                                    openingAdditionalPaymentInvoiceId !==
+                                      invoiceId
                                   }
                                 />
                               );
@@ -1366,7 +1414,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                           <Button
                             title={
                               isRegeneratingAdditionalPaymentInvoices &&
-                              additionalPaymentInvoiceRegenerationTarget?.id === payment.id
+                              additionalPaymentInvoiceRegenerationTarget?.id ===
+                                payment.id
                                 ? "Regenerating..."
                                 : "Regenerate invoices"
                             }
@@ -1374,15 +1423,19 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                             height={24}
                             className={styles.additionalPaymentInvoiceButton}
                             onClick={() =>
-                              openAdditionalPaymentInvoiceRegenerationModal(payment)
+                              openAdditionalPaymentInvoiceRegenerationModal(
+                                payment,
+                              )
                             }
                             isLoading={
                               isRegeneratingAdditionalPaymentInvoices &&
-                              additionalPaymentInvoiceRegenerationTarget?.id === payment.id
+                              additionalPaymentInvoiceRegenerationTarget?.id ===
+                                payment.id
                             }
                             isDisabled={
                               isRegeneratingAdditionalPaymentInvoices &&
-                              additionalPaymentInvoiceRegenerationTarget?.id !== payment.id
+                              additionalPaymentInvoiceRegenerationTarget?.id !==
+                                payment.id
                             }
                           />
                         )}
@@ -1453,7 +1506,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             <div className={`${styles.confirmationModal} ${nunito.className}`}>
               <h2 className={styles.confirmationTitle}>Regenerate invoices?</h2>
               <p className={styles.confirmationBody}>
-                Regenerate invoices for <b>{additionalPaymentInvoiceRegenerationTarget.title}</b>
+                Regenerate invoices for{" "}
+                <b>{additionalPaymentInvoiceRegenerationTarget.title}</b>
                 {additionalPaymentInvoiceRegenerationTarget.paidOutAt
                   ? ` paid out at ${formatCompactDateTime(
                       additionalPaymentInvoiceRegenerationTarget.paidOutAt,
@@ -1583,11 +1637,17 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           {showCanceledFeeBreakdown ? (
             <>
               <div className={styles.breakdownRow}>
-                <span className={styles.breakdownLabel}>{finalPrimaryTitle}</span>
-                <span className={styles.breakdownAmount}>{finalPrimaryValue}</span>
+                <span className={styles.breakdownLabel}>
+                  {finalPrimaryTitle}
+                </span>
+                <span className={styles.breakdownAmount}>
+                  {finalPrimaryValue}
+                </span>
               </div>
               <div className={styles.breakdownRow}>
-                <span className={styles.breakdownLabel}>Cancel fee to sitter</span>
+                <span className={styles.breakdownLabel}>
+                  Cancel fee to sitter
+                </span>
                 <span className={styles.breakdownAmount}>
                   {`€${cancelFeeDisplayAmount.toFixed(2)}`}
                 </span>
@@ -1595,8 +1655,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             </>
           ) : (
             <>
-              <span className={styles.finalPriceTitle}>{finalPrimaryTitle}</span>
-              <span className={styles.finalPriceValue}>{finalPrimaryValue}</span>
+              <span className={styles.finalPriceTitle}>
+                {finalPrimaryTitle}
+              </span>
+              <span className={styles.finalPriceValue}>
+                {finalPrimaryValue}
+              </span>
             </>
           )}
         </div>
@@ -1605,18 +1669,19 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             {`Sitter was paid at ${releasedFundsAt}`}
           </span>
         )}
-        {!isCanceledOrder && isOrderPaid && !order?.isReleasedFundsToProvider && (
-          <Button
-            title={isReleasingFunds ? "Paying..." : "Pay the sitter"}
-            type="BLACK"
-            isDisabled={
-              !order?.provider_markedAsServiceEndedAt || isReleasingFunds
-            }
-            onClick={payOrderHandler}
-          />
-        )}
-        {isRefundableCanceledOrder &&
-          areCanceledFinancialActionsDone && (
+        {!isCanceledOrder &&
+          isOrderPaid &&
+          !order?.isReleasedFundsToProvider && (
+            <Button
+              title={isReleasingFunds ? "Paying..." : "Pay the sitter"}
+              type="BLACK"
+              isDisabled={
+                !order?.provider_markedAsServiceEndedAt || isReleasingFunds
+              }
+              onClick={payOrderHandler}
+            />
+          )}
+        {isRefundableCanceledOrder && areCanceledFinancialActionsDone && (
           <div className={styles.finalActionsColumn}>
             {(requiresRefund || isCanceledLate12h) && (
               <span className={`${styles.paidText} ${nunito.className}`}>
@@ -1633,25 +1698,25 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         {isRefundableCanceledOrder &&
           isOrderPaid &&
           !areCanceledFinancialActionsDone && (
-          <div className={styles.finalActionsRow}>
-            {(requiresRefund || isCanceledLate12h) && !isRefundDone && (
-              <Button
-                title={isRefunding ? "Refunding..." : "Refund the parent"}
-                type="BLACK"
-                isDisabled={isRefunding || isPayingCancelFee}
-                onClick={refundParent}
-              />
-            )}
-            {requiresCancelFeePayout && !isCancelFeeDone && (
-              <Button
-                title={isPayingCancelFee ? "Paying..." : "Pay the sitter"}
-                type="OUTLINED"
-                isDisabled={isRefunding || isPayingCancelFee}
-                onClick={payoutCancelFee}
-              />
-            )}
-          </div>
-        )}
+            <div className={styles.finalActionsRow}>
+              {(requiresRefund || isCanceledLate12h) && !isRefundDone && (
+                <Button
+                  title={isRefunding ? "Refunding..." : "Refund the parent"}
+                  type="BLACK"
+                  isDisabled={isRefunding || isPayingCancelFee}
+                  onClick={refundParent}
+                />
+              )}
+              {requiresCancelFeePayout && !isCancelFeeDone && (
+                <Button
+                  title={isPayingCancelFee ? "Paying..." : "Pay the sitter"}
+                  type="OUTLINED"
+                  isDisabled={isRefunding || isPayingCancelFee}
+                  onClick={payoutCancelFee}
+                />
+              )}
+            </div>
+          )}
       </div>
       <div className={styles.closeOrderRow}>
         {!isCanceledOrder && (
@@ -1697,7 +1762,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         <div className={styles.confirmationBackdrop}>
           <div className={`${styles.confirmationModal} ${nunito.className}`}>
             <h2 className={styles.confirmationTitle}>Payment failed</h2>
-            <p className={styles.confirmationBody}>{releaseFundsErrorMessage}</p>
+            <p className={styles.confirmationBody}>
+              {releaseFundsErrorMessage}
+            </p>
             {releaseFundsErrorDetails && (
               <p className={styles.errorDetails}>
                 Stripe reason: {releaseFundsErrorDetails}
@@ -1732,7 +1799,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               >
                 {orderStatusOptions.map((status) => (
                   <option key={status} value={status}>
-                    {getOrderStatusTitle(status, order?.isDirectOrderToProvider)}
+                    {getOrderStatusTitle(
+                      status,
+                      order?.isDirectOrderToProvider,
+                    )}
                   </option>
                 ))}
               </select>
