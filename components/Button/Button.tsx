@@ -1,7 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 import { forwardRef } from "react";
 import arrowDownImg from "../../assets/images/arrow-down.svg";
-import { Button as UiButton, type ButtonProps as UiButtonProps } from "@/components/ui/button";
+import {
+  Button as UiButton,
+  type ButtonProps as UiButtonProps,
+} from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = {
@@ -9,7 +12,7 @@ type ButtonProps = {
   type: string;
   /** Native `<button type>` — defaults to `button` so in-form actions don’t accidentally submit forms. */
   htmlType?: "button" | "submit" | "reset";
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
   attentionNumber?: number;
   imgUrl?: string;
   arrowDown?: boolean;

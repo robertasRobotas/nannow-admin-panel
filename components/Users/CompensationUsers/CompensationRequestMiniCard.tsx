@@ -211,7 +211,10 @@ const CompensationRequestMiniCard = ({
         >
           <div
             className={requestStyles.confirmationModal}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
           >
             <h2 className={requestStyles.confirmationTitle}>Change status</h2>
             <p className={requestStyles.confirmationBody}>
@@ -223,7 +226,9 @@ const CompensationRequestMiniCard = ({
                   key={status}
                   title={status}
                   type={draftStatus === status ? "BLACK" : "OUTLINED"}
-                  onClick={() => {
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     setDraftStatus(status);
                     setIsStatusPickerOpen(false);
                     setSaveError(null);
@@ -240,7 +245,9 @@ const CompensationRequestMiniCard = ({
       {isSaveConfirmOpen && request && !isFallback && (
         <div
           className={requestStyles.confirmationBackdrop}
-          onClick={() => {
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
             setIsSaveConfirmOpen(false);
             if (pendingAction === "status") {
               setDraftStatus(request.status);
@@ -250,7 +257,10 @@ const CompensationRequestMiniCard = ({
         >
           <div
             className={requestStyles.confirmationModal}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
           >
             <h2 className={requestStyles.confirmationTitle}>
               {pendingAction === "status" ? "Change status?" : "Save changes?"}
@@ -278,7 +288,11 @@ const CompensationRequestMiniCard = ({
               <Button
                 title={isSaving ? "Saving..." : "Confirm"}
                 type="BLACK"
-                onClick={handleSaveRequest}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  handleSaveRequest();
+                }}
                 isDisabled={isSaving}
               />
             </div>
