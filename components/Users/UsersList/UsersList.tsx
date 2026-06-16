@@ -11,15 +11,9 @@ type UsersListProps = {
   users: UserWithCompensationDetails[];
   mode: "client" | "provider";
   showCompensationInfo?: boolean;
-  onCompensationRequestUpdated?: () => void;
 };
 
-const UsersList = ({
-  users,
-  mode,
-  showCompensationInfo,
-  onCompensationRequestUpdated,
-}: UsersListProps) => {
+const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
   const hasSelectionRef = useRef(false);
 
   const updateSelectionState = () => {
@@ -85,10 +79,7 @@ const UsersList = ({
             </div>
             {showCompensationInfo && (
               <div className={styles.compensationMeta}>
-                <CompensationRequestMiniCard
-                  user={user}
-                  onUpdated={onCompensationRequestUpdated}
-                />
+                <CompensationRequestMiniCard user={user} />
               </div>
             )}
           </Link>

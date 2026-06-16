@@ -212,23 +212,6 @@ const CompensationUsers = () => {
     [itemsPerPage, totalUsers],
   );
 
-  const refreshUsers = useCallback(() => {
-    void fetchUsers(
-      page,
-      appliedSearchText,
-      itemsPerPage,
-      selectedSort,
-      showCompletedRequests,
-    );
-  }, [
-    appliedSearchText,
-    fetchUsers,
-    itemsPerPage,
-    page,
-    selectedSort,
-    showCompletedRequests,
-  ]);
-
   const handlePageChange = (event: { selected: number }) => {
     const nextPage = event.selected + 1;
     setPage(nextPage);
@@ -424,19 +407,9 @@ const CompensationUsers = () => {
         <div className={styles.emptyState}>Loading users...</div>
       ) : users.length > 0 ? (
         isCompactView ? (
-          <UsersList
-            users={users}
-            mode="client"
-            showCompensationInfo
-            onCompensationRequestUpdated={refreshUsers}
-          />
+          <UsersList users={users} mode="client" showCompensationInfo />
         ) : (
-          <Cards
-            users={users}
-            mode="client"
-            showCompensationInfo
-            onCompensationRequestUpdated={refreshUsers}
-          />
+          <Cards users={users} mode="client" showCompensationInfo />
         )
       ) : (
         <div className={styles.emptyState}>

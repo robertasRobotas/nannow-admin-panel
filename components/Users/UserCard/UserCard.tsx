@@ -9,15 +9,9 @@ type UserCardProps = {
   user: UserWithCompensationDetails;
   mode: "client" | "provider";
   showCompensationInfo?: boolean;
-  onCompensationRequestUpdated?: () => void;
 };
 
-const UserCard = ({
-  user,
-  mode,
-  showCompensationInfo,
-  onCompensationRequestUpdated,
-}: UserCardProps) => {
+const UserCard = ({ user, mode, showCompensationInfo }: UserCardProps) => {
   const href = `/${mode}/${user.userId}`;
   const hasSelectionRef = useRef(false);
 
@@ -62,12 +56,7 @@ const UserCard = ({
           finalPrice={user.finalPrice}
           enableImageViewer={false}
         />
-        {showCompensationInfo && (
-          <CompensationRequestMiniCard
-            user={user}
-            onUpdated={onCompensationRequestUpdated}
-          />
-        )}
+        {showCompensationInfo && <CompensationRequestMiniCard user={user} />}
       </div>
     </Link>
   );

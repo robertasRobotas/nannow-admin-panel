@@ -14,7 +14,6 @@ import { updateClientCompensationRequestStatus } from "@/pages/api/fetch";
 
 type CompensationRequestMiniCardProps = {
   user: UserWithCompensationDetails;
-  onUpdated?: () => void;
 };
 
 const normalizeCommentText = (value: unknown) => {
@@ -46,7 +45,6 @@ const getStatusToneClass = (
 
 const CompensationRequestMiniCard = ({
   user,
-  onUpdated,
 }: CompensationRequestMiniCardProps) => {
   const client = user.client;
   const apiClientId = client?.id ?? "";
@@ -60,9 +58,13 @@ const CompensationRequestMiniCard = ({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isStatusPickerOpen, setIsStatusPickerOpen] = useState(false);
   const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"status" | "save" | null>(
-    null,
-  );
+  const [savedStatus, setSavedStatus] = useState("");
+  const [savedComment, setSavedComment] = useState("");
+
+  const hasChanges =
+    !!request &&
+    (draftStatus !== savedStatus ||
+      draftComment.trim() !== savedComment.trim());
 
   useEffect(() => {
     if (!request) {
@@ -70,19 +72,25 @@ const CompensationRequestMiniCard = ({
       setDraftComment("");
       setIsStatusPickerOpen(false);
       setIsSaveConfirmOpen(false);
-      setPendingAction(null);
+
       return;
     }
 
+    const comment = normalizeCommentText(request.comments);
+
     setDraftStatus(request.status);
-    setDraftComment(normalizeCommentText(request.comments));
+    setDraftComment(comment);
+
+    setSavedStatus(request.status);
+    setSavedComment(comment);
   }, [request]);
 
   const hasRequest = !!request;
   const isFallback = request?.isFallback ?? false;
-  const requestStatusTone = request
-    ? getCompensationRequestStatusTone(request.status)
-    : "unknown";
+  const requestStatusTone =
+    draftStatus && request
+      ? getCompensationRequestStatusTone(draftStatus as typeof request.status)
+      : "unknown";
 
   const handleSaveRequest = async () => {
     if (!request || request.isFallback || isSaving || !apiClientId) return;
@@ -114,9 +122,11 @@ const CompensationRequestMiniCard = ({
           }),
         );
       }
-      onUpdated?.();
+
+      setSavedStatus(draftStatus);
+      setSavedComment(nextComment);
+      setIsStatusPickerOpen(false);
       setIsSaveConfirmOpen(false);
-      setPendingAction(null);
     } catch (error) {
       console.log(error);
       setSaveError("Failed to update compensation request.");
@@ -187,12 +197,14 @@ const CompensationRequestMiniCard = ({
                     <Button
                       title={isSaving ? "Saving..." : "Save"}
                       type="BLACK"
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
                         setSaveError(null);
-                        setPendingAction("save");
                         setIsSaveConfirmOpen(true);
                       }}
-                      isDisabled={isSaving}
+                      isDisabled={isSaving || !hasChanges}
                     />
                   </div>
                 </div>
@@ -232,8 +244,6 @@ const CompensationRequestMiniCard = ({
                     setDraftStatus(status);
                     setIsStatusPickerOpen(false);
                     setSaveError(null);
-                    setPendingAction("status");
-                    setIsSaveConfirmOpen(true);
                   }}
                 />
               ))}
@@ -249,10 +259,6 @@ const CompensationRequestMiniCard = ({
             event.preventDefault();
             event.stopPropagation();
             setIsSaveConfirmOpen(false);
-            if (pendingAction === "status") {
-              setDraftStatus(request.status);
-            }
-            setPendingAction(null);
           }}
         >
           <div
@@ -262,27 +268,16 @@ const CompensationRequestMiniCard = ({
               event.stopPropagation();
             }}
           >
-            <h2 className={requestStyles.confirmationTitle}>
-              {pendingAction === "status" ? "Change status?" : "Save changes?"}
-            </h2>
+            <h2 className={requestStyles.confirmationTitle}>Save changes?</h2>
+
             <p className={requestStyles.confirmationBody}>
-              {pendingAction === "status"
-                ? `This will change the request status to ${formatCompensationRequestStatus(
-                    draftStatus,
-                  )} and save the current comment.`
-                : "This will update the request status and save the current comment."}
+              This will save the current status and comment.
             </p>
             <div className={requestStyles.confirmationActions}>
               <Button
                 title="Cancel"
                 type="OUTLINED"
-                onClick={() => {
-                  setIsSaveConfirmOpen(false);
-                  if (pendingAction === "status") {
-                    setDraftStatus(request.status);
-                  }
-                  setPendingAction(null);
-                }}
+                onClick={() => setIsSaveConfirmOpen(false)}
                 isDisabled={isSaving}
               />
               <Button
