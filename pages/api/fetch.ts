@@ -1496,7 +1496,9 @@ export const getInvoicePdf = async (id: string) => {
   return response;
 };
 
-export const regenerateAdditionalPaymentInvoices = async (additionalPaymentId: string) => {
+export const regenerateAdditionalPaymentInvoices = async (
+  additionalPaymentId: string,
+) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
     `${BASE_URL}/admin/additional-payments/${additionalPaymentId}/regenerate-invoices`,
@@ -1512,11 +1514,14 @@ export const regenerateAdditionalPaymentInvoices = async (additionalPaymentId: s
 
 export const getOrdersWithMissingAdditionalPaymentInvoices = async () => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/orders/additional-payments/missing-invoices`, {
-    headers: {
-      Authorization: jwt,
+  const response = await axios.get(
+    `${BASE_URL}/admin/orders/additional-payments/missing-invoices`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
     },
-  });
+  );
   return response;
 };
 
@@ -1587,6 +1592,32 @@ export const getEarnedProfit = async (params?: {
       },
     },
   );
+  return response;
+};
+
+export const getEarnedProfitByMonth = async (params: {
+  year: number;
+  month: number;
+  includeBreakdown?: boolean;
+  breakdownLimit?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/financial/profit/earned/${params.year}/${params.month}`,
+    {
+      params: {
+        includeBreakdown: params.includeBreakdown,
+        breakdownLimit: params.breakdownLimit,
+        t: Date.now(), // optional cache-buster
+      },
+      headers: {
+        Authorization: jwt,
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    },
+  );
+
   return response;
 };
 

@@ -5,7 +5,10 @@ import Link from "next/link";
 import { FileText, Wallet } from "lucide-react";
 import Button from "@/components/Button/Button";
 import { nunito } from "@/helpers/fonts";
-import { getEarnedProfit, regeneratePlatformFeeInvoiceReport } from "@/pages/api/fetch";
+import {
+  getEarnedProfitByMonth,
+  regeneratePlatformFeeInvoiceReport,
+} from "@/pages/api/fetch";
 import type {
   EarnedProfitBreakdownRow,
   EarnedProfitResponse,
@@ -24,15 +27,6 @@ const EMPTY_TOTALS: EarnedProfitTotals = {
   profitCents: 0,
   stripeFeeCents: 0,
   netProfitCents: 0,
-};
-
-const getMonthRange = (year: number, month: number) => {
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
-  return {
-    startIso: start.toISOString(),
-    endIso: end.toISOString(),
-  };
 };
 
 const formatLedgerReportMonth = (year: number, month: number) =>
@@ -126,7 +120,9 @@ const BreakdownTable = ({
       </div>
     </div>
     {rows.length === 0 ? (
-      <div className={styles.emptyState}>No breakdown rows for this period.</div>
+      <div className={styles.emptyState}>
+        No breakdown rows for this period.
+      </div>
     ) : (
       <div className={styles.breakdownTableScroll}>
         <table className={styles.breakdownTable}>
@@ -146,7 +142,9 @@ const BreakdownTable = ({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={`${row.entryKind}-${row.invoiceOrOrderNumber}-${row.dateTime}`}>
+              <tr
+                key={`${row.entryKind}-${row.invoiceOrOrderNumber}-${row.dateTime}`}
+              >
                 <td>
                   <span
                     className={`${styles.entryKindBadge} ${
@@ -193,15 +191,19 @@ const EarnedProfit = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [activeView, setActiveView] = useState<EarnedProfitView>("profit");
-  const [reportRegenerationTarget, setReportRegenerationTarget] = useState<
-    { year: number; month: number; label: string } | null
-  >(null);
+  const [reportRegenerationTarget, setReportRegenerationTarget] = useState<{
+    year: number;
+    month: number;
+    label: string;
+  } | null>(null);
   const [regeneratingReportKey, setRegeneratingReportKey] = useState("");
-  const [selectedReportMonth, setSelectedReportMonth] = useState(() =>
-    `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`,
+  const [selectedReportMonth, setSelectedReportMonth] = useState(
+    () =>
+      `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`,
   );
 
-  const [selectedReportYear, selectedReportMonthValue] = selectedReportMonth.split("-");
+  const [selectedReportYear, selectedReportMonthValue] =
+    selectedReportMonth.split("-");
   const selectedReportYearNumber = Number(selectedReportYear);
   const selectedReportMonthNumber = Number(selectedReportMonthValue);
   const selectedReportMonthKey = `${selectedReportYearNumber}-${selectedReportMonthNumber}`;
@@ -212,40 +214,46 @@ const EarnedProfit = () => {
           selectedReportMonthNumber,
         )
       : "Selected month";
-  const { startIso: appliedStartDate, endIso: appliedEndDate } = getMonthRange(
-    selectedReportYearNumber || new Date().getUTCFullYear(),
-    selectedReportMonthNumber || new Date().getUTCMonth() + 1,
-  );
 
   const fetchEarnedProfit = useCallback(async () => {
+    if (!selectedReportYearNumber || !selectedReportMonthNumber) {
+      setData(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
-      const response = await getEarnedProfit({
-        startDate: appliedStartDate,
-        endDate: appliedEndDate,
+
+      const response = await getEarnedProfitByMonth({
+        year: selectedReportYearNumber,
+        month: selectedReportMonthNumber,
         includeBreakdown: true,
         breakdownLimit: BREAKDOWN_LIMIT,
       });
+
       const payload = response.data as
         | EarnedProfitResponse
         | { result?: EarnedProfitResponse };
+
       const nextData =
         (payload as { result?: EarnedProfitResponse }).result ??
         (payload as EarnedProfitResponse);
+
       setData(nextData);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         router.push("/");
         return;
       }
+
       console.log(err);
       setError("Failed to load earned profit.");
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, [appliedEndDate, appliedStartDate, router]);
+  }, [router, selectedReportYearNumber, selectedReportMonthNumber]);
 
   useEffect(() => {
     fetchEarnedProfit();
@@ -258,7 +266,12 @@ const EarnedProfit = () => {
   const canRegenerateSelectedMonth = selectedReportMonthKey !== currentMonthKey;
 
   const openReportRegenerationModal = () => {
-    if (!canRegenerateSelectedMonth || !selectedReportYearNumber || !selectedReportMonthNumber) return;
+    if (
+      !canRegenerateSelectedMonth ||
+      !selectedReportYearNumber ||
+      !selectedReportMonthNumber
+    )
+      return;
     setReportRegenerationTarget({
       year: selectedReportYearNumber,
       month: selectedReportMonthNumber,
@@ -340,7 +353,10 @@ const EarnedProfit = () => {
         <>
           <ReportMonthControls
             currentYear={new Date().getUTCFullYear()}
-            reportYearOptions={Array.from({ length: 10 }, (_, index) => new Date().getUTCFullYear() - index)}
+            reportYearOptions={Array.from(
+              { length: 10 },
+              (_, index) => new Date().getUTCFullYear() - index,
+            )}
             selectedYear={selectedReportYearNumber}
             selectedMonth={selectedReportMonthNumber}
             onYearChange={(year) =>
@@ -360,8 +376,12 @@ const EarnedProfit = () => {
             toolbarMeta={selectedReportMonthLabel}
           />
 
-          {loading && <div className={styles.emptyState}>Loading earned profit...</div>}
-          {!loading && error && <div className={styles.emptyState}>{error}</div>}
+          {loading && (
+            <div className={styles.emptyState}>Loading earned profit...</div>
+          )}
+          {!loading && error && (
+            <div className={styles.emptyState}>{error}</div>
+          )}
 
           {!loading && !error && data && (
             <>
@@ -385,11 +405,17 @@ const EarnedProfit = () => {
                   />
                   <MetricCard
                     label="Stripe fees"
-                    value={formatMoneyFromCents(totals.stripeFeeCents, currency)}
+                    value={formatMoneyFromCents(
+                      totals.stripeFeeCents,
+                      currency,
+                    )}
                   />
                   <MetricCard
                     label="Net profit"
-                    value={formatMoneyFromCents(totals.netProfitCents, currency)}
+                    value={formatMoneyFromCents(
+                      totals.netProfitCents,
+                      currency,
+                    )}
                     tone="positive"
                   />
                 </div>
