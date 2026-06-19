@@ -80,6 +80,30 @@
   align-items: center;
 }
 
+.stripeKycActionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.stripeKycWarningToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #505050;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stripeKycWarningToggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #111;
+}
+
 .stripeKycGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

@@ -171,6 +171,7 @@ const ProviderInfoSection = ({
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const [isLaunchingOnboardingTest, setIsLaunchingOnboardingTest] = useState(false);
   const [onboardingClientSecret, setOnboardingClientSecret] = useState<string | null>(null);
+  const [isWarningTestMode, setIsWarningTestMode] = useState(false);
   const intro = provider?.intro?.trim();
   const qualities = provider?.qualitiesIds ?? [];
   const stripeAccountId = getStripeAccountId(provider);
@@ -188,7 +189,9 @@ const ProviderInfoSection = ({
 
     try {
       setIsLaunchingOnboardingTest(true);
-      const response = await startProviderStripeOnboardingTest(provider.userId);
+      const response = await startProviderStripeOnboardingTest(provider.userId, {
+        mode: isWarningTestMode ? "warning" : undefined,
+      });
       const clientSecret = response.data.result.clientSecret;
       setOnboardingClientSecret(clientSecret);
       toast.success("Stripe onboarding test session created");
@@ -257,13 +260,23 @@ const ProviderInfoSection = ({
           </div>
 
           <div className={styles.stripeKycActions}>
-            <Button
-              title="Run onboarding test"
-              type="BLACK"
-              onClick={runOnboardingTest}
-              isLoading={isLaunchingOnboardingTest}
-              isDisabled={!provider?.userId || !stripeAccountId}
-            />
+            <div className={styles.stripeKycActionGroup}>
+              <Button
+                title="Run onboarding test"
+                type="BLACK"
+                onClick={runOnboardingTest}
+                isLoading={isLaunchingOnboardingTest}
+                isDisabled={!provider?.userId || !stripeAccountId}
+              />
+              <label className={styles.stripeKycWarningToggle}>
+                <input
+                  type="checkbox"
+                  checked={isWarningTestMode}
+                  onChange={(event) => setIsWarningTestMode(event.target.checked)}
+                />
+                <span>Warning test</span>
+              </label>
+            </div>
             {onboardingClientSecret && (
               <Button
                 title="Copy client secret"

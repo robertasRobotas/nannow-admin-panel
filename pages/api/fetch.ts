@@ -160,6 +160,8 @@ export type StripeOnboardingTestResponse = {
   };
 };
 
+export type StripeOnboardingTestMode = "warning";
+
 export type AdminUserPayload = {
   id?: string;
   _id?: string;
@@ -309,11 +311,16 @@ export const getProviderById = async (id: string) => {
   return response;
 };
 
-export const startProviderStripeOnboardingTest = async (userId: string) => {
+export const startProviderStripeOnboardingTest = async (
+  userId: string,
+  payload?: {
+    mode?: StripeOnboardingTestMode;
+  },
+) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post<StripeOnboardingTestResponse>(
     `${BASE_URL}/admin/providers/${userId}/stripe-onboarding-test`,
-    {},
+    payload ?? {},
     {
       headers: {
         Authorization: jwt,
