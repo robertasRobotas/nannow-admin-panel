@@ -152,6 +152,14 @@ export type StripeKycReconcileResponse = {
   updateErrors: StripeKycReconcileError[];
 };
 
+export type StripeOnboardingTestResponse = {
+  result: {
+    providerUserId: string;
+    stripeAccountId: string;
+    clientSecret: string;
+  };
+};
+
 export type AdminUserPayload = {
   id?: string;
   _id?: string;
@@ -298,6 +306,20 @@ export const getProviderById = async (id: string) => {
       Authorization: jwt,
     },
   });
+  return response;
+};
+
+export const startProviderStripeOnboardingTest = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post<StripeOnboardingTestResponse>(
+    `${BASE_URL}/admin/providers/${userId}/stripe-onboarding-test`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
   return response;
 };
 

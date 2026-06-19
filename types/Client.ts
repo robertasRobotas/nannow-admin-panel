@@ -100,6 +100,7 @@ export type UserDetails = {
     videoUrl?: string;
     badgesIds?: string[];
     stripeAccountVerifiedAt?: string;
+    stripeAccountId?: string;
     isAvailableStatusChangedAt?: string;
     isAvailableStatus?: boolean;
     languages?: string[];
@@ -123,6 +124,29 @@ export type UserDetails = {
       code: string;
       verifiedAt: string;
       verifiedType: string;
+    };
+    kycStatus?: string | null;
+    stripeKycStatus?: string | null;
+    stripeKycMode?: string | null;
+    stripeKycAction?: string | null;
+    stripeKycBlockingRequirements?: string[] | null;
+    stripeKycFutureRequirements?: string[] | null;
+    stripeKycPendingVerificationRequirements?: string[] | null;
+    stripeKycCurrentDeadline?: string | null;
+    stripeKycFutureDeadline?: string | null;
+    stripeKycDisabledReason?: string | null;
+    stripeKycLastCheckedAt?: string | null;
+    stripeKycFieldDescriptions?: Record<string, string>;
+    stripe?: {
+      accountId?: string | null;
+      onboardingFinished?: boolean | null;
+      payoutsEnabled?: boolean | null;
+      chargesEnabled?: boolean | null;
+      accountVerifiedAt?: string | number | null;
+      accountType?: string | null;
+      email?: string | null;
+      currency?: string | null;
+      country?: string | null;
     };
     specialSkills?: {
       firstAid?: {

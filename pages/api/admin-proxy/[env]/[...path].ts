@@ -72,7 +72,26 @@ export default async function handler(
     }
   }
 
-  const upstreamRes = await fetch(url, init);
+  let upstreamRes: Response;
+  try {
+    upstreamRes = await fetch(url, init);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to reach upstream API";
+    console.error("Admin proxy upstream request failed", {
+      env,
+      mode,
+      url,
+      message,
+    });
+    res.status(502).json({
+      error: "Upstream admin API unavailable",
+      message,
+      url,
+      mode,
+    });
+    return;
+  }
 
   res.status(upstreamRes.status);
   const ct = upstreamRes.headers.get("content-type");
