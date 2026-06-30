@@ -93,6 +93,8 @@ export type UserDetails = {
   provider?: {
     id: string;
     userId: string;
+    createdAt?: string;
+    updatedAt?: string;
     isOnboardingFinished?: boolean;
     intro?: string;
     qualitiesIds?: QualityType[];

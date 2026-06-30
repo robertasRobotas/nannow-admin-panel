@@ -2,6 +2,7 @@ import { UserDetails } from "@/types/Client";
 import profileImg from "../assets/images/profile.svg";
 import phoneImg from "../assets/images/phone.svg";
 import locationPinImg from "../assets/images/location-pin.svg";
+import calendarImg from "../assets/images/calendar.svg";
 import idImg from "../assets/images/id.svg";
 import shieldImg from "../assets/images/shield.svg";
 import suspendedGreenImg from "../assets/images/suspended-green.svg";
@@ -43,6 +44,20 @@ const formatDateTime = (value?: string | null) => {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+
+const formatStripeDateTime = (value?: string | number | null) => {
+  if (value === null || value === undefined || value === "") return "—";
+
+  const date =
+    typeof value === "number"
+      ? new Date(value * 1000)
+      : /^\d+$/.test(value)
+        ? new Date(Number(value) * 1000)
+        : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleString();
 };
 
@@ -320,14 +335,22 @@ export const getInfoCards = (
         title: "Stripe verified at",
         icon: locationPinImg,
         value: data?.provider?.stripeAccountVerifiedAt
-          ? new Date(
-              Number(data?.provider?.stripeAccountVerifiedAt) * 1000,
-            ).toLocaleString()
+          ? formatStripeDateTime(data?.provider?.stripeAccountVerifiedAt)
           : "Not verified",
         actionButton: {
           title: "Delete Stripe acc",
           action: "DELETE_STRIPE",
         },
+      },
+      {
+        title: "Provider timestamps",
+        icon: calendarImg,
+        isWide: true,
+        value: formatDateTime(data?.provider?.createdAt),
+        valueLines: [
+          { text: `Created at: ${formatDateTime(data?.provider?.createdAt)}` },
+          { text: `Updated at: ${formatDateTime(data?.provider?.updatedAt)}` },
+        ],
       },
       {
         title: "Availability status switched at",
@@ -420,6 +443,16 @@ export const getInfoCards = (
         ? `/client/${data.user.id}/compensation-requests`
         : undefined,
       alertDot: hasCompensationAlert,
+    },
+    {
+      title: "Client timestamps",
+      icon: calendarImg,
+      isWide: true,
+      value: formatDateTime(data?.client?.createdAt),
+      valueLines: [
+        { text: `Created at: ${formatDateTime(data?.client?.createdAt)}` },
+        { text: `Updated at: ${formatDateTime(data?.client?.updatedAt)}` },
+      ],
     },
     {
       title: "Children",
