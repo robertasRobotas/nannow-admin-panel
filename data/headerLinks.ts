@@ -8,6 +8,7 @@ export const links: HeaderLink[] = [
     link: "/compensation?mode=clients&hasRequestedCompensationInfoAt=true&page=1",
   },
   { title: "Campaigns", link: "/campaigns" },
+  { title: "Credits", link: "/credits" },
   { title: "Criminal check", link: "/criminal-check" },
   { title: "Documents", link: "/documents" },
   { title: "Financial ledger", link: "/financial-ledger" },

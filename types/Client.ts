@@ -83,6 +83,7 @@ export type User = {
   imgUrlRemoveMessage?: string | null;
   imgUrlRemovedAt?: string | null;
   imgUrlRemovedByAdminId?: string | null;
+  creditBalanceCents?: number;
   finalPrice?: number;
   locale?: string;
   requestedCompensationInfoAt?: string | null;
@@ -99,6 +100,7 @@ export type UserDetails = {
     intro?: string;
     qualitiesIds?: QualityType[];
     totalEarnings: number;
+    creditBalanceCents?: number;
     videoUrl?: string;
     badgesIds?: string[];
     stripeAccountVerifiedAt?: string;
@@ -250,6 +252,7 @@ export type UserDetails = {
     id: string;
     userId: string;
     isOnboardingFinished?: boolean;
+    creditBalanceCents?: number;
     requestedCompensationInfoAt?: string | null;
     contactedRegardingCompensationAt?: string | null;
     compensationRequests?: CompensationRequest[];
@@ -377,6 +380,7 @@ export type UserDetails = {
     imgUrlRemoveMessage?: string | null;
     imgUrlRemovedAt?: string | null;
     imgUrlRemovedByAdminId?: string | null;
+    creditBalanceCents?: number;
     userAppLanguage?: string;
     isSuspendedByAdmin: boolean;
     suspensionReason: string;

@@ -64,7 +64,17 @@ export const setAdminApiMode = (mode: AdminApiMode) => {
   }
 };
 
-export type AdminRole = "ADMIN" | "SUPER_ADMIN" | "CHAT_MODERATOR";
+export type AdminRole =
+  | "ADMIN"
+  | "SUPER_ADMIN"
+  | "CHAT_MODERATOR"
+  | "CREDIT_MANAGER";
+export const ADMIN_ROLE_OPTIONS: AdminRole[] = [
+  "ADMIN",
+  "CREDIT_MANAGER",
+  "SUPER_ADMIN",
+  "CHAT_MODERATOR",
+];
 export type SuperAccessEntity =
   | "admins"
   | "users"
@@ -168,8 +178,60 @@ export type AdminUserPayload = {
   email: string;
   firstName?: string;
   roles?: string[];
+  creditBalanceCents?: number;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type CreditTransactionUserPayload = {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  imgUrl?: string | null;
+  currentMode?: string | null;
+  userType?: string | null;
+  creditBalanceCents?: number;
+};
+
+export type CreditTransactionPayload = {
+  id: string;
+  userId: string;
+  type: string;
+  amountCents: number;
+  balanceAfterCents?: number;
+  source?: string;
+  orderId?: string | null;
+  stripePaymentIntentId?: string | null;
+  paymentId?: string | null;
+  adminId?: string | null;
+  note?: string | null;
+  createdAt: string;
+  user?: CreditTransactionUserPayload;
+};
+
+export type CreditTransactionsSummaryPayload = {
+  userId?: string;
+  totalCount: number;
+  positiveAmountCents: number;
+  negativeAmountCents: number;
+  netAmountCents: number;
+  grantCount: number;
+  redemptionCount: number;
+  refundCount: number;
+  adjustmentCount: number;
+};
+
+export type CreditsListResponsePayload = {
+  items: CreditTransactionPayload[];
+  total: number;
+  startIndex: number;
+  pageSize: number;
+  hasMore: boolean;
+  user?: CreditTransactionUserPayload;
+  summary?: CreditTransactionsSummaryPayload;
 };
 
 export const login = async (loginData: { email: string; password: string }) => {
@@ -604,6 +666,22 @@ export const parseJwtPayload = (token?: string) => {
   }
 };
 
+export const normalizeAdminRoles = (roles: unknown[]): AdminRole[] => {
+  const normalizedRoles = roles.filter(
+    (role): role is AdminRole =>
+      role === "ADMIN" ||
+      role === "SUPER_ADMIN" ||
+      role === "CHAT_MODERATOR" ||
+      role === "CREDIT_MANAGER",
+  );
+
+  if (normalizedRoles.includes("SUPER_ADMIN")) {
+    normalizedRoles.push("CREDIT_MANAGER");
+  }
+
+  return ADMIN_ROLE_OPTIONS.filter((role) => normalizedRoles.includes(role));
+};
+
 export const getCurrentAdminRolesFromJwt = (): AdminRole[] => {
   const jwt = Cookies.get("@user_jwt");
   const payload = parseJwtPayload(jwt);
@@ -613,16 +691,7 @@ export const getCurrentAdminRolesFromJwt = (): AdminRole[] => {
     ...(Array.isArray(payload?.admin?.roles) ? payload.admin.roles : []),
     ...(payload?.role ? [payload.role] : []),
   ];
-  return Array.from(
-    new Set(
-      candidateRoles.filter(
-        (role): role is AdminRole =>
-          role === "ADMIN" ||
-          role === "SUPER_ADMIN" ||
-          role === "CHAT_MODERATOR",
-      ),
-    ),
-  );
+  return normalizeAdminRoles(candidateRoles);
 };
 
 export const getCurrentAdminProfileFromJwt = () => {
@@ -2738,6 +2807,61 @@ export const getAllAdmins = async () => {
   return response;
 };
 
+type CreditsListParams = {
+  startIndex?: number;
+  pageSize?: number;
+  q?: string;
+  sortBy?: "date" | "userId" | "amount";
+  sortOrder?: "asc" | "desc";
+};
+
+export const getCredits = async (params?: CreditsListParams) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/credits`, {
+    params: {
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+      q: params?.q,
+      sortBy: params?.sortBy ?? "date",
+      sortOrder: params?.sortOrder ?? "desc",
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getUserCredits = async (
+  userId: string,
+  params?: CreditsListParams,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/${userId}/credits`, {
+    params: {
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+      q: params?.q,
+      sortBy: params?.sortBy ?? "date",
+      sortOrder: params?.sortOrder ?? "desc",
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getUserCreditsCount = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/users/${userId}/credits/count`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
 export const getConnectedAdmins = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/users/connected-admins`, {
@@ -2883,6 +3007,26 @@ export const updateAdminUserRoles = async (
   const response = await axios.put(
     `${BASE_URL}/admin-user/${adminId}/roles`,
     { roles },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const grantAdminUserCredits = async (
+  userId: string,
+  payload: {
+    amountCents: number;
+    note?: string;
+  },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/users/${userId}/credits`,
+    payload,
     {
       headers: {
         Authorization: jwt,

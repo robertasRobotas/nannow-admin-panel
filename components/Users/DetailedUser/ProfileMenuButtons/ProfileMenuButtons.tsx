@@ -9,6 +9,7 @@ type ProfileMenuButtonsProps = {
   selectedSection: string;
   setSelectedSection: (nextSection: string) => void;
   mode: "client" | "provider";
+  creditsCount?: number;
 };
 
 const ProfileMenuButtons = ({
@@ -17,8 +18,9 @@ const ProfileMenuButtons = ({
   selectedSection,
   setSelectedSection,
   mode,
+  creditsCount,
 }: ProfileMenuButtonsProps) => {
-  const buttonsData = getButtonsData(user, mode);
+  const buttonsData = getButtonsData(user, mode, { creditsCount });
   const router = useRouter();
 
   return (

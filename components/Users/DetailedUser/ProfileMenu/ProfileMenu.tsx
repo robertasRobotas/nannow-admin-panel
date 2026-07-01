@@ -68,6 +68,7 @@ type ProfileMenuProps = {
   setIsSelectedMenu: () => void;
   setSelectedSection: (nextSection: string) => void;
   mode: "client" | "provider";
+  creditsCount?: number;
 };
 
 const ProfileMenu = ({
@@ -76,6 +77,7 @@ const ProfileMenu = ({
   selectedSection,
   setSelectedSection,
   mode,
+  creditsCount,
 }: ProfileMenuProps) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -266,6 +268,7 @@ const ProfileMenu = ({
         selectedSection={selectedSection}
         setSelectedSection={setSelectedSection}
         mode={mode}
+        creditsCount={creditsCount}
       />
       <Button
         title="Delete profile"

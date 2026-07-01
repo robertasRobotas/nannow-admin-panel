@@ -1,0 +1,386 @@
+.main {
+  padding: 30px 35px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  color: #000;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: normal;
+}
+
+.subtitle {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.panel {
+  border-radius: 24px;
+  background: #f1f1f1;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.topRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sortRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filtersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.72);
+  text-transform: uppercase;
+}
+
+.field input,
+.field select,
+.noteInput {
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  border-radius: 12px;
+  min-height: 42px;
+  padding: 0 12px;
+  background: #fff;
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.noteInput {
+  min-height: 90px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.periodRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.periodButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.periodButton {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.periodButtonActive {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
+.customDateControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dateField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dateField span {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.72);
+  text-transform: uppercase;
+}
+
+.dateInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dateInput {
+  width: 170px;
+}
+
+.datePickerBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.datePickerBtn img {
+  width: 18px;
+  height: 18px;
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.validationError {
+  color: #d92d20;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.emptyState {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 0;
+}
+
+.summaryBar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.summaryLabel {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.summaryValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: #000;
+}
+
+.userLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #000;
+  font-weight: 800;
+  min-width: 0;
+}
+
+.userAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.userName {
+  font-size: 18px;
+  font-weight: 800;
+  color: #000;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.typeBadge,
+.sourceBadge {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.typeBadge {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+
+.sourceBadge {
+  background: rgba(0, 0, 0, 0.05);
+  color: #000;
+}
+
+.metricLabel {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.metricValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+  word-break: break-word;
+}
+
+.table {
+  overflow-x: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tableHeader,
+.tableRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) minmax(120px, 1fr) repeat(
+      5,
+      minmax(130px, 1fr)
+    );
+  gap: 12px;
+  align-items: center;
+}
+
+.tableHeader {
+  padding: 12px 0 10px;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tableRow {
+  padding: 16px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.columnUser,
+.columnType,
+.columnValue {
+  min-width: 0;
+}
+
+.columnType {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 99999999;
+}
+
+.modal {
+  width: 100%;
+  max-width: 620px;
+  border-radius: 20px;
+  background: #fff;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #000;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 936px) {
+  .main {
+    padding: 20px 16px;
+  }
+
+  .title {
+    font-size: 30px;
+  }
+
+  .tableHeader,
+  .tableRow {
+    min-width: 900px;
+  }
+}

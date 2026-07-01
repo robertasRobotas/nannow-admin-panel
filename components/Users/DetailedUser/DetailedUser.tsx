@@ -21,6 +21,8 @@ import { getButtonsData } from "@/data/userProfileMenu";
 import ProviderInfoSection from "./ProviderInfoSection/ProviderInfoSection";
 import NannowChatSection from "./NannowChatSection/NannowChatSection";
 import CompensationRequests from "@/components/Users/CompensationRequests/CompensationRequests";
+import Credits from "@/components/Credits/Credits";
+import { getUserCreditsCount } from "@/pages/api/fetch";
 
 type DetailedClientProps = {
   user: UserDetails;
@@ -33,9 +35,10 @@ const DetailedClient = ({ user, mode, initialSection }: DetailedClientProps) => 
   const [selectedSection, setSelectedSectionState] = useState(
     initialSection ?? "general",
   );
+  const [creditsCount, setCreditsCount] = useState(0);
   const validSectionIds = useMemo(
-    () => getButtonsData(user, mode).map((button) => button.id),
-    [mode, user],
+    () => getButtonsData(user, mode, { creditsCount }).map((button) => button.id),
+    [creditsCount, mode, user],
   );
 
   const setSelectedSection = useCallback(
@@ -73,6 +76,30 @@ const DetailedClient = ({ user, mode, initialSection }: DetailedClientProps) => 
       : "general";
     setSelectedSectionState((prev) => (prev === safeSection ? prev : safeSection));
   }, [initialSection, router.isReady, router.query.section, validSectionIds]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadCreditsCount = async () => {
+      try {
+        const response = await getUserCreditsCount(user.user.id);
+        const total = Number(response.data?.total ?? response.data?.result?.total ?? 0);
+        if (!isCancelled && Number.isFinite(total)) {
+          setCreditsCount(total);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error(error);
+        }
+      }
+    };
+
+    loadCreditsCount();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user.user.id]);
 
   const renderSelectedSection = () => {
     switch (selectedSection) {
@@ -136,6 +163,19 @@ const DetailedClient = ({ user, mode, initialSection }: DetailedClientProps) => 
         return (
           <PaymentsSection
             user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+            }}
+          />
+        );
+      }
+
+      case "credits": {
+        return (
+          <Credits
+            userId={user.user.id}
+            title="Credits"
+            creditBalanceCents={user.user.creditBalanceCents}
             onBackClick={() => {
               setSelectedSection("");
             }}
@@ -296,6 +336,7 @@ const DetailedClient = ({ user, mode, initialSection }: DetailedClientProps) => 
         selectedSection={selectedSection}
         setSelectedSection={setSelectedSection}
         mode={mode}
+        creditsCount={creditsCount}
       />
       <div className={styles.sectionWrapper}>{renderSelectedSection()}</div>
     </div>

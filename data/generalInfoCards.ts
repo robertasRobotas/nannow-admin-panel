@@ -52,6 +52,16 @@ const formatCompletionRate = (value?: number | null) => {
   return `${(value * 100).toFixed(2)}%`;
 };
 
+const formatCreditBalance = (value?: number | null) => {
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  return `€ ${(value / 100).toFixed(2)}`;
+};
+
+const getCreditBalanceCents = (data: UserDetails) =>
+  data?.user?.creditBalanceCents ??
+  data?.client?.creditBalanceCents ??
+  data?.provider?.creditBalanceCents;
+
 const formatStripeDateTime = (value?: string | number | null) => {
   if (value === null || value === undefined || value === "") return "—";
 
@@ -230,6 +240,11 @@ export const getInfoCards = (
       title: "ID verification",
       icon: idImg,
       value: data?.user?.isUserVerified ? "Verified" : "Not verified",
+    },
+    {
+      title: "Credit balance",
+      icon: walletImg,
+      value: formatCreditBalance(getCreditBalanceCents(data)),
     },
     {
       title: "Push token",

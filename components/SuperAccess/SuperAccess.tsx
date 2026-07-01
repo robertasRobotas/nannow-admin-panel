@@ -14,6 +14,7 @@ import styles from "./superAccess.module.css";
 import defaultUserImg from "../../assets/images/default-avatar.png";
 import calendarImg from "../../assets/images/calendar.svg";
 import {
+  ADMIN_ROLE_OPTIONS,
   AdminRole,
   createAdminUser,
   deleteFinancialLedgerOrders,
@@ -39,6 +40,7 @@ import {
   reconcileStripeKyc,
   getCurrentAdminProfileFromJwt,
   sendStripeKycUpdateEmail,
+  normalizeAdminRoles,
   updateBroadcastNotificationSender,
   updateSuperAccessItem,
   type ProviderCompletionStatsRebuildJob,
@@ -2260,12 +2262,7 @@ const SuperAccess = () => {
               ? draft.email.trim()
               : undefined,
           roles: Array.isArray(draft.roles)
-            ? draft.roles.filter(
-                (role): role is AdminRole =>
-                  role === "ADMIN" ||
-                  role === "SUPER_ADMIN" ||
-                  role === "CHAT_MODERATOR",
-              )
+            ? normalizeAdminRoles(draft.roles)
             : undefined,
         };
         if (removeAdminPassword) {
@@ -3693,16 +3690,15 @@ const SuperAccess = () => {
                     />
                   </div>
                   <div className={styles.rolesMultiSelect}>
-                    {["ADMIN", "SUPER_ADMIN", "CHAT_MODERATOR"].map((role) => (
+                    {ADMIN_ROLE_OPTIONS.map((role) => (
                       <label key={role} className={styles.roleToggle}>
                         <input
                           type="checkbox"
-                          checked={newAdminRoles.includes(role as AdminRole)}
+                          checked={newAdminRoles.includes(role)}
                           onChange={(e) => {
-                            const typedRole = role as AdminRole;
                             const nextRoles = e.target.checked
-                              ? [...newAdminRoles, typedRole]
-                              : newAdminRoles.filter((item) => item !== typedRole);
+                              ? [...newAdminRoles, role]
+                              : newAdminRoles.filter((item) => item !== role);
                             if (nextRoles.length > 0) {
                               setNewAdminRoles(nextRoles);
                             }
@@ -3784,7 +3780,7 @@ const SuperAccess = () => {
                     <div key={key} className={styles.field}>
                       <span>{prettyTitle(key)}</span>
                       <div className={styles.rolesMultiSelect}>
-                        {["ADMIN", "SUPER_ADMIN", "CHAT_MODERATOR"].map((role) => (
+                        {ADMIN_ROLE_OPTIONS.map((role) => (
                           <label key={role} className={styles.roleToggle}>
                             <input
                               type="checkbox"

@@ -7,6 +7,7 @@ import DocWithPencilIcon from "@/components/Icons/DocWithPencilIcon";
 import BadgeIcon from "@/components/Icons/BadgeIcon";
 import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
 import ChildrenIcon from "@/components/Icons/ChildrenIcon";
+import EuroCircleIcon from "@/components/Icons/EuroCircleIcon";
 import { normalizeCompensationRequests } from "@/data/compensationRequests";
 
 const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
@@ -31,7 +32,10 @@ const getVisibleChatCount = (user: UserDetails) => {
 
 export const getButtonsData = (
   user: UserDetails,
-  mode: "client" | "provider"
+  mode: "client" | "provider",
+  options?: {
+    creditsCount?: number;
+  },
 ) => {
   const buttons = [
     {
@@ -66,6 +70,13 @@ export const getButtonsData = (
       icon: DocWithCheckmarkIcon,
       id: "payouts",
       visibleFor: ["provider"],
+    },
+    {
+      title: "Credits",
+      icon: EuroCircleIcon,
+      number: options?.creditsCount ?? 0,
+      id: "credits",
+      visibleFor: ["client", "provider"],
     },
 
     {
