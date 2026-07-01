@@ -150,6 +150,10 @@ export type UserDetails = {
       currency?: string | null;
       country?: string | null;
     };
+    acceptedOrdersCount?: number | null;
+    finishedAcceptedOrdersCount?: number | null;
+    canceledByProviderAcceptedOrdersCount?: number | null;
+    orderCompletionRate?: number | null;
     specialSkills?: {
       firstAid?: {
         documentId?: string;

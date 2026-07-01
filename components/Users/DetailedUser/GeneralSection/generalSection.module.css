@@ -18,6 +18,13 @@
   flex-wrap: wrap;
 }
 
+.titleActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .infoCardsWrapper {
   display: flex;
   gap: 24px;

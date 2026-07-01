@@ -5,9 +5,12 @@ import { UserDetails } from "@/types/Client";
 import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   deleteProviderStripeAccount,
+  getProviderCompletionStatsRebuildJob,
+  rebuildProviderCompletionStats,
+  type ProviderCompletionStatsRebuildJob,
   setUserBanStatus,
   setUserSuspendedStatus,
   updateClientRequestedCompensationInfoAt,
@@ -113,6 +116,14 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   );
   const [isCompensationModalOpen, setIsCompensationModalOpen] = useState(false);
   const [isCompensationSaving, setIsCompensationSaving] = useState(false);
+  const [isRebuildingCompletionStats, setIsRebuildingCompletionStats] =
+    useState(false);
+  const [completionStatsRebuildJobId, setCompletionStatsRebuildJobId] =
+    useState("");
+  const [completionStatsRebuildJob, setCompletionStatsRebuildJob] =
+    useState<ProviderCompletionStatsRebuildJob | null>(null);
+  const [isCompletionStatsModalOpen, setIsCompletionStatsModalOpen] =
+    useState(false);
 
   console.log(user.provider);
   const [isSuspendedSaving, setIsSuspendedSaving] = useState(false);
@@ -357,20 +368,100 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     }
   };
 
+  useEffect(() => {
+    if (!completionStatsRebuildJobId) return;
+    if (
+      completionStatsRebuildJob?.status === "COMPLETED" ||
+      completionStatsRebuildJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getProviderCompletionStatsRebuildJob(
+          completionStatsRebuildJobId,
+        );
+        const job =
+          (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data?.result?.job as
+            | ProviderCompletionStatsRebuildJob
+            | undefined) ??
+          (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data as ProviderCompletionStatsRebuildJob | undefined);
+        if (!isCancelled && job) {
+          setCompletionStatsRebuildJob(job);
+        }
+      } catch {
+        // Ignore transient polling errors.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 2500);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [completionStatsRebuildJob?.status, completionStatsRebuildJobId]);
+
+  const handleRebuildCompletionStats = async () => {
+    if (!user?.provider?.id || isRebuildingCompletionStats) return;
+
+    try {
+      setIsRebuildingCompletionStats(true);
+      const response = await rebuildProviderCompletionStats(user.provider.id);
+      const job =
+        (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
+        (response.data?.result?.job as
+          | ProviderCompletionStatsRebuildJob
+          | undefined) ??
+        (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+        (response.data as ProviderCompletionStatsRebuildJob | undefined);
+      if (job?.id) {
+        setCompletionStatsRebuildJob(job);
+        setCompletionStatsRebuildJobId(job.id);
+        setIsCompletionStatsModalOpen(true);
+        toast.success("Provider completion stats rebuild started");
+      } else {
+        toast.success("Provider completion stats rebuild requested");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to start completion stats rebuild");
+    } finally {
+      setIsRebuildingCompletionStats(false);
+    }
+  };
+
   return (
     <div className={styles.main}>
       <div className={styles.titleRow}>
         <h3 className={`${styles.title} ${nunito.className}`}>General info</h3>
         {mode === "provider" && user?.provider?.id && (
-          <Button
-            title="Track provider"
-            type="BLACK"
-            onClick={() => {
-              router.push(
-                `/provider/${user.provider!.id}/tracking?providerUserId=${user.user.id}`,
-              );
-            }}
-          />
+          <div className={styles.titleActions}>
+            <Button
+              title={
+                isRebuildingCompletionStats
+                  ? "Rebuilding..."
+                  : "Rebuild completion rate"
+              }
+              type="OUTLINED"
+              onClick={handleRebuildCompletionStats}
+              isDisabled={isRebuildingCompletionStats}
+              isLoading={isRebuildingCompletionStats}
+            />
+            <Button
+              title="Track provider"
+              type="BLACK"
+              onClick={() => {
+                router.push(
+                  `/provider/${user.provider!.id}/tracking?providerUserId=${user.user.id}`,
+                );
+              }}
+            />
+          </div>
         )}
       </div>
       <div className={styles.infoCardsWrapper}>
@@ -714,6 +805,56 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 type="BLACK"
                 onClick={confirmCompensationStatusChange}
                 isDisabled={isCompensationSaving}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCompletionStatsModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>
+              Provider completion stats rebuild
+            </h2>
+            <p className={styles.confirmationBody}>
+              {`Job: ${
+                completionStatsRebuildJob?.id ??
+                completionStatsRebuildJobId ??
+                "—"
+              } • Status: ${
+                completionStatsRebuildJob?.status ?? "PENDING"
+              }`}
+            </p>
+            <div className={styles.confirmationBody}>
+              <div>
+                Providers total:{" "}
+                {completionStatsRebuildJob?.progress.providersTotal ?? "—"}
+              </div>
+              <div>
+                Providers processed:{" "}
+                {completionStatsRebuildJob?.progress.providersProcessed ?? "—"}
+              </div>
+              <div>
+                Providers modified:{" "}
+                {completionStatsRebuildJob?.progress.providersModified ?? "—"}
+              </div>
+              {completionStatsRebuildJob?.error && (
+                <div className={styles.inputError}>
+                  {completionStatsRebuildJob.error}
+                </div>
+              )}
+            </div>
+            <div className={styles.confirmationActions}>
+              <Button
+                title={
+                  completionStatsRebuildJob?.status === "COMPLETED" ||
+                  completionStatsRebuildJob?.status === "FAILED"
+                    ? "Close"
+                    : "Hide"
+                }
+                type="OUTLINED"
+                onClick={() => setIsCompletionStatsModalOpen(false)}
               />
             </div>
           </div>

@@ -47,6 +47,11 @@ const formatDateTime = (value?: string | null) => {
   return date.toLocaleString();
 };
 
+const formatCompletionRate = (value?: number | null) => {
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  return `${(value * 100).toFixed(2)}%`;
+};
+
 const formatStripeDateTime = (value?: string | number | null) => {
   if (value === null || value === undefined || value === "") return "—";
 
@@ -288,6 +293,41 @@ export const getInfoCards = (
           typeof data?.provider?.totalEarnings === "number"
             ? `${data.provider.totalEarnings}`
             : "0",
+      },
+      {
+        title: "Order completion stats",
+        icon: walletImg,
+        isWide: true,
+        value: formatCompletionRate(data?.provider?.orderCompletionRate),
+        valueLines: [
+          {
+            text: `Accepted: ${
+              typeof data?.provider?.acceptedOrdersCount === "number"
+                ? data.provider.acceptedOrdersCount
+                : 0
+            }`,
+          },
+          {
+            text: `Finished: ${
+              typeof data?.provider?.finishedAcceptedOrdersCount === "number"
+                ? data.provider.finishedAcceptedOrdersCount
+                : 0
+            }`,
+          },
+          {
+            text: `Canceled by provider: ${
+              typeof data?.provider?.canceledByProviderAcceptedOrdersCount ===
+              "number"
+                ? data.provider.canceledByProviderAcceptedOrdersCount
+                : 0
+            }`,
+          },
+          {
+            text: `Completion rate: ${formatCompletionRate(
+              data?.provider?.orderCompletionRate,
+            )}`,
+          },
+        ],
       },
       {
         title: "Base price",

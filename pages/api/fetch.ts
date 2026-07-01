@@ -354,6 +354,24 @@ export type ProviderTrackingSession = {
   warning?: string;
 };
 
+export type ProviderCompletionStatsRebuildJob = {
+  id: string;
+  requestedByAdminId: string;
+  scope: "ALL_PROVIDERS" | "SINGLE_PROVIDER";
+  providerId: string | null;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  error: string | null;
+  progress: {
+    providersTotal: number;
+    providersProcessed: number;
+    providersModified: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
 export const startProviderTracking = async (providerId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.post(
@@ -1070,6 +1088,47 @@ export const updateProviderFields = async (
     },
   );
 
+  return response;
+};
+
+export const rebuildProviderCompletionStats = async (providerId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/providers/${providerId}/completion-stats/rebuild`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const rebuildAllProvidersCompletionStats = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/super/providers/completion-stats/rebuild`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getProviderCompletionStatsRebuildJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/providers/completion-stats/rebuild-jobs/${jobId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
   return response;
 };
 

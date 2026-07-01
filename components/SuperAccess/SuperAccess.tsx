@@ -27,6 +27,8 @@ import {
   regenerateUsersFullNameSearch,
   rebuildAllFinancialLedgerOrders,
   rebuildFinancialLedgerForOrder,
+  rebuildAllProvidersCompletionStats,
+  getProviderCompletionStatsRebuildJob,
   runChatsNormalization,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
@@ -39,6 +41,7 @@ import {
   sendStripeKycUpdateEmail,
   updateBroadcastNotificationSender,
   updateSuperAccessItem,
+  type ProviderCompletionStatsRebuildJob,
 } from "@/pages/api/fetch";
 import { options as orderStatusOptions } from "@/data/orderStatusOptions";
 import { useRouter } from "next/router";
@@ -786,6 +789,14 @@ const SuperAccess = () => {
   const [chatNormalizationJobId, setChatNormalizationJobId] = useState("");
   const [chatNormalizationJob, setChatNormalizationJob] =
     useState<ChatNormalizationJob | null>(null);
+  const [providerCompletionStatsRebuildJobId, setProviderCompletionStatsRebuildJobId] =
+    useState("");
+  const [providerCompletionStatsRebuildJob, setProviderCompletionStatsRebuildJob] =
+    useState<ProviderCompletionStatsRebuildJob | null>(null);
+  const [isProviderCompletionStatsRebuildModalOpen, setIsProviderCompletionStatsRebuildModalOpen] =
+    useState(false);
+  const [isRebuildingAllProviderCompletionStats, setIsRebuildingAllProviderCompletionStats] =
+    useState(false);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
     "ONE",
   );
@@ -1830,6 +1841,47 @@ const SuperAccess = () => {
     };
   }, [chatNormalizationJob?.status, chatNormalizationJobId, fetchChatNormalizationAnalysis]);
 
+  useEffect(() => {
+    if (!providerCompletionStatsRebuildJobId) return;
+    if (
+      providerCompletionStatsRebuildJob?.status === "COMPLETED" ||
+      providerCompletionStatsRebuildJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getProviderCompletionStatsRebuildJob(
+          providerCompletionStatsRebuildJobId,
+        );
+        const job =
+          (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data?.result?.job as
+            | ProviderCompletionStatsRebuildJob
+            | undefined) ??
+          (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data as ProviderCompletionStatsRebuildJob | undefined);
+        if (!isCancelled && job) {
+          setProviderCompletionStatsRebuildJob(job);
+        }
+      } catch {
+        // Ignore transient errors while polling.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 2500);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    providerCompletionStatsRebuildJob?.status,
+    providerCompletionStatsRebuildJobId,
+  ]);
+
   const startChatsNormalization = async () => {
     if (isStartingChatNormalization) return;
     try {
@@ -1862,6 +1914,42 @@ const SuperAccess = () => {
       setError("Failed to start chat normalization.");
     } finally {
       setIsStartingChatNormalization(false);
+    }
+  };
+
+  const handleRebuildAllProvidersCompletionStats = async () => {
+    if (isRebuildingAllProviderCompletionStats) return;
+    try {
+      setIsRebuildingAllProviderCompletionStats(true);
+      setError("");
+      setNotice("");
+      const response = await rebuildAllProvidersCompletionStats();
+      const job =
+        (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
+        (response.data?.result?.job as
+          | ProviderCompletionStatsRebuildJob
+          | undefined) ??
+        (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+        (response.data as ProviderCompletionStatsRebuildJob | undefined);
+      if (job?.id) {
+        setProviderCompletionStatsRebuildJob(job);
+        setProviderCompletionStatsRebuildJobId(job.id);
+        setIsProviderCompletionStatsRebuildModalOpen(true);
+        setNotice(`Started completion stats rebuild job ${job.id}.`);
+      } else {
+        setNotice("Started completion stats rebuild.");
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to rebuild provider completion stats.",
+        );
+        return;
+      }
+      setError("Failed to rebuild provider completion stats.");
+    } finally {
+      setIsRebuildingAllProviderCompletionStats(false);
     }
   };
 
@@ -2790,17 +2878,30 @@ const SuperAccess = () => {
                   </>
                 )}
                 {entity === "providers" && (
-                  <Button
-                    title={
-                      isStripeKycAuditLoading
-                        ? "Scanning..."
-                        : "Scan Stripe status"
-                    }
-                    type="OUTLINED"
-                    onClick={() => refreshStripeKycAudit(undefined, { openModal: true })}
-                    isDisabled={isStripeKycAuditLoading || isStripeKycReconcileLoading}
-                    isLoading={isStripeKycAuditLoading}
-                  />
+                  <>
+                    <Button
+                      title={
+                        isRebuildingAllProviderCompletionStats
+                          ? "Rebuilding..."
+                          : "Rebuild completion rates"
+                      }
+                      type="OUTLINED"
+                      onClick={handleRebuildAllProvidersCompletionStats}
+                      isDisabled={isRebuildingAllProviderCompletionStats}
+                      isLoading={isRebuildingAllProviderCompletionStats}
+                    />
+                    <Button
+                      title={
+                        isStripeKycAuditLoading
+                          ? "Scanning..."
+                          : "Scan Stripe status"
+                      }
+                      type="OUTLINED"
+                      onClick={() => refreshStripeKycAudit(undefined, { openModal: true })}
+                      isDisabled={isStripeKycAuditLoading || isStripeKycReconcileLoading}
+                      isLoading={isStripeKycAuditLoading}
+                    />
+                  </>
                 )}
                 <SearchBar
                   placeholder="Type to search"
@@ -4394,6 +4495,59 @@ const SuperAccess = () => {
                 }
                 type="OUTLINED"
                 onClick={() => setIsChatNormalizationProgressModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isProviderCompletionStatsRebuildModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>
+              Provider completion stats rebuild
+            </h3>
+            <p className={styles.modalText}>
+              {`Job: ${providerCompletionStatsRebuildJob?.id || providerCompletionStatsRebuildJobId || "—"} • Status: ${
+                providerCompletionStatsRebuildJob?.status ?? "PENDING"
+              }`}
+            </p>
+            <div className={styles.chatProgressList}>
+              <div className={styles.chatProgressRow}>
+                <span>Providers total</span>
+                <strong>
+                  {providerCompletionStatsRebuildJob?.progress.providersTotal ?? "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Providers processed</span>
+                <strong>
+                  {providerCompletionStatsRebuildJob?.progress.providersProcessed ??
+                    "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Providers modified</span>
+                <strong>
+                  {providerCompletionStatsRebuildJob?.progress.providersModified ??
+                    "—"}
+                </strong>
+              </div>
+            </div>
+            {providerCompletionStatsRebuildJob?.error && (
+              <div className={styles.modalError}>
+                {providerCompletionStatsRebuildJob.error}
+              </div>
+            )}
+            <div className={styles.modalActions}>
+              <Button
+                title={
+                  providerCompletionStatsRebuildJob?.status === "COMPLETED" ||
+                  providerCompletionStatsRebuildJob?.status === "FAILED"
+                    ? "Close"
+                    : "Hide"
+                }
+                type="OUTLINED"
+                onClick={() => setIsProviderCompletionStatsRebuildModalOpen(false)}
               />
             </div>
           </div>
