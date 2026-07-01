@@ -932,7 +932,12 @@ const SuperAccess = () => {
       ? (entityFromQuery as SuperAccessViewEntity)
       : "users";
     setEntity(nextEntity);
-    setIsCompactListView(nextEntity === "financial-ledger");
+    setIsCompactListView((currentCompactView) => {
+      if (nextEntity !== entity) {
+        return nextEntity === "financial-ledger";
+      }
+      return currentCompactView;
+    });
 
     const pageSizeFromQuery =
       typeof router.query.pageSize === "string"
@@ -959,6 +964,7 @@ const SuperAccess = () => {
     const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
     setSelectedId(idFromQuery);
   }, [
+    entity,
     router.isReady,
     router.query.entity,
     router.query.id,
@@ -2776,7 +2782,9 @@ const SuperAccess = () => {
                   <button
                     type="button"
                     className={styles.listViewSwitchButton}
-                    onClick={() => setIsCompactListView((prev) => !prev)}
+                    onClick={() => {
+                      setIsCompactListView((prev) => !prev);
+                    }}
                   >
                     <span className={styles.listViewSwitchLabel}>Show compact</span>
                     <span
