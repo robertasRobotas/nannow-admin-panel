@@ -547,9 +547,13 @@ const Schedule = () => {
   );
 
   const summary = useMemo(() => {
-    const active = items.filter((item) => item.isActiveForContactSharing).length;
-    const direct = items.filter((item) => item.isDirectOrderToProvider).length;
-    return { active, direct };
+    const now = Date.now();
+    const futureItems = items.filter(
+      (item) => new Date(item.startsAt).getTime() >= now,
+    );
+    const active = futureItems.filter((item) => item.isActiveForContactSharing).length;
+    const direct = futureItems.filter((item) => item.isDirectOrderToProvider).length;
+    return { total: futureItems.length, active, direct };
   }, [items]);
 
   const applyFilters = (nextFilters = filters) => {
@@ -866,7 +870,7 @@ const Schedule = () => {
       <section className={styles.calendarPane}>
         <div className={styles.paneHeader}>
           <div>
-            <h2>{total} scheduled order{total === 1 ? "" : "s"}</h2>
+            <h2>{summary.total} scheduled order{summary.total === 1 ? "" : "s"}</h2>
             <p>
               {summary.active} contact sharing · {summary.direct} direct orders
             </p>
