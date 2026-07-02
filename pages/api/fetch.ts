@@ -83,7 +83,86 @@ export type SuperAccessEntity =
   | "providers"
   | "addresses"
   | "orders"
-  | "chats";
+  | "chats"
+  | "schedule";
+
+export type OrderScheduleUserSnapshot = {
+  userId: string;
+  profileId: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
+  imgUrl?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+};
+
+export type OrderScheduleItem = {
+  orderId: string;
+  orderPrettyId?: string | null;
+  status: string;
+  paymentStatus?: string | null;
+  startsAt: string;
+  endsAt: string;
+  canceledAt?: string | null;
+  finishedAt?: string | null;
+  isActiveForContactSharing: boolean;
+  isClosedByAdmin?: boolean;
+  isDirectOrderToProvider?: boolean;
+  requestingServiceInRegion?: string | null;
+  requestingServiceCity?: string | null;
+  requestingServiceCountryCode?: string | null;
+  totalPrice?: number | null;
+  totalProviderPrice?: number | null;
+  subtotalPrice?: number | null;
+  platformFeePrice?: number | null;
+  additionalPaymentsTotalCents?: number;
+  clientUserId: string;
+  clientId: string;
+  providerUserId: string;
+  providerId: string;
+  client: OrderScheduleUserSnapshot;
+  provider: OrderScheduleUserSnapshot;
+  orderCreatedAt?: string | null;
+  orderUpdatedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type OrderScheduleListResponse = {
+  items: OrderScheduleItem[];
+  total: number;
+  pageSize: number;
+  startIndex?: number;
+};
+
+export type OrderScheduleRegenerationJobPhase =
+  | "COUNT"
+  | "READ_ORDERS"
+  | "WRITE_SCHEDULE"
+  | "DELETE_STALE"
+  | "DONE";
+
+export type OrderScheduleRegenerationJob = {
+  id: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  phase?: OrderScheduleRegenerationJobPhase | null;
+  error?: string | null;
+  progress?: {
+    ordersTotal?: number;
+    ordersProcessed?: number;
+    scheduleRowsPrepared?: number;
+    scheduleRowsWritten?: number;
+    batchesWritten?: number;
+    deletedStale?: number;
+  } | null;
+  result?: {
+    scanned?: number;
+    upserted?: number;
+    modified?: number;
+    deleted?: number;
+  } | null;
+};
 
 export type StripeKycAuditMismatch = {
   providerId: string;
@@ -3044,6 +3123,8 @@ export const getSuperAccessList = async (
   const url =
     entity === "admins"
       ? `${BASE_URL}/admin-user`
+      : entity === "schedule"
+        ? `${BASE_URL}/admin/order-schedule`
       : `${BASE_URL}/admin/super/${entity}`;
   const response = await axios.get(url, {
     params: {
@@ -3158,6 +3239,8 @@ export const getSuperAccessItem = async (
   const url =
     entity === "admins"
       ? `${BASE_URL}/admin-user/${id}`
+      : entity === "schedule"
+        ? `${BASE_URL}/admin/order-schedule/${id}`
       : `${BASE_URL}/admin/super/${entity}/${id}`;
   const response = await axios.get(url, {
     headers: {
@@ -3180,6 +3263,84 @@ export const updateSuperAccessItem = async (
   const response = await axios.put(
     url,
     entity === "admins" ? updates : { updates },
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getOrderSchedules = async (params?: {
+  period?: "day" | "week" | "month" | "year" | "custom";
+  date?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  year?: number | string;
+  month?: number | string;
+  timezone?: string;
+  status?: string;
+  clientUserId?: string;
+  providerUserId?: string;
+  showCanceled?: boolean;
+  showPast?: boolean;
+  startIndex?: number;
+  pageSize?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/order-schedule`, {
+    params: {
+      period: params?.period,
+      date: params?.date,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      year: params?.year,
+      month: params?.month,
+      timezone: params?.timezone,
+      status: params?.status,
+      clientUserId: params?.clientUserId,
+      providerUserId: params?.providerUserId,
+      showCanceled: params?.showCanceled,
+      showPast: params?.showPast,
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getOrderSchedule = async (orderId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/order-schedule/${orderId}`, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const regenerateOrderSchedule = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/super/order-schedule/regenerate`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getOrderScheduleRegenerationJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/super/order-schedule/regenerate/jobs/${jobId}`,
     {
       headers: {
         Authorization: jwt,

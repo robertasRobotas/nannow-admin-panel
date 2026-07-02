@@ -41,9 +41,13 @@ import {
   getCurrentAdminProfileFromJwt,
   sendStripeKycUpdateEmail,
   normalizeAdminRoles,
+  regenerateOrderSchedule,
   updateBroadcastNotificationSender,
   updateSuperAccessItem,
+  getOrderScheduleRegenerationJob,
   type ProviderCompletionStatsRebuildJob,
+  type OrderScheduleItem,
+  type OrderScheduleRegenerationJob,
 } from "@/pages/api/fetch";
 import { options as orderStatusOptions } from "@/data/orderStatusOptions";
 import { useRouter } from "next/router";
@@ -189,6 +193,7 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Addresses", key: "addresses" },
   { title: "Orders", key: "orders" },
   { title: "Chats", key: "chats" },
+  { title: "Schedule", key: "schedule" },
   { title: "Financial ledger", key: "financial-ledger" },
   { title: "Broadcast sender", key: "broadcast-sender" },
   { title: "WS connected Admins", key: "connected-admins" },
@@ -245,7 +250,7 @@ const parseListResponse = (data: unknown) => {
   const nestedUsers = result.users as Record<string, unknown> | undefined;
 
   const items = extractArray(
-    result.items ??
+      result.items ??
       nestedAdmins?.items ??
       nestedUsers?.items ??
       result.users ??
@@ -253,7 +258,9 @@ const parseListResponse = (data: unknown) => {
       result.children ??
       result.providers ??
       result.orders ??
+      result.schedules ??
       result.chats ??
+      payload.schedules ??
       result.addresses ??
       payload.items,
   );
@@ -288,6 +295,8 @@ const parseItemResponse = (data: unknown): EntityRecord | null => {
     result.client,
     result.provider,
     result.order,
+    result.schedule,
+    result.orderSchedule,
     result.chat,
     result.address,
     result.item,
@@ -472,6 +481,7 @@ const isSuperAccessEntity = (
     "addresses",
     "orders",
     "chats",
+    "schedule",
   ].includes(value);
 
 const isIsoDate = (value: string) =>
@@ -795,6 +805,13 @@ const SuperAccess = () => {
     useState("");
   const [providerCompletionStatsRebuildJob, setProviderCompletionStatsRebuildJob] =
     useState<ProviderCompletionStatsRebuildJob | null>(null);
+  const [isScheduleRegenerationRunning, setIsScheduleRegenerationRunning] =
+    useState(false);
+  const [isScheduleRegenerationModalOpen, setIsScheduleRegenerationModalOpen] =
+    useState(false);
+  const [scheduleRegenerationJobId, setScheduleRegenerationJobId] = useState("");
+  const [scheduleRegenerationJob, setScheduleRegenerationJob] =
+    useState<OrderScheduleRegenerationJob | null>(null);
   const [isProviderCompletionStatsRebuildModalOpen, setIsProviderCompletionStatsRebuildModalOpen] =
     useState(false);
   const [isRebuildingAllProviderCompletionStats, setIsRebuildingAllProviderCompletionStats] =
@@ -933,6 +950,13 @@ const SuperAccess = () => {
     const nextEntity = isValidEntity
       ? (entityFromQuery as SuperAccessViewEntity)
       : "users";
+    if (nextEntity !== entity) {
+      setList([]);
+      setTotal(0);
+      setSelectedId("");
+      setSelectedItem(null);
+      setDraft({});
+    }
     setEntity(nextEntity);
     setIsCompactListView((currentCompactView) => {
       if (nextEntity !== entity) {
@@ -1890,6 +1914,53 @@ const SuperAccess = () => {
     providerCompletionStatsRebuildJobId,
   ]);
 
+  useEffect(() => {
+    if (!scheduleRegenerationJobId) return;
+    if (
+      scheduleRegenerationJob?.status === "COMPLETED" ||
+      scheduleRegenerationJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getOrderScheduleRegenerationJob(
+          scheduleRegenerationJobId,
+        );
+        const job =
+          (response.data?.job as OrderScheduleRegenerationJob | undefined) ??
+          (response.data?.result?.job as OrderScheduleRegenerationJob | undefined) ??
+          (response.data?.result as OrderScheduleRegenerationJob | undefined) ??
+          (response.data as OrderScheduleRegenerationJob | undefined);
+        if (!isCancelled && job) {
+          setScheduleRegenerationJob(job);
+        }
+      } catch {
+        // Ignore transient polling errors.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 2500);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [scheduleRegenerationJob?.status, scheduleRegenerationJobId]);
+
+  useEffect(() => {
+    if (!scheduleRegenerationJob) return;
+    if (scheduleRegenerationJob.status === "COMPLETED") {
+      setNotice("Schedule regeneration completed.");
+      fetchList();
+    }
+    if (scheduleRegenerationJob.status === "FAILED") {
+      setError(scheduleRegenerationJob.error || "Schedule regeneration failed.");
+    }
+  }, [fetchList, scheduleRegenerationJob]);
+
   const startChatsNormalization = async () => {
     if (isStartingChatNormalization) return;
     try {
@@ -1958,6 +2029,46 @@ const SuperAccess = () => {
       setError("Failed to rebuild provider completion stats.");
     } finally {
       setIsRebuildingAllProviderCompletionStats(false);
+    }
+  };
+
+  const handleRegenerateSchedule = async () => {
+    if (isScheduleRegenerationRunning) return;
+    try {
+      setIsScheduleRegenerationRunning(true);
+      setError("");
+      setNotice("");
+      const response = await regenerateOrderSchedule();
+      const job =
+        (response.data?.job as OrderScheduleRegenerationJob | undefined) ??
+        (response.data?.result?.job as
+          | OrderScheduleRegenerationJob
+          | undefined) ??
+        (response.data?.result as OrderScheduleRegenerationJob | undefined) ??
+        (response.data as OrderScheduleRegenerationJob | undefined);
+      const started = Boolean(
+        response.data?.result?.started ?? response.data?.started ?? job?.id,
+      );
+      if (!job?.id) {
+        setNotice(started ? "Schedule regeneration started." : "Schedule regeneration requested.");
+        return;
+      }
+      setScheduleRegenerationJobId(job.id);
+      setScheduleRegenerationJob(job);
+      setIsScheduleRegenerationModalOpen(true);
+      setNotice(`Started schedule regeneration job ${job.id}.`);
+      await fetchList();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to regenerate schedule.",
+        );
+        return;
+      }
+      setError("Failed to regenerate schedule.");
+    } finally {
+      setIsScheduleRegenerationRunning(false);
     }
   };
 
@@ -2692,13 +2803,15 @@ const SuperAccess = () => {
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           {MENU_ITEMS.map((menuItem) => (
-            <button
+              <button
               key={menuItem.key}
               type="button"
               className={`${styles.sideBtn} ${
                 entity === menuItem.key ? styles.sideBtnActive : ""
               }`}
               onClick={() => {
+                setList([]);
+                setTotal(0);
                 updateSuperAccessQuery(
                   {
                     entity: menuItem.key,
@@ -2723,6 +2836,10 @@ const SuperAccess = () => {
                 setChatNormalizationAnalysis(null);
                 setChatNormalizationJobId("");
                 setChatNormalizationJob(null);
+                setIsScheduleRegenerationRunning(false);
+                setIsScheduleRegenerationModalOpen(false);
+                setScheduleRegenerationJobId("");
+                setScheduleRegenerationJob(null);
                 setIsStripeKycAuditModalOpen(false);
                 setIsStripeKycAuditLoading(false);
                 setIsStripeKycReconcileLoading(false);
@@ -2751,6 +2868,8 @@ const SuperAccess = () => {
                   ? "Admin messages"
                   : entity === "financial-ledger"
                     ? "Financial ledger"
+                  : entity === "schedule"
+                    ? "Order schedule"
                   : entity === "broadcast-sender"
                     ? "Broadcast sender"
                   : entity === "connected-admins"
@@ -2764,10 +2883,12 @@ const SuperAccess = () => {
                     ? `${total} ledger orders, page ${currentPage}/${totalPages}`
                   : entity === "broadcast-sender"
                     ? "Manage the SYSTEM_NANNOW sender profile."
-                  : entity === "connected-admins"
-                    ? `${total} admins connected right now.`
-                  : entity === "chats"
-                    ? `${total} chats total, page ${currentPage}/${totalPages}`
+                    : entity === "schedule"
+                      ? "Order schedule rows and snapshots."
+                    : entity === "connected-admins"
+                      ? `${total} admins connected right now.`
+                    : entity === "chats"
+                      ? `${total} chats total, page ${currentPage}/${totalPages}`
                   : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
@@ -2775,6 +2896,19 @@ const SuperAccess = () => {
               entity !== "connected-admins" &&
               entity !== "broadcast-sender" && (
               <div className={styles.listHeaderActions}>
+                {entity === "schedule" && (
+                  <Button
+                    title={
+                      isScheduleRegenerationRunning
+                        ? "Regenerating..."
+                        : "Regenerate schedule"
+                    }
+                    type="OUTLINED"
+                    onClick={handleRegenerateSchedule}
+                    isDisabled={loadingList || isScheduleRegenerationRunning}
+                    isLoading={isScheduleRegenerationRunning}
+                  />
+                )}
                 {entity !== "financial-ledger" && (
                   <button
                     type="button"
@@ -3060,6 +3194,51 @@ const SuperAccess = () => {
               >
                 {list.map((item) => {
                   const id = pickId(item);
+                  if (entity === "schedule") {
+                    const scheduleItem = item as OrderScheduleItem;
+                    const clientSnapshot = scheduleItem.client;
+                    const providerSnapshot = scheduleItem.provider;
+                    const participantName = (
+                      snapshot?: OrderScheduleItem["client"],
+                    ) =>
+                      String(snapshot?.fullName ?? "").trim() ||
+                      `${String(snapshot?.firstName ?? "").trim()} ${String(
+                        snapshot?.lastName ?? "",
+                      ).trim()}`.trim() ||
+                      String(snapshot?.profileId ?? snapshot?.userId ?? "");
+                    return (
+                      <div
+                        key={id || String(item.orderId ?? item.id ?? "schedule")}
+                        role="button"
+                        tabIndex={0}
+                        className={`${styles.itemCard} ${
+                          selectedId === id ? styles.itemCardActive : ""
+                        } ${styles.itemCardCompact}`}
+                        onClick={() => selectItem(id)}
+                        onKeyDown={(event) => handleItemCardKeyDown(event, id)}
+                      >
+                        <div className={styles.orderRow}>
+                          <div className={styles.orderRowTop}>
+                            <div className={styles.orderRowNames}>
+                              {String(scheduleItem.orderPrettyId ?? id ?? "Order schedule")}
+                            </div>
+                          </div>
+                          <div className={styles.orderRowTime}>
+                            Starts: {formatDateTimeShort(scheduleItem.startsAt)}
+                          </div>
+                          <div className={styles.orderRowTime}>
+                            Ends: {formatDateTimeShort(scheduleItem.endsAt)}
+                          </div>
+                          <div className={styles.orderRowStatus}>
+                            {String(scheduleItem.status ?? "—")}
+                          </div>
+                          <div className={styles.orderRowPrettyId}>
+                            {participantName(clientSnapshot)} | {participantName(providerSnapshot)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
                   const orderItem =
                     entity === "orders" ? ordersById[id] ?? item : item;
                   const linkedUser =
@@ -3396,6 +3575,8 @@ const SuperAccess = () => {
                 ? "Send message"
                 : entity === "broadcast-sender"
                   ? "Broadcast sender"
+                : entity === "schedule"
+                  ? "Schedule detail"
                 : entity === "connected-admins"
                   ? "Connected admin"
                   : "Detail"}
@@ -3457,7 +3638,7 @@ const SuperAccess = () => {
                       ? isSaving
                         ? "Saving..."
                         : "Save sender"
-                    : entity === "financial-ledger" || entity === "chats"
+                    : entity === "financial-ledger" || entity === "chats" || entity === "schedule"
                       ? "Read only"
                     : entity === "connected-admins"
                       ? "Read only"
@@ -3472,7 +3653,7 @@ const SuperAccess = () => {
                     ? !adminAlertText.trim() || isSendingAlert
                     : entity === "broadcast-sender"
                       ? loadingItem || isSaving
-                    : entity === "financial-ledger" || entity === "chats"
+                    : entity === "financial-ledger" || entity === "chats" || entity === "schedule"
                       ? true
                     : entity === "connected-admins"
                       ? true
@@ -3484,7 +3665,8 @@ const SuperAccess = () => {
                     : isSaving &&
                       entity !== "connected-admins" &&
                       entity !== "financial-ledger" &&
-                      entity !== "chats"
+                      entity !== "chats" &&
+                      entity !== "schedule"
                 }
               />
             </div>
@@ -3599,7 +3781,7 @@ const SuperAccess = () => {
                 <div className={styles.empty}>Loading...</div>
               )}
 
-              {(entity === "financial-ledger" || entity === "chats") &&
+              {(entity === "financial-ledger" || entity === "chats" || entity === "schedule") &&
                 selectedId &&
                 !loadingItem &&
                 selectedItem && (
@@ -3663,7 +3845,7 @@ const SuperAccess = () => {
                   </div>
                 )}
 
-              {entity !== "financial-ledger" && entity !== "chats" && (
+              {entity !== "financial-ledger" && entity !== "chats" && entity !== "schedule" && (
                 <>
 
               {entity === "admins" && (
@@ -4552,6 +4734,66 @@ const SuperAccess = () => {
                 }
                 type="OUTLINED"
                 onClick={() => setIsProviderCompletionStatsRebuildModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isScheduleRegenerationModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Schedule regeneration</h3>
+            <p className={styles.modalText}>
+              {`Job: ${scheduleRegenerationJobId || scheduleRegenerationJob?.id || "—"} • Status: ${
+                scheduleRegenerationJob?.status ?? "PENDING"
+              }`}
+            </p>
+            {scheduleRegenerationJob?.phase && (
+              <p className={styles.modalText}>
+                {`Phase: ${scheduleRegenerationJob.phase}`}
+              </p>
+            )}
+            {scheduleRegenerationJob?.error && (
+              <div className={styles.modalError}>
+                {scheduleRegenerationJob.error}
+              </div>
+            )}
+            {scheduleRegenerationJob?.progress &&
+              typeof scheduleRegenerationJob.progress === "object" && (
+                <div className={styles.chatProgressList}>
+                  {Object.entries(scheduleRegenerationJob.progress).map(
+                    ([key, value]) => (
+                      <div key={key} className={styles.chatProgressRow}>
+                        <span>{prettyTitle(key)}</span>
+                        <strong>{String(value ?? "—")}</strong>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+            {scheduleRegenerationJob?.result &&
+              typeof scheduleRegenerationJob.result === "object" && (
+                <div className={styles.chatProgressList}>
+                  {Object.entries(scheduleRegenerationJob.result).map(
+                    ([key, value]) => (
+                      <div key={key} className={styles.chatProgressRow}>
+                        <span>{prettyTitle(key)}</span>
+                        <strong>{String(value ?? "—")}</strong>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+            <div className={styles.modalActions}>
+              <Button
+                title={
+                  scheduleRegenerationJob?.status === "COMPLETED" ||
+                  scheduleRegenerationJob?.status === "FAILED"
+                    ? "Close"
+                    : "Hide"
+                }
+                type="OUTLINED"
+                onClick={() => setIsScheduleRegenerationModalOpen(false)}
               />
             </div>
           </div>
