@@ -2,6 +2,7 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useState } from "r
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 import {
   getOrderSchedule,
   getOrderSchedules,
@@ -206,6 +207,20 @@ const getStatusColor = (status?: string | null) => {
   return "#1a73e8";
 };
 
+const shouldShowScheduleItem = (
+  item: OrderScheduleItem,
+  filters: Pick<ScheduleFilterState, "showCanceled" | "showPast">,
+) => {
+  const normalizedStatus = String(item.status ?? "").toUpperCase();
+  if (!filters.showCanceled && normalizedStatus.includes("CANCEL")) {
+    return false;
+  }
+  if (!filters.showPast && new Date(item.startsAt).getTime() < Date.now()) {
+    return false;
+  }
+  return true;
+};
+
 const getDateKey = (value: string, timeZone: string) =>
   new Intl.DateTimeFormat("sv-SE", {
     timeZone,
@@ -334,6 +349,7 @@ const getCalendarTitle = (filters: ScheduleFilterState) => {
 
 const Schedule = () => {
   const router = useRouter();
+  const { lastEvent } = useAdminSocket();
   const [filters, setFilters] = useState<ScheduleFilterState>(getDefaultFilters);
   const [appliedFilters, setAppliedFilters] =
     useState<ScheduleFilterState>(getDefaultFilters);
@@ -466,6 +482,80 @@ const Schedule = () => {
     if (!router.isReady || !filtersReady) return;
     fetchList();
   }, [fetchList, filtersReady, router.isReady]);
+
+  useEffect(() => {
+    if (!lastEvent) return;
+    if (
+      lastEvent.type !== "ORDER_CONFIRMED" &&
+      lastEvent.type !== "ORDER_CANCELED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const refreshAffectedOrder = async () => {
+      try {
+        const response = await getOrderSchedule(lastEvent.orderId);
+        const payload = (response.data?.result ?? response.data) as
+          | OrderScheduleItem
+          | { schedule?: OrderScheduleItem; orderSchedule?: OrderScheduleItem };
+        const nextItem =
+          (payload && "orderId" in payload ? payload : null) ??
+          (payload && "schedule" in payload ? payload.schedule ?? null : null) ??
+          (payload && "orderSchedule" in payload ? payload.orderSchedule ?? null : null);
+
+        if (isCancelled) return;
+
+        setItems((prev) => {
+          const nextItems = [...prev];
+          const existingIndex = nextItems.findIndex(
+            (item) => item.orderId === lastEvent.orderId,
+          );
+
+          if (!nextItem || !shouldShowScheduleItem(nextItem, filters)) {
+            if (existingIndex >= 0) {
+              nextItems.splice(existingIndex, 1);
+            }
+            return nextItems;
+          }
+
+          if (existingIndex >= 0) {
+            nextItems[existingIndex] = nextItem;
+          } else {
+            nextItems.push(nextItem);
+          }
+
+          nextItems.sort(
+            (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+          );
+
+          return nextItems;
+        });
+
+        if (selectedId === lastEvent.orderId) {
+          if (!nextItem || !shouldShowScheduleItem(nextItem, filters)) {
+            closeModal();
+          } else {
+            setSelectedItem(nextItem);
+          }
+        }
+      } catch {
+        if (isCancelled) return;
+        if (lastEvent.type === "ORDER_CANCELED") {
+          setItems((prev) => prev.filter((item) => item.orderId !== lastEvent.orderId));
+          if (selectedId === lastEvent.orderId) {
+            closeModal();
+          }
+        }
+      }
+    };
+
+    void refreshAffectedOrder();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [filters, lastEvent, selectedId]);
 
   useEffect(() => {
     if (!selectedId) {
