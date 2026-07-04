@@ -19,6 +19,7 @@ import {
   createAdminUser,
   deleteFinancialLedgerOrders,
   getChatsNormalizationAnalysis,
+  getChatsContactSharingRebuildJob,
   getChatsNormalizationJob,
   getBroadcastNotificationSender,
   getConnectedAdmins,
@@ -29,6 +30,7 @@ import {
   rebuildAllFinancialLedgerOrders,
   rebuildFinancialLedgerForOrder,
   rebuildAllProvidersCompletionStats,
+  rebuildChatsContactSharing,
   getProviderCompletionStatsRebuildJob,
   runChatsNormalization,
   SuperAccessEntity,
@@ -91,6 +93,17 @@ type ChatNormalizationJob = {
   error?: string | null;
   warnings?: string[];
   steps?: ChatNormalizationJobStep[];
+  progress?: Record<string, unknown> | null;
+};
+
+type ChatsContactSharingRebuildJob = {
+  id: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  currentStep?: string | null;
+  currentPhase?: string | null;
+  phase?: string | null;
+  error?: string | null;
+  warnings?: string[];
   progress?: Record<string, unknown> | null;
 };
 
@@ -801,6 +814,14 @@ const SuperAccess = () => {
   const [chatNormalizationJobId, setChatNormalizationJobId] = useState("");
   const [chatNormalizationJob, setChatNormalizationJob] =
     useState<ChatNormalizationJob | null>(null);
+  const [isRebuildingChatContactSharing, setIsRebuildingChatContactSharing] =
+    useState(false);
+  const [isChatContactSharingRebuildModalOpen, setIsChatContactSharingRebuildModalOpen] =
+    useState(false);
+  const [chatContactSharingRebuildJobId, setChatContactSharingRebuildJobId] =
+    useState("");
+  const [chatContactSharingRebuildJob, setChatContactSharingRebuildJob] =
+    useState<ChatsContactSharingRebuildJob | null>(null);
   const [providerCompletionStatsRebuildJobId, setProviderCompletionStatsRebuildJobId] =
     useState("");
   const [providerCompletionStatsRebuildJob, setProviderCompletionStatsRebuildJob] =
@@ -1874,6 +1895,47 @@ const SuperAccess = () => {
   }, [chatNormalizationJob?.status, chatNormalizationJobId, fetchChatNormalizationAnalysis]);
 
   useEffect(() => {
+    if (!chatContactSharingRebuildJobId) return;
+    if (
+      chatContactSharingRebuildJob?.status === "COMPLETED" ||
+      chatContactSharingRebuildJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getChatsContactSharingRebuildJob(
+          chatContactSharingRebuildJobId,
+        );
+        const job =
+          (response.data?.job as ChatsContactSharingRebuildJob | undefined) ??
+          (response.data?.result?.job as
+            | ChatsContactSharingRebuildJob
+            | undefined) ??
+          (response.data?.result as ChatsContactSharingRebuildJob | undefined) ??
+          (response.data as ChatsContactSharingRebuildJob | undefined);
+        if (!isCancelled && job) {
+          setChatContactSharingRebuildJob(job);
+        }
+      } catch {
+        // Ignore transient errors while polling.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 2500);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    chatContactSharingRebuildJob?.status,
+    chatContactSharingRebuildJobId,
+  ]);
+
+  useEffect(() => {
     if (!providerCompletionStatsRebuildJobId) return;
     if (
       providerCompletionStatsRebuildJob?.status === "COMPLETED" ||
@@ -1993,6 +2055,44 @@ const SuperAccess = () => {
       setError("Failed to start chat normalization.");
     } finally {
       setIsStartingChatNormalization(false);
+    }
+  };
+
+  const handleRebuildChatContactSharing = async () => {
+    if (isRebuildingChatContactSharing) return;
+    try {
+      setIsRebuildingChatContactSharing(true);
+      setError("");
+      setNotice("");
+      const response = await rebuildChatsContactSharing();
+      const job =
+        (response.data?.job as ChatsContactSharingRebuildJob | undefined) ??
+        (response.data?.result?.job as
+          | ChatsContactSharingRebuildJob
+          | undefined) ??
+        (response.data?.result as ChatsContactSharingRebuildJob | undefined) ??
+        (response.data as ChatsContactSharingRebuildJob | undefined);
+
+      if (!job?.id) {
+        setError("Failed to start phone rescan.");
+        return;
+      }
+
+      setChatContactSharingRebuildJobId(job.id);
+      setChatContactSharingRebuildJob(job);
+      setIsChatContactSharingRebuildModalOpen(true);
+      setNotice(`Started phone rescan job ${job.id}.`);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { error?: string })?.error ??
+            "Failed to start phone rescan.",
+        );
+        return;
+      }
+      setError("Failed to start phone rescan.");
+    } finally {
+      setIsRebuildingChatContactSharing(false);
     }
   };
 
@@ -2836,6 +2936,10 @@ const SuperAccess = () => {
                 setChatNormalizationAnalysis(null);
                 setChatNormalizationJobId("");
                 setChatNormalizationJob(null);
+                setIsRebuildingChatContactSharing(false);
+                setIsChatContactSharingRebuildModalOpen(false);
+                setChatContactSharingRebuildJobId("");
+                setChatContactSharingRebuildJob(null);
                 setIsScheduleRegenerationRunning(false);
                 setIsScheduleRegenerationModalOpen(false);
                 setScheduleRegenerationJobId("");
@@ -3013,6 +3117,17 @@ const SuperAccess = () => {
                       type="BLACK"
                       onClick={() => setIsChatNormalizationConfirmModalOpen(true)}
                       isDisabled={isStartingChatNormalization}
+                    />
+                    <Button
+                      title={
+                        isRebuildingChatContactSharing
+                          ? "Rescanning..."
+                          : "Rescan for phones"
+                      }
+                      type="BLACK"
+                      onClick={handleRebuildChatContactSharing}
+                      isDisabled={isRebuildingChatContactSharing}
+                      isLoading={isRebuildingChatContactSharing}
                     />
                   </>
                 )}
@@ -4681,6 +4796,78 @@ const SuperAccess = () => {
                 }
                 type="OUTLINED"
                 onClick={() => setIsChatNormalizationProgressModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isChatContactSharingRebuildModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Phone rescan progress</h3>
+            <p className={styles.modalText}>
+              {`Job: ${chatContactSharingRebuildJobId || chatContactSharingRebuildJob?.id || "—"} • Status: ${
+                chatContactSharingRebuildJob?.status ?? "PENDING"
+              }`}
+            </p>
+            {(chatContactSharingRebuildJob?.currentPhase ||
+              chatContactSharingRebuildJob?.phase) && (
+              <p className={styles.modalText}>
+                {`Phase: ${
+                  chatContactSharingRebuildJob.currentPhase ??
+                  chatContactSharingRebuildJob.phase
+                }`}
+              </p>
+            )}
+            {chatContactSharingRebuildJob?.currentStep && (
+              <p className={styles.modalText}>
+                {`Current step: ${chatContactSharingRebuildJob.currentStep}`}
+              </p>
+            )}
+            {chatContactSharingRebuildJob?.error && (
+              <div className={styles.modalError}>
+                {chatContactSharingRebuildJob.error}
+              </div>
+            )}
+            {chatContactSharingRebuildJob?.progress &&
+              typeof chatContactSharingRebuildJob.progress === "object" && (
+                <div className={styles.chatProgressList}>
+                  {Object.entries(chatContactSharingRebuildJob.progress).map(
+                    ([key, value]) => (
+                      <div key={key} className={styles.chatProgressRow}>
+                        <span>{prettyTitle(key)}</span>
+                        <strong>
+                          {typeof value === "number" ||
+                          typeof value === "string" ||
+                          typeof value === "boolean"
+                            ? String(value)
+                            : JSON.stringify(value)}
+                        </strong>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+            {Array.isArray(chatContactSharingRebuildJob?.warnings) &&
+              chatContactSharingRebuildJob.warnings.length > 0 && (
+                <div className={styles.chatStepsList}>
+                  {chatContactSharingRebuildJob.warnings.map((warning) => (
+                    <div key={warning} className={styles.chatStepRow}>
+                      <div>{warning}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            <div className={styles.modalActions}>
+              <Button
+                title={
+                  chatContactSharingRebuildJob?.status === "COMPLETED" ||
+                  chatContactSharingRebuildJob?.status === "FAILED"
+                    ? "Close"
+                    : "Hide"
+                }
+                type="OUTLINED"
+                onClick={() => setIsChatContactSharingRebuildModalOpen(false)}
               />
             </div>
           </div>
