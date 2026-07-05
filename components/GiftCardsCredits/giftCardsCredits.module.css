@@ -1,0 +1,166 @@
+.main {
+  padding: 30px 35px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  color: #000;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: normal;
+}
+
+.subtitle {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.tabActive {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 4px 0 0;
+  color: #000;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.stateText {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 2px;
+}
+
+.errorText {
+  color: #e1485f;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 2px;
+}
+
+.table {
+  border-radius: 12px;
+  background: #f9f9f9;
+  overflow: hidden;
+}
+
+.headerRowTable {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.giftHeader,
+.giftRow {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.9fr 1.1fr 1.4fr 0.9fr 0.9fr;
+  gap: 12px;
+  padding: 12px 14px;
+  align-items: center;
+}
+
+.creditHeader,
+.creditRow {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 1fr 1.8fr 1.4fr 0.9fr;
+  gap: 12px;
+  padding: 12px 14px;
+  align-items: center;
+}
+
+.giftRow,
+.creditRow {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  color: #000;
+  font-weight: 600;
+}
+
+.code {
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.muted {
+  color: rgba(0, 0, 0, 0.66);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plus {
+  color: #19ad3e;
+  font-weight: 800;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.08);
+  color: #000;
+}
+
+.badge_ACTIVE {
+  background: rgba(25, 173, 62, 0.14);
+  color: #19ad3e;
+}
+
+.badge_REDEEMED {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.badge_EXPIRED {
+  background: rgba(213, 128, 0, 0.14);
+  color: #d58000;
+}

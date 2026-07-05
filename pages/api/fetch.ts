@@ -65,10 +65,7 @@ export const setAdminApiMode = (mode: AdminApiMode) => {
 };
 
 export type AdminRole =
-  | "ADMIN"
-  | "SUPER_ADMIN"
-  | "CHAT_MODERATOR"
-  | "CREDIT_MANAGER";
+  "ADMIN" | "SUPER_ADMIN" | "CHAT_MODERATOR" | "CREDIT_MANAGER";
 export const ADMIN_ROLE_OPTIONS: AdminRole[] = [
   "ADMIN",
   "CREDIT_MANAGER",
@@ -137,11 +134,7 @@ export type OrderScheduleListResponse = {
 };
 
 export type OrderScheduleRegenerationJobPhase =
-  | "COUNT"
-  | "READ_ORDERS"
-  | "WRITE_SCHEDULE"
-  | "DELETE_STALE"
-  | "DONE";
+  "COUNT" | "READ_ORDERS" | "WRITE_SCHEDULE" | "DELETE_STALE" | "DONE";
 
 export type OrderScheduleRegenerationJob = {
   id: string;
@@ -2892,6 +2885,7 @@ type CreditsListParams = {
   q?: string;
   sortBy?: "date" | "userId" | "amount";
   sortOrder?: "asc" | "desc";
+  source?: string;
 };
 
 export const getCredits = async (params?: CreditsListParams) => {
@@ -2903,6 +2897,28 @@ export const getCredits = async (params?: CreditsListParams) => {
       q: params?.q,
       sortBy: params?.sortBy ?? "date",
       sortOrder: params?.sortOrder ?? "desc",
+      source: params?.source,
+    },
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const getAdminGiftCards = async (params?: {
+  filter?: "REDEEMED" | "NOT_REDEEMED" | "EXPIRED";
+  startIndex?: number;
+  pageSize?: number;
+  q?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/gift-cards`, {
+    params: {
+      filter: params?.filter,
+      startIndex: params?.startIndex ?? 0,
+      pageSize: params?.pageSize ?? 20,
+      q: params?.q,
     },
     headers: {
       Authorization: jwt,
@@ -2916,28 +2932,34 @@ export const getUserCredits = async (
   params?: CreditsListParams,
 ) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/users/${userId}/credits`, {
-    params: {
-      startIndex: params?.startIndex ?? 0,
-      pageSize: params?.pageSize ?? 20,
-      q: params?.q,
-      sortBy: params?.sortBy ?? "date",
-      sortOrder: params?.sortOrder ?? "desc",
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/${userId}/credits`,
+    {
+      params: {
+        startIndex: params?.startIndex ?? 0,
+        pageSize: params?.pageSize ?? 20,
+        q: params?.q,
+        sortBy: params?.sortBy ?? "date",
+        sortOrder: params?.sortOrder ?? "desc",
+      },
+      headers: {
+        Authorization: jwt,
+      },
     },
-    headers: {
-      Authorization: jwt,
-    },
-  });
+  );
   return response;
 };
 
 export const getUserCreditsCount = async (userId: string) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/users/${userId}/credits/count`, {
-    headers: {
-      Authorization: jwt,
+  const response = await axios.get(
+    `${BASE_URL}/admin/users/${userId}/credits/count`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
     },
-  });
+  );
   return response;
 };
 
@@ -3125,7 +3147,7 @@ export const getSuperAccessList = async (
       ? `${BASE_URL}/admin-user`
       : entity === "schedule"
         ? `${BASE_URL}/admin/order-schedule`
-      : `${BASE_URL}/admin/super/${entity}`;
+        : `${BASE_URL}/admin/super/${entity}`;
   const response = await axios.get(url, {
     params: {
       startIndex: params?.startIndex ?? 0,
@@ -3241,7 +3263,7 @@ export const getSuperAccessItem = async (
       ? `${BASE_URL}/admin-user/${id}`
       : entity === "schedule"
         ? `${BASE_URL}/admin/order-schedule/${id}`
-      : `${BASE_URL}/admin/super/${entity}/${id}`;
+        : `${BASE_URL}/admin/super/${entity}/${id}`;
   const response = await axios.get(url, {
     headers: {
       Authorization: jwt,
@@ -3315,11 +3337,14 @@ export const getOrderSchedules = async (params?: {
 
 export const getOrderSchedule = async (orderId: string) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.get(`${BASE_URL}/admin/order-schedule/${orderId}`, {
-    headers: {
-      Authorization: jwt,
+  const response = await axios.get(
+    `${BASE_URL}/admin/order-schedule/${orderId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
     },
-  });
+  );
   return response;
 };
 
@@ -3374,11 +3399,15 @@ export const createDiscountCode = async (payload: {
   expiresAt?: string | null;
 }) => {
   const jwt = Cookies.get("@user_jwt");
-  const response = await axios.post(`${BASE_URL}/admin/discount-codes`, payload, {
-    headers: {
-      Authorization: jwt,
+  const response = await axios.post(
+    `${BASE_URL}/admin/discount-codes`,
+    payload,
+    {
+      headers: {
+        Authorization: jwt,
+      },
     },
-  });
+  );
   return response;
 };
 
