@@ -108,6 +108,9 @@ const Order = ({
               {discountCode && (
                 <span className={styles.discountTag}>{discountCode}</span>
               )}
+              {(creditsAppliedCents ?? 0) > 0 && (
+                <span className={styles.creditsTag}>Credits used</span>
+              )}
             </>
           ) : (
             totalPriceText

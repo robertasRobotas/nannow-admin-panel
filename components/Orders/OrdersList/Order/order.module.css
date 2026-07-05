@@ -149,6 +149,13 @@
   color: #e1485f;
 }
 
+.creditsTag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #19ad3e;
+}
+
 .orderStatus {
   color: black;
   font-family: Inter;
