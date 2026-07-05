@@ -3349,3 +3349,63 @@ export const getOrderScheduleRegenerationJob = async (jobId: string) => {
   );
   return response;
 };
+
+// ---- Discount codes ----
+
+export const getDiscountCodes = async (params?: {
+  startIndex?: number;
+  pageSize?: number;
+  q?: string;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(`${BASE_URL}/admin/discount-codes`, {
+    params,
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const createDiscountCode = async (payload: {
+  code: string;
+  percentOff: number;
+  usageType: "ONE_TIME" | "ONCE_PER_USER";
+  expiresAt?: string | null;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(`${BASE_URL}/admin/discount-codes`, payload, {
+    headers: {
+      Authorization: jwt,
+    },
+  });
+  return response;
+};
+
+export const revokeDiscountCode = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/discount-codes/${id}/revoke`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const expireDiscountCode = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/discount-codes/${id}/expire`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};

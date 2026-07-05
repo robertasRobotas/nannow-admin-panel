@@ -15,6 +15,7 @@ import {
   Shield,
   ShoppingBag,
   Star,
+  Tag,
   Users,
   Wallet,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/compensation": Receipt,
   "/users/compensation-requests": Receipt,
   "/campaigns": Megaphone,
+  "/discount-codes": Tag,
   "/orders": ShoppingBag,
   "/criminal-check": Shield,
   "/documents": FileText,

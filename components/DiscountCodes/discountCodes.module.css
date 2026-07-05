@@ -1,0 +1,175 @@
+.main {
+  padding: 30px 35px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  color: #000;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: normal;
+}
+
+.subtitle {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.panel {
+  border-radius: 24px;
+  background: #f1f1f1;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #000;
+}
+
+.filtersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.72);
+  text-transform: uppercase;
+}
+
+.field input,
+.field select {
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  border-radius: 12px;
+  min-height: 42px;
+  padding: 0 12px;
+  background: #fff;
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.stateText {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 2px;
+}
+
+.errorText {
+  color: #e1485f;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 2px;
+}
+
+.table {
+  border-radius: 12px;
+  background: #f9f9f9;
+  overflow: hidden;
+}
+
+.tableHeader,
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.4fr 0.6fr 0.9fr 1fr 1fr 0.6fr 1fr 1.6fr;
+  gap: 12px;
+  padding: 12px 14px;
+  align-items: center;
+}
+
+.tableHeader {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.tableRow {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  color: #000;
+}
+
+.colCode {
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.col {
+  font-weight: 600;
+}
+
+.colActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.08);
+  color: #000;
+}
+
+.badge_ACTIVE {
+  background: rgba(25, 173, 62, 0.14);
+  color: #19ad3e;
+}
+
+.badge_REDEEMED {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.badge_REVOKED {
+  background: rgba(225, 72, 95, 0.14);
+  color: #e1485f;
+}
+
+.badge_EXPIRED {
+  background: rgba(213, 128, 0, 0.14);
+  color: #d58000;
+}
