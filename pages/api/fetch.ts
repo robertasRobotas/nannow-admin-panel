@@ -3201,6 +3201,33 @@ export const getChatsNormalizationJob = async (jobId: string) => {
   return response;
 };
 
+export const rebuildChatsContactSharing = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.post(
+    `${BASE_URL}/admin/super/chats/rebuild`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getChatsContactSharingRebuildJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/super/chats/rebuild/jobs/${jobId}`,
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const getStripeKycAudit = async (params?: {
   userId?: string;
   startIndex?: number;
