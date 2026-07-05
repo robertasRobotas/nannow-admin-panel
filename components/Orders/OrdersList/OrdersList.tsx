@@ -8,7 +8,10 @@ type OrdersListProps = {
   recentlyChangedOrderIds?: Record<string, true>;
 };
 
-const OrdersList = ({ orders, recentlyChangedOrderIds = {} }: OrdersListProps) => {
+const OrdersList = ({
+  orders,
+  recentlyChangedOrderIds = {},
+}: OrdersListProps) => {
   const getUserImage = (imgUrl?: string) =>
     imgUrl && imgUrl.length > 0 ? imgUrl : defaultUserImg.src;
 
@@ -45,6 +48,9 @@ const OrdersList = ({ orders, recentlyChangedOrderIds = {} }: OrdersListProps) =
             startsAt={u.startsAt}
             endsAt={u.endsAt}
             totalPrice={u.totalPrice}
+            creditsAppliedCents={u.creditsAppliedCents}
+            discountCode={u.discountCode}
+            discountAppliedCents={u.discountAppliedCents}
             isUrgent={u.isUrgent}
             isDirectOrderToProvider={u.isDirectOrderToProvider}
             providerName={getProviderName(

@@ -60,6 +60,9 @@ export type OrderType = {
   updatedAt?: string | null;
   approvedProviderId: string | null;
   totalPrice: number | null;
+  creditsAppliedCents?: number | null;
+  discountCode?: string | null;
+  discountAppliedCents?: number | null;
   subtotalPrice: number | null;
   platformFeePrice: number | null;
   status: OrderStatus;

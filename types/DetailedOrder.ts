@@ -74,6 +74,9 @@ export type DetailedOrderType = {
   platformFeePrice: number;
   status: string;
   paymentStatus: string;
+  creditsAppliedCents?: number | null;
+  discountCode?: string | null;
+  discountAppliedCents?: number | null;
   paidAt?: string | null;
   stripeCustomerId?: string | null;
   stripePaymentDescription?: string | null;

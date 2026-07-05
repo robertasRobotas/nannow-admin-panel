@@ -16,6 +16,9 @@ type OrderProps = {
   startsAt: string;
   endsAt: string;
   totalPrice?: number | null;
+  creditsAppliedCents?: number | null;
+  discountCode?: string | null;
+  discountAppliedCents?: number | null;
   isUrgent?: boolean;
   isProviderIgnoredEndNotification?: boolean;
   pendingProvidersCount?: number;
@@ -35,6 +38,9 @@ const Order = ({
   startsAt,
   endsAt,
   totalPrice,
+  creditsAppliedCents,
+  discountCode,
+  discountAppliedCents,
   isUrgent = false,
   isProviderIgnoredEndNotification,
   pendingProvidersCount,
@@ -56,6 +62,14 @@ const Order = ({
   const timeRangeText = `${formatDateTime(startsAt)} - ${formatDateTime(endsAt)}`;
   const totalPriceText =
     typeof totalPrice === "number" ? `€${totalPrice.toFixed(2)}` : null;
+  const reductionCents = Math.max(
+    0,
+    (creditsAppliedCents ?? 0) + (discountAppliedCents ?? 0),
+  );
+  const hasReduction = typeof totalPrice === "number" && reductionCents > 0;
+  const chargedText = hasReduction
+    ? `€${Math.max(0, (totalPrice as number) - reductionCents / 100).toFixed(2)}`
+    : null;
 
   return (
     <Link
@@ -85,7 +99,21 @@ const Order = ({
           <div className={styles.timeRange}>{timeRangeText}</div>
         </div>
       </div>
-      {totalPriceText && <div className={styles.totalPrice}>{totalPriceText}</div>}
+      {totalPriceText && (
+        <div className={styles.totalPrice}>
+          {hasReduction ? (
+            <>
+              <span className={styles.originalPrice}>{totalPriceText}</span>
+              <span>{chargedText}</span>
+              {discountCode && (
+                <span className={styles.discountTag}>{discountCode}</span>
+              )}
+            </>
+          ) : (
+            totalPriceText
+          )}
+        </div>
+      )}
       <div className={styles.orderStatus}>
         {statusTitle}
         {isProviderIgnoredEndNotification && (

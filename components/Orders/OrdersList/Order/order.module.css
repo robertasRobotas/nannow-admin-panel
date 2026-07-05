@@ -129,6 +129,24 @@
   font-family: Inter;
   font-size: 14px;
   font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.originalPrice {
+  text-decoration: line-through;
+  color: rgba(0, 0, 0, 0.4);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.discountTag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #e1485f;
 }
 
 .orderStatus {

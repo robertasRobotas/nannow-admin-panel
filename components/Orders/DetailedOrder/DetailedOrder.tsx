@@ -1271,6 +1271,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           duration={order?.serviceDurationHours}
           uegentFee={order?.urgentFee ?? 0}
           totalProviderPrice={order?.totalProviderPrice ?? 0}
+          creditsAppliedCents={order?.creditsAppliedCents ?? 0}
+          discountCode={order?.discountCode ?? null}
+          discountAppliedCents={order?.discountAppliedCents ?? 0}
         />
         {hasAdditionalPayments && (
           <div className={styles.additionalPaymentsSection}>
