@@ -1,4 +1,5 @@
 export type AdminEvent =
+  | { type: "SUSPICIOUS_CHAT_MESSAGE"; messageId: string; chatId: string; senderId: string; receiverId: string; score: number; detectedAt: string }
   | {
       type: "ADMIN_CONNECTED";
       adminId: string;

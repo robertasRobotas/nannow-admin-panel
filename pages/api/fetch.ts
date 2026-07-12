@@ -1335,6 +1335,24 @@ export const getAdminChats = async ({
   return response;
 };
 
+export const getChatModerationRules = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/chat-moderation/rules`, { headers: { Authorization: jwt } });
+};
+
+export const updateChatModerationRule = async (ruleId: string, data: Record<string, unknown>) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.patch(`${BASE_URL}/admin/chat-moderation/rules/${ruleId}`, data, { headers: { Authorization: jwt } });
+};
+export const deleteChatModerationLanguage = async (ruleId: string, language: string) => { const jwt = Cookies.get("@user_jwt"); return axios.delete(`${BASE_URL}/admin/chat-moderation/rules/${ruleId}/languages/${language}`, { headers: { Authorization: jwt } }); };
+export const deleteChatModerationRule = async (ruleId: string) => { const jwt = Cookies.get("@user_jwt"); return axios.delete(`${BASE_URL}/admin/chat-moderation/rules/${ruleId}`, { headers: { Authorization: jwt } }); };
+export const createChatModerationRule = async (data: Record<string, unknown>) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(`${BASE_URL}/admin/chat-moderation/rules`, data, { headers: { Authorization: jwt } });
+};
+export const getChatModerationSettings = async () => { const jwt = Cookies.get("@user_jwt"); return axios.get(`${BASE_URL}/admin/chat-moderation/settings`, { headers: { Authorization: jwt } }); };
+export const updateChatModerationSettings = async (detectorThreshold: number) => { const jwt = Cookies.get("@user_jwt"); return axios.patch(`${BASE_URL}/admin/chat-moderation/settings`, { detectorThreshold }, { headers: { Authorization: jwt } }); };
+
 export const getSystemNannowChatsUnreadCount = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(

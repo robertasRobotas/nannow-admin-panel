@@ -128,6 +128,8 @@ const Header = () => {
   const [apiMode, setApiMode] = useState<AdminApiMode>("production");
   const { pathname } = useRouter();
   const { lastEvent } = useAdminSocket();
+  const [suspiciousChatsCount, setSuspiciousChatsCount] = useState(0);
+  useEffect(() => { if (lastEvent?.type === "SUSPICIOUS_CHAT_MESSAGE") setSuspiciousChatsCount((count) => count + 1); }, [lastEvent]);
 
   const router = useRouter();
 
@@ -583,6 +585,7 @@ const Header = () => {
     if (normalizedLink === "/nannow-chats" && unreadSystemNannowChatsCount > 0) {
       return unreadSystemNannowChatsCount;
     }
+    if (normalizedLink === "/chats" && suspiciousChatsCount > 0) return suspiciousChatsCount;
     if (normalizedLink === "/reports" && notResolvedReportsCount > 0) {
       return notResolvedReportsCount;
     }

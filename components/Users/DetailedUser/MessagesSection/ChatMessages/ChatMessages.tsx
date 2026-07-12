@@ -47,6 +47,9 @@ type ChatMessageHistoryResponse = {
 
 const getMessageFlag = (message: ChatMessageType) => {
   if (message.isDeleted) return "Deleted by admin";
+  if (message.paymentRisk?.isSuspicious) {
+    return `Suspicious payment language (score ${message.paymentRisk.score})`;
+  }
   if (message.isModerated && message.lastEditedByAdminName) {
     return `Edited by ${message.lastEditedByAdminName}`;
   }
@@ -358,15 +361,16 @@ const ChatMessages = ({
               }`}
             >
               {!isFromUser && (
-                <img
-                  className={styles.profileImg}
-                  src={otherUserImgUrl.length > 0 ? otherUserImgUrl : avatarImg.src}
-                />
+                <div style={{ position: "relative" }}>
+                  {message.paymentRisk?.isSuspicious && <span style={{ position: "absolute", top: -18, left: "50%", transform: "translateX(-50%)", minWidth: 22, height: 22, padding: "0 5px", borderRadius: 999, background: "#dc2626", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, zIndex: 2 }}>{message.paymentRisk.score}</span>}
+                  <img className={styles.profileImg} src={otherUserImgUrl.length > 0 ? otherUserImgUrl : avatarImg.src} />
+                </div>
               )}
               <div
                 className={`${styles.chatBubble} ${
                   isFromUser ? styles.sent : styles.received
                 } ${message.isDeleted ? styles.deletedBubble : ""}`}
+                style={{ position: "relative" }}
               >
                 {!message.isRead && <span className={styles.messageUnreadDot} />}
                 {isEditing ? (
@@ -488,10 +492,10 @@ const ChatMessages = ({
                 )}
               </div>
               {isFromUser && (
-                <img
-                  className={styles.profileImg}
-                  src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src}
-                />
+                <div style={{ position: "relative" }}>
+                  {message.paymentRisk?.isSuspicious && <span style={{ position: "absolute", top: -18, left: "50%", transform: "translateX(-50%)", minWidth: 22, height: 22, padding: "0 5px", borderRadius: 999, background: "#dc2626", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, zIndex: 2 }}>{message.paymentRisk.score}</span>}
+                  <img className={styles.profileImg} src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src} />
+                </div>
               )}
             </div>
           );

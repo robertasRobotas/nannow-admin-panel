@@ -377,6 +377,10 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
     };
   }
 
+  if (parsed.type === "SUSPICIOUS_CHAT_MESSAGE" && typeof parsed.messageId === "string" && typeof parsed.chatId === "string" && typeof parsed.score === "number") {
+    return { type: "SUSPICIOUS_CHAT_MESSAGE", messageId: parsed.messageId, chatId: parsed.chatId, senderId: String(parsed.senderId ?? ""), receiverId: String(parsed.receiverId ?? ""), score: parsed.score, detectedAt: String(parsed.detectedAt ?? "") };
+  }
+
   return null;
 };
 
@@ -402,6 +406,8 @@ const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
         linkHref: `/orders/${event.orderId}`,
         linkLabel: "Open order",
       };
+    case "SUSPICIOUS_CHAT_MESSAGE":
+      return { ...event, title: "Suspicious chat message", description: `Score ${event.score}`, linkHref: `/chats?id=${event.chatId}`, linkLabel: "Open chat" };
     case "ORDER_CONFIRMED":
       return {
         ...event,
@@ -574,6 +580,8 @@ export const AdminSocketProvider = ({
         return `${event.type}:${event.id}`;
       case "SYSTEM_CHAT_UNREAD_CHANGED":
         return `${event.type}:${event.chatId}:${event.unreadCount}`;
+      case "SUSPICIOUS_CHAT_MESSAGE":
+        return `${event.type}:${event.messageId}`;
       case "FEEDBACK_CREATED":
         return `${event.type}:${event.feedbackId}`;
       case "FEEDBACK_RESOLVED":
