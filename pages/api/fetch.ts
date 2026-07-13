@@ -1339,6 +1339,7 @@ export const getChatModerationRules = async () => {
   const jwt = Cookies.get("@user_jwt");
   return axios.get(`${BASE_URL}/admin/chat-moderation/rules`, { headers: { Authorization: jwt } });
 };
+export const testChatModerationRegex = async (pattern: string, examples: string[]) => { const jwt = Cookies.get("@user_jwt"); return axios.post(`${BASE_URL}/admin/chat-moderation/rules/test-regex`, { pattern, examples }, { headers: { Authorization: jwt } }); };
 
 export const updateChatModerationRule = async (ruleId: string, data: Record<string, unknown>) => {
   const jwt = Cookies.get("@user_jwt");
