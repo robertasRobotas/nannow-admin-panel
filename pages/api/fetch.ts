@@ -1314,11 +1314,13 @@ export const getAdminChats = async ({
   pageSize = 20,
   sort = "latest",
   search,
+  suspiciousOnly = false,
 }: {
   startIndex?: number;
   pageSize?: number;
   sort?: "latest" | "name";
   search?: string;
+  suspiciousOnly?: boolean;
 }) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/chats`, {
@@ -1327,6 +1329,7 @@ export const getAdminChats = async ({
       pageSize,
       sort,
       search: search?.trim() || undefined,
+      suspiciousOnly: suspiciousOnly || undefined,
     },
     headers: {
       Authorization: jwt,
@@ -1444,6 +1447,15 @@ export const updateChatMessageByAdmin = async (
     },
   );
   return response;
+};
+
+export const acknowledgeChatMessagePaymentRiskByAdmin = async (messageId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/chats/messages/${messageId}/payment-risk/acknowledge`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
 };
 
 export const deleteChatMessageImageByAdmin = async (messageId: string) => {

@@ -88,6 +88,8 @@ const AdminChats = () => {
   const [pageSize, setPageSize] = useState(20);
   const [searchText, setSearchText] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  const [suspiciousOnly, setSuspiciousOnly] = useState(false);
+  const [suspiciousChatsCount, setSuspiciousChatsCount] = useState(0);
   const [selectedSortOption, setSelectedSortOption] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -169,6 +171,7 @@ const AdminChats = () => {
         pageSize,
         sort: selectedSort,
         search: appliedSearch,
+        suspiciousOnly,
       });
       const payload = response.data as
         | GetAdminChatsResponse
@@ -185,6 +188,7 @@ const AdminChats = () => {
       setItems(visibleItems);
       setPageSize(nextPageSize);
       setPageCount(Math.max(1, Math.ceil(nextTotal / nextPageSize)));
+      setSuspiciousChatsCount(Number(data?.suspiciousTotal ?? 0));
       setSelectedChatId((prev) => {
         if (prev && visibleItems.some((item) => (item.chatId ?? item.id) === prev)) {
           return prev;
@@ -200,7 +204,7 @@ const AdminChats = () => {
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, itemOffset, pageSize, selectedSort]);
+  }, [appliedSearch, itemOffset, pageSize, selectedSort, suspiciousOnly]);
 
   useEffect(() => {
     fetchChats();
@@ -216,6 +220,21 @@ const AdminChats = () => {
       setMessages(Array.isArray(result.messages) ? result.messages : []);
     });
   }, [fetchChats, lastEvent, selectedChatId]);
+
+  useEffect(() => {
+    const handleSuspiciousChatsCountUpdate = () => {
+      void fetchChats();
+    };
+    window.addEventListener(
+      "admin-suspicious-chats-count-update",
+      handleSuspiciousChatsCountUpdate,
+    );
+    return () =>
+      window.removeEventListener(
+        "admin-suspicious-chats-count-update",
+        handleSuspiciousChatsCountUpdate,
+      );
+  }, [fetchChats]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -523,6 +542,15 @@ const AdminChats = () => {
               });
             }}
           />
+          <div style={{ position: "relative", display: "inline-flex" }}>
+            <Button
+              title="Suspicious chats"
+              type={suspiciousOnly ? "BLACK" : "OUTLINED"}
+              onClick={() => { setSuspiciousOnly((current) => !current); setItemOffset(0); }}
+              isDisabled={loading}
+            />
+            {suspiciousChatsCount > 0 && <span style={{ position: "absolute", top: -8, right: -8, minWidth: 20, height: 20, padding: "0 5px", borderRadius: 999, background: "#dc2626", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>{suspiciousChatsCount}</span>}
+          </div>
           <Button
             title="Payment keywords"
             type="OUTLINED"
@@ -566,9 +594,9 @@ const AdminChats = () => {
                 const lastMessage = Array.isArray(chat.messages)
                   ? chat.messages[chat.messages.length - 1]
                   : chat.lastMessage ?? null;
-                const suspiciousMessage = Array.isArray(chat.messages)
+                const suspiciousMessage = chat.isSuspicious || (Array.isArray(chat.messages)
                   ? chat.messages.find((message) => message.paymentRisk?.isSuspicious)
-                  : chat.lastMessage?.paymentRisk?.isSuspicious ? chat.lastMessage : null;
+                  : chat.lastMessage?.paymentRisk?.isSuspicious ? chat.lastMessage : null);
                 const user1Name = `${chat.user1?.firstName ?? "Deleted"} ${
                   chat.user1?.lastName ?? "User"
                 }`.trim();
