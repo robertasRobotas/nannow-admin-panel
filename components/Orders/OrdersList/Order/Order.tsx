@@ -5,6 +5,7 @@ import { OrderStatus } from "@/types/Order";
 
 type OrderProps = {
   status: OrderStatus;
+  paymentStatus?: string | null;
   isDirectOrderToProvider?: boolean;
   providerName: string;
   providerImgUrl: string;
@@ -27,6 +28,7 @@ type OrderProps = {
 
 const Order = ({
   status,
+  paymentStatus,
   isDirectOrderToProvider = false,
   providerName,
   providerImgUrl,
@@ -47,6 +49,9 @@ const Order = ({
   isRecentlyChanged = false,
 }: OrderProps) => {
   const statusTitle = getOrderStatusTitle(status, isDirectOrderToProvider);
+  // Money reserved on the card (manual capture) but not captured yet.
+  const isPaymentReserved =
+    String(paymentStatus ?? "").toUpperCase() === "AUTHORIZED";
 
   const formatDateTime = (iso: string) =>
     new Date(iso).toLocaleString("en-GB", {
@@ -75,8 +80,8 @@ const Order = ({
     <Link
       href={`/orders/${id}`}
       className={`${styles.main} ${
-        isRecentlyChanged ? styles.recentlyChanged : ""
-      }`}
+        isPaymentReserved ? styles.reservedPayment : ""
+      } ${isRecentlyChanged ? styles.recentlyChanged : ""}`}
     >
       <div className={styles.orderUsers}>
         <div className={styles.profilePics}>
@@ -94,6 +99,9 @@ const Order = ({
                 </div>
               )}
             {isUrgent && <div className={styles.urgentBadge}>Urgent</div>}
+            {isPaymentReserved && (
+              <div className={styles.reservedBadge}>Reserved</div>
+            )}
           </div>
           <div className={styles.updatedAt}>Updated: {updatedAtText}</div>
           <div className={styles.timeRange}>{timeRangeText}</div>

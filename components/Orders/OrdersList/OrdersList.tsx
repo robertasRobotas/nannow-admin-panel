@@ -62,6 +62,7 @@ const OrdersList = ({
               clientUser?.lastName,
             )} (Client)`}
             status={u.status}
+            paymentStatus={u.paymentStatus}
             isProviderIgnoredEndNotification={
               u.isProviderIgnoredEndNotification
             }

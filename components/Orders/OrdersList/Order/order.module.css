@@ -20,6 +20,29 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+/* Money reserved on the card (manual capture) but not captured yet. */
+.reservedPayment {
+  background-color: rgba(255, 149, 0, 0.12);
+}
+
+.reservedPayment:hover {
+  background-color: rgba(255, 149, 0, 0.22);
+}
+
+.reservedBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 149, 0, 0.16);
+  color: #c46a00;
+  font-family: Inter;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 @keyframes recentlyChangedOrderHighlight {
   0% {
     background-color: rgba(255, 224, 102, 0.75);
