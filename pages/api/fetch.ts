@@ -2437,6 +2437,20 @@ export const refundOrderById = async (id: string) => {
   return response;
 };
 
+export const returnMoneyToParentById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/return-money`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const captureOrderPaymentById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(

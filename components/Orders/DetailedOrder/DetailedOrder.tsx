@@ -35,6 +35,7 @@ import {
   payoutCancelFeeByOrderId,
   refundOrderById,
   releaseFundsByOrderId,
+  returnMoneyToParentById,
   updateOrderStatusByAdmin,
 } from "@/pages/api/fetch";
 import documentImg from "../../../assets/images/doc.svg";
@@ -80,6 +81,11 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
     useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [isReturnMoneyModalOpen, setIsReturnMoneyModalOpen] = useState(false);
+  const [isReturningMoney, setIsReturningMoney] = useState(false);
+  const [returnMoneyError, setReturnMoneyError] = useState<string | null>(
+    null,
+  );
   const [isCapturingPayment, setIsCapturingPayment] = useState(false);
   const [isReleasingAuthorization, setIsReleasingAuthorization] =
     useState(false);
@@ -362,6 +368,23 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       setPaymentActionError(extractPaymentActionError(error));
     } finally {
       setIsReleasingAuthorization(false);
+    }
+  };
+
+  const confirmReturnMoneyToParent = async () => {
+    if (isReturningMoney) return;
+    try {
+      setIsReturningMoney(true);
+      setReturnMoneyError(null);
+      const response = await returnMoneyToParentById(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to return money to parent", error);
+      setReturnMoneyError(extractPaymentActionError(error));
+    } finally {
+      setIsReturningMoney(false);
     }
   };
 
@@ -1941,6 +1964,21 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           )}
       </div>
       <div className={styles.closeOrderRow}>
+        {!isCanceledOrder &&
+          (isOrderPaid || isPaymentAuthorized) &&
+          !order?.refundedAt && (
+            <Button
+              title={
+                isReturningMoney ? "Returning..." : "Return money to parent"
+              }
+              type="OUTLINED"
+              isDisabled={isReturningMoney}
+              onClick={() => {
+                setReturnMoneyError(null);
+                setIsReturnMoneyModalOpen(true);
+              }}
+            />
+          )}
         {!isCanceledOrder && (
           <Button
             title={isCancelingOrder ? "Canceling..." : "Cancel order"}
@@ -1956,6 +1994,44 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           onClick={() => setIsCloseOrderModalOpen(true)}
         />
       </div>
+      {isReturnMoneyModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>
+              Return money to parent?
+            </h2>
+            <p className={styles.confirmationBody}>
+              {isPaymentAuthorized
+                ? "The reserved money will be released back to the parent's card for free (no charge was made)."
+                : "The captured payment will be refunded to the parent via Stripe."}{" "}
+              This action cannot be undone.
+            </p>
+            {order?.isReleasedFundsToProvider && (
+              <p className={styles.errorDetails}>
+                ⚠️ The sitter was already paid for this order. Returning the
+                money to the parent will NOT take it back from the sitter.
+              </p>
+            )}
+            {returnMoneyError && (
+              <p className={styles.errorDetails}>{returnMoneyError}</p>
+            )}
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsReturnMoneyModalOpen(false)}
+                isDisabled={isReturningMoney}
+              />
+              <Button
+                title={isReturningMoney ? "Returning..." : "Confirm return"}
+                type="DELETE"
+                onClick={confirmReturnMoneyToParent}
+                isDisabled={isReturningMoney}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {isConfirmModalOpen && (
         <div className={styles.confirmationBackdrop}>
           <div className={`${styles.confirmationModal} ${nunito.className}`}>
