@@ -20,7 +20,9 @@ import PriceSummary from "./PriceSummary/PriceSummary";
 import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
 import {
+  cancelOrderAuthorizationById,
   cancelOrderByAdmin,
+  captureOrderPaymentById,
   closeOrderByAdmin,
   finishOrderByAdmin,
   getInvoicePdf,
@@ -78,6 +80,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
     useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [isCapturingPayment, setIsCapturingPayment] = useState(false);
+  const [isReleasingAuthorization, setIsReleasingAuthorization] =
+    useState(false);
+  const [paymentActionError, setPaymentActionError] = useState<string | null>(
+    null,
+  );
   const [isPayingCancelFee, setIsPayingCancelFee] = useState(false);
   const [isPayingAdditionalPayments, setIsPayingAdditionalPayments] =
     useState(false);
@@ -309,6 +317,51 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       console.error("Failed to refund order", error);
     } finally {
       setIsRefunding(false);
+    }
+  };
+
+  const extractPaymentActionError = (error: unknown) => {
+    if (typeof error === "object" && error !== null) {
+      const data = (error as { response?: { data?: { error?: unknown } } })
+        .response?.data;
+      if (typeof data?.error === "string" && data.error.trim().length > 0) {
+        return data.error;
+      }
+    }
+    return "Payment action failed";
+  };
+
+  const capturePayment = async () => {
+    if (isCapturingPayment || isReleasingAuthorization) return;
+    try {
+      setIsCapturingPayment(true);
+      setPaymentActionError(null);
+      const response = await captureOrderPaymentById(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to capture payment", error);
+      setPaymentActionError(extractPaymentActionError(error));
+    } finally {
+      setIsCapturingPayment(false);
+    }
+  };
+
+  const releaseAuthorization = async () => {
+    if (isCapturingPayment || isReleasingAuthorization) return;
+    try {
+      setIsReleasingAuthorization(true);
+      setPaymentActionError(null);
+      const response = await cancelOrderAuthorizationById(order.id);
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to release authorization", error);
+      setPaymentActionError(extractPaymentActionError(error));
+    } finally {
+      setIsReleasingAuthorization(false);
     }
   };
 
@@ -740,6 +793,54 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     shouldShowInvoiceCards && !!order?.approvedProviderId;
   const isOrderPaid =
     String(order?.paymentStatus ?? "").toUpperCase() === "PAID";
+  const paymentStatusUpper = String(order?.paymentStatus ?? "").toUpperCase();
+  const isManualCapturePayment = order?.paymentCaptureMethod === "MANUAL";
+  const isPaymentAuthorized = paymentStatusUpper === "AUTHORIZED";
+  const isAuthorizationReleased =
+    paymentStatusUpper === "AUTHORIZATION_CANCELED";
+  const isAuthorizationExpired =
+    paymentStatusUpper === "AUTHORIZATION_EXPIRED" ||
+    !!order?.paymentRecoveryRequired;
+  const captureDeadlineDate = order?.captureDeadlineAt
+    ? new Date(order.captureDeadlineAt)
+    : null;
+  const captureDeadlineMsLeft = captureDeadlineDate
+    ? captureDeadlineDate.getTime() - Date.now()
+    : null;
+  const formatTimeLeft = (ms: number) => {
+    if (ms <= 0) return "expired";
+    const totalHours = Math.floor(ms / (60 * 60 * 1000));
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (totalHours > 0) return `${hours}h ${minutes}m left`;
+    return `${minutes}m left`;
+  };
+  const isCaptureDeadlineSoon =
+    isPaymentAuthorized &&
+    captureDeadlineMsLeft !== null &&
+    captureDeadlineMsLeft < 24 * 60 * 60 * 1000;
+  const formatPaymentDate = (value?: string | null) =>
+    value
+      ? new Date(value).toLocaleString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "-";
+  const paymentStatusTitle = isPaymentAuthorized
+    ? "Reserved (waiting for capture)"
+    : isAuthorizationReleased
+      ? "Reservation released (no charge)"
+      : isAuthorizationExpired
+        ? "Reservation expired — payment recovery needed"
+        : isOrderPaid
+          ? "Paid (captured)"
+          : paymentStatusUpper || "-";
   const isRejectedDirectOffer =
     orderStatusUpper === "PROVIDER_REJECTED_DIRECT_OFFER";
   const isCanceledNotPaidByClient =
@@ -1635,6 +1736,116 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           </div>
         )}
       </div>
+      {(isManualCapturePayment ||
+        isPaymentAuthorized ||
+        isAuthorizationReleased ||
+        isAuthorizationExpired) && (
+        <div className={`${styles.paymentCaptureCard} ${nunito.className}`}>
+          <div className={styles.paymentCaptureHeader}>
+            <span className={styles.paymentCaptureTitle}>Payment</span>
+            <span className={styles.paymentCaptureType}>
+              {isManualCapturePayment
+                ? "Reserved on card (manual capture)"
+                : "Charged immediately"}
+            </span>
+          </div>
+          <div className={styles.paymentCaptureRows}>
+            <div className={styles.breakdownRow}>
+              <span className={styles.breakdownLabel}>Status</span>
+              <span className={styles.breakdownAmount}>
+                {paymentStatusTitle}
+              </span>
+            </div>
+            <div className={styles.breakdownRow}>
+              <span className={styles.breakdownLabel}>Reserved amount</span>
+              <span className={styles.breakdownAmount}>
+                {formatCents(order?.authorizedAmountCents)}
+                {order?.authorizedAt
+                  ? ` (at ${formatPaymentDate(order.authorizedAt)})`
+                  : ""}
+              </span>
+            </div>
+            <div className={styles.breakdownRow}>
+              <span className={styles.breakdownLabel}>Captured amount</span>
+              <span className={styles.breakdownAmount}>
+                {formatCents(order?.capturedAmountCents)}
+                {order?.capturedAt
+                  ? ` (at ${formatPaymentDate(order.capturedAt)})`
+                  : ""}
+              </span>
+            </div>
+            {captureDeadlineDate && !isOrderPaid && !isAuthorizationReleased && (
+              <div className={styles.breakdownRow}>
+                <span className={styles.breakdownLabel}>Capture deadline</span>
+                <span className={styles.breakdownAmount}>
+                  {formatPaymentDate(order?.captureDeadlineAt)}
+                  {captureDeadlineMsLeft !== null && isPaymentAuthorized
+                    ? ` — ${formatTimeLeft(captureDeadlineMsLeft)}`
+                    : ""}
+                </span>
+              </div>
+            )}
+            {isAuthorizationReleased && (
+              <div className={styles.breakdownRow}>
+                <span className={styles.breakdownLabel}>Released</span>
+                <span className={styles.breakdownAmount}>
+                  {formatPaymentDate(order?.authorizationCanceledAt)}
+                  {order?.authorizationCancelReason
+                    ? ` — ${order.authorizationCancelReason}`
+                    : ""}
+                </span>
+              </div>
+            )}
+          </div>
+          {isCaptureDeadlineSoon && (
+            <p className={styles.errorDetails}>
+              ⚠️ The reservation expires soon. Capture the payment before the
+              deadline or the money will be released automatically.
+            </p>
+          )}
+          {isAuthorizationExpired && (
+            <p className={styles.errorDetails}>
+              ⚠️ The reservation expired before the money was captured. The
+              client was NOT charged — ask the client to pay again (payment
+              recovery).
+            </p>
+          )}
+          {order?.captureErrorMessage && !isOrderPaid && (
+            <p className={styles.errorDetails}>
+              Last capture attempt failed
+              {order?.captureFailedAt
+                ? ` at ${formatPaymentDate(order.captureFailedAt)}`
+                : ""}
+              : {order.captureErrorMessage}
+            </p>
+          )}
+          {paymentActionError && (
+            <p className={styles.errorDetails}>{paymentActionError}</p>
+          )}
+          {isPaymentAuthorized && (
+            <div className={styles.finalActionsRow}>
+              <Button
+                title={isCapturingPayment ? "Capturing..." : "Capture payment"}
+                type="BLACK"
+                isDisabled={isCapturingPayment || isReleasingAuthorization}
+                onClick={capturePayment}
+              />
+              {isCanceledOrder && (
+                <Button
+                  title={
+                    isReleasingAuthorization
+                      ? "Releasing..."
+                      : "Release reserved money"
+                  }
+                  type="OUTLINED"
+                  isDisabled={isCapturingPayment || isReleasingAuthorization}
+                  onClick={releaseAuthorization}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <div className={`${styles.finalPrice} ${nunito.className}`}>
         <div>
           {showCanceledFeeBreakdown ? (
@@ -1699,12 +1910,20 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           </div>
         )}
         {isRefundableCanceledOrder &&
-          isOrderPaid &&
+          (isOrderPaid || isPaymentAuthorized) &&
           !areCanceledFinancialActionsDone && (
             <div className={styles.finalActionsRow}>
               {(requiresRefund || isCanceledLate12h) && !isRefundDone && (
                 <Button
-                  title={isRefunding ? "Refunding..." : "Refund the parent"}
+                  title={
+                    isRefunding
+                      ? isPaymentAuthorized
+                        ? "Releasing..."
+                        : "Refunding..."
+                      : isPaymentAuthorized
+                        ? "Release reserved money"
+                        : "Refund the parent"
+                  }
                   type="BLACK"
                   isDisabled={isRefunding || isPayingCancelFee}
                   onClick={refundParent}

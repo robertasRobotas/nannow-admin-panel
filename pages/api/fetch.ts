@@ -2406,6 +2406,34 @@ export const refundOrderById = async (id: string) => {
   return response;
 };
 
+export const captureOrderPaymentById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/capture-payment`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const cancelOrderAuthorizationById = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.put(
+    `${BASE_URL}/admin/orders/${id}/cancel-authorization`,
+    {},
+    {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
 export const payoutCancelFeeByOrderId = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.put(

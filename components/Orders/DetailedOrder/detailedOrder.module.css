@@ -42,6 +42,42 @@
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.paymentCaptureCard {
+  margin: 0 55px 22px;
+  padding: 16px 20px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.paymentCaptureHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.paymentCaptureTitle {
+  color: #000;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.32px;
+}
+
+.paymentCaptureType {
+  color: rgba(27, 27, 31, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.paymentCaptureRows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .closeOrderRow {
   padding: 0 55px 22px;
   display: flex;
