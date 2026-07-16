@@ -16,6 +16,7 @@ import {
   getCanceledPendingFinancialOrdersCount,
   getUnreadAdminMessagesCount,
   getSystemNannowChatsUnreadCount,
+  getAdminChats,
   getCurrentAdminRolesFromJwt,
   getNotFinishedOnboardingUsers,
   getNotEndedOrdersCount,
@@ -128,6 +129,29 @@ const Header = () => {
   const [apiMode, setApiMode] = useState<AdminApiMode>("production");
   const { pathname } = useRouter();
   const { lastEvent } = useAdminSocket();
+  const [suspiciousChatsCount, setSuspiciousChatsCount] = useState(0);
+  useEffect(() => { if (lastEvent?.type === "SUSPICIOUS_CHAT_MESSAGE") setSuspiciousChatsCount((count) => count + 1); }, [lastEvent]);
+  useEffect(() => {
+    const handleSuspiciousChatsCountUpdate = async () => {
+      try {
+        const response = await getAdminChats({ pageSize: 1 });
+        const result = response.data?.result ?? response.data;
+        setSuspiciousChatsCount(Number(result?.suspiciousTotal ?? 0));
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    window.addEventListener(
+      "admin-suspicious-chats-count-update",
+      handleSuspiciousChatsCountUpdate,
+    );
+    return () =>
+      window.removeEventListener(
+        "admin-suspicious-chats-count-update",
+        handleSuspiciousChatsCountUpdate,
+      );
+  }, []);
 
   const router = useRouter();
 
@@ -312,6 +336,15 @@ const Header = () => {
         console.log(err);
       }
     };
+    const fetchSuspiciousChatsCount = async () => {
+      try {
+        const response = await getAdminChats({ pageSize: 1 });
+        const result = response.data?.result ?? response.data;
+        setSuspiciousChatsCount(Number(result?.suspiciousTotal ?? 0) || 0);
+      } catch (err) {
+        console.log(err);
+      }
+    };
 
     fetchPendingProviderSpecialSkills();
     fetchNotEndedOrdersCount();
@@ -327,6 +360,7 @@ const Header = () => {
     fetchNotResolvedReportsCount();
     fetchUnreadAdminMessagesCount();
     fetchUnreadSystemNannowChatsCount();
+    fetchSuspiciousChatsCount();
   }, [router]);
 
   useEffect(() => {
@@ -583,6 +617,7 @@ const Header = () => {
     if (normalizedLink === "/nannow-chats" && unreadSystemNannowChatsCount > 0) {
       return unreadSystemNannowChatsCount;
     }
+    if (normalizedLink === "/chats" && suspiciousChatsCount > 0) return suspiciousChatsCount;
     if (normalizedLink === "/reports" && notResolvedReportsCount > 0) {
       return notResolvedReportsCount;
     }
@@ -837,6 +872,7 @@ const Header = () => {
             documentsAttentionNumber={notReviewedDocumentsCount}
           messagesAttentionNumber={unreadAdminMessagesCount}
           nannowChatsAttentionNumber={unreadSystemNannowChatsCount}
+          suspiciousChatsAttentionNumber={suspiciousChatsCount}
           reportsAttentionNumber={notResolvedReportsCount}
           apiMode={apiMode}
           onToggleApiMode={toggleApiMode}

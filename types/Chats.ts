@@ -25,6 +25,21 @@ export type ChatMessageType = {
   chatId: string;
   isRead: boolean;
   readAt?: string | null;
+  paymentRisk?: PaymentRiskType | null;
+};
+
+export type PaymentRiskType = {
+  isSuspicious: boolean;
+  status?: "OPEN" | "REVIEWED" | "DISMISSED" | "ACKNOWLEDGED" | null;
+  acknowledgedAt?: string | null;
+  acknowledgedByAdminId?: string | null;
+  acknowledgedByAdminName?: string | null;
+  score: number;
+  matchedRuleIds: string[];
+  matchedSignals: string[];
+  detectedAt?: string | null;
+  detectorVersion?: number;
+  userWarningSuppressed?: boolean;
 };
 
 export type ChatMessageHistorySnapshot = {
@@ -55,10 +70,13 @@ export type ChatType = {
   lastMessageCreatedAt?: string;
   lastMessageReadAt?: string | null;
   unreadMessagesCount?: number;
+  suspiciousMessagesCount?: number;
+  isSuspicious?: boolean;
   user1: ChatUserType;
   user2: ChatUserType;
   participants?: ChatUserType[];
   messages?: ChatMessageType[];
+  lastMessage?: ChatMessageType | null;
 };
 
 export type GetAdminChatsResponse = {
@@ -67,4 +85,5 @@ export type GetAdminChatsResponse = {
   pageSize: number;
   startIndex: number;
   hasMore: boolean;
+  suspiciousTotal?: number;
 };

@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import Button from "@/components/Button/Button";
 import { nunito } from "@/helpers/fonts";
 import {
+  acknowledgeChatMessagePaymentRiskByAdmin,
   deleteChatMessageByAdmin,
   deleteChatMessageImageByAdmin,
   getChatMessageHistoryByAdmin,
@@ -47,6 +48,10 @@ type ChatMessageHistoryResponse = {
 
 const getMessageFlag = (message: ChatMessageType) => {
   if (message.isDeleted) return "Deleted by admin";
+  if (message.paymentRisk?.isSuspicious) {
+    // The red score badge above the avatar already communicates this state.
+    return "";
+  }
   if (message.isModerated && message.lastEditedByAdminName) {
     return `Edited by ${message.lastEditedByAdminName}`;
   }
@@ -91,6 +96,8 @@ const getHistoryActionLabel = (entry: ChatMessageHistoryEntry) => {
       return `Image removed by ${actor}`;
     case "DELETE_MESSAGE":
       return `Deleted by ${actor}`;
+    case "ACKNOWLEDGE_PAYMENT_RISK":
+      return `Acknowledged by ${actor}`;
     default:
       return `${entry.action.replace(/_/g, " ").toLowerCase()} by ${actor}`;
   }
@@ -103,7 +110,8 @@ const hasMessageHistory = (message: ChatMessageType) =>
       message.isModerated ||
       message.editedAt ||
       message.lastEditedByAdminId ||
-      message.lastEditedByAdminName,
+      message.lastEditedByAdminName ||
+      message.paymentRisk?.status === "ACKNOWLEDGED",
   );
 
 const ChatMessages = ({
@@ -279,6 +287,33 @@ const ChatMessages = ({
     }
   };
 
+  const acknowledgePaymentRisk = async (message: ChatMessageType) => {
+    try {
+      setLoadingActionKey(`acknowledge-${message.id}`);
+      const response = await acknowledgeChatMessagePaymentRiskByAdmin(message.id);
+      const nextMessage = response.data?.item ?? response.data?.result?.item ?? null;
+
+      syncMessage(message.id, (current) => ({
+        ...current,
+        ...(nextMessage && typeof nextMessage === "object" ? nextMessage : {}),
+        paymentRisk: {
+          ...current.paymentRisk!,
+          ...(nextMessage?.paymentRisk ?? {}),
+          status: "ACKNOWLEDGED",
+        },
+      }));
+      window.dispatchEvent(
+        new CustomEvent("admin-suspicious-chats-count-update"),
+      );
+      toast.success("Suspicious message acknowledged");
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to acknowledge suspicious message");
+    } finally {
+      setLoadingActionKey("");
+    }
+  };
+
   const openHistory = async (messageId: string) => {
     try {
       setIsHistoryModalOpen(true);
@@ -349,6 +384,56 @@ const ChatMessages = ({
           const messageFlag = getMessageFlag(message);
           const isEditing = editingMessageId === message.id;
           const canShowHistory = hasMessageHistory(message);
+          const isAcknowledged = message.paymentRisk?.status === "ACKNOWLEDGED";
+          const warningSuppressed = Boolean(message.paymentRisk?.userWarningSuppressed);
+          const riskIndicatorColor = isAcknowledged
+            ? "#d97706"
+            : warningSuppressed
+              ? "#0f766e"
+              : "#dc2626";
+          const riskIndicatorTitle = isAcknowledged
+            ? `${warningSuppressed ? "Suspicious payment language detected during an incoming or active order. The user warning was suppressed." : "Suspicious payment language detected"} Acknowledged by ${message.paymentRisk?.acknowledgedByAdminName || "admin"}.`
+            : warningSuppressed
+              ? "Suspicious payment language detected during an incoming or active order. The user warning was suppressed."
+              : "Suspicious payment language detected";
+          const riskIndicator = message.paymentRisk?.isSuspicious ? (
+            <span
+              title={riskIndicatorTitle}
+              style={{
+                position: "absolute",
+                top: isAcknowledged ? -39 : -34,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: isAcknowledged ? 38 : 28,
+                height: isAcknowledged ? 38 : 28,
+                borderRadius: isAcknowledged ? 8 : 999,
+                background: isAcknowledged ? "#fffbeb" : riskIndicatorColor,
+                border: isAcknowledged ? "3px solid #d97706" : "none",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 2,
+              }}
+            >
+              <span
+                style={{
+                  minWidth: 28,
+                  height: 28,
+                  padding: "0 7px",
+                  borderRadius: 999,
+                  background: riskIndicatorColor,
+                  color: "#fff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                  fontWeight: 800,
+                }}
+              >
+                {message.paymentRisk.score}
+              </span>
+            </span>
+          ) : null;
 
           return (
             <div
@@ -358,15 +443,17 @@ const ChatMessages = ({
               }`}
             >
               {!isFromUser && (
-                <img
-                  className={styles.profileImg}
-                  src={otherUserImgUrl.length > 0 ? otherUserImgUrl : avatarImg.src}
-                />
+                <div style={{ position: "relative" }}>
+                  {riskIndicator}
+                  <img className={styles.profileImg} src={otherUserImgUrl.length > 0 ? otherUserImgUrl : avatarImg.src} />
+                </div>
               )}
+              <div className={styles.messageContent}>
               <div
                 className={`${styles.chatBubble} ${
                   isFromUser ? styles.sent : styles.received
                 } ${message.isDeleted ? styles.deletedBubble : ""}`}
+                style={{ position: "relative" }}
               >
                 {!message.isRead && <span className={styles.messageUnreadDot} />}
                 {isEditing ? (
@@ -440,6 +527,18 @@ const ChatMessages = ({
                     </div>
                     {canModerate && (
                       <div className={styles.messageActions}>
+                        {message.paymentRisk?.isSuspicious && !isAcknowledged && (
+                          <button
+                            type="button"
+                            className={styles.messageActionBtn}
+                            onClick={() => acknowledgePaymentRisk(message)}
+                            disabled={loadingActionKey === `acknowledge-${message.id}`}
+                          >
+                            {loadingActionKey === `acknowledge-${message.id}`
+                              ? "Acknowledging..."
+                              : "Acknowledge"}
+                          </button>
+                        )}
                         {!message.isDeleted && (
                           <button
                             type="button"
@@ -487,11 +586,17 @@ const ChatMessages = ({
                   </>
                 )}
               </div>
+              {isAcknowledged && (
+                <span className={styles.acknowledgedMeta}>
+                  Acknowledged by {message.paymentRisk?.acknowledgedByAdminName || "admin"} · {formatDateTime(message.paymentRisk?.acknowledgedAt ?? undefined)}
+                </span>
+              )}
+              </div>
               {isFromUser && (
-                <img
-                  className={styles.profileImg}
-                  src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src}
-                />
+                <div style={{ position: "relative" }}>
+                  {riskIndicator}
+                  <img className={styles.profileImg} src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src} />
+                </div>
               )}
             </div>
           );
