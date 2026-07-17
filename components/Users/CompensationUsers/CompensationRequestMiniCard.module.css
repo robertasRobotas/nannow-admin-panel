@@ -25,6 +25,9 @@
   min-width: 0;
 }
 
+.infoEmailAction { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.infoEmailSent { color: rgba(0, 0, 0, .56); font-size: 10px; white-space: nowrap; }
+
 .dateRow {
   display: flex;
   flex-direction: column;

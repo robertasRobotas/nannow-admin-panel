@@ -437,6 +437,39 @@ export const updateClientCompensationRequestStatus = async (
   return response;
 };
 
+export const sendCompensationInfoEmail = async (
+  clientId: string,
+  requestId: string,
+  idempotencyKey: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/clients/${clientId}/compensation-request/${requestId}/info-email`,
+    {},
+    { headers: { Authorization: jwt, "Idempotency-Key": idempotencyKey } },
+  );
+};
+
+export const getCompensationInfoEmailTemplate = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/compensation-info-email-template`, { headers: { Authorization: jwt } });
+};
+
+export const getLatestCompensationInfoEmail = async (clientId: string, requestId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/clients/${clientId}/compensation-request/${requestId}/info-email`, { headers: { Authorization: jwt } });
+};
+
+export const updateCompensationInfoEmailTemplate = async (payload: { subject: string; bodyHtml: string; attachments: File[]; removeAttachmentIds: string[] }) => {
+  const jwt = Cookies.get("@user_jwt");
+  const form = new FormData();
+  form.append("subject", payload.subject);
+  form.append("bodyHtml", payload.bodyHtml);
+  form.append("removeAttachmentIds", JSON.stringify(payload.removeAttachmentIds));
+  payload.attachments.forEach((file) => form.append("attachments", file));
+  return axios.put(`${BASE_URL}/admin/compensation-info-email-template`, form, { headers: { Authorization: jwt } });
+};
+
 export const getProviderById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/providers/${id}`, {

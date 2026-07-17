@@ -1,7 +1,8 @@
 import styles from "./userCard.module.css";
-import Link from "next/link";
+import { useRouter } from "next/router";
 import ProfileInfo from "../ProfileInfo/ProfileInfo";
-import { useRef, type DragEvent, type MouseEvent } from "react";
+import { useRef, type MouseEvent } from "react";
+import { isRowNavExcluded } from "@/lib/utils";
 import { UserWithCompensationDetails } from "../CompensationUsers/compensationPreview";
 import CompensationRequestMiniCard from "../CompensationUsers/CompensationRequestMiniCard";
 
@@ -12,6 +13,7 @@ type UserCardProps = {
 };
 
 const UserCard = ({ user, mode, showCompensationInfo }: UserCardProps) => {
+  const router = useRouter();
   const href = `/${mode}/${user.userId}`;
   const hasSelectionRef = useRef(false);
 
@@ -20,25 +22,22 @@ const UserCard = ({ user, mode, showCompensationInfo }: UserCardProps) => {
       (window.getSelection?.()?.toString().trim() ?? "").length > 0;
   };
 
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (isRowNavExcluded(event.target)) return;
     updateSelectionState();
     if (hasSelectionRef.current) {
-      event.preventDefault();
+      return;
     }
-  };
-
-  const preventLinkDrag = (event: DragEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
+    void router.push(href);
   };
 
   return (
-    <Link
-      href={href}
+    <div
       className={styles.main}
       onClick={handleClick}
       onMouseUp={updateSelectionState}
-      onDragStart={preventLinkDrag}
-      draggable={false}
+      role="link"
+      tabIndex={0}
       aria-label={`View ${`${user.firstName} ${user.lastName}`.trim() || "user"} profile`}
     >
       <div className={styles.profileWrapper}>
@@ -58,7 +57,7 @@ const UserCard = ({ user, mode, showCompensationInfo }: UserCardProps) => {
         />
         {showCompensationInfo && <CompensationRequestMiniCard user={user} />}
       </div>
-    </Link>
+    </div>
   );
 };
 

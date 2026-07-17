@@ -1,9 +1,9 @@
 import styles from "./usersList.module.css";
 import defaultUserImg from "@/assets/images/default-avatar.png";
-import Link from "next/link";
+import { useRouter } from "next/router";
 import { isRowNavExcluded } from "@/lib/utils";
 import UserEmailIdLine from "../UserEmailIdLine/UserEmailIdLine";
-import { useRef, type DragEvent, type MouseEvent } from "react";
+import { useRef, type MouseEvent } from "react";
 import { UserWithCompensationDetails } from "../CompensationUsers/compensationPreview";
 import CompensationRequestMiniCard from "../CompensationUsers/CompensationRequestMiniCard";
 
@@ -14,15 +14,12 @@ type UsersListProps = {
 };
 
 const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
+  const router = useRouter();
   const hasSelectionRef = useRef(false);
 
   const updateSelectionState = () => {
     hasSelectionRef.current =
       (window.getSelection?.()?.toString().trim() ?? "").length > 0;
-  };
-
-  const preventLinkDrag = (event: DragEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
   };
 
   return (
@@ -32,26 +29,25 @@ const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
           `${user.firstName} ${user.lastName}`.trim() || "Unknown user";
         const href = `/${mode}/${user.userId}`;
 
-        const onRowClick = (e: MouseEvent<HTMLAnchorElement>) => {
+        const onRowClick = (e: MouseEvent<HTMLDivElement>) => {
           if (isRowNavExcluded(e.target)) {
-            e.preventDefault();
             return;
           }
           updateSelectionState();
           if (hasSelectionRef.current) {
-            e.preventDefault();
+            return;
           }
+          void router.push(href);
         };
 
         return (
-          <Link
+          <div
             key={user.id}
-            href={href}
             className={styles.row}
             onClick={onRowClick}
             onMouseUp={updateSelectionState}
-            onDragStart={preventLinkDrag}
-            draggable={false}
+            role="link"
+            tabIndex={0}
             aria-label={`View ${displayName} profile`}
           >
             <div className={styles.left}>
@@ -82,7 +78,7 @@ const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
                 <CompensationRequestMiniCard user={user} />
               </div>
             )}
-          </Link>
+          </div>
         );
       })}
     </div>

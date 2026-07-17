@@ -271,6 +271,7 @@ const CompensationUsers = () => {
 
       <div className={styles.toolbarRow}>
         <div className={styles.toolbarLeft}>
+          <Button title="Info email" type="OUTLINED" onClick={() => void router.push("/compensation/info-email")} />
           <div className={styles.sortControl}>
             <DropDownButton
               options={COMPENSATION_SORT_OPTIONS.map((option) => ({
