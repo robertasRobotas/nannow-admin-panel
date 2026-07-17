@@ -318,9 +318,9 @@ export const loginWithFirebase = async (firebaseIdToken: string) => {
     {},
     {
       headers: {
-        // Use the conventional auth scheme. The API strips this prefix before
-        // passing the token to Firebase Admin.
-        Authorization: `Bearer ${firebaseIdToken}`,
+        // The currently deployed API expects the raw Firebase JWT. Keep this
+        // format until the API is deployed with Bearer-token support.
+        Authorization: firebaseIdToken,
       },
     },
   );
