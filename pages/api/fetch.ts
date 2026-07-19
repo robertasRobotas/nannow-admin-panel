@@ -455,6 +455,11 @@ export const getCompensationInfoEmailTemplate = async () => {
   return axios.get(`${BASE_URL}/admin/compensation-info-email-template`, { headers: { Authorization: jwt } });
 };
 
+export const exportCompensationInfoEmailTemplate = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/compensation-info-email-template/export`, { headers: { Authorization: jwt } });
+};
+
 export const getLatestCompensationInfoEmail = async (clientId: string, requestId: string) => {
   const jwt = Cookies.get("@user_jwt");
   return axios.get(`${BASE_URL}/admin/clients/${clientId}/compensation-request/${requestId}/info-email`, { headers: { Authorization: jwt } });
