@@ -467,11 +467,17 @@ const ChatMessages = ({
                   />
                 </div>
               )}
-              <div className={styles.messageContent}>
+              <div
+                className={`${styles.messageContent} ${
+                  hasImage ? styles.imageMessageContent : ""
+                }`}
+              >
                 <div
                   className={`${styles.chatBubble} ${
                     isFromUser ? styles.sent : styles.received
-                  } ${message.isDeleted ? styles.deletedBubble : ""}`}
+                  } ${hasImage ? styles.imageBubble : ""} ${
+                    message.isDeleted ? styles.deletedBubble : ""
+                  }`}
                   style={{ position: "relative" }}
                 >
                   {!message.isRead && (
