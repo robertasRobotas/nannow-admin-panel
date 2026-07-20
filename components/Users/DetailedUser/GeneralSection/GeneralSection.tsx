@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import {
   deleteProviderStripeAccount,
   getProviderCompletionStatsRebuildJob,
+  rebuildProviderPublicUrl,
   rebuildProviderCompletionStats,
   type ProviderCompletionStatsRebuildJob,
   setUserBanStatus,
@@ -124,10 +125,20 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     useState<ProviderCompletionStatsRebuildJob | null>(null);
   const [isCompletionStatsModalOpen, setIsCompletionStatsModalOpen] =
     useState(false);
+  const [isRebuildingPublicUrl, setIsRebuildingPublicUrl] = useState(false);
+  const [isPublicUrlConfirmModalOpen, setIsPublicUrlConfirmModalOpen] = useState(false);
+  const [publicUrlLocal, setPublicUrlLocal] = useState<string | null>(
+    user?.provider?.publicUrl ?? null,
+  );
 
   console.log(user.provider);
   const [isSuspendedSaving, setIsSuspendedSaving] = useState(false);
-  const cards = getInfoCards(user, mode, {
+  const cards = getInfoCards(
+    mode === "provider" && user.provider
+      ? { ...user, provider: { ...user.provider, publicUrl: publicUrlLocal } }
+      : user,
+    mode,
+    {
     suspendedSwitch: {
       value: isSuspendedLocal,
       onChange: async () => {
@@ -158,7 +169,8 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             disabled: isCompensationSaving,
           }
         : undefined,
-  });
+    },
+  );
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
   console.log(user);
@@ -189,6 +201,27 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       toast.error("Failed to delete stripe account");
     } finally {
       setIsDeletingStripeAccount(false);
+    }
+  };
+
+  const handleRebuildPublicUrl = async () => {
+    if (!user?.provider?.id || isRebuildingPublicUrl) return;
+    try {
+      setIsPublicUrlConfirmModalOpen(false);
+      setIsRebuildingPublicUrl(true);
+      const response = await rebuildProviderPublicUrl(user.provider.id);
+      const nextUrl = response.data?.publicUrl as string | undefined;
+      if (nextUrl) {
+        setPublicUrlLocal(nextUrl);
+        toast.success("Provider public URL rebuilt");
+      }
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data as { error?: string })?.error
+        : undefined;
+      toast.error(message ?? "Failed to rebuild provider public URL");
+    } finally {
+      setIsRebuildingPublicUrl(false);
     }
   };
 
@@ -543,6 +576,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 />
               </button>
             )}
+            <div className={styles.cardActions}>
             {c.link && (
               <Button
                 title={c.linkButtonTitle ?? "Details"}
@@ -582,6 +616,16 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 onClick={openBanModal}
               />
             )}
+            {c.actionButton?.action === "REBUILD_PUBLIC_URL" && mode === "provider" && (
+              <Button
+                title={isRebuildingPublicUrl ? "Rebuilding..." : c.actionButton.title}
+                type="OUTLINED"
+                onClick={() => setIsPublicUrlConfirmModalOpen(true)}
+                isDisabled={isRebuildingPublicUrl}
+                isLoading={isRebuildingPublicUrl}
+              />
+            )}
+            </div>
           </div>
         ))}
       </div>
@@ -855,6 +899,31 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 }
                 type="OUTLINED"
                 onClick={() => setIsCompletionStatsModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPublicUrlConfirmModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h3 className={styles.confirmationTitle}>Rebuild public URL?</h3>
+            <p className={styles.confirmationBody}>
+              The current public link will stop working. Continue?
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsPublicUrlConfirmModalOpen(false)}
+              />
+              <Button
+                title="Rebuild URL"
+                type="BLACK"
+                onClick={() => void handleRebuildPublicUrl()}
+                isDisabled={isRebuildingPublicUrl}
+                isLoading={isRebuildingPublicUrl}
               />
             </div>
           </div>

@@ -94,6 +94,8 @@ export type UserDetails = {
   provider?: {
     id: string;
     userId: string;
+    publicUrl?: string | null;
+    publicSlug?: string | null;
     createdAt?: string;
     updatedAt?: string;
     isOnboardingFinished?: boolean;

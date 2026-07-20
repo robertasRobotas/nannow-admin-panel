@@ -30,6 +30,8 @@ import {
   rebuildAllFinancialLedgerOrders,
   rebuildFinancialLedgerForOrder,
   rebuildAllProvidersCompletionStats,
+  rebuildAllProviderPublicUrls,
+  getProviderPublicUrlGenerationJob,
   rebuildChatsContactSharing,
   getProviderCompletionStatsRebuildJob,
   runChatsNormalization,
@@ -48,6 +50,7 @@ import {
   updateSuperAccessItem,
   getOrderScheduleRegenerationJob,
   type ProviderCompletionStatsRebuildJob,
+  type ProviderPublicUrlGenerationJob,
   type OrderScheduleItem,
   type OrderScheduleRegenerationJob,
 } from "@/pages/api/fetch";
@@ -837,6 +840,12 @@ const SuperAccess = () => {
     useState(false);
   const [isRebuildingAllProviderCompletionStats, setIsRebuildingAllProviderCompletionStats] =
     useState(false);
+  const [providerPublicUrlGenerationJobId, setProviderPublicUrlGenerationJobId] = useState("");
+  const [providerPublicUrlGenerationJob, setProviderPublicUrlGenerationJob] =
+    useState<ProviderPublicUrlGenerationJob | null>(null);
+  const [isProviderPublicUrlGenerationModalOpen, setIsProviderPublicUrlGenerationModalOpen] = useState(false);
+  const [isProviderPublicUrlGenerationConfirmModalOpen, setIsProviderPublicUrlGenerationConfirmModalOpen] = useState(false);
+  const [isGeneratingProviderPublicUrls, setIsGeneratingProviderPublicUrls] = useState(false);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
     "ONE",
   );
@@ -1977,6 +1986,39 @@ const SuperAccess = () => {
   ]);
 
   useEffect(() => {
+    if (!providerPublicUrlGenerationJobId) return;
+    if (
+      providerPublicUrlGenerationJob?.status === "COMPLETED" ||
+      providerPublicUrlGenerationJob?.status === "COMPLETED_WITH_ERRORS" ||
+      providerPublicUrlGenerationJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getProviderPublicUrlGenerationJob(providerPublicUrlGenerationJobId);
+        const job =
+          (response.data?.job as ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data?.result?.job as ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data?.result as ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data as ProviderPublicUrlGenerationJob | undefined);
+        if (!isCancelled && job) setProviderPublicUrlGenerationJob(job);
+      } catch {
+        // Ignore transient polling failures.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 2500);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [providerPublicUrlGenerationJob?.status, providerPublicUrlGenerationJobId]);
+
+  useEffect(() => {
     if (!scheduleRegenerationJobId) return;
     if (
       scheduleRegenerationJob?.status === "COMPLETED" ||
@@ -2129,6 +2171,46 @@ const SuperAccess = () => {
       setError("Failed to rebuild provider completion stats.");
     } finally {
       setIsRebuildingAllProviderCompletionStats(false);
+    }
+  };
+
+  const handleRebuildAllProviderPublicUrls = async () => {
+    if (isGeneratingProviderPublicUrls) return;
+    try {
+      setIsProviderPublicUrlGenerationConfirmModalOpen(false);
+      setIsGeneratingProviderPublicUrls(true);
+      setError("");
+      setNotice("");
+      const response = await rebuildAllProviderPublicUrls();
+      const job =
+        (response.data?.job as ProviderPublicUrlGenerationJob | undefined) ??
+        (response.data?.result?.job as ProviderPublicUrlGenerationJob | undefined) ??
+        (response.data?.result as ProviderPublicUrlGenerationJob | undefined) ??
+        (response.data as ProviderPublicUrlGenerationJob | undefined);
+      if (job?.id) {
+        setProviderPublicUrlGenerationJob(job);
+        setProviderPublicUrlGenerationJobId(job.id);
+        setIsProviderPublicUrlGenerationModalOpen(true);
+        setNotice(`Started public URL rebuild job ${job.id}.`);
+      }
+    } catch (err) {
+      setError(
+        axios.isAxiosError(err)
+          ? (err.response?.data as { error?: string })?.error ?? "Failed to generate public URLs."
+          : "Failed to rebuild public URLs.",
+      );
+    } finally {
+      setIsGeneratingProviderPublicUrls(false);
+    }
+  };
+
+  const handleProviderAction = (action: string) => {
+    if (action === "PUBLIC_URLS") {
+      setIsProviderPublicUrlGenerationConfirmModalOpen(true);
+    } else if (action === "COMPLETION") {
+      void handleRebuildAllProvidersCompletionStats();
+    } else if (action === "STRIPE") {
+      void refreshStripeKycAudit(undefined, { openModal: true });
     }
   };
 
@@ -3132,30 +3214,21 @@ const SuperAccess = () => {
                   </>
                 )}
                 {entity === "providers" && (
-                  <>
-                    <Button
-                      title={
-                        isRebuildingAllProviderCompletionStats
-                          ? "Rebuilding..."
-                          : "Rebuild completion rates"
-                      }
-                      type="OUTLINED"
-                      onClick={handleRebuildAllProvidersCompletionStats}
-                      isDisabled={isRebuildingAllProviderCompletionStats}
-                      isLoading={isRebuildingAllProviderCompletionStats}
-                    />
-                    <Button
-                      title={
-                        isStripeKycAuditLoading
-                          ? "Scanning..."
-                          : "Scan Stripe status"
-                      }
-                      type="OUTLINED"
-                      onClick={() => refreshStripeKycAudit(undefined, { openModal: true })}
-                      isDisabled={isStripeKycAuditLoading || isStripeKycReconcileLoading}
-                      isLoading={isStripeKycAuditLoading}
-                    />
-                  </>
+                  <select
+                    aria-label="Provider actions"
+                    defaultValue=""
+                    className={styles.providerActionsSelect}
+                    onChange={(event) => {
+                      handleProviderAction(event.target.value);
+                      event.currentTarget.value = "";
+                    }}
+                    disabled={isGeneratingProviderPublicUrls || isRebuildingAllProviderCompletionStats}
+                  >
+                    <option value="">Actions</option>
+                    <option value="PUBLIC_URLS">Rebuild all public URLs</option>
+                    <option value="COMPLETION">Rebuild completion rates</option>
+                    <option value="STRIPE">Scan Stripe status</option>
+                  </select>
                 )}
                 <SearchBar
                   placeholder="Type to search"
@@ -4868,6 +4941,67 @@ const SuperAccess = () => {
                 }
                 type="OUTLINED"
                 onClick={() => setIsChatContactSharingRebuildModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isProviderPublicUrlGenerationModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Rebuild all provider public URLs</h3>
+            <p className={styles.modalText}>
+              {`Job: ${providerPublicUrlGenerationJob?.id || providerPublicUrlGenerationJobId || "—"} • Status: ${
+                providerPublicUrlGenerationJob?.status ?? "PENDING"
+              }`}
+            </p>
+            <div className={styles.chatProgressList}>
+              <div className={styles.chatProgressRow}><span>Providers total</span><strong>{providerPublicUrlGenerationJob?.progress.providersTotal ?? "—"}</strong></div>
+              <div className={styles.chatProgressRow}><span>Processed</span><strong>{providerPublicUrlGenerationJob?.progress.providersProcessed ?? "—"}</strong></div>
+              <div className={styles.chatProgressRow}><span>URLs rebuilt</span><strong>{providerPublicUrlGenerationJob?.progress.urlsRebuilt ?? "—"}</strong></div>
+              <div className={styles.chatProgressRow}><span>Unsupported region</span><strong>{providerPublicUrlGenerationJob?.progress.unsupportedOrMissingRegion ?? "—"}</strong></div>
+              <div className={styles.chatProgressRow}><span>Failed</span><strong>{providerPublicUrlGenerationJob?.progress.providersFailed ?? "—"}</strong></div>
+            </div>
+            {(providerPublicUrlGenerationJob?.error || providerPublicUrlGenerationJob?.errors?.length) && (
+              <div className={styles.modalError}>
+                {providerPublicUrlGenerationJob.error || providerPublicUrlGenerationJob.errors[0]?.message}
+              </div>
+            )}
+            <div className={styles.modalActions}>
+              <Button
+                title={
+                  providerPublicUrlGenerationJob?.status === "COMPLETED" ||
+                  providerPublicUrlGenerationJob?.status === "COMPLETED_WITH_ERRORS" ||
+                  providerPublicUrlGenerationJob?.status === "FAILED"
+                    ? "Close"
+                    : "Hide"
+                }
+                type="OUTLINED"
+                onClick={() => setIsProviderPublicUrlGenerationModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isProviderPublicUrlGenerationConfirmModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Rebuild all provider public URLs?</h3>
+            <p className={styles.modalText}>
+              This regenerates every public URL. Current public links will stop working. Providers without a supported region will remain without a public URL.
+            </p>
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsProviderPublicUrlGenerationConfirmModalOpen(false)}
+              />
+              <Button
+                title="Rebuild all URLs"
+                type="BLACK"
+                onClick={() => void handleRebuildAllProviderPublicUrls()}
+                isDisabled={isGeneratingProviderPublicUrls}
+                isLoading={isGeneratingProviderPublicUrls}
               />
             </div>
           </div>

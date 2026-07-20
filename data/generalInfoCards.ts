@@ -31,7 +31,11 @@ export type InfoCard = {
   linkButtonTitle?: string;
   actionButton?: {
     title: string;
-    action: "DELETE_STRIPE" | "CHANGE_BASE_PRICE" | "BAN_USER";
+    action:
+      | "DELETE_STRIPE"
+      | "CHANGE_BASE_PRICE"
+      | "BAN_USER"
+      | "REBUILD_PUBLIC_URL";
   };
   booleanSwitch?: {
     value: boolean;
@@ -308,6 +312,23 @@ export const getInfoCards = (
           typeof data?.provider?.totalEarnings === "number"
             ? `${data.provider.totalEarnings}`
             : "0",
+      },
+      {
+        title: "Public profile URL",
+        icon: profileImg,
+        isWide: true,
+        value: data?.provider?.publicUrl ?? "—",
+        ...(data?.provider?.publicUrl
+          ? {
+              link: data.provider.publicUrl,
+              linkValueText: data.provider.publicUrl,
+              linkButtonTitle: "Open profile",
+            }
+          : {}),
+        actionButton: {
+          title: "Rebuild URL",
+          action: "REBUILD_PUBLIC_URL",
+        },
       },
       {
         title: "Order completion stats",

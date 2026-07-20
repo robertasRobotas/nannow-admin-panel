@@ -105,6 +105,19 @@
   width: 394px;
 }
 
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.cardActions > button {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .cardClickable {
   cursor: pointer;
   transition: transform 120ms ease, background 120ms ease;
