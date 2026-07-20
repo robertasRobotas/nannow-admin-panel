@@ -80,9 +80,11 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
       : (user?.provider?.criminalRecordStatus ??
         newCurrentStatus ??
         "NOT_SUBMITTED");
-  const normalizedCurrentStatus = (
-    rawCurrentStatus.toUpperCase() as "APPROVED" | "NOT_SUBMITTED" | "PENDING" | "REJECTED"
-  );
+  const normalizedCurrentStatus = rawCurrentStatus.toUpperCase() as
+    | "APPROVED"
+    | "NOT_SUBMITTED"
+    | "PENDING"
+    | "REJECTED";
   const currentStatus =
     normalizedCurrentStatus in statusPresentation
       ? normalizedCurrentStatus
@@ -95,9 +97,9 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
   };
 
   const formatDateTime = (value?: string | Date | null) => {
-    if (!value) return "—";
+    if (!value) return "-";
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "—";
+    if (Number.isNaN(date.getTime())) return "-";
     return date.toLocaleString("en-US", {
       year: "numeric",
       month: "short",
@@ -276,17 +278,17 @@ const DetailedCriminalCheck = ({ user }: DetailedCriminalCheckProps) => {
                 {app.verificationType === "QR" ? (
                   <div className={styles.qrInfo}>
                     <span>
-                      Auto check: {app.decisionContext?.autoDecisionBy ?? "—"}
+                      Auto check: {app.decisionContext?.autoDecisionBy ?? "-"}
                     </span>
                     <span>
                       Name match:{" "}
                       {app.decisionContext?.isNameMatch ? "YES" : "NO"}
                     </span>
                     <span>
-                      Police full name: {app.policeCheck?.fullName ?? "—"}
+                      Police full name: {app.policeCheck?.fullName ?? "-"}
                     </span>
-                    <span>Issued at: {app.policeCheck?.issuedAt ?? "—"}</span>
-                    <span>Expires at: {app.policeCheck?.expiresAt ?? "—"}</span>
+                    <span>Issued at: {app.policeCheck?.issuedAt ?? "-"}</span>
+                    <span>Expires at: {app.policeCheck?.expiresAt ?? "-"}</span>
                   </div>
                 ) : (
                   <div className={styles.documentsList}>

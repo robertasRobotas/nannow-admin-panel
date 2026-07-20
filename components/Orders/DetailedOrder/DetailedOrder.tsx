@@ -83,9 +83,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isRefunding, setIsRefunding] = useState(false);
   const [isReturnMoneyModalOpen, setIsReturnMoneyModalOpen] = useState(false);
   const [isReturningMoney, setIsReturningMoney] = useState(false);
-  const [returnMoneyError, setReturnMoneyError] = useState<string | null>(
-    null,
-  );
+  const [returnMoneyError, setReturnMoneyError] = useState<string | null>(null);
   const [isCapturingPayment, setIsCapturingPayment] = useState(false);
   const [isReleasingAuthorization, setIsReleasingAuthorization] =
     useState(false);
@@ -860,7 +858,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     : isAuthorizationReleased
       ? "Reservation released (no charge)"
       : isAuthorizationExpired
-        ? "Reservation expired — payment recovery needed"
+        ? "Reservation expired - payment recovery needed"
         : isOrderPaid
           ? "Paid (captured)"
           : paymentStatusUpper || "-";
@@ -960,11 +958,11 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     ? requiresRefund || isCanceledLate12h
       ? refundDisplayAmount != null
         ? `€${refundDisplayAmount.toFixed(2)}`
-        : "—"
+        : "-"
       : isCanceledByClient
         ? cancelFeeDisplayAmount != null
           ? `€${cancelFeeDisplayAmount.toFixed(2)}`
-          : "—"
+          : "-"
         : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
     : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`;
   const showCanceledFeeBreakdown =
@@ -1797,24 +1795,28 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                   : ""}
               </span>
             </div>
-            {captureDeadlineDate && !isOrderPaid && !isAuthorizationReleased && (
-              <div className={styles.breakdownRow}>
-                <span className={styles.breakdownLabel}>Capture deadline</span>
-                <span className={styles.breakdownAmount}>
-                  {formatPaymentDate(order?.captureDeadlineAt)}
-                  {captureDeadlineMsLeft !== null && isPaymentAuthorized
-                    ? ` — ${formatTimeLeft(captureDeadlineMsLeft)}`
-                    : ""}
-                </span>
-              </div>
-            )}
+            {captureDeadlineDate &&
+              !isOrderPaid &&
+              !isAuthorizationReleased && (
+                <div className={styles.breakdownRow}>
+                  <span className={styles.breakdownLabel}>
+                    Capture deadline
+                  </span>
+                  <span className={styles.breakdownAmount}>
+                    {formatPaymentDate(order?.captureDeadlineAt)}
+                    {captureDeadlineMsLeft !== null && isPaymentAuthorized
+                      ? ` - ${formatTimeLeft(captureDeadlineMsLeft)}`
+                      : ""}
+                  </span>
+                </div>
+              )}
             {isAuthorizationReleased && (
               <div className={styles.breakdownRow}>
                 <span className={styles.breakdownLabel}>Released</span>
                 <span className={styles.breakdownAmount}>
                   {formatPaymentDate(order?.authorizationCanceledAt)}
                   {order?.authorizationCancelReason
-                    ? ` — ${order.authorizationCancelReason}`
+                    ? ` - ${order.authorizationCancelReason}`
                     : ""}
                 </span>
               </div>
@@ -1829,7 +1831,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           {isAuthorizationExpired && (
             <p className={styles.errorDetails}>
               ⚠️ The reservation expired before the money was captured. The
-              client was NOT charged — ask the client to pay again (payment
+              client was NOT charged - ask the client to pay again (payment
               recovery).
             </p>
           )}

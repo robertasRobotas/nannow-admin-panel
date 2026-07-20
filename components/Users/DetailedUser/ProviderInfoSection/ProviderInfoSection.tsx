@@ -108,7 +108,8 @@ const STRIPE_KYC_FIELD_CONFIGS: StripeKycFieldConfig[] = [
   {
     key: "stripeKycDisabledReason",
     label: "Disabled reason",
-    description: "Why Stripe marked the account as disabled or needing remediation.",
+    description:
+      "Why Stripe marked the account as disabled or needing remediation.",
   },
   {
     key: "stripeKycLastCheckedAt",
@@ -121,7 +122,7 @@ const formatStripeKycValue = (
   key: StripeKycFieldKey,
   value: unknown,
 ): string => {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   if (Array.isArray(value)) {
     return value.length > 0 ? value.join(", ") : "None";
   }
@@ -129,7 +130,10 @@ const formatStripeKycValue = (
     return value ? "Yes" : "No";
   }
   if (typeof value === "string") {
-    if (key.toLowerCase().includes("deadline") || key === "stripeKycLastCheckedAt") {
+    if (
+      key.toLowerCase().includes("deadline") ||
+      key === "stripeKycLastCheckedAt"
+    ) {
       const date = new Date(value);
       if (!Number.isNaN(date.getTime())) return date.toLocaleString();
     }
@@ -169,8 +173,11 @@ const ProviderInfoSection = ({
   onBackClick,
 }: ProviderInfoSectionProps) => {
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
-  const [isLaunchingOnboardingTest, setIsLaunchingOnboardingTest] = useState(false);
-  const [onboardingClientSecret, setOnboardingClientSecret] = useState<string | null>(null);
+  const [isLaunchingOnboardingTest, setIsLaunchingOnboardingTest] =
+    useState(false);
+  const [onboardingClientSecret, setOnboardingClientSecret] = useState<
+    string | null
+  >(null);
   const [isWarningTestMode, setIsWarningTestMode] = useState(false);
   const intro = provider?.intro?.trim();
   const qualities = provider?.qualitiesIds ?? [];
@@ -180,7 +187,9 @@ const ProviderInfoSection = ({
     Boolean(stripeAccountId) ||
     STRIPE_KYC_FIELD_CONFIGS.some(({ key }) => {
       const value = getStripeKycValue(provider, key);
-      return Array.isArray(value) ? value.length > 0 : value != null && value !== "";
+      return Array.isArray(value)
+        ? value.length > 0
+        : value != null && value !== "";
     }) ||
     Object.keys(stripeKycDescriptions).length > 0;
 
@@ -189,16 +198,23 @@ const ProviderInfoSection = ({
 
     try {
       setIsLaunchingOnboardingTest(true);
-      const response = await startProviderStripeOnboardingTest(provider.userId, {
-        mode: isWarningTestMode ? "warning" : undefined,
-      });
+      const response = await startProviderStripeOnboardingTest(
+        provider.userId,
+        {
+          mode: isWarningTestMode ? "warning" : undefined,
+        },
+      );
       const clientSecret = response.data.result.clientSecret;
       setOnboardingClientSecret(clientSecret);
       toast.success("Stripe onboarding test session created");
     } catch (error) {
       console.error(error);
       const message = axios.isAxiosError(error)
-        ? String(error.response?.data?.error ?? error.message ?? "Failed to start onboarding test")
+        ? String(
+            error.response?.data?.error ??
+              error.message ??
+              "Failed to start onboarding test",
+          )
         : "Failed to start onboarding test";
       toast.error(message);
     } finally {
@@ -272,7 +288,9 @@ const ProviderInfoSection = ({
                 <input
                   type="checkbox"
                   checked={isWarningTestMode}
-                  onChange={(event) => setIsWarningTestMode(event.target.checked)}
+                  onChange={(event) =>
+                    setIsWarningTestMode(event.target.checked)
+                  }
                 />
                 <span>Warning test</span>
               </label>
@@ -289,14 +307,18 @@ const ProviderInfoSection = ({
           {onboardingClientSecret && (
             <div className={styles.clientSecretBox}>
               <div className={styles.clientSecretLabel}>Client secret</div>
-              <pre className={styles.clientSecretValue}>{onboardingClientSecret}</pre>
+              <pre className={styles.clientSecretValue}>
+                {onboardingClientSecret}
+              </pre>
             </div>
           )}
 
           <div className={styles.stripeKycGrid}>
             {STRIPE_KYC_FIELD_CONFIGS.map(({ key, label, description }) => {
               const providerDescription =
-                stripeKycDescriptions[key] ?? stripeKycDescriptions[label] ?? "";
+                stripeKycDescriptions[key] ??
+                stripeKycDescriptions[label] ??
+                "";
               const rawValue = getStripeKycValue(provider, key);
               return (
                 <div key={key} className={styles.stripeKycCard}>

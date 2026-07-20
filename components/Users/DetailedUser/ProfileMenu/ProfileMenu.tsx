@@ -6,7 +6,11 @@ import trashImg from "../../../../assets/images/trash.svg";
 import balanceImg from "../../../../assets/images/wallet.svg";
 import { UserDetails } from "@/types/Client";
 import { useEffect, useMemo, useState } from "react";
-import { anonymizeUser, deleteUser, getUserAnonymizationJob } from "@/pages/api/fetch";
+import {
+  anonymizeUser,
+  deleteUser,
+  getUserAnonymizationJob,
+} from "@/pages/api/fetch";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
 import { nunito } from "@/helpers/fonts";
@@ -83,8 +87,10 @@ const ProfileMenu = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAnonymizeConfirmModalOpen, setIsAnonymizeConfirmModalOpen] =
     useState(false);
-  const [isAnonymizationProgressModalOpen, setIsAnonymizationProgressModalOpen] =
-    useState(false);
+  const [
+    isAnonymizationProgressModalOpen,
+    setIsAnonymizationProgressModalOpen,
+  ] = useState(false);
   const [anonymizationReason, setAnonymizationReason] = useState("");
   const [isStartingAnonymization, setIsStartingAnonymization] = useState(false);
   const [anonymizationJobId, setAnonymizationJobId] = useState("");
@@ -194,13 +200,20 @@ const ProfileMenu = ({
   };
 
   const startAnonymization = async () => {
-    if (!user.user.id || !anonymizationReason.trim() || isStartingAnonymization) {
+    if (
+      !user.user.id ||
+      !anonymizationReason.trim() ||
+      isStartingAnonymization
+    ) {
       return;
     }
 
     try {
       setIsStartingAnonymization(true);
-      const response = await anonymizeUser(user.user.id, anonymizationReason.trim());
+      const response = await anonymizeUser(
+        user.user.id,
+        anonymizationReason.trim(),
+      );
       const job = (response.data?.job ?? response.data?.result?.job) as
         | AnonymizationJob
         | undefined;
@@ -234,7 +247,9 @@ const ProfileMenu = ({
   };
 
   const getStepStatus = (stepKey: string) => {
-    const matchedStep = anonymizationJob?.steps?.find((step) => step.key === stepKey);
+    const matchedStep = anonymizationJob?.steps?.find(
+      (step) => step.key === stepKey,
+    );
     return matchedStep?.status ?? "PENDING";
   };
 
@@ -332,7 +347,8 @@ const ProfileMenu = ({
                 type="BLACK"
                 onClick={startAnonymization}
                 isDisabled={
-                  isStartingAnonymization || anonymizationReason.trim().length === 0
+                  isStartingAnonymization ||
+                  anonymizationReason.trim().length === 0
                 }
               />
             </div>
@@ -346,7 +362,7 @@ const ProfileMenu = ({
           >
             <h2 className={styles.confirmationTitle}>Anonymization progress</h2>
             <p className={styles.confirmationBody}>
-              {`Job: ${anonymizationJobId || "—"} • Status: ${
+              {`Job: ${anonymizationJobId || "-"} • Status: ${
                 anonymizationJob?.status ?? "PENDING"
               }`}
             </p>
@@ -385,7 +401,9 @@ const ProfileMenu = ({
                       {stepStatus}
                     </div>
                     {matchedStep?.error && (
-                      <div className={styles.stepError}>{matchedStep.error}</div>
+                      <div className={styles.stepError}>
+                        {matchedStep.error}
+                      </div>
                     )}
                   </div>
                 );

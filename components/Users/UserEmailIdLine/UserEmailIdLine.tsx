@@ -11,8 +11,7 @@ type UserEmailIdLineProps = {
   phoneNumber?: string | null;
 };
 
-const normalizeTelHref = (value: string) =>
-  value.trim().replace(/[^\d+]/g, "");
+const normalizeTelHref = (value: string) => value.trim().replace(/[^\d+]/g, "");
 
 const UserEmailIdLine = ({
   email,
@@ -20,9 +19,7 @@ const UserEmailIdLine = ({
   phoneNumber,
 }: UserEmailIdLineProps) => {
   const displayEmail =
-    email != null && String(email).trim() !== ""
-      ? String(email).trim()
-      : "—";
+    email != null && String(email).trim() !== "" ? String(email).trim() : "-";
   const short = shortenUserId(userId);
   const normalizedPhone = (phoneNumber ?? "").trim();
   const phoneHref = normalizedPhone ? normalizeTelHref(normalizedPhone) : "";

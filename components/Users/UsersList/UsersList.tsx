@@ -65,7 +65,7 @@ const UsersList = ({ users, mode, showCompensationInfo }: UsersListProps) => {
                 />
                 <div
                   className={styles.meta}
-                >{`APP INFO: ${user.platform ?? "—"} | ${user.appVersion ?? "—"}`}</div>
+                >{`APP INFO: ${user.platform ?? "-"} | ${user.appVersion ?? "-"}`}</div>
                 {mode === "provider" && (
                   <div
                     className={styles.meta}

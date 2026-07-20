@@ -67,7 +67,7 @@ const formatDateTime = (value?: string | null) =>
         minute: "2-digit",
         hour12: false,
       })
-    : "—";
+    : "-";
 
 const getUserDisplayName = (
   firstName?: string | null,
@@ -662,7 +662,7 @@ const Campaigns = () => {
                 <div className={styles.senderTitle}>
                   {sender.firstName || "Nannow"}
                 </div>
-                <div className={styles.senderMeta}>{sender.email || "—"}</div>
+                <div className={styles.senderMeta}>{sender.email || "-"}</div>
               </div>
             </div>
           )}
@@ -935,7 +935,7 @@ const Campaigns = () => {
                         )}
                       </div>
                       <div className={styles.previewRecipientMeta}>
-                        {`${recipient.currentMode ?? "USER"} • ${recipient.city ?? "—"} • ${
+                        {`${recipient.currentMode ?? "USER"} • ${recipient.city ?? "-"} • ${
                           recipient.appVersion ?? "No app version"
                         }`}
                       </div>
@@ -1061,7 +1061,7 @@ const Campaigns = () => {
                 </div>
                 <div className={styles.summaryCard}>
                   <span>Created by</span>
-                  <strong>{selectedCampaign.createdByAdminName || "—"}</strong>
+                  <strong>{selectedCampaign.createdByAdminName || "-"}</strong>
                 </div>
                 <div className={styles.summaryCard}>
                   <span>Created at</span>
@@ -1137,7 +1137,7 @@ const Campaigns = () => {
                                 {recipient.user?.email || recipient.userId}
                               </div>
                               <div className={styles.recipientMeta}>
-                                {`Delivery: ${recipient.deliveryStatus ?? "—"} • Push: ${recipient.pushStatus ?? "—"} • Read: ${recipient.isRead ? "Yes" : "No"}`}
+                                {`Delivery: ${recipient.deliveryStatus ?? "-"} • Push: ${recipient.pushStatus ?? "-"} • Read: ${recipient.isRead ? "Yes" : "No"}`}
                               </div>
                             </div>
                             <div className={styles.recipientDate}>

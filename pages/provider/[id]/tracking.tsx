@@ -15,7 +15,7 @@ import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 import { TrackingPin, TrackingPoint } from "@/types/Tracking";
 
 const formatDateTime = (value?: string) => {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
@@ -31,10 +31,7 @@ const getForegroundOnlyWarning = (isStale: boolean) =>
     ? "Provider app is closed or has no signal. Live location is temporarily unavailable"
     : "Provider location updates are available only while provider app is open";
 
-const getApiErrorMessage = (
-  error: unknown,
-  fallback: string,
-): string => {
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
   if (
     typeof error === "object" &&
     error !== null &&
@@ -82,7 +79,9 @@ const extractProviderNameFromUnknown = (payload: unknown) => {
       };
     };
   };
-  const details = (root.providerDetails ?? root.result?.providerDetails ?? payload) as {
+  const details = (root.providerDetails ??
+    root.result?.providerDetails ??
+    payload) as {
     firstName?: unknown;
     lastName?: unknown;
     first_name?: unknown;
@@ -142,8 +141,12 @@ const extractProviderNameFromUnknown = (payload: unknown) => {
     root?.lastName,
     root?.last_name,
   ];
-  const firstName = String(firstNameCandidates.find((value) => !!value) ?? "").trim();
-  const lastName = String(lastNameCandidates.find((value) => !!value) ?? "").trim();
+  const firstName = String(
+    firstNameCandidates.find((value) => !!value) ?? "",
+  ).trim();
+  const lastName = String(
+    lastNameCandidates.find((value) => !!value) ?? "",
+  ).trim();
   return `${String(firstName).trim()} ${String(lastName).trim()}`.trim();
 };
 
@@ -155,25 +158,23 @@ const extractProviderLastLocationFromUnknown = (payload: unknown) => {
     user?: { lastTrackingLocation?: unknown };
     lastTrackingLocation?: unknown;
   };
-  const details = (root.providerDetails ?? root.result?.providerDetails ?? payload) as {
+  const details = (root.providerDetails ??
+    root.result?.providerDetails ??
+    payload) as {
     provider?: { lastTrackingLocation?: unknown };
     user?: { lastTrackingLocation?: unknown };
     lastTrackingLocation?: unknown;
   };
-  return (
-    details?.provider?.lastTrackingLocation ??
+  return (details?.provider?.lastTrackingLocation ??
     details?.lastTrackingLocation ??
     details?.user?.lastTrackingLocation ??
-    null
-  ) as
-    | {
-        latitude?: unknown;
-        longitude?: unknown;
-        accuracy?: unknown;
-        timestamp?: unknown;
-        updatedAt?: unknown;
-      }
-    | null;
+    null) as {
+    latitude?: unknown;
+    longitude?: unknown;
+    accuracy?: unknown;
+    timestamp?: unknown;
+    updatedAt?: unknown;
+  } | null;
 };
 
 const ProviderTrackingPage = () => {
@@ -187,7 +188,9 @@ const ProviderTrackingPage = () => {
 
   const [session, setSession] = useState<ProviderTrackingSession | null>(null);
   const [livePoint, setLivePoint] = useState<TrackingPoint | null>(null);
-  const [lastKnownPoint, setLastKnownPoint] = useState<TrackingPoint | null>(null);
+  const [lastKnownPoint, setLastKnownPoint] = useState<TrackingPoint | null>(
+    null,
+  );
   const [providerDisplayName, setProviderDisplayName] = useState("");
   const [statusText, setStatusText] = useState("");
   const [warningText, setWarningText] = useState("");
@@ -199,34 +202,40 @@ const ProviderTrackingPage = () => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const [mapHeight, setMapHeight] = useState(680);
 
-  const applyProviderMeta = useCallback((payload: unknown, fallbackId: string) => {
-    const fullName = extractProviderNameFromUnknown(payload);
-    setProviderDisplayName(fullName || fallbackId);
+  const applyProviderMeta = useCallback(
+    (payload: unknown, fallbackId: string) => {
+      const fullName = extractProviderNameFromUnknown(payload);
+      setProviderDisplayName(fullName || fallbackId);
 
-    const location = extractProviderLastLocationFromUnknown(payload);
-    const latitude = Number(location?.latitude);
-    const longitude = Number(location?.longitude);
-    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-      setLastKnownPoint({
-        latitude,
-        longitude,
-        accuracy: Number.isFinite(Number(location?.accuracy))
-          ? Number(location?.accuracy)
-          : undefined,
-        timestamp:
-          typeof location?.timestamp === "string"
-            ? location.timestamp
-            : typeof location?.updatedAt === "string"
-              ? location.updatedAt
-              : undefined,
-      });
-    }
-  }, []);
+      const location = extractProviderLastLocationFromUnknown(payload);
+      const latitude = Number(location?.latitude);
+      const longitude = Number(location?.longitude);
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        setLastKnownPoint({
+          latitude,
+          longitude,
+          accuracy: Number.isFinite(Number(location?.accuracy))
+            ? Number(location?.accuracy)
+            : undefined,
+          timestamp:
+            typeof location?.timestamp === "string"
+              ? location.timestamp
+              : typeof location?.updatedAt === "string"
+                ? location.updatedAt
+                : undefined,
+        });
+      }
+    },
+    [],
+  );
 
-  const fetchProviderMetaById = useCallback(async (id: string, fallbackId: string) => {
-    const response = await getProviderById(id);
-    applyProviderMeta(response.data, fallbackId);
-  }, [applyProviderMeta]);
+  const fetchProviderMetaById = useCallback(
+    async (id: string, fallbackId: string) => {
+      const response = await getProviderById(id);
+      applyProviderMeta(response.data, fallbackId);
+    },
+    [applyProviderMeta],
+  );
 
   useEffect(() => {
     if (!providerId && !providerUserIdFromQuery) return;
@@ -297,7 +306,10 @@ const ProviderTrackingPage = () => {
 
     heartbeatTimerRef.current = window.setInterval(async () => {
       try {
-        const response = await heartbeatProviderTracking(providerId, session.sessionId);
+        const response = await heartbeatProviderTracking(
+          providerId,
+          session.sessionId,
+        );
         const nextSession = response.data as ProviderTrackingSession;
         setSession(nextSession);
         if (
@@ -307,7 +319,10 @@ const ProviderTrackingPage = () => {
           try {
             await fetchProviderMetaById(nextSession.providerUserId, providerId);
           } catch (error) {
-            console.error("Failed to fetch provider meta by providerUserId", error);
+            console.error(
+              "Failed to fetch provider meta by providerUserId",
+              error,
+            );
           }
         }
         if (nextSession.lastLocation) {
@@ -320,7 +335,8 @@ const ProviderTrackingPage = () => {
             prev
               ? {
                   ...prev,
-                  timestamp: nextSession.lastLocationTimestamp ?? prev.timestamp,
+                  timestamp:
+                    nextSession.lastLocationTimestamp ?? prev.timestamp,
                 }
               : prev,
           );
@@ -397,7 +413,9 @@ const ProviderTrackingPage = () => {
               trackingMode: lastEvent.trackingMode,
               locationStale: isForegroundStale,
               lastLocationTimestamp:
-                prev.lastLocation?.timestamp ?? prev.lastLocationTimestamp ?? null,
+                prev.lastLocation?.timestamp ??
+                prev.lastLocationTimestamp ??
+                null,
               expiresAt: lastEvent.expiresAt ?? prev.expiresAt,
             }
           : prev,
@@ -406,7 +424,10 @@ const ProviderTrackingPage = () => {
         setHasLiveLocationUpdates(false);
         setLivePoint(null);
       }
-      if (isForegroundOnlyMode || String(lastEvent.reason).toUpperCase().includes("BACKGROUND")) {
+      if (
+        isForegroundOnlyMode ||
+        String(lastEvent.reason).toUpperCase().includes("BACKGROUND")
+      ) {
         if (!hasLiveLocationUpdates) {
           setWarningText(
             isForegroundOnlyMode
@@ -431,7 +452,9 @@ const ProviderTrackingPage = () => {
           : prev,
       );
       if (lastEvent.requestImmediateLocation) {
-        setStatusText("Provider connected. Waiting immediate location update...");
+        setStatusText(
+          "Provider connected. Waiting immediate location update...",
+        );
       }
       return;
     }
@@ -466,7 +489,10 @@ const ProviderTrackingPage = () => {
         try {
           await fetchProviderMetaById(nextSession.providerUserId, providerId);
         } catch (error) {
-          console.error("Failed to fetch provider meta by providerUserId", error);
+          console.error(
+            "Failed to fetch provider meta by providerUserId",
+            error,
+          );
         }
       }
       if (nextSession.lastLocation) {
@@ -514,7 +540,8 @@ const ProviderTrackingPage = () => {
 
   const headerStatus = useMemo(() => {
     if (!session) return "Not tracking";
-    if (hasLiveLocationUpdates) return `${session.trackingStatus} (LIVE_LOCATION_UPDATES)`;
+    if (hasLiveLocationUpdates)
+      return `${session.trackingStatus} (LIVE_LOCATION_UPDATES)`;
     return `${session.trackingStatus} (${session.trackingReason})`;
   }, [session, hasLiveLocationUpdates]);
 
@@ -527,7 +554,8 @@ const ProviderTrackingPage = () => {
 
   const showLastKnownNotice =
     (!livePoint && !!lastKnownPoint) || (!session && !!lastKnownPoint);
-  const hasLimitedTrackingWarning = warningText.length > 0 && !hasLiveLocationUpdates;
+  const hasLimitedTrackingWarning =
+    warningText.length > 0 && !hasLiveLocationUpdates;
   const lastKnownAtText = lastKnownPoint?.timestamp
     ? formatDateTime(lastKnownPoint.timestamp)
     : "unknown time";
@@ -535,29 +563,29 @@ const ProviderTrackingPage = () => {
     ? `Tracking stopped. Last known position: ${lastKnownAtText}.`
     : isForegroundStaleReason(session.trackingReason) || !!session.locationStale
       ? `Provider app is closed or has no signal. Showing last known provider position (${lastKnownAtText}).`
-    : isTrackingExpiredWithoutFreshLocation
-      ? `Live tracking session expired and no new coordinates were received. Showing last known provider position (${lastKnownAtText}).`
-      : warningText
-        ? `${warningText}. Last known position: ${lastKnownAtText}`
-        : `Live tracking is not available right now. Showing last known provider position (${lastKnownAtText}).`;
+      : isTrackingExpiredWithoutFreshLocation
+        ? `Live tracking session expired and no new coordinates were received. Showing last known provider position (${lastKnownAtText}).`
+        : warningText
+          ? `${warningText}. Last known position: ${lastKnownAtText}`
+          : `Live tracking is not available right now. Showing last known provider position (${lastKnownAtText}).`;
   const attentionPoint = livePoint ?? lastKnownPoint;
   const mapPins: TrackingPin[] = showLastKnownNotice
     ? [
-          {
-            id: "last-known-provider-location",
-            kind: "LAST_KNOWN_PROVIDER",
-            label: "Provider last known position",
-            latitude: lastKnownPoint!.latitude,
-            longitude: lastKnownPoint!.longitude,
-            subtitle: !session
-              ? `Tracking stopped • Updated ${lastKnownAtText}`
-              : isTrackingExpiredWithoutFreshLocation
-                ? `Tracking expired • Updated ${lastKnownAtText}`
-                : lastKnownPoint?.timestamp
-                  ? `Updated ${formatDateTime(lastKnownPoint.timestamp)}`
-                  : "No live tracking yet",
-          },
-        ]
+        {
+          id: "last-known-provider-location",
+          kind: "LAST_KNOWN_PROVIDER",
+          label: "Provider last known position",
+          latitude: lastKnownPoint!.latitude,
+          longitude: lastKnownPoint!.longitude,
+          subtitle: !session
+            ? `Tracking stopped • Updated ${lastKnownAtText}`
+            : isTrackingExpiredWithoutFreshLocation
+              ? `Tracking expired • Updated ${lastKnownAtText}`
+              : lastKnownPoint?.timestamp
+                ? `Updated ${formatDateTime(lastKnownPoint.timestamp)}`
+                : "No live tracking yet",
+        },
+      ]
     : hasLimitedTrackingWarning && attentionPoint
       ? [
           {
@@ -573,27 +601,56 @@ const ProviderTrackingPage = () => {
         ]
       : [];
   const activeMapPoint =
-    showLastKnownNotice || hasLimitedTrackingWarning ? null : livePoint ?? lastKnownPoint;
+    showLastKnownNotice || hasLimitedTrackingWarning
+      ? null
+      : (livePoint ?? lastKnownPoint);
 
   return (
     <ModalPageTemplate>
-      <div style={{ display: "grid", gap: 16, minHeight: "calc(100dvh - 120px)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+      <div
+        style={{ display: "grid", gap: 16, minHeight: "calc(100dvh - 120px)" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Provider tracking</h1>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+              Provider tracking
+            </h1>
             <p style={{ margin: "8px 0 0", color: "#4b5563" }}>
-              Provider: {providerDisplayName || providerId || "—"}
+              Provider: {providerDisplayName || providerId || "-"}
             </p>
-            <p style={{ margin: "4px 0 0", color: "#4b5563" }}>Status: {headerStatus}</p>
+            <p style={{ margin: "4px 0 0", color: "#4b5563" }}>
+              Status: {headerStatus}
+            </p>
           </div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
             {!session ? (
-              <Button title={isStarting ? "Starting..." : "Start tracking"} type="BLACK" onClick={startTracking} isDisabled={isStarting || !providerId} />
+              <Button
+                title={isStarting ? "Starting..." : "Start tracking"}
+                type="BLACK"
+                onClick={startTracking}
+                isDisabled={isStarting || !providerId}
+              />
             ) : (
-              <Button title={isStopping ? "Stopping..." : "Stop tracking"} type="OUTLINED" onClick={stopTracking} isDisabled={isStopping} />
+              <Button
+                title={isStopping ? "Stopping..." : "Stop tracking"}
+                type="OUTLINED"
+                onClick={stopTracking}
+                isDisabled={isStopping}
+              />
             )}
-            <Button title="Back" type="OUTLINED" onClick={() => router.back()} />
+            <Button
+              title="Back"
+              type="OUTLINED"
+              onClick={() => router.back()}
+            />
           </div>
         </div>
 
@@ -645,7 +702,8 @@ const ProviderTrackingPage = () => {
             <div>Expires: {formatDateTime(session.expiresAt)}</div>
             <div>Location stale: {session.locationStale ? "YES" : "NO"}</div>
             <div>
-              Last location timestamp: {formatDateTime(session.lastLocationTimestamp ?? undefined)}
+              Last location timestamp:{" "}
+              {formatDateTime(session.lastLocationTimestamp ?? undefined)}
             </div>
           </div>
         ) : null}
@@ -658,7 +716,11 @@ const ProviderTrackingPage = () => {
         <div ref={mapContainerRef}>
           <OsmMap
             focusPoint={activeMapPoint}
-            focusLabel={livePoint ? "Provider live location" : "Provider last known location"}
+            focusLabel={
+              livePoint
+                ? "Provider live location"
+                : "Provider last known location"
+            }
             pins={mapPins}
             height={mapHeight}
             zoom={14}

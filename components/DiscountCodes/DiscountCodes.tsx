@@ -17,9 +17,9 @@ import paginateStyles from "@/styles/paginate.module.css";
 const PAGE_SIZE = 20;
 
 const formatDate = (value?: string | null) => {
-  if (!value) return "—";
+  if (!value) return "-";
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-GB");
+  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("en-GB");
 };
 
 const isExpired = (code: DiscountCode) =>

@@ -153,7 +153,7 @@ const BookedTimeSlotsSection = ({
   return (
     <div className={styles.main}>
       <h3 className={`${styles.title} ${nunito.className}`}>
-        Booked time slots{zoneLabel ? ` — You view in ${zoneLabel}` : ""}
+        Booked time slots{zoneLabel ? ` - You view in ${zoneLabel}` : ""}
       </h3>
       <div className={styles.list}>
         {sortedGroupKeys.length === 0 ? (

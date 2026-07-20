@@ -6,8 +6,19 @@ import Link from "next/link";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import Button from "@/components/Button/Button";
-import { getAdminChats, getChatById, getCurrentAdminRolesFromJwt, getChatModerationRules, updateChatModerationRule, createChatModerationRule } from "@/pages/api/fetch";
-import { ChatMessageType, ChatType, GetAdminChatsResponse } from "@/types/Chats";
+import {
+  getAdminChats,
+  getChatById,
+  getCurrentAdminRolesFromJwt,
+  getChatModerationRules,
+  updateChatModerationRule,
+  createChatModerationRule,
+} from "@/pages/api/fetch";
+import {
+  ChatMessageType,
+  ChatType,
+  GetAdminChatsResponse,
+} from "@/types/Chats";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
 import paginateStyles from "@/styles/paginate.module.css";
 import styles from "./adminChats.module.css";
@@ -42,7 +53,14 @@ type ChatMessageExportRow = {
   messageCreatedAt: string;
   messageContent: string;
 };
-type ModerationRule = { id: string; label: string; phrase: string; language: string; weight: number; enabled: boolean };
+type ModerationRule = {
+  id: string;
+  label: string;
+  phrase: string;
+  language: string;
+  weight: number;
+  enabled: boolean;
+};
 
 const formatDateTime = (value?: string | null) =>
   value
@@ -53,7 +71,7 @@ const formatDateTime = (value?: string | null) =>
         hour: "2-digit",
         minute: "2-digit",
       })
-    : "—";
+    : "-";
 
 const isChatUnread = (chat: ChatType) => {
   if (Number(chat.unreadMessagesCount ?? 0) > 0) return true;
@@ -61,10 +79,8 @@ const isChatUnread = (chat: ChatType) => {
   return chat.messages.some((message) => !message.isRead);
 };
 
-const getChatReadAt = (
-  chat: ChatType,
-  lastMessage?: ChatMessageType | null,
-) => lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+const getChatReadAt = (chat: ChatType, lastMessage?: ChatMessageType | null) =>
+  lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
 
 const getChatParticipantId = (chat: ChatType, key: "user1" | "user2") =>
   chat[key]?.id ?? (key === "user1" ? chat.user1Id : chat.user2Id) ?? "";
@@ -81,7 +97,9 @@ const AdminChats = () => {
   const routerRef = useRef(router);
   const [items, setItems] = useState<ChatType[]>([]);
   const [selectedChatId, setSelectedChatId] = useState("");
-  const [selectedChat, setSelectedChat] = useState<ChatDetailsResponse | null>(null);
+  const [selectedChat, setSelectedChat] = useState<ChatDetailsResponse | null>(
+    null,
+  );
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [itemOffset, setItemOffset] = useState(0);
   const [pageCount, setPageCount] = useState(0);
@@ -98,22 +116,53 @@ const AdminChats = () => {
   const [showKeywords, setShowKeywords] = useState(false);
   const [keywords, setKeywords] = useState<ModerationRule[]>([]);
   const [savingKeyword, setSavingKeyword] = useState<string | null>(null);
-  const [newKeyword, setNewKeyword] = useState({ label: "", phrase: "", weight: 1 });
+  const [newKeyword, setNewKeyword] = useState({
+    label: "",
+    phrase: "",
+    weight: 1,
+  });
   const currentSort = SORT_OPTIONS[selectedSortOption]?.value ?? "latest";
   const loadKeywords = useCallback(async () => {
-    try { const response = await getChatModerationRules(); setKeywords(response.data?.items ?? []); setShowKeywords(true); }
-    catch { setError("Failed to load moderation keywords."); }
+    try {
+      const response = await getChatModerationRules();
+      setKeywords(response.data?.items ?? []);
+      setShowKeywords(true);
+    } catch {
+      setError("Failed to load moderation keywords.");
+    }
   }, []);
   const saveKeyword = async (rule: ModerationRule) => {
     setSavingKeyword(rule.id);
-    try { const response = await updateChatModerationRule(rule.id, { label: rule.label, phrase: rule.phrase, language: rule.language, weight: Number(rule.weight), enabled: rule.enabled }); setKeywords((items) => items.map((item) => item.id === rule.id ? response.data.item : item)); }
-    catch { setError("Failed to update moderation keyword."); }
-    finally { setSavingKeyword(null); }
+    try {
+      const response = await updateChatModerationRule(rule.id, {
+        label: rule.label,
+        phrase: rule.phrase,
+        language: rule.language,
+        weight: Number(rule.weight),
+        enabled: rule.enabled,
+      });
+      setKeywords((items) =>
+        items.map((item) => (item.id === rule.id ? response.data.item : item)),
+      );
+    } catch {
+      setError("Failed to update moderation keyword.");
+    } finally {
+      setSavingKeyword(null);
+    }
   };
   const addKeyword = async () => {
     if (!newKeyword.label.trim() || !newKeyword.phrase.trim()) return;
-    try { const response = await createChatModerationRule({ ...newKeyword, language: "any", enabled: true }); setKeywords((items) => [...items, response.data.item]); setNewKeyword({ label: "", phrase: "", weight: 1 }); }
-    catch { setError("Failed to add moderation keyword."); }
+    try {
+      const response = await createChatModerationRule({
+        ...newKeyword,
+        language: "any",
+        enabled: true,
+      });
+      setKeywords((items) => [...items, response.data.item]);
+      setNewKeyword({ label: "", phrase: "", weight: 1 });
+    } catch {
+      setError("Failed to add moderation keyword.");
+    }
   };
 
   const updateChatsQuery = useCallback(
@@ -181,7 +230,9 @@ const AdminChats = () => {
         (payload as GetAdminChatsResponse);
 
       const nextItems = Array.isArray(data?.items) ? data.items : [];
-      const visibleItems = nextItems.filter((item) => !isSystemNannowChat(item));
+      const visibleItems = nextItems.filter(
+        (item) => !isSystemNannowChat(item),
+      );
       const nextTotal = Number(data?.total ?? nextItems.length);
       const nextPageSize = Number(data?.pageSize ?? pageSize) || pageSize;
 
@@ -190,7 +241,10 @@ const AdminChats = () => {
       setPageCount(Math.max(1, Math.ceil(nextTotal / nextPageSize)));
       setSuspiciousChatsCount(Number(data?.suspiciousTotal ?? 0));
       setSelectedChatId((prev) => {
-        if (prev && visibleItems.some((item) => (item.chatId ?? item.id) === prev)) {
+        if (
+          prev &&
+          visibleItems.some((item) => (item.chatId ?? item.id) === prev)
+        ) {
           return prev;
         }
         return visibleItems[0]?.chatId ?? visibleItems[0]?.id ?? "";
@@ -240,13 +294,16 @@ const AdminChats = () => {
     if (!router.isReady) return;
     const sortFromQuery =
       typeof router.query.sort === "string" ? router.query.sort : "latest";
-    const sortIndex = SORT_OPTIONS.findIndex((option) => option.value === sortFromQuery);
+    const sortIndex = SORT_OPTIONS.findIndex(
+      (option) => option.value === sortFromQuery,
+    );
     setSelectedSortOption(sortIndex >= 0 ? sortIndex : 0);
 
     const qFromQuery = typeof router.query.q === "string" ? router.query.q : "";
     setSearchText(qFromQuery);
     setAppliedSearch(qFromQuery);
-    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    const idFromQuery =
+      typeof router.query.id === "string" ? router.query.id : "";
     if (idFromQuery) {
       setSelectedChatId(idFromQuery);
     }
@@ -406,7 +463,9 @@ const AdminChats = () => {
           (payload as { result?: GetAdminChatsResponse }).result ??
           (payload as GetAdminChatsResponse);
         const nextItems = Array.isArray(data?.items) ? data.items : [];
-        const filteredItems = nextItems.filter((item) => !isSystemNannowChat(item));
+        const filteredItems = nextItems.filter(
+          (item) => !isSystemNannowChat(item),
+        );
         const nextPageSize = Number(data?.pageSize ?? nextItems.length);
         total = Number(data?.total ?? collected.length + nextItems.length);
 
@@ -436,7 +495,9 @@ const AdminChats = () => {
           }`.trim();
           const user1NameWithRole = `${user1Name} (Client)`;
           const user2NameWithRole = `${user2Name} (Provider)`;
-          const messages = Array.isArray(result.messages) ? result.messages : [];
+          const messages = Array.isArray(result.messages)
+            ? result.messages
+            : [];
 
           messages.forEach((message) => {
             const rawTextPart = message.content?.trim() ?? "";
@@ -546,10 +607,34 @@ const AdminChats = () => {
             <Button
               title="Suspicious chats"
               type={suspiciousOnly ? "BLACK" : "OUTLINED"}
-              onClick={() => { setSuspiciousOnly((current) => !current); setItemOffset(0); }}
+              onClick={() => {
+                setSuspiciousOnly((current) => !current);
+                setItemOffset(0);
+              }}
               isDisabled={loading}
             />
-            {suspiciousChatsCount > 0 && <span style={{ position: "absolute", top: -8, right: -8, minWidth: 20, height: 20, padding: "0 5px", borderRadius: 999, background: "#dc2626", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>{suspiciousChatsCount}</span>}
+            {suspiciousChatsCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -8,
+                  right: -8,
+                  minWidth: 20,
+                  height: 20,
+                  padding: "0 5px",
+                  borderRadius: 999,
+                  background: "#dc2626",
+                  color: "#fff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                {suspiciousChatsCount}
+              </span>
+            )}
           </div>
           <Button
             title="Payment keywords"
@@ -568,19 +653,153 @@ const AdminChats = () => {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      {showKeywords && <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,.35)", display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 80 }}>
-        <div style={{ background: "white", borderRadius: 12, padding: 24, width: "min(760px, 92vw)", maxHeight: "80vh", overflow: "auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><h3>Payment detection keywords</h3><Button title="Close" type="PLAIN" onClick={() => setShowKeywords(false)} /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.5fr 70px 90px", gap: 8, marginBottom: 16 }}><input placeholder="Label" value={newKeyword.label} onChange={(e) => setNewKeyword({ ...newKeyword, label: e.target.value })} /><input placeholder="Keyword or phrase" value={newKeyword.phrase} onChange={(e) => setNewKeyword({ ...newKeyword, phrase: e.target.value })} /><input type="number" min={1} max={10} value={newKeyword.weight} onChange={(e) => setNewKeyword({ ...newKeyword, weight: Number(e.target.value) })} /><Button title="Add" type="BLACK" onClick={addKeyword} /></div>
-          {keywords.map((rule) => <div key={rule.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.5fr 70px 80px 90px", gap: 8, alignItems: "center", marginBottom: 8 }}>
-            <input value={rule.label} onChange={(e) => setKeywords((xs) => xs.map((x) => x.id === rule.id ? { ...x, label: e.target.value } : x))} />
-            <input value={rule.phrase} onChange={(e) => setKeywords((xs) => xs.map((x) => x.id === rule.id ? { ...x, phrase: e.target.value } : x))} />
-            <input type="number" min={1} max={10} value={rule.weight} onChange={(e) => setKeywords((xs) => xs.map((x) => x.id === rule.id ? { ...x, weight: Number(e.target.value) } : x))} />
-            <label><input type="checkbox" checked={rule.enabled} onChange={(e) => setKeywords((xs) => xs.map((x) => x.id === rule.id ? { ...x, enabled: e.target.checked } : x))} /> on</label>
-            <Button title={savingKeyword === rule.id ? "Saving..." : "Save"} type="BLACK" onClick={() => saveKeyword(rule)} isDisabled={savingKeyword !== null} />
-          </div>)}
+      {showKeywords && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 50,
+            background: "rgba(0,0,0,.35)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
+            paddingTop: 80,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 12,
+              padding: 24,
+              width: "min(760px, 92vw)",
+              maxHeight: "80vh",
+              overflow: "auto",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <h3>Payment detection keywords</h3>
+              <Button
+                title="Close"
+                type="PLAIN"
+                onClick={() => setShowKeywords(false)}
+              />
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.2fr 1.5fr 70px 90px",
+                gap: 8,
+                marginBottom: 16,
+              }}
+            >
+              <input
+                placeholder="Label"
+                value={newKeyword.label}
+                onChange={(e) =>
+                  setNewKeyword({ ...newKeyword, label: e.target.value })
+                }
+              />
+              <input
+                placeholder="Keyword or phrase"
+                value={newKeyword.phrase}
+                onChange={(e) =>
+                  setNewKeyword({ ...newKeyword, phrase: e.target.value })
+                }
+              />
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={newKeyword.weight}
+                onChange={(e) =>
+                  setNewKeyword({
+                    ...newKeyword,
+                    weight: Number(e.target.value),
+                  })
+                }
+              />
+              <Button title="Add" type="BLACK" onClick={addKeyword} />
+            </div>
+            {keywords.map((rule) => (
+              <div
+                key={rule.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.2fr 1.5fr 70px 80px 90px",
+                  gap: 8,
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <input
+                  value={rule.label}
+                  onChange={(e) =>
+                    setKeywords((xs) =>
+                      xs.map((x) =>
+                        x.id === rule.id ? { ...x, label: e.target.value } : x,
+                      ),
+                    )
+                  }
+                />
+                <input
+                  value={rule.phrase}
+                  onChange={(e) =>
+                    setKeywords((xs) =>
+                      xs.map((x) =>
+                        x.id === rule.id ? { ...x, phrase: e.target.value } : x,
+                      ),
+                    )
+                  }
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={rule.weight}
+                  onChange={(e) =>
+                    setKeywords((xs) =>
+                      xs.map((x) =>
+                        x.id === rule.id
+                          ? { ...x, weight: Number(e.target.value) }
+                          : x,
+                      ),
+                    )
+                  }
+                />
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={rule.enabled}
+                    onChange={(e) =>
+                      setKeywords((xs) =>
+                        xs.map((x) =>
+                          x.id === rule.id
+                            ? { ...x, enabled: e.target.checked }
+                            : x,
+                        ),
+                      )
+                    }
+                  />{" "}
+                  on
+                </label>
+                <Button
+                  title={savingKeyword === rule.id ? "Saving..." : "Save"}
+                  type="BLACK"
+                  onClick={() => saveKeyword(rule)}
+                  isDisabled={savingKeyword !== null}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>}
+      )}
 
       <div className={styles.layout}>
         <div className={styles.chatListPane}>
@@ -593,10 +812,16 @@ const AdminChats = () => {
                 const chatId = chat.chatId ?? chat.id;
                 const lastMessage = Array.isArray(chat.messages)
                   ? chat.messages[chat.messages.length - 1]
-                  : chat.lastMessage ?? null;
-                const suspiciousMessage = chat.isSuspicious || (Array.isArray(chat.messages)
-                  ? chat.messages.find((message) => message.paymentRisk?.isSuspicious)
-                  : chat.lastMessage?.paymentRisk?.isSuspicious ? chat.lastMessage : null);
+                  : (chat.lastMessage ?? null);
+                const suspiciousMessage =
+                  chat.isSuspicious ||
+                  (Array.isArray(chat.messages)
+                    ? chat.messages.find(
+                        (message) => message.paymentRisk?.isSuspicious,
+                      )
+                    : chat.lastMessage?.paymentRisk?.isSuspicious
+                      ? chat.lastMessage
+                      : null);
                 const user1Name = `${chat.user1?.firstName ?? "Deleted"} ${
                   chat.user1?.lastName ?? "User"
                 }`.trim();
@@ -646,10 +871,39 @@ const AdminChats = () => {
                         <span>{user1Name}</span>
                         <span className={styles.chatDivider}>/</span>
                         <span>{user2Name}</span>
-                        {suspiciousMessage && <span title="Suspicious payment-related message" style={{ marginLeft: 6, width: 20, height: 20, borderRadius: "50%", background: "#dc2626", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800 }}>!</span>}
+                        {suspiciousMessage && (
+                          <span
+                            title="Suspicious payment-related message"
+                            style={{
+                              marginLeft: 6,
+                              width: 20,
+                              height: 20,
+                              borderRadius: "50%",
+                              background: "#dc2626",
+                              color: "#fff",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 12,
+                              fontWeight: 800,
+                            }}
+                          >
+                            !
+                          </span>
+                        )}
                       </div>
                       <div className={styles.chatPreview}>
-                        {suspiciousMessage && <span style={{ color: "#b91c1c", fontWeight: 600, marginRight: 4 }}>Suspicious:</span>}
+                        {suspiciousMessage && (
+                          <span
+                            style={{
+                              color: "#b91c1c",
+                              fontWeight: 600,
+                              marginRight: 4,
+                            }}
+                          >
+                            Suspicious:
+                          </span>
+                        )}
                         {lastMessage?.content?.trim() ||
                           (lastMessage?.imageUrl ? "Image" : "No messages yet")}
                       </div>
@@ -675,7 +929,9 @@ const AdminChats = () => {
           <div className={styles.paneTitle}>{selectedTitle}</div>
           {loadingChat ? (
             <div className={styles.emptyState}>Loading messages...</div>
-          ) : messages.length > 0 && selectedChat?.user1 && selectedChat?.user2 ? (
+          ) : messages.length > 0 &&
+            selectedChat?.user1 &&
+            selectedChat?.user2 ? (
             <ChatMessages
               messages={messages}
               userId={selectedChat.user2.id}

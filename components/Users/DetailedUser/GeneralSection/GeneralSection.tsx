@@ -332,8 +332,9 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   };
 
   const parsedBasePrice = parseBasePriceValue(basePriceInput);
-  const basePricePreview =
-    parsedBasePrice.ok ? `€ ${parsedBasePrice.value.toFixed(2)}` : "—";
+  const basePricePreview = parsedBasePrice.ok
+    ? `€ ${parsedBasePrice.value.toFixed(2)}`
+    : "-";
 
   const confirmChangeBasePrice = async () => {
     if (!user?.provider?.id || isUpdatingBasePrice) return;
@@ -417,11 +418,15 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
           completionStatsRebuildJobId,
         );
         const job =
-          (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data?.job as
+            | ProviderCompletionStatsRebuildJob
+            | undefined) ??
           (response.data?.result?.job as
             | ProviderCompletionStatsRebuildJob
             | undefined) ??
-          (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data?.result as
+            | ProviderCompletionStatsRebuildJob
+            | undefined) ??
           (response.data as ProviderCompletionStatsRebuildJob | undefined);
         if (!isCancelled && job) {
           setCompletionStatsRebuildJob(job);
@@ -450,7 +455,9 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
         (response.data?.result?.job as
           | ProviderCompletionStatsRebuildJob
           | undefined) ??
-        (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+        (response.data?.result as
+          | ProviderCompletionStatsRebuildJob
+          | undefined) ??
         (response.data as ProviderCompletionStatsRebuildJob | undefined);
       if (job?.id) {
         setCompletionStatsRebuildJob(job);
@@ -594,13 +601,14 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 }}
               />
             )}
-            {c.actionButton?.action === "DELETE_STRIPE" && mode === "provider" && (
-              <Button
-                title={c.actionButton.title}
-                type="OUTLINED"
-                onClick={openDeleteStripeModal}
-              />
-            )}
+            {c.actionButton?.action === "DELETE_STRIPE" &&
+              mode === "provider" && (
+                <Button
+                  title={c.actionButton.title}
+                  type="OUTLINED"
+                  onClick={openDeleteStripeModal}
+                />
+              )}
             {c.actionButton?.action === "CHANGE_BASE_PRICE" &&
               mode === "provider" && (
                 <Button
@@ -668,7 +676,9 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
               />
               <Button
                 title={
-                  isDeletingStripeAccount ? "Deleting..." : "Delete stripe account"
+                  isDeletingStripeAccount
+                    ? "Deleting..."
+                    : "Delete stripe account"
                 }
                 type="DELETE"
                 onClick={confirmDeleteStripeAccount}
@@ -865,23 +875,21 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
               {`Job: ${
                 completionStatsRebuildJob?.id ??
                 completionStatsRebuildJobId ??
-                "—"
-              } • Status: ${
-                completionStatsRebuildJob?.status ?? "PENDING"
-              }`}
+                "-"
+              } • Status: ${completionStatsRebuildJob?.status ?? "PENDING"}`}
             </p>
             <div className={styles.confirmationBody}>
               <div>
                 Providers total:{" "}
-                {completionStatsRebuildJob?.progress.providersTotal ?? "—"}
+                {completionStatsRebuildJob?.progress.providersTotal ?? "-"}
               </div>
               <div>
                 Providers processed:{" "}
-                {completionStatsRebuildJob?.progress.providersProcessed ?? "—"}
+                {completionStatsRebuildJob?.progress.providersProcessed ?? "-"}
               </div>
               <div>
                 Providers modified:{" "}
-                {completionStatsRebuildJob?.progress.providersModified ?? "—"}
+                {completionStatsRebuildJob?.progress.providersModified ?? "-"}
               </div>
               {completionStatsRebuildJob?.error && (
                 <div className={styles.inputError}>

@@ -60,7 +60,8 @@ const ProfileInfo = ({
 
   const hasProfileImage = profileImgUrl.trim().length > 0;
   const showRemovedAvatar = !hasProfileImage && removeMessage.trim().length > 0;
-  const hasPlatform = typeof platform === "string" && platform.trim().length > 0;
+  const hasPlatform =
+    typeof platform === "string" && platform.trim().length > 0;
   const hasAppVersion =
     typeof appVersion === "string" && appVersion.trim().length > 0;
   const normalizedPhoneNumber = (phoneNumber ?? "").trim();
@@ -69,8 +70,8 @@ const ProfileInfo = ({
     : "";
   const appInfoLine =
     hasPlatform || hasAppVersion
-      ? `${hasPlatform ? platform : "—"} | ${hasAppVersion ? appVersion : "—"}`
-      : "—";
+      ? `${hasPlatform ? platform : "-"} | ${hasAppVersion ? appVersion : "-"}`
+      : "-";
 
   const openImageModal = (event?: MouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation();

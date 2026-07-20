@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 type ButtonProps = {
   title: string;
   type: string;
-  /** Native `<button type>` — defaults to `button` so in-form actions don’t accidentally submit forms. */
+  /** Native `<button type>` - defaults to `button` so in-form actions don’t accidentally submit forms. */
   htmlType?: "button" | "submit" | "reset";
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   attentionNumber?: number;

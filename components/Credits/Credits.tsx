@@ -40,9 +40,8 @@ const SORT_ORDER_OPTIONS = [
   { title: "Ascending", value: "asc" },
 ] as const;
 
-
 const formatDateTime = (value?: string | null) => {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
@@ -69,7 +68,9 @@ const parseEuroAmountToCents = (value: string) => {
 const getUserName = (user?: CreditTransactionUserPayload) => {
   const fullName = user?.fullName?.trim();
   if (fullName) return fullName;
-  return `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || user?.id || "—";
+  return (
+    `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || user?.id || "-"
+  );
 };
 
 const getUserRoute = (user?: CreditTransactionUserPayload) => {
@@ -109,22 +110,33 @@ const normalizeCreditsResponse = (
       source.summary && typeof source.summary === "object"
         ? ({
             userId:
-              typeof (source.summary as Record<string, unknown>).userId === "string"
+              typeof (source.summary as Record<string, unknown>).userId ===
+              "string"
                 ? String((source.summary as Record<string, unknown>).userId)
                 : undefined,
-            totalCount: Number((source.summary as Record<string, unknown>).totalCount ?? 0),
+            totalCount: Number(
+              (source.summary as Record<string, unknown>).totalCount ?? 0,
+            ),
             positiveAmountCents: Number(
-              (source.summary as Record<string, unknown>).positiveAmountCents ?? 0,
+              (source.summary as Record<string, unknown>).positiveAmountCents ??
+                0,
             ),
             negativeAmountCents: Number(
-              (source.summary as Record<string, unknown>).negativeAmountCents ?? 0,
+              (source.summary as Record<string, unknown>).negativeAmountCents ??
+                0,
             ),
-            netAmountCents: Number((source.summary as Record<string, unknown>).netAmountCents ?? 0),
-            grantCount: Number((source.summary as Record<string, unknown>).grantCount ?? 0),
+            netAmountCents: Number(
+              (source.summary as Record<string, unknown>).netAmountCents ?? 0,
+            ),
+            grantCount: Number(
+              (source.summary as Record<string, unknown>).grantCount ?? 0,
+            ),
             redemptionCount: Number(
               (source.summary as Record<string, unknown>).redemptionCount ?? 0,
             ),
-            refundCount: Number((source.summary as Record<string, unknown>).refundCount ?? 0),
+            refundCount: Number(
+              (source.summary as Record<string, unknown>).refundCount ?? 0,
+            ),
             adjustmentCount: Number(
               (source.summary as Record<string, unknown>).adjustmentCount ?? 0,
             ),
@@ -133,7 +145,12 @@ const normalizeCreditsResponse = (
   };
 };
 
-const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProps) => {
+const Credits = ({
+  userId,
+  title,
+  onBackClick,
+  creditBalanceCents,
+}: CreditsProps) => {
   const router = useRouter();
   const isUserScoped = Boolean(userId);
   const canGrantCredits = isUserScoped && isAdminAllowedToGrantCredits();
@@ -144,14 +161,20 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
   const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [creditsUser, setCreditsUser] = useState<CreditTransactionUserPayload | null>(null);
-  const [creditsSummary, setCreditsSummary] = useState<CreditTransactionsSummaryPayload | null>(null);
+  const [creditsUser, setCreditsUser] =
+    useState<CreditTransactionUserPayload | null>(null);
+  const [creditsSummary, setCreditsSummary] =
+    useState<CreditTransactionsSummaryPayload | null>(null);
   const [queryText, setQueryText] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [selectedSortBy, setSelectedSortBy] = useState<(typeof SORT_BY_OPTIONS)[number]["value"]>("date");
-  const [appliedSortBy, setAppliedSortBy] = useState<(typeof SORT_BY_OPTIONS)[number]["value"]>("date");
-  const [selectedSortOrder, setSelectedSortOrder] = useState<(typeof SORT_ORDER_OPTIONS)[number]["value"]>("desc");
-  const [appliedSortOrder, setAppliedSortOrder] = useState<(typeof SORT_ORDER_OPTIONS)[number]["value"]>("desc");
+  const [selectedSortBy, setSelectedSortBy] =
+    useState<(typeof SORT_BY_OPTIONS)[number]["value"]>("date");
+  const [appliedSortBy, setAppliedSortBy] =
+    useState<(typeof SORT_BY_OPTIONS)[number]["value"]>("date");
+  const [selectedSortOrder, setSelectedSortOrder] =
+    useState<(typeof SORT_ORDER_OPTIONS)[number]["value"]>("desc");
+  const [appliedSortOrder, setAppliedSortOrder] =
+    useState<(typeof SORT_ORDER_OPTIONS)[number]["value"]>("desc");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [amountInput, setAmountInput] = useState("");
   const [confirmAmountInput, setConfirmAmountInput] = useState("");
@@ -171,20 +194,21 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
     try {
       setLoading(true);
       setError("");
-      const response = isUserScoped && userId
-        ? await getUserCredits(userId, {
-            startIndex: itemOffset,
-            pageSize,
-            sortBy: "date",
-            sortOrder: "desc",
-          })
-        : await getCredits({
-            startIndex: itemOffset,
-            pageSize,
-            q: appliedQuery.trim() || undefined,
-            sortBy: appliedSortBy,
-            sortOrder: appliedSortOrder,
-          });
+      const response =
+        isUserScoped && userId
+          ? await getUserCredits(userId, {
+              startIndex: itemOffset,
+              pageSize,
+              sortBy: "date",
+              sortOrder: "desc",
+            })
+          : await getCredits({
+              startIndex: itemOffset,
+              pageSize,
+              q: appliedQuery.trim() || undefined,
+              sortBy: appliedSortBy,
+              sortOrder: appliedSortOrder,
+            });
 
       const normalized = normalizeCreditsResponse(response.data);
       const data = normalized ?? {
@@ -198,8 +222,16 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
       setItems(Array.isArray(data.items) ? data.items : []);
       setTotal(Number(data.total ?? 0));
       setPageSize(Number(data.pageSize ?? PAGE_SIZE) || PAGE_SIZE);
-      setPageCount(Math.max(1, Math.ceil(Number(data.total ?? 0) / (Number(data.pageSize ?? PAGE_SIZE) || PAGE_SIZE))));
-      setCreditsUser(isUserScoped ? data.user ?? null : null);
+      setPageCount(
+        Math.max(
+          1,
+          Math.ceil(
+            Number(data.total ?? 0) /
+              (Number(data.pageSize ?? PAGE_SIZE) || PAGE_SIZE),
+          ),
+        ),
+      );
+      setCreditsUser(isUserScoped ? (data.user ?? null) : null);
       setCreditsSummary(data.summary ?? null);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -289,7 +321,11 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
     } catch (err) {
       console.log(err);
       const message = axios.isAxiosError(err)
-        ? String(err.response?.data?.error ?? err.message ?? "Failed to grant credits")
+        ? String(
+            err.response?.data?.error ??
+              err.message ??
+              "Failed to grant credits",
+          )
         : "Failed to grant credits";
       toast.error(message);
     } finally {
@@ -297,19 +333,24 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
     }
   };
 
-  const currentPage = pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize) + 1;
+  const currentPage =
+    pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize) + 1;
   const positiveAmountCents = creditsSummary?.positiveAmountCents ?? 0;
   const negativeAmountCents = creditsSummary?.negativeAmountCents ?? 0;
   const netAmountCents = creditsSummary?.netAmountCents ?? 0;
   const balanceAfterCents =
-    creditBalanceCents ?? creditsUser?.creditBalanceCents ?? items[0]?.balanceAfterCents;
+    creditBalanceCents ??
+    creditsUser?.creditBalanceCents ??
+    items[0]?.balanceAfterCents;
 
   return (
     <div className={styles.main}>
       <div className={styles.headerRow}>
         <div className={styles.titleWrap}>
           <h2 className={styles.title}>{currentTitle}</h2>
-          <div className={styles.subtitle}>{`${total} credit transactions, page ${currentPage}/${pageCount}`}</div>
+          <div
+            className={styles.subtitle}
+          >{`${total} credit transactions, page ${currentPage}/${pageCount}`}</div>
         </div>
         <div className={styles.headerActions}>
           {canGrantCredits && (
@@ -341,7 +382,8 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
                   value={selectedSortBy}
                   onChange={(e) =>
                     setSelectedSortBy(
-                      e.target.value as (typeof SORT_BY_OPTIONS)[number]["value"],
+                      e.target
+                        .value as (typeof SORT_BY_OPTIONS)[number]["value"],
                     )
                   }
                 >
@@ -358,7 +400,8 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
                   value={selectedSortOrder}
                   onChange={(e) =>
                     setSelectedSortOrder(
-                      e.target.value as (typeof SORT_ORDER_OPTIONS)[number]["value"],
+                      e.target
+                        .value as (typeof SORT_ORDER_OPTIONS)[number]["value"],
                     )
                   }
                 >
@@ -377,7 +420,9 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
       {loading && <div className={styles.emptyState}>Loading credits...</div>}
       {!loading && error && <div className={styles.emptyState}>{error}</div>}
       {!loading && !error && items.length === 0 && (
-        <div className={styles.emptyState}>No credits found for selected filters</div>
+        <div className={styles.emptyState}>
+          No credits found for selected filters
+        </div>
       )}
 
       {!loading && !error && creditsSummary && (
@@ -472,12 +517,12 @@ const Credits = ({ userId, title, onBackClick, creditBalanceCents }: CreditsProp
                 <div className={styles.columnValue}>
                   {formatDateTime(item.createdAt)}
                 </div>
-                <div className={styles.columnValue}>{item.note ?? "—"}</div>
+                <div className={styles.columnValue}>{item.note ?? "-"}</div>
                 <div className={styles.columnValue}>
                   {item.orderId ??
                     item.paymentId ??
                     item.stripePaymentIntentId ??
-                    "—"}
+                    "-"}
                 </div>
               </div>
             );

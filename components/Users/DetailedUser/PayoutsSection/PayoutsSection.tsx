@@ -42,7 +42,7 @@ const formatDateTime = (value?: string) =>
         minute: "2-digit",
         hour12: false,
       })
-    : "—";
+    : "-";
 
 const formatMoney = (amount: number, currency: string) => {
   try {
@@ -114,7 +114,9 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [ordersById, setOrdersById] = useState<Record<string, OrderType>>({});
   const [subtotalPaidAmt, setSubtotalPaidAmt] = useState(0);
-  const [refreshingOrderId, setRefreshingOrderId] = useState<string | null>(null);
+  const [refreshingOrderId, setRefreshingOrderId] = useState<string | null>(
+    null,
+  );
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -137,7 +139,9 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
       setTotalCount(data.totalCount ?? 0);
       setSubtotalPaidAmt(data.subtotalPaidAmt ?? 0);
       setPageCount(
-        Math.ceil((data.totalCount ?? 0) / (itemsPerPage > 0 ? itemsPerPage : 1)),
+        Math.ceil(
+          (data.totalCount ?? 0) / (itemsPerPage > 0 ? itemsPerPage : 1),
+        ),
       );
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -151,7 +155,14 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, [appliedEndDate, appliedStartDate, itemOffset, itemsPerPage, providerUserId, router]);
+  }, [
+    appliedEndDate,
+    appliedStartDate,
+    itemOffset,
+    itemsPerPage,
+    providerUserId,
+    router,
+  ]);
 
   useEffect(() => {
     fetchPayouts();
@@ -300,7 +311,9 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
               const order =
                 payout.order ??
                 (payoutOrderId ? ordersById[payoutOrderId] : undefined);
-              const payoutStatus = normalizePayoutStatus(payout.stripePayoutStatus);
+              const payoutStatus = normalizePayoutStatus(
+                payout.stripePayoutStatus,
+              );
               const showArrivalDate =
                 payoutStatus === "pending" || payoutStatus === "in_transit";
               const showPaidAt = payoutStatus === "paid";
@@ -310,11 +323,12 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
                   <div className={styles.rowTop}>
                     <div className={styles.rowColLeft}>
                       <div className={styles.metaItem}>
-                        Date: {formatDateTime(payout.createdAt ?? payout.updatedAt)}
+                        Date:{" "}
+                        {formatDateTime(payout.createdAt ?? payout.updatedAt)}
                       </div>
                       <div className={styles.stripeDataTitle}>Stripe data</div>
                       <div className={styles.payoutMetaItem}>
-                        <b>Status:</b> {payout.stripePayoutStatus ?? "—"}
+                        <b>Status:</b> {payout.stripePayoutStatus ?? "-"}
                       </div>
                       {showArrivalDate && (
                         <div className={styles.payoutMetaItem}>
@@ -327,7 +341,9 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
                       {showPaidAt && (
                         <div className={styles.payoutMetaItem}>
                           <b>Paid at:</b>{" "}
-                          {formatDateTime(payout.stripePayoutPaidAt ?? undefined)}
+                          {formatDateTime(
+                            payout.stripePayoutPaidAt ?? undefined,
+                          )}
                         </div>
                       )}
                       {showFailure && (
@@ -340,18 +356,19 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
                           </div>
                           <div className={styles.payoutMetaItem}>
                             <b>Failure code:</b>{" "}
-                            {payout.stripePayoutFailureCode ?? "—"}
+                            {payout.stripePayoutFailureCode ?? "-"}
                           </div>
                           <div className={styles.payoutMetaItem}>
                             <b>Failure message:</b>{" "}
-                            {payout.stripePayoutFailureMessage ?? "—"}
+                            {payout.stripePayoutFailureMessage ?? "-"}
                           </div>
                         </>
                       )}
                     </div>
                     <div className={styles.rowColRight}>
                       <div className={styles.metaItem}>
-                        Amount: {formatMoney(payout.paidAmt ?? 0, payout.currency)}
+                        Amount:{" "}
+                        {formatMoney(payout.paidAmt ?? 0, payout.currency)}
                       </div>
                       {payoutOrderId && (
                         <div className={styles.payoutActions}>
@@ -374,7 +391,9 @@ const PayoutsSection = ({ user, onBackClick }: PayoutsSectionProps) => {
                   {order ? (
                     <Order
                       key={order.id}
-                      providerImgUrl={getUserImage(order.approvedProvider?.user?.imgUrl)}
+                      providerImgUrl={getUserImage(
+                        order.approvedProvider?.user?.imgUrl,
+                      )}
                       clientImgUrl={getUserImage(order.clientUser?.imgUrl)}
                       id={order.id}
                       createdAt={order.createdAt}

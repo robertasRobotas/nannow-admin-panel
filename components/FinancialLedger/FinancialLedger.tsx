@@ -212,7 +212,7 @@ const formatDateTime = (value?: string | null) =>
         minute: "2-digit",
         hour12: false,
       })
-    : "—";
+    : "-";
 
 const formatMoneyFromCents = (value?: number | null) => {
   const amount = typeof value === "number" ? value / 100 : 0;
@@ -298,7 +298,7 @@ const getAmountPresentation = (
 
       if (!hasAnyRefund) {
         return {
-          amount: "—",
+          amount: "-",
           tone: "neutral",
           subtitle: "No refund",
           isEmpty: true,
@@ -443,10 +443,14 @@ const FinancialLedger = () => {
   const [reportsError, setReportsError] = useState("");
   const [regeneratingReportKey, setRegeneratingReportKey] = useState("");
   const [downloadingReportKey, setDownloadingReportKey] = useState("");
-  const [reportRegenerationTarget, setReportRegenerationTarget] =
-    useState<{ year: number; month: number; label: string } | null>(null);
-  const [selectedReportMonth, setSelectedReportMonth] = useState(() =>
-    `${defaultRange.endInput.slice(0, 4)}-${defaultRange.endInput.slice(5, 7)}`,
+  const [reportRegenerationTarget, setReportRegenerationTarget] = useState<{
+    year: number;
+    month: number;
+    label: string;
+  } | null>(null);
+  const [selectedReportMonth, setSelectedReportMonth] = useState(
+    () =>
+      `${defaultRange.endInput.slice(0, 4)}-${defaultRange.endInput.slice(5, 7)}`,
   );
   const [hasSyncedViewFromQuery, setHasSyncedViewFromQuery] = useState(false);
   const startDateInputRef = useRef<HTMLInputElement>(null);
@@ -661,8 +665,7 @@ const FinancialLedger = () => {
     typeof router.query[LEDGER_VIEW_KEY] === "string"
       ? router.query[LEDGER_VIEW_KEY]
       : "";
-  const ledgerQueryQ =
-    typeof router.query.q === "string" ? router.query.q : "";
+  const ledgerQueryQ = typeof router.query.q === "string" ? router.query.q : "";
   const ledgerQueryStatus =
     typeof router.query.status === "string" ? router.query.status : "";
   const ledgerQueryMode =
@@ -670,7 +673,9 @@ const FinancialLedger = () => {
   const ledgerQuerySort =
     typeof router.query.sort === "string" ? router.query.sort : "paidAt_desc";
   const ledgerQueryPeriod =
-    typeof router.query.period === "string" ? router.query.period : "this_month";
+    typeof router.query.period === "string"
+      ? router.query.period
+      : "this_month";
   const ledgerQueryStart =
     typeof router.query.start === "string" ? router.query.start : "";
   const ledgerQueryEnd =
@@ -679,22 +684,44 @@ const FinancialLedger = () => {
     typeof router.query.page === "string" ? router.query.page : "";
 
   useEffect(() => {
-    if (router.isReady && hasSyncedViewFromQuery && activeView === LEDGER_DEFAULT_VIEW) {
+    if (
+      router.isReady &&
+      hasSyncedViewFromQuery &&
+      activeView === LEDGER_DEFAULT_VIEW
+    ) {
       fetchFinancialOrders();
     }
-  }, [activeView, fetchFinancialOrders, hasSyncedViewFromQuery, router.isReady]);
+  }, [
+    activeView,
+    fetchFinancialOrders,
+    hasSyncedViewFromQuery,
+    router.isReady,
+  ]);
 
   useEffect(() => {
-    if (router.isReady && hasSyncedViewFromQuery && activeView === LEDGER_DEFAULT_VIEW) {
+    if (
+      router.isReady &&
+      hasSyncedViewFromQuery &&
+      activeView === LEDGER_DEFAULT_VIEW
+    ) {
       fetchForecasts();
     }
   }, [activeView, fetchForecasts, hasSyncedViewFromQuery, router.isReady]);
 
   useEffect(() => {
-    if (router.isReady && hasSyncedViewFromQuery && activeView === LEDGER_REPORTS_VIEW) {
+    if (
+      router.isReady &&
+      hasSyncedViewFromQuery &&
+      activeView === LEDGER_REPORTS_VIEW
+    ) {
       fetchPlatformFeeInvoiceReports();
     }
-  }, [activeView, fetchPlatformFeeInvoiceReports, hasSyncedViewFromQuery, router.isReady]);
+  }, [
+    activeView,
+    fetchPlatformFeeInvoiceReports,
+    hasSyncedViewFromQuery,
+    router.isReady,
+  ]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -710,11 +737,15 @@ const FinancialLedger = () => {
     setSelectedStatusOption(statusIndex >= 0 ? statusIndex : 0);
 
     const modeFromQuery = ledgerQueryMode;
-    const modeIndex = MODE_OPTIONS.findIndex((option) => option.value === modeFromQuery);
+    const modeIndex = MODE_OPTIONS.findIndex(
+      (option) => option.value === modeFromQuery,
+    );
     setSelectedModeOption(modeIndex >= 0 ? modeIndex : 0);
 
     const sortFromQuery = ledgerQuerySort;
-    const sortIndex = SORT_OPTIONS.findIndex((option) => option.value === sortFromQuery);
+    const sortIndex = SORT_OPTIONS.findIndex(
+      (option) => option.value === sortFromQuery,
+    );
     setSelectedSortOption(sortIndex >= 0 ? sortIndex : 0);
 
     const periodFromQuery = ledgerQueryPeriod;
@@ -730,7 +761,8 @@ const FinancialLedger = () => {
     if (safePeriod === "custom") {
       const startFromQuery = ledgerQueryStart;
       const endFromQuery = ledgerQueryEnd;
-      const hasValidInputs = startFromQuery.length > 0 && endFromQuery.length > 0;
+      const hasValidInputs =
+        startFromQuery.length > 0 && endFromQuery.length > 0;
       if (hasValidInputs) {
         setSelectedPeriod("custom");
         setStartDateInput(startFromQuery);
@@ -946,13 +978,18 @@ const FinancialLedger = () => {
         )
       : "Selected month";
   const currentYear = new Date().getFullYear();
-  const reportYearOptions = Array.from({ length: 10 }, (_, index) => currentYear - index);
+  const reportYearOptions = Array.from(
+    { length: 10 },
+    (_, index) => currentYear - index,
+  );
   return (
     <div className={styles.main}>
       <div className={styles.ledgerColumn}>
         <div className={styles.headerRow}>
           <div className={styles.titleWrap}>
-            <h2 className={`${styles.title} ${nunito.className}`}>Financial ledger</h2>
+            <h2 className={`${styles.title} ${nunito.className}`}>
+              Financial ledger
+            </h2>
             <div className={styles.subtitle}>
               {`${total} ledger rows, page ${currentPage}/${pageCount}`}
             </div>
@@ -1037,7 +1074,9 @@ const FinancialLedger = () => {
                     <button
                       type="button"
                       className={styles.datePickerBtn}
-                      onClick={() => openNativeDatePicker(endDateInputRef.current)}
+                      onClick={() =>
+                        openNativeDatePicker(endDateInputRef.current)
+                      }
                       aria-label="Open end date picker"
                     >
                       <img src={calendarImg.src} alt="" />
@@ -1060,8 +1099,12 @@ const FinancialLedger = () => {
             )}
           </div>
 
-          {loading && <div className={styles.emptyState}>Loading financial orders...</div>}
-          {!loading && error && <div className={styles.emptyState}>{error}</div>}
+          {loading && (
+            <div className={styles.emptyState}>Loading financial orders...</div>
+          )}
+          {!loading && error && (
+            <div className={styles.emptyState}>{error}</div>
+          )}
           {!loading && !error && items.length === 0 && (
             <div className={styles.emptyState}>
               No financial orders for selected filters
@@ -1096,7 +1139,9 @@ const FinancialLedger = () => {
                       <div className={styles.profilePics}>
                         <img
                           className={styles.providerImg}
-                          src={order.providerUser?.imgUrl || defaultAvatarImg.src}
+                          src={
+                            order.providerUser?.imgUrl || defaultAvatarImg.src
+                          }
                           alt={providerName}
                         />
                         <img
@@ -1106,10 +1151,15 @@ const FinancialLedger = () => {
                         />
                       </div>
                       <div className={styles.orderInfo}>
-                        <Link href={`/orders/${order.id}`} className={styles.orderIdLink}>
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className={styles.orderIdLink}
+                        >
                           {order.orderPrettyId}
                         </Link>
-                        <div className={styles.orderNames}>{`${providerName} / ${clientName}`}</div>
+                        <div
+                          className={styles.orderNames}
+                        >{`${providerName} / ${clientName}`}</div>
                         <div className={styles.orderMeta}>
                           Paid: {formatDateTime(order.paidAt)}
                         </div>
@@ -1212,14 +1262,18 @@ const FinancialLedger = () => {
               nextLinkClassName={paginateStyles.nextLink}
               breakClassName={paginateStyles.break}
               activeClassName={paginateStyles.activePage}
-              forcePage={pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize)}
+              forcePage={
+                pageCount === 0 ? 0 : Math.floor(itemOffset / pageSize)
+              }
             />
           )}
 
           <div className={styles.totalsSection}>
             <div className={styles.totalsHeader}>
               <h3 className={styles.totalsTitle}>Totals for selected period</h3>
-              <div className={styles.totalsSubtitle}>{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
+              <div
+                className={styles.totalsSubtitle}
+              >{`${appliedStartLabel} - ${appliedEndLabel}`}</div>
             </div>
             <div className={styles.totalsGrid}>
               <div className={styles.totalCard}>
@@ -1229,7 +1283,9 @@ const FinancialLedger = () => {
               <div className={styles.totalCard}>
                 <div className={styles.totalLabel}>Ledger rows</div>
                 <div className={styles.modeCountsWrap}>
-                  <span className={`${styles.modeCountChip} ${styles.recordTypeOrder}`}>
+                  <span
+                    className={`${styles.modeCountChip} ${styles.recordTypeOrder}`}
+                  >
                     Orders {subtotal.orderPaymentCount ?? 0}
                   </span>
                   <span
@@ -1282,7 +1338,9 @@ const FinancialLedger = () => {
               <div className={styles.totalCard}>
                 <div className={styles.totalLabel}>Mode counts</div>
                 <div className={styles.modeCountsWrap}>
-                  <span className={`${styles.modeCountChip} ${styles.modeForecast}`}>
+                  <span
+                    className={`${styles.modeCountChip} ${styles.modeForecast}`}
+                  >
                     Forecast {subtotal.forecastCount}
                   </span>
                   <span
@@ -1290,7 +1348,9 @@ const FinancialLedger = () => {
                   >
                     Partial {subtotal.partialRealCount}
                   </span>
-                  <span className={`${styles.modeCountChip} ${styles.modeReal}`}>
+                  <span
+                    className={`${styles.modeCountChip} ${styles.modeReal}`}
+                  >
                     Real {subtotal.realCount}
                   </span>
                 </div>
@@ -1481,8 +1541,8 @@ const FinancialLedger = () => {
                     <span>Ledger paid</span>
                     <strong>
                       {formatMoneyFromCents(
-                        forecastCrossChecks
-                          ?.ledgerAlreadyPaidOutToSittersCents ?? 0,
+                        forecastCrossChecks?.ledgerAlreadyPaidOutToSittersCents ??
+                          0,
                       )}
                     </strong>
                   </div>

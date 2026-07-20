@@ -80,9 +80,9 @@ type CreditRow = {
 const euro = (cents?: number | null) =>
   `€${(Math.max(0, cents ?? 0) / 100).toFixed(2)}`;
 const date = (v?: string | null) => {
-  if (!v) return "—";
+  if (!v) return "-";
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-GB");
+  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("en-GB");
 };
 
 const GiftCardsCredits = ({ title }: { title: string }) => {
@@ -245,9 +245,9 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                       {status}
                     </span>
                   </div>
-                  <div className={styles.muted}>{g.senderName || "—"}</div>
+                  <div className={styles.muted}>{g.senderName || "-"}</div>
                   <div className={styles.muted}>
-                    {g.recipientName || g.recipientEmail || "—"}
+                    {g.recipientName || g.recipientEmail || "-"}
                   </div>
                   <div className={styles.muted}>{date(g.expiresAt)}</div>
                   <div className={styles.muted}>{date(g.createdAt)}</div>
@@ -303,8 +303,8 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                   <div className={styles.muted}>{userLabel}</div>
                   <div className={styles.plus}>+{euro(c.amountCents)}</div>
                   <div>{euro(c.balanceAfterCents)}</div>
-                  <div className={styles.muted}>{c.note || "—"}</div>
-                  <div className={styles.muted}>{c.adminId || "—"}</div>
+                  <div className={styles.muted}>{c.note || "-"}</div>
+                  <div className={styles.muted}>{c.adminId || "-"}</div>
                   <div className={styles.muted}>{date(c.createdAt)}</div>
                 </div>
               );
