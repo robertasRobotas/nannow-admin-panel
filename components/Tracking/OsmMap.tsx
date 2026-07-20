@@ -89,9 +89,13 @@ const ensureLeafletLoaded = async (): Promise<LeafletApi | null> => {
     ) as HTMLScriptElement | null;
     if (existing) {
       existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("leaflet-load-error")), {
-        once: true,
-      });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error("leaflet-load-error")),
+        {
+          once: true,
+        },
+      );
       return;
     }
 
@@ -114,12 +118,14 @@ const getPinPopupHtml = (pin: TrackingPin) => {
     const statusTitle = getOrderStatusTitle(statusRaw, false);
     const startsAt = pin.orderStartsAt
       ? new Date(pin.orderStartsAt).toLocaleString()
-      : "—";
-    const endsAt = pin.orderEndsAt ? new Date(pin.orderEndsAt).toLocaleString() : "—";
+      : "-";
+    const endsAt = pin.orderEndsAt
+      ? new Date(pin.orderEndsAt).toLocaleString()
+      : "-";
     const totalPrice =
       typeof pin.orderTotalPrice === "number"
         ? `€${pin.orderTotalPrice.toFixed(2)}`
-        : "—";
+        : "-";
     const orderLink = pin.profileUrl
       ? `<a href="${escapeHtml(pin.profileUrl)}" style="margin-top:6px;color:#111827;font-size:12px;font-weight:700;text-decoration:underline;display:inline-block;">Open order</a>`
       : "";
@@ -143,7 +149,9 @@ const getPinPopupHtml = (pin: TrackingPin) => {
     `;
   }
 
-  const subtitle = pin.subtitle ? `<div style="color:#6b7280;font-size:12px;">${escapeHtml(pin.subtitle)}</div>` : "";
+  const subtitle = pin.subtitle
+    ? `<div style="color:#6b7280;font-size:12px;">${escapeHtml(pin.subtitle)}</div>`
+    : "";
   const avatarUrl = escapeHtml(pin.avatarUrl || FALLBACK_AVATAR_URL);
   const profileLink = pin.profileUrl
     ? `<a href="${escapeHtml(pin.profileUrl)}" style="margin-top:6px;color:#111827;font-size:12px;font-weight:700;text-decoration:underline;display:inline-block;">Open profile</a>`
@@ -211,8 +219,12 @@ const getOrderPinStyleKey = (pin: TrackingPin) =>
 
 const getFocusPopupHtml = (label: string, point: TrackingPoint) => {
   const accuracy =
-    typeof point.accuracy === "number" ? `<div>Accuracy: ${point.accuracy}m</div>` : "";
-  const timestamp = point.timestamp ? `<div>${new Date(point.timestamp).toLocaleString()}</div>` : "";
+    typeof point.accuracy === "number"
+      ? `<div>Accuracy: ${point.accuracy}m</div>`
+      : "";
+  const timestamp = point.timestamp
+    ? `<div>${new Date(point.timestamp).toLocaleString()}</div>`
+    : "";
   return `<div><strong>${label}</strong>${accuracy}${timestamp}</div>`;
 };
 
@@ -316,13 +328,18 @@ const OsmMap = ({
 
     const init = async () => {
       const L = await ensureLeafletLoaded();
-      if (!L || isUnmounted || !mapContainerRef.current || mapRef.current) return;
+      if (!L || isUnmounted || !mapContainerRef.current || mapRef.current)
+        return;
 
-      mapRef.current = L.map(mapContainerRef.current).setView([54.6872, 25.2797], zoom);
+      mapRef.current = L.map(mapContainerRef.current).setView(
+        [54.6872, 25.2797],
+        zoom,
+      );
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(mapRef.current);
       const onZoomEnd = () => {
         if (!mapRef.current) return;
@@ -363,11 +380,15 @@ const OsmMap = ({
 
     renderedPins.forEach((pin) => {
       const popupHtml = getPinPopupHtml(pin);
-      const styleKey = pin.kind === "ORDER" ? getOrderPinStyleKey(pin) : pin.kind;
+      const styleKey =
+        pin.kind === "ORDER" ? getOrderPinStyleKey(pin) : pin.kind;
       const existing = markerLayerRef.current.get(pin.id);
       if (existing) {
         existing.marker.setLatLng([pin.latitude, pin.longitude]);
-        if (existing.popupHtml !== popupHtml || existing.styleKey !== styleKey) {
+        if (
+          existing.popupHtml !== popupHtml ||
+          existing.styleKey !== styleKey
+        ) {
           map.removeLayer(existing.marker);
           markerLayerRef.current.delete(pin.id);
         } else {
@@ -379,7 +400,8 @@ const OsmMap = ({
         const palette = getPinPalette(pin);
         const isAttentionOrder =
           pin.kind === "ORDER" &&
-          (styleKey === "NOT_STARTED_IN_TIME" || styleKey === "NOT_ENDED_IN_TIME");
+          (styleKey === "NOT_STARTED_IN_TIME" ||
+            styleKey === "NOT_ENDED_IN_TIME");
 
         const marker =
           pin.kind === "ORDER"
@@ -417,7 +439,10 @@ const OsmMap = ({
     });
 
     const sourcePinsSignature = normalizedPins
-      .map((pin) => `${pin.id}:${pin.latitude.toFixed(6)}:${pin.longitude.toFixed(6)}`)
+      .map(
+        (pin) =>
+          `${pin.id}:${pin.latitude.toFixed(6)}:${pin.longitude.toFixed(6)}`,
+      )
       .sort()
       .join("|");
     const focusSignature = focusPoint
@@ -461,17 +486,23 @@ const OsmMap = ({
     const popupHtml = getFocusPopupHtml(focusLabel, focusPoint);
 
     if (!focusMarkerRef.current) {
-      focusMarkerRef.current = L.circleMarker([focusPoint.latitude, focusPoint.longitude], {
-        radius: 10,
-        color: "#111827",
-        fillColor: "#2563eb",
-        fillOpacity: 0.85,
-        weight: 2,
-      }).addTo(map);
+      focusMarkerRef.current = L.circleMarker(
+        [focusPoint.latitude, focusPoint.longitude],
+        {
+          radius: 10,
+          color: "#111827",
+          fillColor: "#2563eb",
+          fillOpacity: 0.85,
+          weight: 2,
+        },
+      ).addTo(map);
       focusMarkerRef.current.bindPopup(popupHtml);
       focusMarkerRef.current.openPopup?.();
     } else {
-      focusMarkerRef.current.setLatLng([focusPoint.latitude, focusPoint.longitude]);
+      focusMarkerRef.current.setLatLng([
+        focusPoint.latitude,
+        focusPoint.longitude,
+      ]);
       focusMarkerRef.current.bindPopup(popupHtml);
     }
 
@@ -485,8 +516,15 @@ const OsmMap = ({
       </Head>
       <style jsx global>{`
         @keyframes orderPinBlink {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.35; transform: scale(1.08); }
+          0%,
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.35;
+            transform: scale(1.08);
+          }
         }
         .order-pin-blink {
           animation: orderPinBlink 1.1s ease-in-out infinite;

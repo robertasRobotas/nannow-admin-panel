@@ -1,4 +1,10 @@
-import { type CSSProperties, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -149,7 +155,7 @@ const formatDateTime = (value?: string | null, timeZone = TIMEZONE) =>
         hour12: false,
         timeZone,
       }).format(new Date(value))
-    : "—";
+    : "-";
 
 const formatEventTime = (value?: string | null, timeZone = TIMEZONE) =>
   value
@@ -159,16 +165,17 @@ const formatEventTime = (value?: string | null, timeZone = TIMEZONE) =>
         hour12: false,
         timeZone,
       }).format(new Date(value))
-    : "—";
+    : "-";
 
 const formatEventTimeRange = (
   startsAt?: string | null,
   endsAt?: string | null,
   timeZone = TIMEZONE,
-) => `${formatEventTime(startsAt, timeZone)} - ${formatEventTime(endsAt, timeZone)}`;
+) =>
+  `${formatEventTime(startsAt, timeZone)} - ${formatEventTime(endsAt, timeZone)}`;
 
 const formatMoney = (value?: number | null) => {
-  if (typeof value !== "number") return "—";
+  if (typeof value !== "number") return "-";
   return new Intl.NumberFormat("en-IE", {
     style: "currency",
     currency: "EUR",
@@ -199,9 +206,12 @@ const getScheduleDisplayText = (item: OrderScheduleItem, timeZone: string) =>
 const getStatusColor = (status?: string | null) => {
   const normalized = String(status ?? "").toUpperCase();
   if (normalized.includes("CANCEL")) return "#d93025";
-  if (normalized.includes("FINISH") || normalized.includes("COMPLETED")) return "#188038";
-  if (normalized.includes("PAID") || normalized.includes("APPROVED")) return "#1a73e8";
-  if (normalized.includes("PENDING") || normalized.includes("WAIT")) return "#f9ab00";
+  if (normalized.includes("FINISH") || normalized.includes("COMPLETED"))
+    return "#188038";
+  if (normalized.includes("PAID") || normalized.includes("APPROVED"))
+    return "#1a73e8";
+  if (normalized.includes("PENDING") || normalized.includes("WAIT"))
+    return "#f9ab00";
   if (normalized.includes("SPLIT")) return "#7e57c2";
   if (normalized.includes("NOT_ENDED")) return "#5f6368";
   return "#1a73e8";
@@ -350,12 +360,15 @@ const getCalendarTitle = (filters: ScheduleFilterState) => {
 const Schedule = () => {
   const router = useRouter();
   const { lastEvent } = useAdminSocket();
-  const [filters, setFilters] = useState<ScheduleFilterState>(getDefaultFilters);
+  const [filters, setFilters] =
+    useState<ScheduleFilterState>(getDefaultFilters);
   const [appliedFilters, setAppliedFilters] =
     useState<ScheduleFilterState>(getDefaultFilters);
   const [items, setItems] = useState<OrderScheduleItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [selectedItem, setSelectedItem] = useState<OrderScheduleItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<OrderScheduleItem | null>(
+    null,
+  );
   const [total, setTotal] = useState(0);
   const [loadingList, setLoadingList] = useState(false);
   const [loadingItem, setLoadingItem] = useState(false);
@@ -392,7 +405,8 @@ const Schedule = () => {
       dateTo: typeof query.dateTo === "string" ? query.dateTo : defaults.dateTo,
       year: typeof query.year === "string" ? query.year : defaults.year,
       month: typeof query.month === "string" ? query.month : defaults.month,
-      timezone: typeof query.timezone === "string" ? query.timezone : defaults.timezone,
+      timezone:
+        typeof query.timezone === "string" ? query.timezone : defaults.timezone,
       status: typeof query.status === "string" ? query.status : defaults.status,
       clientUserId:
         typeof query.clientUserId === "string"
@@ -407,7 +421,9 @@ const Schedule = () => {
           ? query.showCanceled === "true"
           : defaults.showCanceled,
       showPast:
-        typeof query.showPast === "string" ? query.showPast === "true" : defaults.showPast,
+        typeof query.showPast === "string"
+          ? query.showPast === "true"
+          : defaults.showPast,
       page: derivedPage,
       pageSize,
     };
@@ -447,7 +463,8 @@ const Schedule = () => {
           appliedFilters.period === "month" || appliedFilters.period === "year"
             ? appliedFilters.year
             : undefined,
-        month: appliedFilters.period === "month" ? appliedFilters.month : undefined,
+        month:
+          appliedFilters.period === "month" ? appliedFilters.month : undefined,
         timezone: appliedFilters.timezone || TIMEZONE,
         status: appliedFilters.status || undefined,
         clientUserId: appliedFilters.clientUserId || undefined,
@@ -457,7 +474,8 @@ const Schedule = () => {
         startIndex: (appliedFilters.page - 1) * appliedFilters.pageSize,
         pageSize: appliedFilters.pageSize,
       });
-      const payload = (response.data?.result ?? response.data) as OrderScheduleListResponse;
+      const payload = (response.data?.result ??
+        response.data) as OrderScheduleListResponse;
       const nextItems = Array.isArray(payload.items) ? payload.items : [];
       setItems(nextItems);
       setTotal(Number(payload.total ?? nextItems.length) || 0);
@@ -501,8 +519,12 @@ const Schedule = () => {
           | { schedule?: OrderScheduleItem; orderSchedule?: OrderScheduleItem };
         const nextItem =
           (payload && "orderId" in payload ? payload : null) ??
-          (payload && "schedule" in payload ? payload.schedule ?? null : null) ??
-          (payload && "orderSchedule" in payload ? payload.orderSchedule ?? null : null);
+          (payload && "schedule" in payload
+            ? (payload.schedule ?? null)
+            : null) ??
+          (payload && "orderSchedule" in payload
+            ? (payload.orderSchedule ?? null)
+            : null);
 
         if (isCancelled) return;
 
@@ -526,7 +548,8 @@ const Schedule = () => {
           }
 
           nextItems.sort(
-            (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+            (a, b) =>
+              new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
           );
 
           return nextItems;
@@ -542,7 +565,9 @@ const Schedule = () => {
       } catch {
         if (isCancelled) return;
         if (lastEvent.type === "ORDER_CANCELED") {
-          setItems((prev) => prev.filter((item) => item.orderId !== lastEvent.orderId));
+          setItems((prev) =>
+            prev.filter((item) => item.orderId !== lastEvent.orderId),
+          );
           if (selectedId === lastEvent.orderId) {
             closeModal();
           }
@@ -562,7 +587,8 @@ const Schedule = () => {
       setSelectedItem(null);
       return;
     }
-    const fromList = items.find((item) => getScheduleId(item) === selectedId) ?? null;
+    const fromList =
+      items.find((item) => getScheduleId(item) === selectedId) ?? null;
     if (fromList) {
       setSelectedItem(fromList);
       setLoadingItem(false);
@@ -579,8 +605,12 @@ const Schedule = () => {
           | { schedule?: OrderScheduleItem; orderSchedule?: OrderScheduleItem };
         const fallback =
           (payload && "orderId" in payload ? payload : null) ??
-          (payload && "schedule" in payload ? payload.schedule ?? null : null) ??
-          (payload && "orderSchedule" in payload ? payload.orderSchedule ?? null : null);
+          (payload && "schedule" in payload
+            ? (payload.schedule ?? null)
+            : null) ??
+          (payload && "orderSchedule" in payload
+            ? (payload.orderSchedule ?? null)
+            : null);
         if (!isCancelled) {
           setSelectedItem(fallback);
         }
@@ -611,7 +641,12 @@ const Schedule = () => {
         itemsByDate,
         appliedFilters.timezone || TIMEZONE,
       ),
-    [appliedFilters.month, appliedFilters.timezone, appliedFilters.year, itemsByDate],
+    [
+      appliedFilters.month,
+      appliedFilters.timezone,
+      appliedFilters.year,
+      itemsByDate,
+    ],
   );
 
   const weekDays = useMemo(
@@ -641,8 +676,12 @@ const Schedule = () => {
     const futureItems = items.filter(
       (item) => new Date(item.startsAt).getTime() >= now,
     );
-    const active = futureItems.filter((item) => item.isActiveForContactSharing).length;
-    const direct = futureItems.filter((item) => item.isDirectOrderToProvider).length;
+    const active = futureItems.filter(
+      (item) => item.isActiveForContactSharing,
+    ).length;
+    const direct = futureItems.filter(
+      (item) => item.isDirectOrderToProvider,
+    ).length;
     return { total: futureItems.length, active, direct };
   }, [items]);
 
@@ -666,7 +705,9 @@ const Schedule = () => {
   };
 
   const changeMonth = (month: string) => {
-    applyFilters(getFiltersForPeriod("month", { ...filters, period: "month", month }));
+    applyFilters(
+      getFiltersForPeriod("month", { ...filters, period: "month", month }),
+    );
   };
 
   const changeYear = (year: string) => {
@@ -675,11 +716,19 @@ const Schedule = () => {
 
   const shiftVisibleRange = (direction: -1 | 1) => {
     if (appliedFilters.period === "day") {
-      changeDate(toDateInput(addDays(new Date(`${appliedFilters.date}T00:00:00`), direction)));
+      changeDate(
+        toDateInput(
+          addDays(new Date(`${appliedFilters.date}T00:00:00`), direction),
+        ),
+      );
       return;
     }
     if (appliedFilters.period === "week") {
-      changeDate(toDateInput(addDays(new Date(`${appliedFilters.date}T00:00:00`), direction * 7)));
+      changeDate(
+        toDateInput(
+          addDays(new Date(`${appliedFilters.date}T00:00:00`), direction * 7),
+        ),
+      );
       return;
     }
     if (appliedFilters.period === "month") {
@@ -701,7 +750,9 @@ const Schedule = () => {
     applyFilters({
       ...filters,
       period: "year",
-      year: String((Number(appliedFilters.year) || new Date().getFullYear()) + direction),
+      year: String(
+        (Number(appliedFilters.year) || new Date().getFullYear()) + direction,
+      ),
       page: 1,
     });
   };
@@ -850,7 +901,9 @@ const Schedule = () => {
               <input
                 type="text"
                 value={filters.timezone}
-                onChange={(event) => updateDraft({ timezone: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ timezone: event.target.value })
+                }
                 onBlur={() => applyFilters()}
               />
             </label>
@@ -859,7 +912,9 @@ const Schedule = () => {
               <input
                 type="text"
                 value={filters.status}
-                onChange={(event) => updateDraft({ status: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ status: event.target.value })
+                }
                 onBlur={() => applyFilters()}
                 placeholder="Optional status"
               />
@@ -869,7 +924,9 @@ const Schedule = () => {
               <input
                 type="text"
                 value={filters.clientUserId}
-                onChange={(event) => updateDraft({ clientUserId: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ clientUserId: event.target.value })
+                }
                 onBlur={() => applyFilters()}
               />
             </label>
@@ -878,7 +935,9 @@ const Schedule = () => {
               <input
                 type="text"
                 value={filters.providerUserId}
-                onChange={(event) => updateDraft({ providerUserId: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ providerUserId: event.target.value })
+                }
                 onBlur={() => applyFilters()}
               />
             </label>
@@ -887,7 +946,10 @@ const Schedule = () => {
                 type="checkbox"
                 checked={filters.showCanceled}
                 onChange={(event) =>
-                  applyFilters({ ...filters, showCanceled: event.target.checked })
+                  applyFilters({
+                    ...filters,
+                    showCanceled: event.target.checked,
+                  })
                 }
               />
               <span>Show canceled</span>
@@ -941,7 +1003,10 @@ const Schedule = () => {
             <select
               value={filters.pageSize}
               onChange={(event) =>
-                applyFilters({ ...filters, pageSize: Number(event.target.value) })
+                applyFilters({
+                  ...filters,
+                  pageSize: Number(event.target.value),
+                })
               }
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
@@ -951,7 +1016,11 @@ const Schedule = () => {
               ))}
             </select>
           </label>
-          <button type="button" className={styles.resetButton} onClick={resetFilters}>
+          <button
+            type="button"
+            className={styles.resetButton}
+            onClick={resetFilters}
+          >
             Reset
           </button>
         </div>
@@ -960,14 +1029,18 @@ const Schedule = () => {
       <section className={styles.calendarPane}>
         <div className={styles.paneHeader}>
           <div>
-            <h2>{summary.total} scheduled order{summary.total === 1 ? "" : "s"}</h2>
+            <h2>
+              {summary.total} scheduled order{summary.total === 1 ? "" : "s"}
+            </h2>
             <p>
               {summary.active} contact sharing · {summary.direct} direct orders
             </p>
           </div>
         </div>
 
-        {loadingList && <div className={styles.empty}>Loading schedule rows...</div>}
+        {loadingList && (
+          <div className={styles.empty}>Loading schedule rows...</div>
+        )}
         {!loadingList && items.length === 0 && (
           <div className={styles.empty}>No schedules found.</div>
         )}
@@ -1058,14 +1131,24 @@ const Schedule = () => {
 
       {selectedId && (
         <div className={styles.modalOverlay} onClick={closeModal}>
-          <div className={styles.modalCard} onClick={(event) => event.stopPropagation()}>
-            <button type="button" className={styles.modalClose} onClick={closeModal}>
+          <div
+            className={styles.modalCard}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={closeModal}
+            >
               ×
             </button>
             {loadingItem && <div className={styles.empty}>Loading...</div>}
             {selectedItem && (
               <>
-                <Link href={`/orders/${selectedItem.orderId}`} className={styles.previewUsers}>
+                <Link
+                  href={`/orders/${selectedItem.orderId}`}
+                  className={styles.previewUsers}
+                >
                   <div className={styles.previewAvatarGroup}>
                     <img
                       src={selectedItem.provider.imgUrl || defaultUserImg.src}
@@ -1083,24 +1166,32 @@ const Schedule = () => {
                       {getScheduleParticipantName(selectedItem.provider)} |{" "}
                       {getScheduleParticipantName(selectedItem.client)}
                     </strong>
-                    <span>{selectedItem.requestingServiceCity || "—"}</span>
+                    <span>{selectedItem.requestingServiceCity || "-"}</span>
                   </div>
                 </Link>
                 <div className={styles.previewTitleRow}>
                   <h3>{getScheduleTitle(selectedItem)}</h3>
-                  <span className={styles.statusPill}>{selectedItem.status}</span>
+                  <span className={styles.statusPill}>
+                    {selectedItem.status}
+                  </span>
                 </div>
                 <div className={styles.modalMetaGrid}>
                   <div>
                     <span>Start</span>
                     <strong>
-                      {formatDateTime(selectedItem.startsAt, appliedFilters.timezone)}
+                      {formatDateTime(
+                        selectedItem.startsAt,
+                        appliedFilters.timezone,
+                      )}
                     </strong>
                   </div>
                   <div>
                     <span>End</span>
                     <strong>
-                      {formatDateTime(selectedItem.endsAt, appliedFilters.timezone)}
+                      {formatDateTime(
+                        selectedItem.endsAt,
+                        appliedFilters.timezone,
+                      )}
                     </strong>
                   </div>
                   <div>
@@ -1112,7 +1203,10 @@ const Schedule = () => {
                     <strong>{selectedItem.status}</strong>
                   </div>
                 </div>
-                <Link href={`/orders/${selectedItem.orderId}`} className={styles.orderLink}>
+                <Link
+                  href={`/orders/${selectedItem.orderId}`}
+                  className={styles.orderLink}
+                >
                   Open order details
                 </Link>
               </>

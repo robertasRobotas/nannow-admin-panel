@@ -37,7 +37,7 @@ const formatDateTime = (value?: string) =>
         minute: "2-digit",
         hour12: false,
       })
-    : "—";
+    : "-";
 
 const formatMoney = (amount: number, currency: string) => {
   try {

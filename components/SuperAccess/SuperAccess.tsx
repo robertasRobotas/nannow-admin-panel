@@ -54,7 +54,10 @@ import {
 import { options as orderStatusOptions } from "@/data/orderStatusOptions";
 import { useRouter } from "next/router";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
-import type { FinancialOrderRow, GetFinancialOrdersResponse } from "@/types/FinancialOrder";
+import type {
+  FinancialOrderRow,
+  GetFinancialOrdersResponse,
+} from "@/types/FinancialOrder";
 import type { BroadcastNotificationSender } from "@/types/BroadcastNotifications";
 
 type EntityRecord = {
@@ -222,11 +225,7 @@ const ORDER_STATUSES = orderStatusOptions
   .map((item) => item.value)
   .filter((value) => value);
 const ORDER_STATUSES_SUPER = Array.from(
-  new Set([
-    ...ORDER_STATUSES,
-    "CANCELED_BY_CLIENT",
-    "CANCELED_BY_PROVIDER",
-  ]),
+  new Set([...ORDER_STATUSES, "CANCELED_BY_CLIENT", "CANCELED_BY_PROVIDER"]),
 );
 
 const PROVIDER_BANK_ONBOARDING_STATUSES = [
@@ -246,8 +245,7 @@ const PROVIDER_KYC_STATUSES = [
 const extractArray = (value: unknown): EntityRecord[] => {
   if (Array.isArray(value)) {
     return value.filter(
-      (item): item is EntityRecord =>
-        !!item && typeof item === "object",
+      (item): item is EntityRecord => !!item && typeof item === "object",
     );
   }
   return [];
@@ -258,12 +256,13 @@ const parseListResponse = (data: unknown) => {
   if (!data || typeof data !== "object") return fallback;
 
   const payload = data as Record<string, unknown>;
-  const result = (payload.result as Record<string, unknown> | undefined) ?? payload;
+  const result =
+    (payload.result as Record<string, unknown> | undefined) ?? payload;
   const nestedAdmins = result.admins as Record<string, unknown> | undefined;
   const nestedUsers = result.users as Record<string, unknown> | undefined;
 
   const items = extractArray(
-      result.items ??
+    result.items ??
       nestedAdmins?.items ??
       nestedUsers?.items ??
       result.users ??
@@ -285,7 +284,11 @@ const parseListResponse = (data: unknown) => {
     payload.total ??
     items.length;
   const pageSizeCandidate =
-    result.pageSize ?? nestedAdmins?.pageSize ?? nestedUsers?.pageSize ?? payload.pageSize ?? 20;
+    result.pageSize ??
+    nestedAdmins?.pageSize ??
+    nestedUsers?.pageSize ??
+    payload.pageSize ??
+    20;
   return {
     items,
     total:
@@ -302,7 +305,8 @@ const parseListResponse = (data: unknown) => {
 const parseItemResponse = (data: unknown): EntityRecord | null => {
   if (!data || typeof data !== "object") return null;
   const payload = data as Record<string, unknown>;
-  const result = (payload.result as Record<string, unknown> | undefined) ?? payload;
+  const result =
+    (payload.result as Record<string, unknown> | undefined) ?? payload;
   const candidates = [
     result.user,
     result.client,
@@ -317,7 +321,11 @@ const parseItemResponse = (data: unknown): EntityRecord | null => {
     result,
   ];
   for (const candidate of candidates) {
-    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      !Array.isArray(candidate)
+    ) {
       return candidate as EntityRecord;
     }
   }
@@ -359,7 +367,8 @@ const parseStripeKycAuditResult = (data: unknown): StripeKycAuditResult => {
   if (!data || typeof data !== "object") return fallback;
 
   const payload = data as Record<string, unknown>;
-  const result = (payload.result as Record<string, unknown> | undefined) ?? payload;
+  const result =
+    (payload.result as Record<string, unknown> | undefined) ?? payload;
   return {
     totalCount: Number(result.totalCount ?? 0) || 0,
     startIndex: Number(result.startIndex ?? 0) || 0,
@@ -383,7 +392,9 @@ const parseStripeKycAuditResult = (data: unknown): StripeKycAuditResult => {
   };
 };
 
-const parseStripeKycReconcileResult = (data: unknown): StripeKycReconcileResult => {
+const parseStripeKycReconcileResult = (
+  data: unknown,
+): StripeKycReconcileResult => {
   const fallback: StripeKycReconcileResult = {
     totalCount: 0,
     startIndex: 0,
@@ -401,7 +412,8 @@ const parseStripeKycReconcileResult = (data: unknown): StripeKycReconcileResult 
   if (!data || typeof data !== "object") return fallback;
 
   const payload = data as Record<string, unknown>;
-  const result = (payload.result as Record<string, unknown> | undefined) ?? payload;
+  const result =
+    (payload.result as Record<string, unknown> | undefined) ?? payload;
   return {
     totalCount: Number(result.totalCount ?? 0) || 0,
     startIndex: Number(result.startIndex ?? 0) || 0,
@@ -555,9 +567,7 @@ const formatLocalOffset = (date: Date) => {
 };
 
 const toIsoFromLocal = (value: string) => {
-  const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/,
-  );
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
   if (!match) return value;
   const [, year, month, day, hour, minute] = match;
   const date = new Date(
@@ -623,12 +633,14 @@ const orderDetailFields = (
   }
 
   const indexedEntries = entries.map((entry, index) => ({ entry, index }));
-  const prioritized = priorityFields.map((fieldKey) =>
-    indexedEntries.find(({ entry }) => entry[0] === fieldKey),
-  ).filter(
-    (item): item is { entry: [string, unknown]; index: number } =>
-      item !== undefined,
-  );
+  const prioritized = priorityFields
+    .map((fieldKey) =>
+      indexedEntries.find(({ entry }) => entry[0] === fieldKey),
+    )
+    .filter(
+      (item): item is { entry: [string, unknown]; index: number } =>
+        item !== undefined,
+    );
 
   if (prioritized.length === 0) {
     return entries;
@@ -652,7 +664,7 @@ const orderDetailFields = (
 };
 
 const formatDateTimeShort = (value: unknown) => {
-  if (typeof value !== "string" || !value) return "—";
+  if (typeof value !== "string" || !value) return "-";
   const date = parseDateString(value) ?? new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString(undefined, {
@@ -698,7 +710,9 @@ const getUserTargetEntity = (
   if (roles.includes("PROVIDER")) return "providers";
   if (roles.includes("CLIENT")) return "clients";
 
-  const rawMode = String(user.userMode ?? user.type ?? user.mode ?? "").toUpperCase();
+  const rawMode = String(
+    user.userMode ?? user.type ?? user.mode ?? "",
+  ).toUpperCase();
   if (rawMode.includes("PROVIDER")) return "providers";
   if (rawMode.includes("CLIENT")) return "clients";
 
@@ -724,9 +738,9 @@ const formatChildLabel = (child: EntityRecord, fallbackId: string) => {
   const genderRaw = String(child.gender ?? "").trim();
   const gender = genderRaw
     ? genderRaw.charAt(0).toUpperCase() + genderRaw.slice(1).toLowerCase()
-    : "—";
+    : "-";
   const age = calculateAgeYears(child.birthDate);
-  return `${name}, ${gender}, ${age == null ? "—" : `${age} y`}`;
+  return `${name}, ${gender}, ${age == null ? "-" : `${age} y`}`;
 };
 
 const formatChildSummary = (child: EntityRecord, fallbackId: string) => {
@@ -734,9 +748,9 @@ const formatChildSummary = (child: EntityRecord, fallbackId: string) => {
   const genderRaw = String(child.gender ?? "").trim();
   const gender = genderRaw
     ? genderRaw.charAt(0).toUpperCase() + genderRaw.slice(1).toLowerCase()
-    : "—";
+    : "-";
   const age = calculateAgeYears(child.birthDate);
-  return `${name}, ${gender}, ${age == null ? "—" : `${age} y`}`;
+  return `${name}, ${gender}, ${age == null ? "-" : `${age} y`}`;
 };
 
 const pickFirstString = (...values: unknown[]) => {
@@ -780,9 +794,7 @@ const SuperAccess = () => {
   const [isCompactListView, setIsCompactListView] = useState(false);
   const [list, setList] = useState<EntityRecord[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [selectedItem, setSelectedItem] = useState<EntityRecord | null>(
-    null,
-  );
+  const [selectedItem, setSelectedItem] = useState<EntityRecord | null>(null);
   const [draft, setDraft] = useState<EntityRecord>({});
   const [error, setError] = useState("");
   const [loadingList, setLoadingList] = useState(false);
@@ -791,52 +803,77 @@ const SuperAccess = () => {
   const [isRegeneratingAddress, setIsRegeneratingAddress] = useState(false);
   const [isRegeneratingAllAddresses, setIsRegeneratingAllAddresses] =
     useState(false);
-  const [isRegeneratingUsersFullNameSearch, setIsRegeneratingUsersFullNameSearch] =
-    useState(false);
+  const [
+    isRegeneratingUsersFullNameSearch,
+    setIsRegeneratingUsersFullNameSearch,
+  ] = useState(false);
   const [isRegenerateAddressModalOpen, setIsRegenerateAddressModalOpen] =
     useState(false);
-  const [isFinancialLedgerDeleteModalOpen, setIsFinancialLedgerDeleteModalOpen] =
-    useState(false);
-  const [isFinancialLedgerRebuildAllModalOpen, setIsFinancialLedgerRebuildAllModalOpen] =
-    useState(false);
-  const [isOrderFinancialRebuildModalOpen, setIsOrderFinancialRebuildModalOpen] =
-    useState(false);
-  const [isChatNormalizationConfirmModalOpen, setIsChatNormalizationConfirmModalOpen] =
-    useState(false);
-  const [isChatNormalizationProgressModalOpen, setIsChatNormalizationProgressModalOpen] =
-    useState(false);
+  const [
+    isFinancialLedgerDeleteModalOpen,
+    setIsFinancialLedgerDeleteModalOpen,
+  ] = useState(false);
+  const [
+    isFinancialLedgerRebuildAllModalOpen,
+    setIsFinancialLedgerRebuildAllModalOpen,
+  ] = useState(false);
+  const [
+    isOrderFinancialRebuildModalOpen,
+    setIsOrderFinancialRebuildModalOpen,
+  ] = useState(false);
+  const [
+    isChatNormalizationConfirmModalOpen,
+    setIsChatNormalizationConfirmModalOpen,
+  ] = useState(false);
+  const [
+    isChatNormalizationProgressModalOpen,
+    setIsChatNormalizationProgressModalOpen,
+  ] = useState(false);
   const [isStartingChatNormalization, setIsStartingChatNormalization] =
     useState(false);
   const [chatNormalizationAnalysis, setChatNormalizationAnalysis] =
     useState<ChatNormalizationAnalysis | null>(null);
-  const [isLoadingChatNormalizationAnalysis, setIsLoadingChatNormalizationAnalysis] =
-    useState(false);
+  const [
+    isLoadingChatNormalizationAnalysis,
+    setIsLoadingChatNormalizationAnalysis,
+  ] = useState(false);
   const [chatNormalizationJobId, setChatNormalizationJobId] = useState("");
   const [chatNormalizationJob, setChatNormalizationJob] =
     useState<ChatNormalizationJob | null>(null);
   const [isRebuildingChatContactSharing, setIsRebuildingChatContactSharing] =
     useState(false);
-  const [isChatContactSharingRebuildModalOpen, setIsChatContactSharingRebuildModalOpen] =
-    useState(false);
+  const [
+    isChatContactSharingRebuildModalOpen,
+    setIsChatContactSharingRebuildModalOpen,
+  ] = useState(false);
   const [chatContactSharingRebuildJobId, setChatContactSharingRebuildJobId] =
     useState("");
   const [chatContactSharingRebuildJob, setChatContactSharingRebuildJob] =
     useState<ChatsContactSharingRebuildJob | null>(null);
-  const [providerCompletionStatsRebuildJobId, setProviderCompletionStatsRebuildJobId] =
-    useState("");
-  const [providerCompletionStatsRebuildJob, setProviderCompletionStatsRebuildJob] =
-    useState<ProviderCompletionStatsRebuildJob | null>(null);
+  const [
+    providerCompletionStatsRebuildJobId,
+    setProviderCompletionStatsRebuildJobId,
+  ] = useState("");
+  const [
+    providerCompletionStatsRebuildJob,
+    setProviderCompletionStatsRebuildJob,
+  ] = useState<ProviderCompletionStatsRebuildJob | null>(null);
   const [isScheduleRegenerationRunning, setIsScheduleRegenerationRunning] =
     useState(false);
   const [isScheduleRegenerationModalOpen, setIsScheduleRegenerationModalOpen] =
     useState(false);
-  const [scheduleRegenerationJobId, setScheduleRegenerationJobId] = useState("");
+  const [scheduleRegenerationJobId, setScheduleRegenerationJobId] =
+    useState("");
   const [scheduleRegenerationJob, setScheduleRegenerationJob] =
     useState<OrderScheduleRegenerationJob | null>(null);
-  const [isProviderCompletionStatsRebuildModalOpen, setIsProviderCompletionStatsRebuildModalOpen] =
-    useState(false);
-  const [isRebuildingAllProviderCompletionStats, setIsRebuildingAllProviderCompletionStats] =
-    useState(false);
+  const [
+    isProviderCompletionStatsRebuildModalOpen,
+    setIsProviderCompletionStatsRebuildModalOpen,
+  ] = useState(false);
+  const [
+    isRebuildingAllProviderCompletionStats,
+    setIsRebuildingAllProviderCompletionStats,
+  ] = useState(false);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
     "ONE",
   );
@@ -845,9 +882,11 @@ const SuperAccess = () => {
   const [regenerateDistanceError, setRegenerateDistanceError] = useState("");
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [isStripeKycAuditModalOpen, setIsStripeKycAuditModalOpen] = useState(false);
+  const [isStripeKycAuditModalOpen, setIsStripeKycAuditModalOpen] =
+    useState(false);
   const [isStripeKycAuditLoading, setIsStripeKycAuditLoading] = useState(false);
-  const [isStripeKycReconcileLoading, setIsStripeKycReconcileLoading] = useState(false);
+  const [isStripeKycReconcileLoading, setIsStripeKycReconcileLoading] =
+    useState(false);
   const [isStripeKycTestEmailSending, setIsStripeKycTestEmailSending] =
     useState(false);
   const [stripeKycAuditResult, setStripeKycAuditResult] =
@@ -871,15 +910,30 @@ const SuperAccess = () => {
   const [newAdminRoles, setNewAdminRoles] = useState<AdminRole[]>(["ADMIN"]);
   const [adminAlertText, setAdminAlertText] = useState("");
   const [isSendingAlert, setIsSendingAlert] = useState(false);
-  const [linkedUsersById, setLinkedUsersById] = useState<Record<string, EntityRecord>>({});
-  const [addressesById, setAddressesById] = useState<Record<string, EntityRecord>>({});
-  const [childrenById, setChildrenById] = useState<Record<string, EntityRecord>>({});
-  const [clientsById, setClientsById] = useState<Record<string, EntityRecord>>({});
-  const [providersById, setProvidersById] = useState<Record<string, EntityRecord>>({});
-  const [ordersById, setOrdersById] = useState<Record<string, EntityRecord>>({});
+  const [linkedUsersById, setLinkedUsersById] = useState<
+    Record<string, EntityRecord>
+  >({});
+  const [addressesById, setAddressesById] = useState<
+    Record<string, EntityRecord>
+  >({});
+  const [childrenById, setChildrenById] = useState<
+    Record<string, EntityRecord>
+  >({});
+  const [clientsById, setClientsById] = useState<Record<string, EntityRecord>>(
+    {},
+  );
+  const [providersById, setProvidersById] = useState<
+    Record<string, EntityRecord>
+  >({});
+  const [ordersById, setOrdersById] = useState<Record<string, EntityRecord>>(
+    {},
+  );
   const [selectedFinancialLedgerOrderIds, setSelectedFinancialLedgerOrderIds] =
     useState<string[]>([]);
-  const currentAdminProfile = useMemo(() => getCurrentAdminProfileFromJwt(), []);
+  const currentAdminProfile = useMemo(
+    () => getCurrentAdminProfileFromJwt(),
+    [],
+  );
   const currentPage = Math.floor(startIndex / pageSize) + 1;
 
   const updateSuperAccessQuery = useCallback(
@@ -967,7 +1021,9 @@ const SuperAccess = () => {
     if (!router.isReady) return;
     const entityFromQuery =
       typeof router.query.entity === "string" ? router.query.entity : "users";
-    const isValidEntity = MENU_ITEMS.some((item) => item.key === entityFromQuery);
+    const isValidEntity = MENU_ITEMS.some(
+      (item) => item.key === entityFromQuery,
+    );
     const nextEntity = isValidEntity
       ? (entityFromQuery as SuperAccessViewEntity)
       : "users";
@@ -1005,10 +1061,12 @@ const SuperAccess = () => {
         : 1;
     setStartIndex((safePage - 1) * safePageSize);
 
-    const searchFromQuery = typeof router.query.q === "string" ? router.query.q : "";
+    const searchFromQuery =
+      typeof router.query.q === "string" ? router.query.q : "";
     setSearchText(searchFromQuery);
     setAppliedSearch(searchFromQuery);
-    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    const idFromQuery =
+      typeof router.query.id === "string" ? router.query.id : "";
     setSelectedId(idFromQuery);
   }, [
     entity,
@@ -1031,9 +1089,9 @@ const SuperAccess = () => {
         setLoadingList(true);
         setError("");
         const response = await getBroadcastNotificationSender();
-        const sender =
-          ((response.data as { result?: BroadcastNotificationSender }).result ??
-            response.data) as BroadcastNotificationSender | null;
+        const sender = ((
+          response.data as { result?: BroadcastNotificationSender }
+        ).result ?? response.data) as BroadcastNotificationSender | null;
         const nextList = sender ? [sender as unknown as EntityRecord] : [];
         setList(nextList);
         setTotal(nextList.length);
@@ -1197,7 +1255,7 @@ const SuperAccess = () => {
           ? withOrderFinancialFields(parsedItem)
           : entity === "providers" && parsedItem
             ? withProviderStatusFields(parsedItem)
-          : parsedItem;
+            : parsedItem;
       setSelectedItem(normalizedItem);
       setDraft(normalizedItem ?? {});
     } catch (err) {
@@ -1376,10 +1434,13 @@ const SuperAccess = () => {
     if (!selectedItem) return;
 
     const rawBaseAddressIds: unknown =
-      selectedItem.addressesIds ?? selectedItem.addressIds ?? selectedItem.addresses;
+      selectedItem.addressesIds ??
+      selectedItem.addressIds ??
+      selectedItem.addresses;
     const baseAddressIds = Array.isArray(rawBaseAddressIds)
       ? (rawBaseAddressIds as unknown[]).filter(
-          (id: unknown): id is string => typeof id === "string" && id.length > 0,
+          (id: unknown): id is string =>
+            typeof id === "string" && id.length > 0,
         )
       : [];
     const defaultAddressId =
@@ -1401,7 +1462,9 @@ const SuperAccess = () => {
     const missingIds = baseAddressIds
       .concat(defaultAddressId ? [defaultAddressId] : [])
       .concat(orderAddressIds)
-      .filter((id: string, index: number, arr: string[]) => arr.indexOf(id) === index)
+      .filter(
+        (id: string, index: number, arr: string[]) => arr.indexOf(id) === index,
+      )
       .filter((id: string) => !addressesById[id]);
     if (missingIds.length === 0) return;
 
@@ -1683,7 +1746,8 @@ const SuperAccess = () => {
                 item.clientUser?.id ??
                 item.client?.userId ??
                 item.client?.user?.id ??
-                clientsById[String(item.clientId ?? item.client?.id ?? "")]?.userId ??
+                clientsById[String(item.clientId ?? item.client?.id ?? "")]
+                  ?.userId ??
                 "",
             ),
             String(
@@ -1691,7 +1755,9 @@ const SuperAccess = () => {
                 item.approvedProvider?.userId ??
                 item.approvedProvider?.user?.id ??
                 providersById[
-                  String(item.approvedProviderId ?? item.approvedProvider?.id ?? "")
+                  String(
+                    item.approvedProviderId ?? item.approvedProvider?.id ?? "",
+                  )
                 ]?.userId ??
                 item.requiredProviderId ??
                 "",
@@ -1837,7 +1903,9 @@ const SuperAccess = () => {
       setIsLoadingChatNormalizationAnalysis(true);
       const response = await getChatsNormalizationAnalysis();
       const payload =
-        (response.data?.result?.analysis as ChatNormalizationAnalysis | undefined) ??
+        (response.data?.result?.analysis as
+          | ChatNormalizationAnalysis
+          | undefined) ??
         (response.data?.analysis as ChatNormalizationAnalysis | undefined) ??
         (response.data?.result as ChatNormalizationAnalysis | undefined) ??
         (response.data as ChatNormalizationAnalysis);
@@ -1892,7 +1960,11 @@ const SuperAccess = () => {
       isCancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [chatNormalizationJob?.status, chatNormalizationJobId, fetchChatNormalizationAnalysis]);
+  }, [
+    chatNormalizationJob?.status,
+    chatNormalizationJobId,
+    fetchChatNormalizationAnalysis,
+  ]);
 
   useEffect(() => {
     if (!chatContactSharingRebuildJobId) return;
@@ -1914,7 +1986,9 @@ const SuperAccess = () => {
           (response.data?.result?.job as
             | ChatsContactSharingRebuildJob
             | undefined) ??
-          (response.data?.result as ChatsContactSharingRebuildJob | undefined) ??
+          (response.data?.result as
+            | ChatsContactSharingRebuildJob
+            | undefined) ??
           (response.data as ChatsContactSharingRebuildJob | undefined);
         if (!isCancelled && job) {
           setChatContactSharingRebuildJob(job);
@@ -1930,10 +2004,7 @@ const SuperAccess = () => {
       isCancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [
-    chatContactSharingRebuildJob?.status,
-    chatContactSharingRebuildJobId,
-  ]);
+  }, [chatContactSharingRebuildJob?.status, chatContactSharingRebuildJobId]);
 
   useEffect(() => {
     if (!providerCompletionStatsRebuildJobId) return;
@@ -1951,11 +2022,15 @@ const SuperAccess = () => {
           providerCompletionStatsRebuildJobId,
         );
         const job =
-          (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data?.job as
+            | ProviderCompletionStatsRebuildJob
+            | undefined) ??
           (response.data?.result?.job as
             | ProviderCompletionStatsRebuildJob
             | undefined) ??
-          (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+          (response.data?.result as
+            | ProviderCompletionStatsRebuildJob
+            | undefined) ??
           (response.data as ProviderCompletionStatsRebuildJob | undefined);
         if (!isCancelled && job) {
           setProviderCompletionStatsRebuildJob(job);
@@ -1993,7 +2068,9 @@ const SuperAccess = () => {
         );
         const job =
           (response.data?.job as OrderScheduleRegenerationJob | undefined) ??
-          (response.data?.result?.job as OrderScheduleRegenerationJob | undefined) ??
+          (response.data?.result?.job as
+            | OrderScheduleRegenerationJob
+            | undefined) ??
           (response.data?.result as OrderScheduleRegenerationJob | undefined) ??
           (response.data as OrderScheduleRegenerationJob | undefined);
         if (!isCancelled && job) {
@@ -2019,7 +2096,9 @@ const SuperAccess = () => {
       fetchList();
     }
     if (scheduleRegenerationJob.status === "FAILED") {
-      setError(scheduleRegenerationJob.error || "Schedule regeneration failed.");
+      setError(
+        scheduleRegenerationJob.error || "Schedule regeneration failed.",
+      );
     }
   }, [fetchList, scheduleRegenerationJob]);
 
@@ -2108,7 +2187,9 @@ const SuperAccess = () => {
         (response.data?.result?.job as
           | ProviderCompletionStatsRebuildJob
           | undefined) ??
-        (response.data?.result as ProviderCompletionStatsRebuildJob | undefined) ??
+        (response.data?.result as
+          | ProviderCompletionStatsRebuildJob
+          | undefined) ??
         (response.data as ProviderCompletionStatsRebuildJob | undefined);
       if (job?.id) {
         setProviderCompletionStatsRebuildJob(job);
@@ -2150,7 +2231,11 @@ const SuperAccess = () => {
         response.data?.result?.started ?? response.data?.started ?? job?.id,
       );
       if (!job?.id) {
-        setNotice(started ? "Schedule regeneration started." : "Schedule regeneration requested.");
+        setNotice(
+          started
+            ? "Schedule regeneration started."
+            : "Schedule regeneration requested.",
+        );
         return;
       }
       setScheduleRegenerationJobId(job.id);
@@ -2376,7 +2461,11 @@ const SuperAccess = () => {
         setIsStripeKycTestEmailSending(false);
       }
     },
-    [currentAdminProfile.email, currentAdminProfile.id, isStripeKycTestEmailSending],
+    [
+      currentAdminProfile.email,
+      currentAdminProfile.id,
+      isStripeKycTestEmailSending,
+    ],
   );
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -2437,11 +2526,7 @@ const SuperAccess = () => {
   };
 
   const saveChanges = async () => {
-    if (
-      entity === "alerts" ||
-      entity === "connected-admins"
-    )
-      return;
+    if (entity === "alerts" || entity === "connected-admins") return;
     if (!selectedId || isSaving) return;
     try {
       setIsSaving(true);
@@ -2600,14 +2685,14 @@ const SuperAccess = () => {
   };
 
   const formatPointValue = (value: unknown) => {
-    if (!value || typeof value !== "object") return "—";
+    if (!value || typeof value !== "object") return "-";
     const point = value as { coordinates?: unknown };
     if (!Array.isArray(point.coordinates) || point.coordinates.length < 2) {
-      return "—";
+      return "-";
     }
     const [longitude, latitude] = point.coordinates;
     if (typeof longitude !== "number" || typeof latitude !== "number") {
-      return "—";
+      return "-";
     }
     return `${latitude}, ${longitude}`;
   };
@@ -2641,7 +2726,10 @@ const SuperAccess = () => {
         setSelectedItem((prev) =>
           prev ? { ...prev, publicLocation: result.publicLocation } : prev,
         );
-        setDraft((prev) => ({ ...prev, publicLocation: result.publicLocation }));
+        setDraft((prev) => ({
+          ...prev,
+          publicLocation: result.publicLocation,
+        }));
         setList((prev) =>
           prev.map((item) =>
             pickId(item) === nextId
@@ -2815,7 +2903,11 @@ const SuperAccess = () => {
 
   const createAdmin = async () => {
     if (isCreatingAdmin) return;
-    if (!newAdminFirstName.trim() || !newAdminEmail.trim() || newAdminRoles.length === 0) {
+    if (
+      !newAdminFirstName.trim() ||
+      !newAdminEmail.trim() ||
+      newAdminRoles.length === 0
+    ) {
       setError("Fill new admin first name, email and roles.");
       return;
     }
@@ -2903,7 +2995,7 @@ const SuperAccess = () => {
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           {MENU_ITEMS.map((menuItem) => (
-              <button
+            <button
               key={menuItem.key}
               type="button"
               className={`${styles.sideBtn} ${
@@ -2972,207 +3064,222 @@ const SuperAccess = () => {
                   ? "Admin messages"
                   : entity === "financial-ledger"
                     ? "Financial ledger"
-                  : entity === "schedule"
-                    ? "Order schedule"
-                  : entity === "broadcast-sender"
-                    ? "Broadcast sender"
-                  : entity === "connected-admins"
-                    ? "WS connected Admins"
-                    : prettyTitle(entity)}
+                    : entity === "schedule"
+                      ? "Order schedule"
+                      : entity === "broadcast-sender"
+                        ? "Broadcast sender"
+                        : entity === "connected-admins"
+                          ? "WS connected Admins"
+                          : prettyTitle(entity)}
               </h2>
               <span className={styles.listHeaderMeta}>
                 {entity === "alerts"
                   ? "Send a message to all admins."
                   : entity === "financial-ledger"
                     ? `${total} ledger orders, page ${currentPage}/${totalPages}`
-                  : entity === "broadcast-sender"
-                    ? "Manage the SYSTEM_NANNOW sender profile."
-                    : entity === "schedule"
-                      ? "Order schedule rows and snapshots."
-                    : entity === "connected-admins"
-                      ? `${total} admins connected right now.`
-                    : entity === "chats"
-                      ? `${total} chats total, page ${currentPage}/${totalPages}`
-                  : `${total} total, page ${currentPage}/${totalPages}`}
+                    : entity === "broadcast-sender"
+                      ? "Manage the SYSTEM_NANNOW sender profile."
+                      : entity === "schedule"
+                        ? "Order schedule rows and snapshots."
+                        : entity === "connected-admins"
+                          ? `${total} admins connected right now.`
+                          : entity === "chats"
+                            ? `${total} chats total, page ${currentPage}/${totalPages}`
+                            : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
             {entity !== "alerts" &&
               entity !== "connected-admins" &&
               entity !== "broadcast-sender" && (
-              <div className={styles.listHeaderActions}>
-                {entity === "schedule" && (
-                  <Button
-                    title={
-                      isScheduleRegenerationRunning
-                        ? "Regenerating..."
-                        : "Regenerate schedule"
-                    }
-                    type="OUTLINED"
-                    onClick={handleRegenerateSchedule}
-                    isDisabled={loadingList || isScheduleRegenerationRunning}
-                    isLoading={isScheduleRegenerationRunning}
-                  />
-                )}
-                {entity !== "financial-ledger" && (
-                  <button
-                    type="button"
-                    className={styles.listViewSwitchButton}
-                    onClick={() => {
-                      setIsCompactListView((prev) => !prev);
-                    }}
-                  >
-                    <span className={styles.listViewSwitchLabel}>Show compact</span>
-                    <span
-                      className={`${styles.listViewSwitchUi} ${
-                        isCompactListView ? styles.listViewSwitchUiActive : ""
-                      }`}
+                <div className={styles.listHeaderActions}>
+                  {entity === "schedule" && (
+                    <Button
+                      title={
+                        isScheduleRegenerationRunning
+                          ? "Regenerating..."
+                          : "Regenerate schedule"
+                      }
+                      type="OUTLINED"
+                      onClick={handleRegenerateSchedule}
+                      isDisabled={loadingList || isScheduleRegenerationRunning}
+                      isLoading={isScheduleRegenerationRunning}
                     />
-                  </button>
-                )}
-                {(isCompactListView || entity === "financial-ledger") && (
-                  <DropDownButton
-                    options={PAGE_SIZE_OPTIONS.map((option) => ({
-                      title: option.title,
-                      value: option.value,
-                    }))}
-                    selectedOption={Math.max(
-                      0,
-                      PAGE_SIZE_OPTIONS.findIndex(
-                        (option) => Number(option.value) === pageSize,
-                      ),
-                    )}
-                    setSelectedOption={(selectedOption) => {
-                      const option =
-                        PAGE_SIZE_OPTIONS[selectedOption as number];
-                      if (!option) return;
-                      const nextPageSize = Number(option.value);
+                  )}
+                  {entity !== "financial-ledger" && (
+                    <button
+                      type="button"
+                      className={styles.listViewSwitchButton}
+                      onClick={() => {
+                        setIsCompactListView((prev) => !prev);
+                      }}
+                    >
+                      <span className={styles.listViewSwitchLabel}>
+                        Show compact
+                      </span>
+                      <span
+                        className={`${styles.listViewSwitchUi} ${
+                          isCompactListView ? styles.listViewSwitchUiActive : ""
+                        }`}
+                      />
+                    </button>
+                  )}
+                  {(isCompactListView || entity === "financial-ledger") && (
+                    <DropDownButton
+                      options={PAGE_SIZE_OPTIONS.map((option) => ({
+                        title: option.title,
+                        value: option.value,
+                      }))}
+                      selectedOption={Math.max(
+                        0,
+                        PAGE_SIZE_OPTIONS.findIndex(
+                          (option) => Number(option.value) === pageSize,
+                        ),
+                      )}
+                      setSelectedOption={(selectedOption) => {
+                        const option =
+                          PAGE_SIZE_OPTIONS[selectedOption as number];
+                        if (!option) return;
+                        const nextPageSize = Number(option.value);
+                        setStartIndex(0);
+                        setPageSize(nextPageSize);
+                        updateSuperAccessQuery({
+                          page: 1,
+                          pageSize: nextPageSize,
+                        });
+                      }}
+                    />
+                  )}
+                  {entity === "financial-ledger" && (
+                    <>
+                      <Button
+                        title={isSaving ? "Rebuilding..." : "Rebuild all"}
+                        type="OUTLINED"
+                        onClick={() =>
+                          setIsFinancialLedgerRebuildAllModalOpen(true)
+                        }
+                        isDisabled={isSaving}
+                      />
+                      <Button
+                        title={`Delete selected (${selectedFinancialLedgerOrderIds.length})`}
+                        type="DELETE"
+                        onClick={() =>
+                          setIsFinancialLedgerDeleteModalOpen(true)
+                        }
+                        isDisabled={
+                          selectedFinancialLedgerOrderIds.length === 0 ||
+                          isSaving
+                        }
+                      />
+                    </>
+                  )}
+                  {entity === "addresses" && (
+                    <Button
+                      title={
+                        isRegeneratingAllAddresses
+                          ? "Regenerating..."
+                          : "Regenerate public"
+                      }
+                      type="OUTLINED"
+                      onClick={() => openRegenerateModal("ALL")}
+                      isDisabled={isRegeneratingAllAddresses}
+                      isLoading={isRegeneratingAllAddresses}
+                    />
+                  )}
+                  {entity === "users" && (
+                    <Button
+                      title={
+                        isRegeneratingUsersFullNameSearch
+                          ? "Regenerating..."
+                          : "Regenerate name index"
+                      }
+                      type="OUTLINED"
+                      onClick={handleRegenerateUsersFullNameSearch}
+                      isDisabled={isRegeneratingUsersFullNameSearch}
+                      isLoading={isRegeneratingUsersFullNameSearch}
+                    />
+                  )}
+                  {entity === "chats" && (
+                    <>
+                      <Button
+                        title={
+                          isLoadingChatNormalizationAnalysis
+                            ? "Refreshing..."
+                            : "Refresh analysis"
+                        }
+                        type="OUTLINED"
+                        onClick={fetchChatNormalizationAnalysis}
+                        isDisabled={isLoadingChatNormalizationAnalysis}
+                        isLoading={isLoadingChatNormalizationAnalysis}
+                      />
+                      <Button
+                        title="Normalize chats"
+                        type="BLACK"
+                        onClick={() =>
+                          setIsChatNormalizationConfirmModalOpen(true)
+                        }
+                        isDisabled={isStartingChatNormalization}
+                      />
+                      <Button
+                        title={
+                          isRebuildingChatContactSharing
+                            ? "Rescanning..."
+                            : "Rescan for phones"
+                        }
+                        type="BLACK"
+                        onClick={handleRebuildChatContactSharing}
+                        isDisabled={isRebuildingChatContactSharing}
+                        isLoading={isRebuildingChatContactSharing}
+                      />
+                    </>
+                  )}
+                  {entity === "providers" && (
+                    <>
+                      <Button
+                        title={
+                          isRebuildingAllProviderCompletionStats
+                            ? "Rebuilding..."
+                            : "Rebuild completion rates"
+                        }
+                        type="OUTLINED"
+                        onClick={handleRebuildAllProvidersCompletionStats}
+                        isDisabled={isRebuildingAllProviderCompletionStats}
+                        isLoading={isRebuildingAllProviderCompletionStats}
+                      />
+                      <Button
+                        title={
+                          isStripeKycAuditLoading
+                            ? "Scanning..."
+                            : "Scan Stripe status"
+                        }
+                        type="OUTLINED"
+                        onClick={() =>
+                          refreshStripeKycAudit(undefined, { openModal: true })
+                        }
+                        isDisabled={
+                          isStripeKycAuditLoading || isStripeKycReconcileLoading
+                        }
+                        isLoading={isStripeKycAuditLoading}
+                      />
+                    </>
+                  )}
+                  <SearchBar
+                    placeholder="Type to search"
+                    searchText={searchText}
+                    setSearchText={setSearchText}
+                    onButtonClick={() => {
                       setStartIndex(0);
-                      setPageSize(nextPageSize);
-                      updateSuperAccessQuery({
-                        page: 1,
-                        pageSize: nextPageSize,
-                      });
+                      setAppliedSearch(searchText);
+                      updateSuperAccessQuery({ page: 1, q: searchText });
                     }}
                   />
-                )}
-                {entity === "financial-ledger" && (
-                  <>
-                    <Button
-                      title={isSaving ? "Rebuilding..." : "Rebuild all"}
-                      type="OUTLINED"
-                      onClick={() => setIsFinancialLedgerRebuildAllModalOpen(true)}
-                      isDisabled={isSaving}
-                    />
-                    <Button
-                      title={`Delete selected (${selectedFinancialLedgerOrderIds.length})`}
-                      type="DELETE"
-                      onClick={() => setIsFinancialLedgerDeleteModalOpen(true)}
-                      isDisabled={
-                        selectedFinancialLedgerOrderIds.length === 0 || isSaving
-                      }
-                    />
-                  </>
-                )}
-                {entity === "addresses" && (
-                  <Button
-                    title={
-                      isRegeneratingAllAddresses
-                        ? "Regenerating..."
-                        : "Regenerate public"
-                    }
-                    type="OUTLINED"
-                    onClick={() => openRegenerateModal("ALL")}
-                    isDisabled={isRegeneratingAllAddresses}
-                    isLoading={isRegeneratingAllAddresses}
-                  />
-                )}
-                {entity === "users" && (
-                  <Button
-                    title={
-                      isRegeneratingUsersFullNameSearch
-                        ? "Regenerating..."
-                        : "Regenerate name index"
-                    }
-                    type="OUTLINED"
-                    onClick={handleRegenerateUsersFullNameSearch}
-                    isDisabled={isRegeneratingUsersFullNameSearch}
-                    isLoading={isRegeneratingUsersFullNameSearch}
-                  />
-                )}
-                {entity === "chats" && (
-                  <>
-                    <Button
-                      title={
-                        isLoadingChatNormalizationAnalysis
-                          ? "Refreshing..."
-                          : "Refresh analysis"
-                      }
-                      type="OUTLINED"
-                      onClick={fetchChatNormalizationAnalysis}
-                      isDisabled={isLoadingChatNormalizationAnalysis}
-                      isLoading={isLoadingChatNormalizationAnalysis}
-                    />
-                    <Button
-                      title="Normalize chats"
-                      type="BLACK"
-                      onClick={() => setIsChatNormalizationConfirmModalOpen(true)}
-                      isDisabled={isStartingChatNormalization}
-                    />
-                    <Button
-                      title={
-                        isRebuildingChatContactSharing
-                          ? "Rescanning..."
-                          : "Rescan for phones"
-                      }
-                      type="BLACK"
-                      onClick={handleRebuildChatContactSharing}
-                      isDisabled={isRebuildingChatContactSharing}
-                      isLoading={isRebuildingChatContactSharing}
-                    />
-                  </>
-                )}
-                {entity === "providers" && (
-                  <>
-                    <Button
-                      title={
-                        isRebuildingAllProviderCompletionStats
-                          ? "Rebuilding..."
-                          : "Rebuild completion rates"
-                      }
-                      type="OUTLINED"
-                      onClick={handleRebuildAllProvidersCompletionStats}
-                      isDisabled={isRebuildingAllProviderCompletionStats}
-                      isLoading={isRebuildingAllProviderCompletionStats}
-                    />
-                    <Button
-                      title={
-                        isStripeKycAuditLoading
-                          ? "Scanning..."
-                          : "Scan Stripe status"
-                      }
-                      type="OUTLINED"
-                      onClick={() => refreshStripeKycAudit(undefined, { openModal: true })}
-                      isDisabled={isStripeKycAuditLoading || isStripeKycReconcileLoading}
-                      isLoading={isStripeKycAuditLoading}
-                    />
-                  </>
-                )}
-                <SearchBar
-                  placeholder="Type to search"
-                  searchText={searchText}
-                  setSearchText={setSearchText}
-                  onButtonClick={() => {
-                    setStartIndex(0);
-                    setAppliedSearch(searchText);
-                    updateSuperAccessQuery({ page: 1, q: searchText });
-                  }}
-                />
-              </div>
-            )}
+                </div>
+              )}
           </div>
-              {entity === "alerts" ? (
+          {entity === "alerts" ? (
             <div className={styles.alertInfoCard}>
-              <div className={styles.alertInfoTitle}>Broadcast admin message</div>
+              <div className={styles.alertInfoTitle}>
+                Broadcast admin message
+              </div>
               <div className={styles.alertInfoText}>
                 Connected admins will receive the message through
                 <code className={styles.alertInlineCode}> ADMIN_EVENT </code>
@@ -3185,7 +3292,9 @@ const SuperAccess = () => {
               {list.map((item) => {
                 const id = String(item.adminId ?? item.id ?? item._id ?? "");
                 const imageUrl = defaultUserImg.src;
-                const title = String(item.fullName ?? item.firstName ?? "Admin");
+                const title = String(
+                  item.fullName ?? item.firstName ?? "Admin",
+                );
                 const email = String(item.email ?? "");
 
                 return (
@@ -3199,10 +3308,14 @@ const SuperAccess = () => {
                     onClick={() => selectItem(id)}
                     onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                   >
-                    <img src={imageUrl} alt="avatar" className={styles.avatar} />
+                    <img
+                      src={imageUrl}
+                      alt="avatar"
+                      className={styles.avatar}
+                    />
                     <div className={styles.itemTitle}>{title}</div>
                     {email && <div className={styles.itemSub}>{email}</div>}
-                    <div className={styles.itemSub}>ID: {id || "—"}</div>
+                    <div className={styles.itemSub}>ID: {id || "-"}</div>
                   </div>
                 );
               })}
@@ -3213,19 +3326,24 @@ const SuperAccess = () => {
           ) : entity === "chats" ? (
             <>
               <div className={styles.chatNormalizationCard}>
-                <div className={styles.chatNormalizationTitle}>Normalization analysis</div>
+                <div className={styles.chatNormalizationTitle}>
+                  Normalization analysis
+                </div>
                 <div className={styles.chatNormalizationStats}>
-                  <div>Chats total: {chatNormalizationAnalysis?.chatsTotal ?? "—"}</div>
                   <div>
-                    Non-normalized chats:{" "}
-                    {chatNormalizationAnalysis?.nonNormalizedChats ?? "—"}
+                    Chats total: {chatNormalizationAnalysis?.chatsTotal ?? "-"}
                   </div>
                   <div>
-                    Duplicate groups: {chatNormalizationAnalysis?.duplicateGroups ?? "—"}
+                    Non-normalized chats:{" "}
+                    {chatNormalizationAnalysis?.nonNormalizedChats ?? "-"}
+                  </div>
+                  <div>
+                    Duplicate groups:{" "}
+                    {chatNormalizationAnalysis?.duplicateGroups ?? "-"}
                   </div>
                   <div>
                     Duplicate chats to merge:{" "}
-                    {chatNormalizationAnalysis?.duplicateChatsToMerge ?? "—"}
+                    {chatNormalizationAnalysis?.duplicateChatsToMerge ?? "-"}
                   </div>
                 </div>
               </div>
@@ -3261,7 +3379,7 @@ const SuperAccess = () => {
                       onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
                       <div className={styles.itemTitle}>{title}</div>
-                      <div className={styles.itemSub}>ID: {id || "—"}</div>
+                      <div className={styles.itemSub}>ID: {id || "-"}</div>
                     </div>
                   );
                 })}
@@ -3287,7 +3405,9 @@ const SuperAccess = () => {
                   onClick={() =>
                     updateSuperAccessQuery({
                       page:
-                        startIndex + pageSize >= total ? currentPage : currentPage + 1,
+                        startIndex + pageSize >= total
+                          ? currentPage
+                          : currentPage + 1,
                     })
                   }
                   isDisabled={startIndex + pageSize >= total || loadingList}
@@ -3323,7 +3443,9 @@ const SuperAccess = () => {
                       String(snapshot?.profileId ?? snapshot?.userId ?? "");
                     return (
                       <div
-                        key={id || String(item.orderId ?? item.id ?? "schedule")}
+                        key={
+                          id || String(item.orderId ?? item.id ?? "schedule")
+                        }
                         role="button"
                         tabIndex={0}
                         className={`${styles.itemCard} ${
@@ -3335,7 +3457,11 @@ const SuperAccess = () => {
                         <div className={styles.orderRow}>
                           <div className={styles.orderRowTop}>
                             <div className={styles.orderRowNames}>
-                              {String(scheduleItem.orderPrettyId ?? id ?? "Order schedule")}
+                              {String(
+                                scheduleItem.orderPrettyId ??
+                                  id ??
+                                  "Order schedule",
+                              )}
                             </div>
                           </div>
                           <div className={styles.orderRowTime}>
@@ -3345,24 +3471,27 @@ const SuperAccess = () => {
                             Ends: {formatDateTimeShort(scheduleItem.endsAt)}
                           </div>
                           <div className={styles.orderRowStatus}>
-                            {String(scheduleItem.status ?? "—")}
+                            {String(scheduleItem.status ?? "-")}
                           </div>
                           <div className={styles.orderRowPrettyId}>
-                            {participantName(clientSnapshot)} | {participantName(providerSnapshot)}
+                            {participantName(clientSnapshot)} |{" "}
+                            {participantName(providerSnapshot)}
                           </div>
                         </div>
                       </div>
                     );
                   }
                   const orderItem =
-                    entity === "orders" ? ordersById[id] ?? item : item;
+                    entity === "orders" ? (ordersById[id] ?? item) : item;
                   const linkedUser =
                     entity === "clients" || entity === "providers"
                       ? linkedUsersById[pickLinkedUserId(item)]
                       : null;
                   const childClientId =
                     entity === "children" ? String(item.clientId ?? "") : "";
-                  const childClient = childClientId ? clientsById[childClientId] : null;
+                  const childClient = childClientId
+                    ? clientsById[childClientId]
+                    : null;
                   const childParentUserId = childClient
                     ? String(childClient.userId ?? "")
                     : "";
@@ -3379,7 +3508,7 @@ const SuperAccess = () => {
                   } ${linkedUser?.lastName ?? item.lastName ?? ""}`.trim();
                   const title =
                     entity === "children"
-                      ? String(item.name ?? `Child ${id || "—"}`)
+                      ? String(item.name ?? `Child ${id || "-"}`)
                       : fullName ||
                         String(
                           linkedUser?.title ??
@@ -3398,7 +3527,9 @@ const SuperAccess = () => {
                     : null;
                   const addressUserName = getUserDisplayName(addressUser);
                   const addressText =
-                    entity === "addresses" ? formatAddressLabel(item, id || "—") : "";
+                    entity === "addresses"
+                      ? formatAddressLabel(item, id || "-")
+                      : "";
                   const imageUrl = String(
                     linkedUser?.imgUrl ??
                       linkedUser?.imageUrl ??
@@ -3409,7 +3540,9 @@ const SuperAccess = () => {
                       defaultUserImg.src,
                   );
                   const childSummary =
-                    entity === "children" ? formatChildSummary(item, id || "—") : "";
+                    entity === "children"
+                      ? formatChildSummary(item, id || "-")
+                      : "";
                   const orderClientUserId = String(
                     orderItem.clientUserId ??
                       orderItem.clientUser?.id ??
@@ -3510,13 +3643,13 @@ const SuperAccess = () => {
                       key={id || title}
                       role="button"
                       tabIndex={0}
-                    className={`${styles.itemCard} ${
-                      selectedId === id ? styles.itemCardActive : ""
-                    } ${
-                      isCompactListView || entity === "financial-ledger"
-                        ? styles.itemCardCompact
-                        : ""
-                    }`}
+                      className={`${styles.itemCard} ${
+                        selectedId === id ? styles.itemCardActive : ""
+                      } ${
+                        isCompactListView || entity === "financial-ledger"
+                          ? styles.itemCardCompact
+                          : ""
+                      }`}
                       onClick={() => selectItem(id)}
                       onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
@@ -3528,7 +3661,9 @@ const SuperAccess = () => {
                           >
                             <input
                               type="checkbox"
-                              checked={selectedFinancialLedgerOrderIds.includes(id)}
+                              checked={selectedFinancialLedgerOrderIds.includes(
+                                id,
+                              )}
                               onChange={() =>
                                 toggleFinancialLedgerOrderSelection(id)
                               }
@@ -3561,16 +3696,21 @@ const SuperAccess = () => {
                                 {financialProviderName} | {financialClientName}
                               </div>
                               <div className={styles.financialLedgerSecondary}>
-                                Paid: {formatDateTimeShort(financialLedgerOrder.paidAt)}
+                                Paid:{" "}
+                                {formatDateTimeShort(
+                                  financialLedgerOrder.paidAt,
+                                )}
                               </div>
                             </div>
                           </div>
                           <div className={styles.financialLedgerAmount}>
-                            {typeof financialLedgerOrder.actualClientPaidCents === "number"
+                            {typeof financialLedgerOrder.actualClientPaidCents ===
+                            "number"
                               ? `€${(
-                                  financialLedgerOrder.actualClientPaidCents / 100
+                                  financialLedgerOrder.actualClientPaidCents /
+                                  100
                                 ).toFixed(2)}`
-                              : "—"}
+                              : "-"}
                           </div>
                           <div className={styles.financialLedgerMeta}>
                             <span
@@ -3586,7 +3726,7 @@ const SuperAccess = () => {
                               {financialLedgerOrder.financialMode}
                             </span>
                             <div className={styles.financialLedgerSecondary}>
-                              {String(financialLedgerOrder.status ?? "—")}
+                              {String(financialLedgerOrder.status ?? "-")}
                             </div>
                           </div>
                         </div>
@@ -3617,7 +3757,7 @@ const SuperAccess = () => {
                             Ends: {formatDateTimeShort(orderItem.endsAt)}
                           </div>
                           <div className={styles.orderRowStatus}>
-                            {String(orderItem.status ?? "—")}
+                            {String(orderItem.status ?? "-")}
                           </div>
                           <div className={styles.orderRowPrettyId}>
                             {String(orderItem.orderPrettyId ?? id)}
@@ -3625,25 +3765,33 @@ const SuperAccess = () => {
                         </div>
                       ) : (
                         <>
-                          <img src={imageUrl} alt="avatar" className={styles.avatar} />
+                          <img
+                            src={imageUrl}
+                            alt="avatar"
+                            className={styles.avatar}
+                          />
                           <div className={styles.itemTitle}>
                             {entity === "addresses" ? addressText : title}
                           </div>
                           {entity === "children" ? (
                             <>
-                              <div className={styles.itemSub}>{childSummary}</div>
                               <div className={styles.itemSub}>
-                                Parent: {childParentName || "—"}
+                                {childSummary}
+                              </div>
+                              <div className={styles.itemSub}>
+                                Parent: {childParentName || "-"}
                               </div>
                             </>
                           ) : entity === "addresses" ? (
                             <div className={styles.itemSub}>
-                              User: {addressUserName || "—"}
+                              User: {addressUserName || "-"}
                             </div>
                           ) : (
-                            email && <div className={styles.itemSub}>{email}</div>
+                            email && (
+                              <div className={styles.itemSub}>{email}</div>
+                            )
                           )}
-                          <div className={styles.itemSub}>ID: {id || "—"}</div>
+                          <div className={styles.itemSub}>ID: {id || "-"}</div>
                         </>
                       )}
                     </div>
@@ -3672,7 +3820,9 @@ const SuperAccess = () => {
                     onClick={() =>
                       updateSuperAccessQuery({
                         page:
-                          startIndex + pageSize >= total ? currentPage : currentPage + 1,
+                          startIndex + pageSize >= total
+                            ? currentPage
+                            : currentPage + 1,
                       })
                     }
                     isDisabled={startIndex + pageSize >= total || loadingList}
@@ -3690,11 +3840,11 @@ const SuperAccess = () => {
                 ? "Send message"
                 : entity === "broadcast-sender"
                   ? "Broadcast sender"
-                : entity === "schedule"
-                  ? "Schedule detail"
-                : entity === "connected-admins"
-                  ? "Connected admin"
-                  : "Detail"}
+                  : entity === "schedule"
+                    ? "Schedule detail"
+                    : entity === "connected-admins"
+                      ? "Connected admin"
+                      : "Detail"}
             </h2>
             <div className={styles.detailHeaderActions}>
               {entity === "addresses" && selectedId && (
@@ -3720,8 +3870,9 @@ const SuperAccess = () => {
                   type="OUTLINED"
                   onClick={() =>
                     refreshStripeKycAudit(
-                      String(selectedItem?.userId ?? draft.userId ?? "").trim() ||
-                        undefined,
+                      String(
+                        selectedItem?.userId ?? draft.userId ?? "",
+                      ).trim() || undefined,
                       { openModal: true },
                     )
                   }
@@ -3753,13 +3904,15 @@ const SuperAccess = () => {
                       ? isSaving
                         ? "Saving..."
                         : "Save sender"
-                    : entity === "financial-ledger" || entity === "chats" || entity === "schedule"
-                      ? "Read only"
-                    : entity === "connected-admins"
-                      ? "Read only"
-                    : isSaving
-                      ? "Saving..."
-                      : "Save"
+                      : entity === "financial-ledger" ||
+                          entity === "chats" ||
+                          entity === "schedule"
+                        ? "Read only"
+                        : entity === "connected-admins"
+                          ? "Read only"
+                          : isSaving
+                            ? "Saving..."
+                            : "Save"
                 }
                 type="BLACK"
                 onClick={entity === "alerts" ? submitAdminAlert : saveChanges}
@@ -3768,11 +3921,13 @@ const SuperAccess = () => {
                     ? !adminAlertText.trim() || isSendingAlert
                     : entity === "broadcast-sender"
                       ? loadingItem || isSaving
-                    : entity === "financial-ledger" || entity === "chats" || entity === "schedule"
-                      ? true
-                    : entity === "connected-admins"
-                      ? true
-                    : !selectedId || loadingItem || isSaving
+                      : entity === "financial-ledger" ||
+                          entity === "chats" ||
+                          entity === "schedule"
+                        ? true
+                        : entity === "connected-admins"
+                          ? true
+                          : !selectedId || loadingItem || isSaving
                 }
                 isLoading={
                   entity === "alerts"
@@ -3891,12 +4046,16 @@ const SuperAccess = () => {
             </>
           ) : (
             <>
-              {!selectedId && <div className={styles.empty}>Select an item.</div>}
+              {!selectedId && (
+                <div className={styles.empty}>Select an item.</div>
+              )}
               {selectedId && loadingItem && (
                 <div className={styles.empty}>Loading...</div>
               )}
 
-              {(entity === "financial-ledger" || entity === "chats" || entity === "schedule") &&
+              {(entity === "financial-ledger" ||
+                entity === "chats" ||
+                entity === "schedule") &&
                 selectedId &&
                 !loadingItem &&
                 selectedItem && (
@@ -3924,7 +4083,10 @@ const SuperAccess = () => {
                           );
                         }
 
-                        if (Array.isArray(value) || (value && typeof value === "object")) {
+                        if (
+                          Array.isArray(value) ||
+                          (value && typeof value === "object")
+                        ) {
                           return (
                             <label
                               key={key}
@@ -3960,747 +4122,916 @@ const SuperAccess = () => {
                   </div>
                 )}
 
-              {entity !== "financial-ledger" && entity !== "chats" && entity !== "schedule" && (
-                <>
-
-              {entity === "admins" && (
-                <div className={styles.adminCreateCard}>
-                  <h3>Create admin</h3>
-                  <div className={styles.inlineFields}>
-                    <input
-                      type="text"
-                      placeholder="First name"
-                      value={newAdminFirstName}
-                      onChange={(e) => setNewAdminFirstName(e.target.value)}
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={newAdminEmail}
-                      onChange={(e) => setNewAdminEmail(e.target.value)}
-                    />
-                    <input
-                      type="password"
-                      placeholder="Password (optional)"
-                      value={newAdminPassword}
-                      onChange={(e) => setNewAdminPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className={styles.rolesMultiSelect}>
-                    {ADMIN_ROLE_OPTIONS.map((role) => (
-                      <label key={role} className={styles.roleToggle}>
-                        <input
-                          type="checkbox"
-                          checked={newAdminRoles.includes(role)}
-                          onChange={(e) => {
-                            const nextRoles = e.target.checked
-                              ? [...newAdminRoles, role]
-                              : newAdminRoles.filter((item) => item !== role);
-                            if (nextRoles.length > 0) {
-                              setNewAdminRoles(nextRoles);
+              {entity !== "financial-ledger" &&
+                entity !== "chats" &&
+                entity !== "schedule" && (
+                  <>
+                    {entity === "admins" && (
+                      <div className={styles.adminCreateCard}>
+                        <h3>Create admin</h3>
+                        <div className={styles.inlineFields}>
+                          <input
+                            type="text"
+                            placeholder="First name"
+                            value={newAdminFirstName}
+                            onChange={(e) =>
+                              setNewAdminFirstName(e.target.value)
                             }
-                          }}
+                          />
+                          <input
+                            type="email"
+                            placeholder="Email"
+                            value={newAdminEmail}
+                            onChange={(e) => setNewAdminEmail(e.target.value)}
+                          />
+                          <input
+                            type="password"
+                            placeholder="Password (optional)"
+                            value={newAdminPassword}
+                            onChange={(e) =>
+                              setNewAdminPassword(e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className={styles.rolesMultiSelect}>
+                          {ADMIN_ROLE_OPTIONS.map((role) => (
+                            <label key={role} className={styles.roleToggle}>
+                              <input
+                                type="checkbox"
+                                checked={newAdminRoles.includes(role)}
+                                onChange={(e) => {
+                                  const nextRoles = e.target.checked
+                                    ? [...newAdminRoles, role]
+                                    : newAdminRoles.filter(
+                                        (item) => item !== role,
+                                      );
+                                  if (nextRoles.length > 0) {
+                                    setNewAdminRoles(nextRoles);
+                                  }
+                                }}
+                              />
+                              {role}
+                            </label>
+                          ))}
+                        </div>
+                        <Button
+                          title={isCreatingAdmin ? "Creating..." : "Add admin"}
+                          type="OUTLINED"
+                          onClick={createAdmin}
+                          isDisabled={isCreatingAdmin}
+                          isLoading={isCreatingAdmin}
                         />
-                        {role}
-                      </label>
-                    ))}
-                  </div>
-                  <Button
-                    title={isCreatingAdmin ? "Creating..." : "Add admin"}
-                    type="OUTLINED"
-                    onClick={createAdmin}
-                    isDisabled={isCreatingAdmin}
-                    isLoading={isCreatingAdmin}
-                  />
-                </div>
-              )}
-
-              {selectedId && !loadingItem && selectedItem && (
-                <div className={styles.form}>
-                  {entity === "admins" && (
-                    <>
-                      <label className={styles.field}>
-                        <span>New password</span>
-                        <input
-                          type="password"
-                          value={adminPassword}
-                          onChange={(e) => setAdminPassword(e.target.value)}
-                          placeholder="Leave empty to keep current"
-                          disabled={removeAdminPassword}
-                        />
-                      </label>
-                      <label className={styles.fieldCheckbox}>
-                        <input
-                          type="checkbox"
-                          checked={removeAdminPassword}
-                          onChange={(e) => setRemoveAdminPassword(e.target.checked)}
-                        />
-                        <span>Remove password login</span>
-                      </label>
-                    </>
-                  )}
-                  {fields.map(([key, value]) => {
-                const fieldId = `field-${key}`;
-
-                const hasOrderStatusDropdown =
-                  entity === "orders" && key === "status" && typeof value === "string";
-                if (hasOrderStatusDropdown) {
-                  const currentStatus = String(value);
-                  const statusOptions = ORDER_STATUSES_SUPER.includes(currentStatus)
-                    ? ORDER_STATUSES_SUPER
-                    : [currentStatus, ...ORDER_STATUSES_SUPER];
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.field}>
-                      <span>{prettyTitle(key)}</span>
-                      <select
-                        id={fieldId}
-                        value={String(value)}
-                        onChange={(e) => handleFieldChange(key, e.target.value)}
-                      >
-                        {statusOptions.map((statusValue) => (
-                          <option key={statusValue} value={statusValue}>
-                            {statusValue}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  );
-                }
-
-                const hasRolesDropdown =
-                  entity === "admins" && key === "roles" && Array.isArray(value);
-                if (hasRolesDropdown) {
-                  const currentRoles = value.filter(
-                    (role): role is string => typeof role === "string",
-                  );
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>{prettyTitle(key)}</span>
-                      <div className={styles.rolesMultiSelect}>
-                        {ADMIN_ROLE_OPTIONS.map((role) => (
-                          <label key={role} className={styles.roleToggle}>
-                            <input
-                              type="checkbox"
-                              checked={currentRoles.includes(role)}
-                              onChange={(e) => {
-                                const nextRoles = e.target.checked
-                                  ? [...currentRoles, role]
-                                  : currentRoles.filter((item) => item !== role);
-                                handleFieldChange(key, nextRoles);
-                              }}
-                            />
-                            {role}
-                          </label>
-                        ))}
                       </div>
-                    </div>
-                  );
-                }
+                    )}
 
-                const hasProviderPriceCalculationMethodDropdown =
-                  entity === "providers" &&
-                  key === "providerPriceCalculationMethod" &&
-                  typeof value === "string";
-                if (hasProviderPriceCalculationMethodDropdown) {
-                  const allowedValues = ["DYNAMIC", "CUSTOM"];
-                  const optionValues = allowedValues.includes(value)
-                    ? allowedValues
-                    : [value, ...allowedValues];
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.field}>
-                      <span>{prettyTitle(key)}</span>
-                      <select
-                        id={fieldId}
-                        value={value}
-                        onChange={(e) => handleFieldChange(key, e.target.value)}
-                      >
-                        {optionValues.map((optionValue) => (
-                          <option key={optionValue} value={optionValue}>
-                            {optionValue}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  );
-                }
-
-                const hasProviderBankOnboardingStatusDropdown =
-                  entity === "providers" &&
-                  key === "bankOnboardingStatus" &&
-                  typeof value === "string";
-                if (hasProviderBankOnboardingStatusDropdown) {
-                  const currentStatus = String(value);
-                  const statusOptions = PROVIDER_BANK_ONBOARDING_STATUSES.includes(
-                    currentStatus as (typeof PROVIDER_BANK_ONBOARDING_STATUSES)[number],
-                  )
-                    ? PROVIDER_BANK_ONBOARDING_STATUSES
-                    : [currentStatus, ...PROVIDER_BANK_ONBOARDING_STATUSES];
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.field}>
-                      <span>Bank Onboarding Status</span>
-                      <select
-                        id={fieldId}
-                        value={currentStatus}
-                        onChange={(e) => handleFieldChange(key, e.target.value)}
-                      >
-                        {statusOptions.map((statusValue) => (
-                          <option key={statusValue} value={statusValue}>
-                            {statusValue}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  );
-                }
-
-                const hasProviderKycStatusDropdown =
-                  entity === "providers" &&
-                  key === "kycStatus" &&
-                  typeof value === "string";
-                if (hasProviderKycStatusDropdown) {
-                  const currentStatus = String(value);
-                  const statusOptions = PROVIDER_KYC_STATUSES.includes(
-                    currentStatus as (typeof PROVIDER_KYC_STATUSES)[number],
-                  )
-                    ? PROVIDER_KYC_STATUSES
-                    : [currentStatus, ...PROVIDER_KYC_STATUSES];
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.field}>
-                      <span>KYC Status</span>
-                      <select
-                        id={fieldId}
-                        value={currentStatus}
-                        onChange={(e) => handleFieldChange(key, e.target.value)}
-                      >
-                        {statusOptions.map((statusValue) => (
-                          <option key={statusValue} value={statusValue}>
-                            {statusValue}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  );
-                }
-
-                const isAddressIdsField =
-                  (entity === "clients" || entity === "providers") &&
-                  (key === "addressesIds" || key === "addressIds") &&
-                  Array.isArray(value);
-                if (isAddressIdsField) {
-                  const ids = value.filter(
-                    (item): item is string =>
-                      typeof item === "string" && item.length > 0,
-                  );
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Addresses</span>
-                      <div className={styles.addressList}>
-                        {ids.length === 0 && (
-                          <div className={styles.addressEmpty}>No addresses</div>
+                    {selectedId && !loadingItem && selectedItem && (
+                      <div className={styles.form}>
+                        {entity === "admins" && (
+                          <>
+                            <label className={styles.field}>
+                              <span>New password</span>
+                              <input
+                                type="password"
+                                value={adminPassword}
+                                onChange={(e) =>
+                                  setAdminPassword(e.target.value)
+                                }
+                                placeholder="Leave empty to keep current"
+                                disabled={removeAdminPassword}
+                              />
+                            </label>
+                            <label className={styles.fieldCheckbox}>
+                              <input
+                                type="checkbox"
+                                checked={removeAdminPassword}
+                                onChange={(e) =>
+                                  setRemoveAdminPassword(e.target.checked)
+                                }
+                              />
+                              <span>Remove password login</span>
+                            </label>
+                          </>
                         )}
-                        {ids.map((addressId) => {
-                          const address = addressesById[addressId];
-                          return (
-                            <button
-                              key={addressId}
-                              type="button"
-                              className={styles.addressLink}
-                              onClick={() => {
-                                setEntity("addresses");
-                                selectItem(addressId);
-                                setSelectedItem(null);
-                                setDraft({});
-                              }}
-                            >
-                              {formatAddressLabel(address ?? {}, addressId)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                }
+                        {fields.map(([key, value]) => {
+                          const fieldId = `field-${key}`;
 
-                const isDefaultAddressField =
-                  (entity === "clients" || entity === "providers") &&
-                  key === "defaultAddressId" &&
-                  typeof value === "string";
-                if (isDefaultAddressField) {
-                  const addressId = value.trim();
-                  const address = addressId ? addressesById[addressId] : null;
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Default address</span>
-                      {addressId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => {
-                            setEntity("addresses");
-                            selectItem(addressId);
-                            setSelectedItem(null);
-                            setDraft({});
-                          }}
-                        >
-                          {formatAddressLabel(address ?? {}, addressId)}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No default address</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isClientProviderUserIdField =
-                  (entity === "clients" || entity === "providers") &&
-                  key === "userId" &&
-                  typeof value === "string";
-                if (isClientProviderUserIdField) {
-                  const userId = value.trim();
-                  const linkedUser = userId ? linkedUsersById[userId] : null;
-                  const userName = getUserDisplayName(linkedUser);
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>User</span>
-                      {userId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => {
-                            setEntity("users");
-                            selectItem(userId);
-                            setSelectedItem(null);
-                            setDraft({});
-                          }}
-                        >
-                          {userName || `User ${userId}`}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No linked user</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isChildIdsField =
-                  entity === "clients" &&
-                  (key === "childIds" || key === "childrenIds") &&
-                  Array.isArray(value);
-                if (isChildIdsField) {
-                  const ids = value.filter(
-                    (item): item is string =>
-                      typeof item === "string" && item.length > 0,
-                  );
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Children</span>
-                      <div className={styles.addressList}>
-                        {ids.length === 0 && (
-                          <div className={styles.addressEmpty}>No children</div>
-                        )}
-                        {ids.map((childId) => {
-                          const child = childrenById[childId];
-                          return (
-                            <button
-                              key={childId}
-                              type="button"
-                              className={styles.addressLink}
-                              onClick={() => {
-                                setEntity("children");
-                                selectItem(childId);
-                                setSelectedItem(null);
-                                setDraft({});
-                              }}
-                            >
-                              {formatChildLabel(child ?? {}, childId)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                }
-
-                const isClientIdField =
-                  entity === "children" && key === "clientId" && typeof value === "string";
-                if (isClientIdField) {
-                  const clientId = value.trim();
-                  const client = clientId ? clientsById[clientId] : null;
-                  const parentUserId = client ? String(client.userId ?? "") : "";
-                  const parentUser = parentUserId
-                    ? linkedUsersById[parentUserId]
-                    : null;
-                  const parentName = parentUser
-                    ? `${String(parentUser.firstName ?? "")} ${String(
-                        parentUser.lastName ?? "",
-                      )}`.trim()
-                    : "";
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Parent client</span>
-                      {clientId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => {
-                            setEntity("clients");
-                            selectItem(clientId);
-                            setSelectedItem(null);
-                            setDraft({});
-                          }}
-                        >
-                          {parentName || `Client ${clientId}`}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No parent client</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isAddressUserIdField =
-                  entity === "addresses" && key === "userId" && typeof value === "string";
-                if (isAddressUserIdField) {
-                  const userId = value.trim();
-                  const linkedUser = userId ? linkedUsersById[userId] : null;
-                  const userName = getUserDisplayName(linkedUser);
-                  const targetEntity = getUserTargetEntity(linkedUser);
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>User</span>
-                      {userId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => {
-                            if (!targetEntity) return;
-                            openUserObject(targetEntity, userId);
-                          }}
-                          disabled={!targetEntity}
-                        >
-                          {userName || `User ${userId}`}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No linked user</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isAddressLocationField =
-                  entity === "addresses" && key === "location";
-                if (isAddressLocationField) {
-                  return (
-                    <div key={key} className={styles.fieldGroup}>
-                      <label htmlFor={fieldId} className={styles.field}>
-                        <span>{prettyTitle(key)}</span>
-                        <input
-                          id={fieldId}
-                          type="text"
-                          value={formatPointValue(value)}
-                          disabled
-                        />
-                      </label>
-                      <label
-                        htmlFor={`${fieldId}-public`}
-                        className={styles.field}
-                      >
-                        <span>Public location</span>
-                        <input
-                          id={`${fieldId}-public`}
-                          type="text"
-                          value={formatPointValue(draft.publicLocation)}
-                          disabled
-                        />
-                      </label>
-                    </div>
-                  );
-                }
-
-                if (entity === "addresses" && key === "publicLocation") {
-                  return null;
-                }
-
-                const isOrderClientUserIdField =
-                  entity === "orders" &&
-                  key === "clientUserId" &&
-                  typeof value === "string";
-                if (isOrderClientUserIdField) {
-                  const userId = value.trim();
-                  const linkedUser = userId ? linkedUsersById[userId] : null;
-                  const userName = getUserDisplayName(linkedUser);
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Client user</span>
-                      {userId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => {
-                            setEntity("users");
-                            selectItem(userId);
-                            setSelectedItem(null);
-                            setDraft({});
-                          }}
-                        >
-                          {userName || `User ${userId}`}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No linked user</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isOrderApprovedProviderIdField =
-                  entity === "orders" &&
-                  key === "approvedProviderId" &&
-                  typeof value === "string";
-                if (isOrderApprovedProviderIdField) {
-                  const providerId = value.trim();
-                  const providerUserId = String(draft.approvedProviderUserId ?? "");
-                  const providerUser = providerUserId
-                    ? linkedUsersById[providerUserId]
-                    : null;
-                  const providerName =
-                    (draft.approvedProvider &&
-                    typeof draft.approvedProvider === "object"
-                      ? getUserDisplayName(
-                          (draft.approvedProvider as Record<string, unknown>)
-                            .user as Record<string, unknown>,
-                        )
-                      : "") || getUserDisplayName(providerUser);
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Approved provider</span>
-                      {providerId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => {
-                            setEntity("providers");
-                            selectItem(providerId);
-                            setSelectedItem(null);
-                            setDraft({});
-                          }}
-                        >
-                          {providerName || `Provider ${providerId}`}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No approved provider</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isOrderAddressIdField =
-                  entity === "orders" &&
-                  /addressId$/i.test(key) &&
-                  typeof value === "string";
-                if (isOrderAddressIdField) {
-                  const addressId = value.trim();
-                  const address = addressId ? addressesById[addressId] : null;
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>{prettyTitle(key)}</span>
-                      {addressId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => {
-                            setEntity("addresses");
-                            selectItem(addressId);
-                            setSelectedItem(null);
-                            setDraft({});
-                          }}
-                        >
-                          {formatAddressLabel(address ?? {}, addressId)}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No address</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isOrderApprovedProviderUserIdField =
-                  entity === "orders" &&
-                  key === "approvedProviderUserId" &&
-                  typeof value === "string";
-                if (isOrderApprovedProviderUserIdField) {
-                  const providerUserId = value.trim();
-                  const providerUser = providerUserId
-                    ? linkedUsersById[providerUserId]
-                    : null;
-                  const providerName = getUserDisplayName(providerUser);
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Approved provider user</span>
-                      {providerUserId ? (
-                        <button
-                          type="button"
-                          className={styles.addressLink}
-                          onClick={() => openUserObject("providers", providerUserId)}
-                        >
-                          {providerName || `User ${providerUserId}`}
-                        </button>
-                      ) : (
-                        <div className={styles.addressEmpty}>No approved provider user</div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isOrderChildrenField =
-                  entity === "orders" &&
-                  (key === "childrenIds" || key === "childIds") &&
-                  Array.isArray(value);
-                if (isOrderChildrenField) {
-                  const ids = value.filter(
-                    (item): item is string =>
-                      typeof item === "string" && item.length > 0,
-                  );
-                  return (
-                    <div key={key} className={styles.field}>
-                      <span>Children</span>
-                      <div className={styles.addressList}>
-                        {ids.length === 0 && (
-                          <div className={styles.addressEmpty}>No children</div>
-                        )}
-                        {ids.map((childId) => {
-                          const child = childrenById[childId];
-                          return (
-                            <button
-                              key={childId}
-                              type="button"
-                              className={styles.addressLink}
-                              onClick={() => {
-                                setEntity("children");
-                                selectItem(childId);
-                                setSelectedItem(null);
-                                setDraft({});
-                              }}
-                            >
-                              {formatChildLabel(child ?? {}, childId)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (typeof value === "boolean") {
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.fieldCheckbox}>
-                      <input
-                        id={fieldId}
-                        type="checkbox"
-                        checked={value}
-                        onChange={(e) => handleFieldChange(key, e.target.checked)}
-                      />
-                      <span>{prettyTitle(key)}</span>
-                    </label>
-                  );
-                }
-
-                if (typeof value === "number") {
-                  const isReadOnlyProviderFinalPrice =
-                    entity === "providers" && key === "finalPrice";
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.field}>
-                      <span>{prettyTitle(key)}</span>
-                      <input
-                        id={fieldId}
-                        type="number"
-                        value={String(value)}
-                        onChange={(e) =>
-                          handleFieldChange(key, Number(e.target.value))
-                        }
-                        disabled={isReadOnlyProviderFinalPrice}
-                      />
-                    </label>
-                  );
-                }
-
-                const isDateField =
-                  isLikelyDateField(key) &&
-                  (typeof value === "string" ||
-                    value === null ||
-                    value === undefined);
-                if (isDateField) {
-                  const isDateOnly = /birthDate/i.test(key);
-                  const normalizedStringValue =
-                    typeof value === "string" ? value : "";
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.field}>
-                      <span>{prettyTitle(key)}</span>
-                      <div className={styles.dateInputWrap}>
-                        <input
-                          id={fieldId}
-                          type={isDateOnly ? "date" : "datetime-local"}
-                          value={
-                            isDateOnly
-                              ? toDateLocal(normalizedStringValue)
-                              : toDateTimeLocal(normalizedStringValue)
-                          }
-                          onChange={(e) =>
-                            handleFieldChange(
-                              key,
-                              isDateOnly
-                                ? toIsoFromDateOnly(e.target.value)
-                                : toIsoFromLocal(e.target.value),
+                          const hasOrderStatusDropdown =
+                            entity === "orders" &&
+                            key === "status" &&
+                            typeof value === "string";
+                          if (hasOrderStatusDropdown) {
+                            const currentStatus = String(value);
+                            const statusOptions = ORDER_STATUSES_SUPER.includes(
+                              currentStatus,
                             )
+                              ? ORDER_STATUSES_SUPER
+                              : [currentStatus, ...ORDER_STATUSES_SUPER];
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.field}
+                              >
+                                <span>{prettyTitle(key)}</span>
+                                <select
+                                  id={fieldId}
+                                  value={String(value)}
+                                  onChange={(e) =>
+                                    handleFieldChange(key, e.target.value)
+                                  }
+                                >
+                                  {statusOptions.map((statusValue) => (
+                                    <option
+                                      key={statusValue}
+                                      value={statusValue}
+                                    >
+                                      {statusValue}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            );
                           }
-                        />
-                        <button
-                          type="button"
-                          className={styles.datePickerBtn}
-                          onClick={() => openNativePicker(fieldId)}
-                          aria-label={`Open ${prettyTitle(key)} picker`}
-                        >
-                          <img src={calendarImg.src} alt="" />
-                        </button>
+
+                          const hasRolesDropdown =
+                            entity === "admins" &&
+                            key === "roles" &&
+                            Array.isArray(value);
+                          if (hasRolesDropdown) {
+                            const currentRoles = value.filter(
+                              (role): role is string =>
+                                typeof role === "string",
+                            );
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>{prettyTitle(key)}</span>
+                                <div className={styles.rolesMultiSelect}>
+                                  {ADMIN_ROLE_OPTIONS.map((role) => (
+                                    <label
+                                      key={role}
+                                      className={styles.roleToggle}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={currentRoles.includes(role)}
+                                        onChange={(e) => {
+                                          const nextRoles = e.target.checked
+                                            ? [...currentRoles, role]
+                                            : currentRoles.filter(
+                                                (item) => item !== role,
+                                              );
+                                          handleFieldChange(key, nextRoles);
+                                        }}
+                                      />
+                                      {role}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          const hasProviderPriceCalculationMethodDropdown =
+                            entity === "providers" &&
+                            key === "providerPriceCalculationMethod" &&
+                            typeof value === "string";
+                          if (hasProviderPriceCalculationMethodDropdown) {
+                            const allowedValues = ["DYNAMIC", "CUSTOM"];
+                            const optionValues = allowedValues.includes(value)
+                              ? allowedValues
+                              : [value, ...allowedValues];
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.field}
+                              >
+                                <span>{prettyTitle(key)}</span>
+                                <select
+                                  id={fieldId}
+                                  value={value}
+                                  onChange={(e) =>
+                                    handleFieldChange(key, e.target.value)
+                                  }
+                                >
+                                  {optionValues.map((optionValue) => (
+                                    <option
+                                      key={optionValue}
+                                      value={optionValue}
+                                    >
+                                      {optionValue}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            );
+                          }
+
+                          const hasProviderBankOnboardingStatusDropdown =
+                            entity === "providers" &&
+                            key === "bankOnboardingStatus" &&
+                            typeof value === "string";
+                          if (hasProviderBankOnboardingStatusDropdown) {
+                            const currentStatus = String(value);
+                            const statusOptions =
+                              PROVIDER_BANK_ONBOARDING_STATUSES.includes(
+                                currentStatus as (typeof PROVIDER_BANK_ONBOARDING_STATUSES)[number],
+                              )
+                                ? PROVIDER_BANK_ONBOARDING_STATUSES
+                                : [
+                                    currentStatus,
+                                    ...PROVIDER_BANK_ONBOARDING_STATUSES,
+                                  ];
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.field}
+                              >
+                                <span>Bank Onboarding Status</span>
+                                <select
+                                  id={fieldId}
+                                  value={currentStatus}
+                                  onChange={(e) =>
+                                    handleFieldChange(key, e.target.value)
+                                  }
+                                >
+                                  {statusOptions.map((statusValue) => (
+                                    <option
+                                      key={statusValue}
+                                      value={statusValue}
+                                    >
+                                      {statusValue}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            );
+                          }
+
+                          const hasProviderKycStatusDropdown =
+                            entity === "providers" &&
+                            key === "kycStatus" &&
+                            typeof value === "string";
+                          if (hasProviderKycStatusDropdown) {
+                            const currentStatus = String(value);
+                            const statusOptions =
+                              PROVIDER_KYC_STATUSES.includes(
+                                currentStatus as (typeof PROVIDER_KYC_STATUSES)[number],
+                              )
+                                ? PROVIDER_KYC_STATUSES
+                                : [currentStatus, ...PROVIDER_KYC_STATUSES];
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.field}
+                              >
+                                <span>KYC Status</span>
+                                <select
+                                  id={fieldId}
+                                  value={currentStatus}
+                                  onChange={(e) =>
+                                    handleFieldChange(key, e.target.value)
+                                  }
+                                >
+                                  {statusOptions.map((statusValue) => (
+                                    <option
+                                      key={statusValue}
+                                      value={statusValue}
+                                    >
+                                      {statusValue}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            );
+                          }
+
+                          const isAddressIdsField =
+                            (entity === "clients" || entity === "providers") &&
+                            (key === "addressesIds" || key === "addressIds") &&
+                            Array.isArray(value);
+                          if (isAddressIdsField) {
+                            const ids = value.filter(
+                              (item): item is string =>
+                                typeof item === "string" && item.length > 0,
+                            );
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Addresses</span>
+                                <div className={styles.addressList}>
+                                  {ids.length === 0 && (
+                                    <div className={styles.addressEmpty}>
+                                      No addresses
+                                    </div>
+                                  )}
+                                  {ids.map((addressId) => {
+                                    const address = addressesById[addressId];
+                                    return (
+                                      <button
+                                        key={addressId}
+                                        type="button"
+                                        className={styles.addressLink}
+                                        onClick={() => {
+                                          setEntity("addresses");
+                                          selectItem(addressId);
+                                          setSelectedItem(null);
+                                          setDraft({});
+                                        }}
+                                      >
+                                        {formatAddressLabel(
+                                          address ?? {},
+                                          addressId,
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          const isDefaultAddressField =
+                            (entity === "clients" || entity === "providers") &&
+                            key === "defaultAddressId" &&
+                            typeof value === "string";
+                          if (isDefaultAddressField) {
+                            const addressId = value.trim();
+                            const address = addressId
+                              ? addressesById[addressId]
+                              : null;
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Default address</span>
+                                {addressId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() => {
+                                      setEntity("addresses");
+                                      selectItem(addressId);
+                                      setSelectedItem(null);
+                                      setDraft({});
+                                    }}
+                                  >
+                                    {formatAddressLabel(
+                                      address ?? {},
+                                      addressId,
+                                    )}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No default address
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isClientProviderUserIdField =
+                            (entity === "clients" || entity === "providers") &&
+                            key === "userId" &&
+                            typeof value === "string";
+                          if (isClientProviderUserIdField) {
+                            const userId = value.trim();
+                            const linkedUser = userId
+                              ? linkedUsersById[userId]
+                              : null;
+                            const userName = getUserDisplayName(linkedUser);
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>User</span>
+                                {userId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() => {
+                                      setEntity("users");
+                                      selectItem(userId);
+                                      setSelectedItem(null);
+                                      setDraft({});
+                                    }}
+                                  >
+                                    {userName || `User ${userId}`}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No linked user
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isChildIdsField =
+                            entity === "clients" &&
+                            (key === "childIds" || key === "childrenIds") &&
+                            Array.isArray(value);
+                          if (isChildIdsField) {
+                            const ids = value.filter(
+                              (item): item is string =>
+                                typeof item === "string" && item.length > 0,
+                            );
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Children</span>
+                                <div className={styles.addressList}>
+                                  {ids.length === 0 && (
+                                    <div className={styles.addressEmpty}>
+                                      No children
+                                    </div>
+                                  )}
+                                  {ids.map((childId) => {
+                                    const child = childrenById[childId];
+                                    return (
+                                      <button
+                                        key={childId}
+                                        type="button"
+                                        className={styles.addressLink}
+                                        onClick={() => {
+                                          setEntity("children");
+                                          selectItem(childId);
+                                          setSelectedItem(null);
+                                          setDraft({});
+                                        }}
+                                      >
+                                        {formatChildLabel(child ?? {}, childId)}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          const isClientIdField =
+                            entity === "children" &&
+                            key === "clientId" &&
+                            typeof value === "string";
+                          if (isClientIdField) {
+                            const clientId = value.trim();
+                            const client = clientId
+                              ? clientsById[clientId]
+                              : null;
+                            const parentUserId = client
+                              ? String(client.userId ?? "")
+                              : "";
+                            const parentUser = parentUserId
+                              ? linkedUsersById[parentUserId]
+                              : null;
+                            const parentName = parentUser
+                              ? `${String(parentUser.firstName ?? "")} ${String(
+                                  parentUser.lastName ?? "",
+                                )}`.trim()
+                              : "";
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Parent client</span>
+                                {clientId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() => {
+                                      setEntity("clients");
+                                      selectItem(clientId);
+                                      setSelectedItem(null);
+                                      setDraft({});
+                                    }}
+                                  >
+                                    {parentName || `Client ${clientId}`}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No parent client
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isAddressUserIdField =
+                            entity === "addresses" &&
+                            key === "userId" &&
+                            typeof value === "string";
+                          if (isAddressUserIdField) {
+                            const userId = value.trim();
+                            const linkedUser = userId
+                              ? linkedUsersById[userId]
+                              : null;
+                            const userName = getUserDisplayName(linkedUser);
+                            const targetEntity =
+                              getUserTargetEntity(linkedUser);
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>User</span>
+                                {userId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() => {
+                                      if (!targetEntity) return;
+                                      openUserObject(targetEntity, userId);
+                                    }}
+                                    disabled={!targetEntity}
+                                  >
+                                    {userName || `User ${userId}`}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No linked user
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isAddressLocationField =
+                            entity === "addresses" && key === "location";
+                          if (isAddressLocationField) {
+                            return (
+                              <div key={key} className={styles.fieldGroup}>
+                                <label
+                                  htmlFor={fieldId}
+                                  className={styles.field}
+                                >
+                                  <span>{prettyTitle(key)}</span>
+                                  <input
+                                    id={fieldId}
+                                    type="text"
+                                    value={formatPointValue(value)}
+                                    disabled
+                                  />
+                                </label>
+                                <label
+                                  htmlFor={`${fieldId}-public`}
+                                  className={styles.field}
+                                >
+                                  <span>Public location</span>
+                                  <input
+                                    id={`${fieldId}-public`}
+                                    type="text"
+                                    value={formatPointValue(
+                                      draft.publicLocation,
+                                    )}
+                                    disabled
+                                  />
+                                </label>
+                              </div>
+                            );
+                          }
+
+                          if (
+                            entity === "addresses" &&
+                            key === "publicLocation"
+                          ) {
+                            return null;
+                          }
+
+                          const isOrderClientUserIdField =
+                            entity === "orders" &&
+                            key === "clientUserId" &&
+                            typeof value === "string";
+                          if (isOrderClientUserIdField) {
+                            const userId = value.trim();
+                            const linkedUser = userId
+                              ? linkedUsersById[userId]
+                              : null;
+                            const userName = getUserDisplayName(linkedUser);
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Client user</span>
+                                {userId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() => {
+                                      setEntity("users");
+                                      selectItem(userId);
+                                      setSelectedItem(null);
+                                      setDraft({});
+                                    }}
+                                  >
+                                    {userName || `User ${userId}`}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No linked user
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isOrderApprovedProviderIdField =
+                            entity === "orders" &&
+                            key === "approvedProviderId" &&
+                            typeof value === "string";
+                          if (isOrderApprovedProviderIdField) {
+                            const providerId = value.trim();
+                            const providerUserId = String(
+                              draft.approvedProviderUserId ?? "",
+                            );
+                            const providerUser = providerUserId
+                              ? linkedUsersById[providerUserId]
+                              : null;
+                            const providerName =
+                              (draft.approvedProvider &&
+                              typeof draft.approvedProvider === "object"
+                                ? getUserDisplayName(
+                                    (
+                                      draft.approvedProvider as Record<
+                                        string,
+                                        unknown
+                                      >
+                                    ).user as Record<string, unknown>,
+                                  )
+                                : "") || getUserDisplayName(providerUser);
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Approved provider</span>
+                                {providerId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() => {
+                                      setEntity("providers");
+                                      selectItem(providerId);
+                                      setSelectedItem(null);
+                                      setDraft({});
+                                    }}
+                                  >
+                                    {providerName || `Provider ${providerId}`}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No approved provider
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isOrderAddressIdField =
+                            entity === "orders" &&
+                            /addressId$/i.test(key) &&
+                            typeof value === "string";
+                          if (isOrderAddressIdField) {
+                            const addressId = value.trim();
+                            const address = addressId
+                              ? addressesById[addressId]
+                              : null;
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>{prettyTitle(key)}</span>
+                                {addressId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() => {
+                                      setEntity("addresses");
+                                      selectItem(addressId);
+                                      setSelectedItem(null);
+                                      setDraft({});
+                                    }}
+                                  >
+                                    {formatAddressLabel(
+                                      address ?? {},
+                                      addressId,
+                                    )}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No address
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isOrderApprovedProviderUserIdField =
+                            entity === "orders" &&
+                            key === "approvedProviderUserId" &&
+                            typeof value === "string";
+                          if (isOrderApprovedProviderUserIdField) {
+                            const providerUserId = value.trim();
+                            const providerUser = providerUserId
+                              ? linkedUsersById[providerUserId]
+                              : null;
+                            const providerName =
+                              getUserDisplayName(providerUser);
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Approved provider user</span>
+                                {providerUserId ? (
+                                  <button
+                                    type="button"
+                                    className={styles.addressLink}
+                                    onClick={() =>
+                                      openUserObject(
+                                        "providers",
+                                        providerUserId,
+                                      )
+                                    }
+                                  >
+                                    {providerName || `User ${providerUserId}`}
+                                  </button>
+                                ) : (
+                                  <div className={styles.addressEmpty}>
+                                    No approved provider user
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isOrderChildrenField =
+                            entity === "orders" &&
+                            (key === "childrenIds" || key === "childIds") &&
+                            Array.isArray(value);
+                          if (isOrderChildrenField) {
+                            const ids = value.filter(
+                              (item): item is string =>
+                                typeof item === "string" && item.length > 0,
+                            );
+                            return (
+                              <div key={key} className={styles.field}>
+                                <span>Children</span>
+                                <div className={styles.addressList}>
+                                  {ids.length === 0 && (
+                                    <div className={styles.addressEmpty}>
+                                      No children
+                                    </div>
+                                  )}
+                                  {ids.map((childId) => {
+                                    const child = childrenById[childId];
+                                    return (
+                                      <button
+                                        key={childId}
+                                        type="button"
+                                        className={styles.addressLink}
+                                        onClick={() => {
+                                          setEntity("children");
+                                          selectItem(childId);
+                                          setSelectedItem(null);
+                                          setDraft({});
+                                        }}
+                                      >
+                                        {formatChildLabel(child ?? {}, childId)}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (typeof value === "boolean") {
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.fieldCheckbox}
+                              >
+                                <input
+                                  id={fieldId}
+                                  type="checkbox"
+                                  checked={value}
+                                  onChange={(e) =>
+                                    handleFieldChange(key, e.target.checked)
+                                  }
+                                />
+                                <span>{prettyTitle(key)}</span>
+                              </label>
+                            );
+                          }
+
+                          if (typeof value === "number") {
+                            const isReadOnlyProviderFinalPrice =
+                              entity === "providers" && key === "finalPrice";
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.field}
+                              >
+                                <span>{prettyTitle(key)}</span>
+                                <input
+                                  id={fieldId}
+                                  type="number"
+                                  value={String(value)}
+                                  onChange={(e) =>
+                                    handleFieldChange(
+                                      key,
+                                      Number(e.target.value),
+                                    )
+                                  }
+                                  disabled={isReadOnlyProviderFinalPrice}
+                                />
+                              </label>
+                            );
+                          }
+
+                          const isDateField =
+                            isLikelyDateField(key) &&
+                            (typeof value === "string" ||
+                              value === null ||
+                              value === undefined);
+                          if (isDateField) {
+                            const isDateOnly = /birthDate/i.test(key);
+                            const normalizedStringValue =
+                              typeof value === "string" ? value : "";
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.field}
+                              >
+                                <span>{prettyTitle(key)}</span>
+                                <div className={styles.dateInputWrap}>
+                                  <input
+                                    id={fieldId}
+                                    type={
+                                      isDateOnly ? "date" : "datetime-local"
+                                    }
+                                    value={
+                                      isDateOnly
+                                        ? toDateLocal(normalizedStringValue)
+                                        : toDateTimeLocal(normalizedStringValue)
+                                    }
+                                    onChange={(e) =>
+                                      handleFieldChange(
+                                        key,
+                                        isDateOnly
+                                          ? toIsoFromDateOnly(e.target.value)
+                                          : toIsoFromLocal(e.target.value),
+                                      )
+                                    }
+                                  />
+                                  <button
+                                    type="button"
+                                    className={styles.datePickerBtn}
+                                    onClick={() => openNativePicker(fieldId)}
+                                    aria-label={`Open ${prettyTitle(key)} picker`}
+                                  >
+                                    <img src={calendarImg.src} alt="" />
+                                  </button>
+                                </div>
+                              </label>
+                            );
+                          }
+
+                          if (
+                            Array.isArray(value) ||
+                            (value && typeof value === "object")
+                          ) {
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={fieldId}
+                                className={styles.field}
+                              >
+                                <span>{prettyTitle(key)} (JSON)</span>
+                                <textarea
+                                  id={fieldId}
+                                  value={JSON.stringify(value, null, 2)}
+                                  onChange={(e) => {
+                                    try {
+                                      handleFieldChange(
+                                        key,
+                                        JSON.parse(e.target.value),
+                                      );
+                                    } catch {
+                                      handleFieldChange(key, e.target.value);
+                                    }
+                                  }}
+                                />
+                              </label>
+                            );
+                          }
+
+                          return (
+                            <label
+                              key={key}
+                              htmlFor={fieldId}
+                              className={styles.field}
+                            >
+                              <span>{prettyTitle(key)}</span>
+                              <input
+                                id={fieldId}
+                                type="text"
+                                value={value == null ? "" : String(value)}
+                                onChange={(e) =>
+                                  handleFieldChange(key, e.target.value)
+                                }
+                              />
+                            </label>
+                          );
+                        })}
                       </div>
-                    </label>
-                  );
-                }
-
-                if (Array.isArray(value) || (value && typeof value === "object")) {
-                  return (
-                    <label key={key} htmlFor={fieldId} className={styles.field}>
-                      <span>{prettyTitle(key)} (JSON)</span>
-                      <textarea
-                        id={fieldId}
-                        value={JSON.stringify(value, null, 2)}
-                        onChange={(e) => {
-                          try {
-                            handleFieldChange(key, JSON.parse(e.target.value));
-                          } catch {
-                            handleFieldChange(key, e.target.value);
-                          }
-                        }}
-                      />
-                    </label>
-                  );
-                }
-
-                return (
-                  <label key={key} htmlFor={fieldId} className={styles.field}>
-                    <span>{prettyTitle(key)}</span>
-                    <input
-                      id={fieldId}
-                      type="text"
-                      value={value == null ? "" : String(value)}
-                      onChange={(e) => handleFieldChange(key, e.target.value)}
-                    />
-                  </label>
-                );
-                  })}
-                </div>
-              )}
-            </>
-              )}
+                    )}
+                  </>
+                )}
             </>
           )}
         </section>
@@ -4736,7 +5067,7 @@ const SuperAccess = () => {
           <div className={styles.modalCard}>
             <h3 className={styles.modalTitle}>Chats normalization progress</h3>
             <p className={styles.modalText}>
-              {`Job: ${chatNormalizationJobId || "—"} • Status: ${
+              {`Job: ${chatNormalizationJobId || "-"} • Status: ${
                 chatNormalizationJob?.status ?? "PENDING"
               }`}
             </p>
@@ -4751,7 +5082,9 @@ const SuperAccess = () => {
               </p>
             )}
             {chatNormalizationJob?.error && (
-              <div className={styles.modalError}>{chatNormalizationJob.error}</div>
+              <div className={styles.modalError}>
+                {chatNormalizationJob.error}
+              </div>
             )}
             {chatNormalizationJob?.progress &&
               typeof chatNormalizationJob.progress === "object" && (
@@ -4806,7 +5139,7 @@ const SuperAccess = () => {
           <div className={styles.modalCard}>
             <h3 className={styles.modalTitle}>Phone rescan progress</h3>
             <p className={styles.modalText}>
-              {`Job: ${chatContactSharingRebuildJobId || chatContactSharingRebuildJob?.id || "—"} • Status: ${
+              {`Job: ${chatContactSharingRebuildJobId || chatContactSharingRebuildJob?.id || "-"} • Status: ${
                 chatContactSharingRebuildJob?.status ?? "PENDING"
               }`}
             </p>
@@ -4880,7 +5213,7 @@ const SuperAccess = () => {
               Provider completion stats rebuild
             </h3>
             <p className={styles.modalText}>
-              {`Job: ${providerCompletionStatsRebuildJob?.id || providerCompletionStatsRebuildJobId || "—"} • Status: ${
+              {`Job: ${providerCompletionStatsRebuildJob?.id || providerCompletionStatsRebuildJobId || "-"} • Status: ${
                 providerCompletionStatsRebuildJob?.status ?? "PENDING"
               }`}
             </p>
@@ -4888,21 +5221,22 @@ const SuperAccess = () => {
               <div className={styles.chatProgressRow}>
                 <span>Providers total</span>
                 <strong>
-                  {providerCompletionStatsRebuildJob?.progress.providersTotal ?? "—"}
+                  {providerCompletionStatsRebuildJob?.progress.providersTotal ??
+                    "-"}
                 </strong>
               </div>
               <div className={styles.chatProgressRow}>
                 <span>Providers processed</span>
                 <strong>
-                  {providerCompletionStatsRebuildJob?.progress.providersProcessed ??
-                    "—"}
+                  {providerCompletionStatsRebuildJob?.progress
+                    .providersProcessed ?? "-"}
                 </strong>
               </div>
               <div className={styles.chatProgressRow}>
                 <span>Providers modified</span>
                 <strong>
-                  {providerCompletionStatsRebuildJob?.progress.providersModified ??
-                    "—"}
+                  {providerCompletionStatsRebuildJob?.progress
+                    .providersModified ?? "-"}
                 </strong>
               </div>
             </div>
@@ -4920,7 +5254,9 @@ const SuperAccess = () => {
                     : "Hide"
                 }
                 type="OUTLINED"
-                onClick={() => setIsProviderCompletionStatsRebuildModalOpen(false)}
+                onClick={() =>
+                  setIsProviderCompletionStatsRebuildModalOpen(false)
+                }
               />
             </div>
           </div>
@@ -4931,7 +5267,7 @@ const SuperAccess = () => {
           <div className={styles.modalCard}>
             <h3 className={styles.modalTitle}>Schedule regeneration</h3>
             <p className={styles.modalText}>
-              {`Job: ${scheduleRegenerationJobId || scheduleRegenerationJob?.id || "—"} • Status: ${
+              {`Job: ${scheduleRegenerationJobId || scheduleRegenerationJob?.id || "-"} • Status: ${
                 scheduleRegenerationJob?.status ?? "PENDING"
               }`}
             </p>
@@ -4952,7 +5288,7 @@ const SuperAccess = () => {
                     ([key, value]) => (
                       <div key={key} className={styles.chatProgressRow}>
                         <span>{prettyTitle(key)}</span>
-                        <strong>{String(value ?? "—")}</strong>
+                        <strong>{String(value ?? "-")}</strong>
                       </div>
                     ),
                   )}
@@ -4965,7 +5301,7 @@ const SuperAccess = () => {
                     ([key, value]) => (
                       <div key={key} className={styles.chatProgressRow}>
                         <span>{prettyTitle(key)}</span>
-                        <strong>{String(value ?? "—")}</strong>
+                        <strong>{String(value ?? "-")}</strong>
                       </div>
                     ),
                   )}
@@ -5008,14 +5344,20 @@ const SuperAccess = () => {
                       { openModal: true },
                     )
                   }
-                  isDisabled={isStripeKycAuditLoading || isStripeKycReconcileLoading}
+                  isDisabled={
+                    isStripeKycAuditLoading || isStripeKycReconcileLoading
+                  }
                   isLoading={isStripeKycAuditLoading}
                 />
                 <Button
-                  title={isStripeKycReconcileLoading ? "Fixing..." : "Fix database"}
+                  title={
+                    isStripeKycReconcileLoading ? "Fixing..." : "Fix database"
+                  }
                   type="BLACK"
                   onClick={() =>
-                    reconcileStripeKycAudit(stripeKycAuditFilterUserId || undefined)
+                    reconcileStripeKycAudit(
+                      stripeKycAuditFilterUserId || undefined,
+                    )
                   }
                   isDisabled={
                     isStripeKycAuditLoading ||
@@ -5037,7 +5379,9 @@ const SuperAccess = () => {
                 <div className={styles.stripeKycSummaryCard}>
                   <div className={styles.stripeKycSummaryGrid}>
                     <div>Checked: {stripeKycReconcileResult.checkedCount}</div>
-                    <div>Mismatches: {stripeKycReconcileResult.mismatchCount}</div>
+                    <div>
+                      Mismatches: {stripeKycReconcileResult.mismatchCount}
+                    </div>
                     <div>Updated: {stripeKycReconcileResult.updatedCount}</div>
                     <div>Skipped: {stripeKycReconcileResult.skippedCount}</div>
                     <div>Errors: {stripeKycReconcileResult.errorCount}</div>
@@ -5081,7 +5425,9 @@ const SuperAccess = () => {
 
               <div className={styles.stripeKycProvidersSection}>
                 <div className={styles.stripeKycSectionTitle}>
-                  {stripeKycAuditFilterUserId ? "Checked provider" : "Affected providers"}
+                  {stripeKycAuditFilterUserId
+                    ? "Checked provider"
+                    : "Affected providers"}
                   {stripeKycAuditResult
                     ? ` (${
                         stripeKycAuditFilterUserId
@@ -5090,16 +5436,14 @@ const SuperAccess = () => {
                       })`
                     : ""}
                 </div>
-                {(
-                  stripeKycAuditFilterUserId
-                    ? stripeKycAuditResult?.checkedProviders
-                    : stripeKycAuditResult?.mismatches
+                {(stripeKycAuditFilterUserId
+                  ? stripeKycAuditResult?.checkedProviders
+                  : stripeKycAuditResult?.mismatches
                 )?.length ? (
                   <div className={styles.stripeKycList}>
-                    {(
-                      stripeKycAuditFilterUserId
-                        ? stripeKycAuditResult?.checkedProviders
-                        : stripeKycAuditResult?.mismatches
+                    {(stripeKycAuditFilterUserId
+                      ? stripeKycAuditResult?.checkedProviders
+                      : stripeKycAuditResult?.mismatches
                     )?.map((item) => (
                       <div
                         key={`${item.providerId}-${item.userId}`}
@@ -5113,7 +5457,9 @@ const SuperAccess = () => {
                                 : `Provider ${item.providerId}`}
                             </div>
                             <div className={styles.stripeKycRowMeta}>
-                              Provider ID: {item.providerId} | User: {item.userId} | Stripe account: {item.stripeAccountId}
+                              Provider ID: {item.providerId} | User:{" "}
+                              {item.userId} | Stripe account:{" "}
+                              {item.stripeAccountId}
                             </div>
                             {item.status && (
                               <div className={styles.stripeKycRowMeta}>
@@ -5131,9 +5477,12 @@ const SuperAccess = () => {
                             <Button
                               title="Fix"
                               type="OUTLINED"
-                              onClick={() => reconcileStripeKycAudit(item.userId)}
+                              onClick={() =>
+                                reconcileStripeKycAudit(item.userId)
+                              }
                               isDisabled={
-                                isStripeKycAuditLoading || isStripeKycReconcileLoading
+                                isStripeKycAuditLoading ||
+                                isStripeKycReconcileLoading
                               }
                             />
                             {stripeKycAuditFilterUserId && (
@@ -5145,7 +5494,9 @@ const SuperAccess = () => {
                                 }
                                 type="OUTLINED"
                                 onClick={() =>
-                                  sendStripeKycTestEmailToCurrentAdmin(item.providerId)
+                                  sendStripeKycTestEmailToCurrentAdmin(
+                                    item.providerId,
+                                  )
                                 }
                                 isDisabled={
                                   isStripeKycTestEmailSending ||
@@ -5166,7 +5517,9 @@ const SuperAccess = () => {
                             </pre>
                           </div>
                           <div>
-                            <div className={styles.stripeKycFieldLabel}>Stripe</div>
+                            <div className={styles.stripeKycFieldLabel}>
+                              Stripe
+                            </div>
                             <pre className={styles.stripeKycJson}>
                               {JSON.stringify(item.stripe ?? {}, null, 2)}
                             </pre>
@@ -5199,7 +5552,9 @@ const SuperAccess = () => {
               <div className={styles.stripeKycSection}>
                 <div className={styles.stripeKycSectionTitle}>
                   Stripe fetch errors
-                  {stripeKycAuditResult ? ` (${stripeKycAuditResult.errorCount})` : ""}
+                  {stripeKycAuditResult
+                    ? ` (${stripeKycAuditResult.errorCount})`
+                    : ""}
                 </div>
                 {stripeKycAuditResult?.errors.length ? (
                   <div className={styles.stripeKycList}>
@@ -5214,7 +5569,8 @@ const SuperAccess = () => {
                             : `Provider ${item.providerId}`}
                         </div>
                         <div className={styles.stripeKycRowMeta}>
-                          Provider ID: {item.providerId} | User: {item.userId} | Stripe account: {item.stripeAccountId}
+                          Provider ID: {item.providerId} | User: {item.userId} |
+                          Stripe account: {item.stripeAccountId}
                         </div>
                         {item.status && (
                           <div className={styles.stripeKycRowMeta}>
@@ -5227,7 +5583,9 @@ const SuperAccess = () => {
                   </div>
                 ) : (
                   <div className={styles.empty}>
-                    {isStripeKycAuditLoading ? "Scanning errors..." : "No fetch errors."}
+                    {isStripeKycAuditLoading
+                      ? "Scanning errors..."
+                      : "No fetch errors."}
                   </div>
                 )}
               </div>
@@ -5238,7 +5596,9 @@ const SuperAccess = () => {
       {isFinancialLedgerRebuildAllModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
-            <h3 className={styles.modalTitle}>Rebuild all financial ledger rows?</h3>
+            <h3 className={styles.modalTitle}>
+              Rebuild all financial ledger rows?
+            </h3>
             <p className={styles.modalText}>
               This scans historical orders and creates missing financial ledger
               rows for orders that existed before the ledger API was added.
@@ -5264,7 +5624,9 @@ const SuperAccess = () => {
       {isFinancialLedgerDeleteModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
-            <h3 className={styles.modalTitle}>Delete selected financial rows?</h3>
+            <h3 className={styles.modalTitle}>
+              Delete selected financial rows?
+            </h3>
             <p className={styles.modalText}>
               This removes financial ledger rows for the selected orders. Use it
               only for test or wrong data.
@@ -5293,7 +5655,9 @@ const SuperAccess = () => {
       {isOrderFinancialRebuildModalOpen && selectedId && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
-            <h3 className={styles.modalTitle}>Rebuild financial data for this order?</h3>
+            <h3 className={styles.modalTitle}>
+              Rebuild financial data for this order?
+            </h3>
             <p className={styles.modalText}>
               This recreates ledger entries for the selected order if they are
               missing.
@@ -5308,7 +5672,9 @@ const SuperAccess = () => {
               <Button
                 title={isSaving ? "Rebuilding..." : "Rebuild"}
                 type="BLACK"
-                onClick={() => handleRebuildSingleOrderFinancialLedger(selectedId)}
+                onClick={() =>
+                  handleRebuildSingleOrderFinancialLedger(selectedId)
+                }
                 isDisabled={isSaving}
                 isLoading={isSaving}
               />

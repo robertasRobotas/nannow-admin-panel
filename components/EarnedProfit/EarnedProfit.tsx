@@ -49,7 +49,7 @@ const formatMoneyFromCents = (value?: number | null, currency = "eur") => {
 const formatMoneyFromDecimal = (
   value?: string | null,
   currency = "eur",
-  fallback = "—",
+  fallback = "-",
 ) => {
   if (value === null || value === undefined || value === "") return fallback;
   const parsed = Number(value);
@@ -73,7 +73,7 @@ const formatDateTime = (value?: string | null) =>
         hour12: false,
         timeZone: "UTC",
       })
-    : "—";
+    : "-";
 
 const MetricCard = ({
   label,

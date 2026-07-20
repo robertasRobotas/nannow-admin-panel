@@ -14,7 +14,9 @@ const LEGACY_REQUEST_ID = "legacy-compensation-request";
 const normalizeCommentText = (value: unknown) => {
   if (typeof value === "string") return value;
   if (Array.isArray(value)) {
-    return value.filter((comment): comment is string => typeof comment === "string").join("\n");
+    return value
+      .filter((comment): comment is string => typeof comment === "string")
+      .join("\n");
   }
   return "";
 };
@@ -28,20 +30,16 @@ const parseDate = (value?: string | null) => {
 
 export const formatCompensationDateTime = (value?: string | null) => {
   const date = parseDate(value);
-  if (!date) return "—";
+  if (!date) return "-";
   return date.toLocaleString();
 };
 
-export const formatCompensationRequestStatus = (
-  status?: string | null,
-) => {
+export const formatCompensationRequestStatus = (status?: string | null) => {
   if (!status) return "UNKNOWN";
   return status.replace(/_/g, " ");
 };
 
-export const getCompensationRequestStatusTone = (
-  status?: string | null,
-) => {
+export const getCompensationRequestStatusTone = (status?: string | null) => {
   switch (status) {
     case "REQUESTED":
       return "requested";
@@ -72,7 +70,9 @@ export const normalizeCompensationRequests = (
     return [...newRequests]
       .map((request, index) => ({
         ...request,
-        comments: normalizeCommentText((request as { comments?: unknown }).comments),
+        comments: normalizeCommentText(
+          (request as { comments?: unknown }).comments,
+        ),
         id:
           request.requestId?.trim() ||
           request.id?.trim() ||

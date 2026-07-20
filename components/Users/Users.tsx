@@ -77,7 +77,7 @@ const roleParenFromEnum = (role: string) =>
   String(role).toUpperCase() === "PROVIDER" ? "(Provider)" : "(Client)";
 
 const formatDateTime = (value?: string) => {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
@@ -563,9 +563,10 @@ const Users = () => {
         }
       }
 
-      const targetView = typeof params.viewOptionIndex === "number"
-        ? viewOptions[params.viewOptionIndex]?.value
-        : currentView;
+      const targetView =
+        typeof params.viewOptionIndex === "number"
+          ? viewOptions[params.viewOptionIndex]?.value
+          : currentView;
       if (targetView === "CLIENTS" || targetView === "PROVIDERS") {
         if (shouldShowFinishedOnboarding) {
           nextQuery.isOnboardingFinished = "true";
@@ -1691,7 +1692,7 @@ const Users = () => {
                             user.userBanReason ??
                             user.bannedReason ??
                             user.reason ??
-                            "—"
+                            "-"
                           }`}
                         </div>
                         <div className={userListStyles.meta}>
@@ -1977,7 +1978,7 @@ const Users = () => {
                     {platformGroup.items.length === 0 && (
                       <div className={styles.versionRow}>
                         <span className={styles.versionName}>No versions</span>
-                        <span className={styles.versionCount}>—</span>
+                        <span className={styles.versionCount}>-</span>
                       </div>
                     )}
                     <div className={styles.platformMeta}>

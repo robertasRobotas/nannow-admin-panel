@@ -17,7 +17,7 @@ import { useRouter } from "next/router";
 const ROLE_OPTIONS: AdminRole[] = ADMIN_ROLE_OPTIONS;
 
 const formatCreditBalance = (creditBalanceCents?: number) => {
-  if (typeof creditBalanceCents !== "number") return "—";
+  if (typeof creditBalanceCents !== "number") return "-";
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -162,7 +162,11 @@ const Admins = () => {
 
   const handleCreateAdmin = async () => {
     if (isCreating) return;
-    if (!createEmail.trim() || !createFirstName.trim() || createRoles.length === 0) {
+    if (
+      !createEmail.trim() ||
+      !createFirstName.trim() ||
+      createRoles.length === 0
+    ) {
       setError("Fill first name, email and roles.");
       return;
     }
@@ -323,13 +327,17 @@ const Admins = () => {
 
       <div className={styles.list}>
         {sortedAdmins.map((admin) => (
-          <div key={getAdminId(admin) || admin.email} className={styles.adminCard}>
+          <div
+            key={getAdminId(admin) || admin.email}
+            className={styles.adminCard}
+          >
             <div className={styles.adminMain}>
               <div>
-                <div className={styles.adminName}>{admin.firstName ?? "—"}</div>
+                <div className={styles.adminName}>{admin.firstName ?? "-"}</div>
                 <div className={styles.adminEmail}>{admin.email}</div>
                 <div className={styles.creditBalance}>
-                  Credit balance: {formatCreditBalance(admin.creditBalanceCents)}
+                  Credit balance:{" "}
+                  {formatCreditBalance(admin.creditBalanceCents)}
                 </div>
               </div>
               <div className={styles.rolesPills}>

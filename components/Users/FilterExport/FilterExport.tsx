@@ -123,9 +123,7 @@ const platformFilterOptions = [
   { title: "No platform", value: "NO_PLATFORM" },
 ];
 
-const extractNumericRating = (
-  rating: unknown,
-): number | null => {
+const extractNumericRating = (rating: unknown): number | null => {
   if (typeof rating === "number" && Number.isFinite(rating)) return rating;
   if (
     typeof rating === "object" &&
@@ -153,11 +151,7 @@ const extractProfileVideo = (detail: UserDetails): boolean => {
   const user = detail.user as ExtendedUser;
   const provider = detail.provider as ExtendedProvider | undefined;
   const client = detail.client as ExtendedClient | undefined;
-  const candidates = [
-    provider?.videoUrl,
-    client?.videoUrl,
-    user?.videoUrl,
-  ];
+  const candidates = [provider?.videoUrl, client?.videoUrl, user?.videoUrl];
 
   return candidates.some(
     (value) => typeof value === "string" && value.trim().length > 0,
@@ -185,8 +179,7 @@ const buildFinishedFields = (
     ABOUT_ME: Boolean(provider?.intro?.trim()),
     CRIMINAL_RECORD: currentCriminalStatus === "APPROVED",
     BANK_ONBOARDING:
-      String(provider?.bankOnboardingStatus ?? "").toUpperCase() ===
-      "APPROVED",
+      String(provider?.bankOnboardingStatus ?? "").toUpperCase() === "APPROVED",
     KYC: String(provider?.kycStatus ?? "").toUpperCase() === "VERIFIED",
   };
 
@@ -272,11 +265,11 @@ const fetchAllBaseUsers = async (
       params.set("hasAppVersion", normalized);
     }
     const basePath = `admin/users?${params.toString()}`;
-    const response = await getAllUsers(
-      basePath,
-    );
+    const response = await getAllUsers(basePath);
     const payload = response.data?.users;
-    const items = Array.isArray(payload?.items) ? (payload.items as User[]) : [];
+    const items = Array.isArray(payload?.items)
+      ? (payload.items as User[])
+      : [];
     const pageSize = Number(payload?.pageSize ?? items.length ?? 0);
     total = Number(payload?.total ?? collected.length + items.length);
     collected.push(...items);
@@ -288,9 +281,7 @@ const fetchAllBaseUsers = async (
   return collected;
 };
 
-const mapNoRoleUser = (
-  baseUser: User,
-): EnrichedUser => ({
+const mapNoRoleUser = (baseUser: User): EnrichedUser => ({
   id: baseUser.id,
   userId: baseUser.userId,
   firstName: baseUser.firstName,
@@ -445,7 +436,8 @@ const FilterExport = () => {
                 appVersion: nestedItem.appVersion,
                 count: Number(nestedItem.count ?? 0) || 0,
               })),
-            withoutAppVersionCount: Number(item.withoutAppVersionCount ?? 0) || 0,
+            withoutAppVersionCount:
+              Number(item.withoutAppVersionCount ?? 0) || 0,
           }));
 
         const versionCounts = new Map<string, number>();
@@ -543,7 +535,9 @@ const FilterExport = () => {
             }),
           );
           nextUsers.push(
-            ...details.filter((detail): detail is EnrichedUser => detail !== null),
+            ...details.filter(
+              (detail): detail is EnrichedUser => detail !== null,
+            ),
           );
         }
 
@@ -619,7 +613,9 @@ const FilterExport = () => {
       return false;
     }
     if (
-      !notFinishedFields.every((field) => user.notFinishedFields.includes(field))
+      !notFinishedFields.every((field) =>
+        user.notFinishedFields.includes(field),
+      )
     ) {
       return false;
     }
@@ -715,7 +711,9 @@ const FilterExport = () => {
           <div className={styles.filterBlock}>
             <div className={styles.label}>Finished onboarding fields</div>
             {availableFields.length === 0 ? (
-              <div className={styles.emptyState}>Not available for users without role.</div>
+              <div className={styles.emptyState}>
+                Not available for users without role.
+              </div>
             ) : (
               <div className={styles.checkGrid}>
                 <label className={styles.checkItem}>
@@ -751,13 +749,17 @@ const FilterExport = () => {
           <div className={styles.filterBlock}>
             <div className={styles.label}>Not finished onboarding fields</div>
             {availableFields.length === 0 ? (
-              <div className={styles.emptyState}>Not available for users without role.</div>
+              <div className={styles.emptyState}>
+                Not available for users without role.
+              </div>
             ) : (
               <div className={styles.checkGrid}>
                 <label className={styles.checkItem}>
                   <input
                     type="checkbox"
-                    checked={notFinishedFields.length === availableFields.length}
+                    checked={
+                      notFinishedFields.length === availableFields.length
+                    }
                     onChange={(event) =>
                       toggleAllFields(
                         event.target.checked,
@@ -769,12 +771,19 @@ const FilterExport = () => {
                   <span>All</span>
                 </label>
                 {availableFields.map((field) => (
-                  <label key={`not-finished-${field}`} className={styles.checkItem}>
+                  <label
+                    key={`not-finished-${field}`}
+                    className={styles.checkItem}
+                  >
                     <input
                       type="checkbox"
                       checked={notFinishedFields.includes(field)}
                       onChange={() =>
-                        toggleField(field, notFinishedFields, setNotFinishedFields)
+                        toggleField(
+                          field,
+                          notFinishedFields,
+                          setNotFinishedFields,
+                        )
                       }
                     />
                     <span>{FIELD_LABELS[field]}</span>
@@ -887,23 +896,28 @@ const FilterExport = () => {
                   />
                   <div>
                     <div className={styles.name}>
-                      {`${user.firstName} ${user.lastName}`.trim() || "Unknown user"}
+                      {`${user.firstName} ${user.lastName}`.trim() ||
+                        "Unknown user"}
                     </div>
-                    <div className={styles.meta}>{user.email || "—"}</div>
+                    <div className={styles.meta}>{user.email || "-"}</div>
                     <div className={styles.meta}>{user.userId}</div>
-                    <div className={styles.meta}>{`APP INFO: ${user.platform ?? "—"} | ${user.appVersion ?? "—"}`}</div>
+                    <div
+                      className={styles.meta}
+                    >{`APP INFO: ${user.platform ?? "-"} | ${user.appVersion ?? "-"}`}</div>
                   </div>
                 </div>
                 <div className={styles.resultStats}>
                   <div className={styles.statItem}>
                     <span className={styles.statLabel}>Rating</span>
                     <span className={styles.statValue}>
-                      {user.rating != null ? user.rating.toFixed(1) : "—"}
+                      {user.rating != null ? user.rating.toFixed(1) : "-"}
                     </span>
                   </div>
                   <div className={styles.statItem}>
                     <span className={styles.statLabel}>Reviews</span>
-                    <span className={styles.statValue}>{user.reviewsCount}</span>
+                    <span className={styles.statValue}>
+                      {user.reviewsCount}
+                    </span>
                   </div>
                   <div className={styles.statItem}>
                     <span className={styles.statLabel}>Video</span>
@@ -914,7 +928,9 @@ const FilterExport = () => {
                 </div>
                 <div className={styles.resultActions}>
                   <Button
-                    title={user.mode === "NO_ROLE" ? "No profile" : "Open profile"}
+                    title={
+                      user.mode === "NO_ROLE" ? "No profile" : "Open profile"
+                    }
                     type="OUTLINED"
                     isDisabled={user.mode === "NO_ROLE"}
                     onClick={() =>
@@ -929,7 +945,9 @@ const FilterExport = () => {
               </div>
             ))}
             {!isLoading && filteredUsers.length === 0 && (
-              <div className={styles.emptyState}>No users match current filters.</div>
+              <div className={styles.emptyState}>
+                No users match current filters.
+              </div>
             )}
           </div>
           {!isLoading && pageCount > 1 && (

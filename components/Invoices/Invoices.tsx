@@ -25,11 +25,12 @@ import {
 
 const PAGE_SIZE = 20;
 
-const ownerRoleOptions: Array<{ label: string; value: InvoiceOwnerRole | "" }> = [
-  { label: "All roles", value: "" },
-  { label: "Client", value: "CLIENT" },
-  { label: "Provider", value: "PROVIDER" },
-];
+const ownerRoleOptions: Array<{ label: string; value: InvoiceOwnerRole | "" }> =
+  [
+    { label: "All roles", value: "" },
+    { label: "Client", value: "CLIENT" },
+    { label: "Provider", value: "PROVIDER" },
+  ];
 
 const kindOptions: Array<{ label: string; value: InvoiceKind | "" }> = [
   { label: "All kinds", value: "" },
@@ -47,7 +48,7 @@ const formatDateTime = (iso?: string) =>
         hour: "2-digit",
         minute: "2-digit",
       })
-    : "—";
+    : "-";
 
 const formatMoney = (amount?: number, currency?: string) => {
   const value = typeof amount === "number" ? amount : 0;
@@ -98,9 +99,9 @@ const Invoices = () => {
   const [ownerUserId, setOwnerUserId] = useState("");
   const [orderId, setOrderId] = useState("");
 
-  const [appliedOwnerRole, setAppliedOwnerRole] = useState<InvoiceOwnerRole | "">(
-    "",
-  );
+  const [appliedOwnerRole, setAppliedOwnerRole] = useState<
+    InvoiceOwnerRole | ""
+  >("");
   const [appliedKind, setAppliedKind] = useState<InvoiceKind | "">("");
   const [appliedOwnerUserId, setAppliedOwnerUserId] = useState("");
   const [appliedOrderId, setAppliedOrderId] = useState("");
@@ -144,7 +145,10 @@ const Invoices = () => {
         delete nextQuery.ownerUserId;
       }
 
-      if (typeof params.orderId === "string" && params.orderId.trim().length > 0) {
+      if (
+        typeof params.orderId === "string" &&
+        params.orderId.trim().length > 0
+      ) {
         nextQuery.orderId = params.orderId.trim();
       } else if (params.orderId !== undefined) {
         delete nextQuery.orderId;
@@ -184,7 +188,9 @@ const Invoices = () => {
 
       setItems(nextItems);
       setTotal(nextTotal);
-      setPageCount(Math.ceil(nextTotal / (pageSize > 0 ? pageSize : PAGE_SIZE)));
+      setPageCount(
+        Math.ceil(nextTotal / (pageSize > 0 ? pageSize : PAGE_SIZE)),
+      );
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
@@ -214,13 +220,13 @@ const Invoices = () => {
   useEffect(() => {
     if (!router.isReady) return;
     const ownerRoleFromQuery =
-      typeof router.query.ownerRole === "string"
-        ? router.query.ownerRole
-        : "";
+      typeof router.query.ownerRole === "string" ? router.query.ownerRole : "";
     const kindFromQuery =
       typeof router.query.kind === "string" ? router.query.kind : "";
     const ownerUserIdFromQuery =
-      typeof router.query.ownerUserId === "string" ? router.query.ownerUserId : "";
+      typeof router.query.ownerUserId === "string"
+        ? router.query.ownerUserId
+        : "";
     const orderIdFromQuery =
       typeof router.query.orderId === "string" ? router.query.orderId : "";
     const pageFromQuery =
@@ -404,15 +410,21 @@ const Invoices = () => {
                   <div className={styles.metaStrong}>
                     {formatDateTime(invoice.invoiceDate)}
                   </div>
-                  <div className={styles.meta}>Invoice No: {invoice.invoiceNo}</div>
+                  <div className={styles.meta}>
+                    Invoice No: {invoice.invoiceNo}
+                  </div>
                   <div className={styles.meta}>Kind: {invoice.kind}</div>
                   {invoice.invoiceSource && (
                     <div className={styles.meta}>
                       Source: {invoice.invoiceSource}
                     </div>
                   )}
-                  <div className={styles.meta}>Owner role: {invoice.ownerRole}</div>
-                  <div className={styles.meta}>Issued at: {formatDateTime(invoice.issuedAt)}</div>
+                  <div className={styles.meta}>
+                    Owner role: {invoice.ownerRole}
+                  </div>
+                  <div className={styles.meta}>
+                    Issued at: {formatDateTime(invoice.issuedAt)}
+                  </div>
                 </div>
 
                 <div className={styles.middle}>
@@ -423,13 +435,19 @@ const Invoices = () => {
                       alt={ownerName || "Owner"}
                     />
                     <div>
-                      <div className={styles.ownerName}>{ownerName || "Unknown owner"}</div>
-                      <div className={styles.ownerId}>{invoice.owner?.id || invoice.ownerUserId}</div>
+                      <div className={styles.ownerName}>
+                        {ownerName || "Unknown owner"}
+                      </div>
+                      <div className={styles.ownerId}>
+                        {invoice.owner?.id || invoice.ownerUserId}
+                      </div>
                     </div>
                   </Link>
                   <div className={styles.meta}>Order ID: {invoice.orderId}</div>
                   {invoice.payoutId && (
-                    <div className={styles.meta}>Payout ID: {invoice.payoutId}</div>
+                    <div className={styles.meta}>
+                      Payout ID: {invoice.payoutId}
+                    </div>
                   )}
                   {invoice.paymentIds && invoice.paymentIds.length > 0 && (
                     <div className={styles.meta}>

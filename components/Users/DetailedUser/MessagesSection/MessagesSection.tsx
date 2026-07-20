@@ -27,10 +27,8 @@ const isChatUnread = (chat: ChatType) => {
   return chat.messages.some((message) => !message.isRead);
 };
 
-const getChatReadAt = (
-  chat: ChatType,
-  lastMessage?: ChatMessageType | null,
-) => lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+const getChatReadAt = (chat: ChatType, lastMessage?: ChatMessageType | null) =>
+  lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
 
 const getChatParticipantId = (chat: ChatType, key: "user1" | "user2") =>
   chat[key]?.id ?? (key === "user1" ? chat.user1Id : chat.user2Id) ?? "";
@@ -43,7 +41,7 @@ const isSystemNannowChat = (chat: ChatType) => {
 };
 
 const formatDateTime = (value?: string) => {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("en-US", {
@@ -96,13 +94,13 @@ const MessagesSection = ({
         setMessages(Array.isArray(result.messages) ? result.messages : []);
         setUserImgUrl(
           result.user1?.id === userId
-            ? result.user1?.imgUrl ?? ""
-            : result.user2?.imgUrl ?? "",
+            ? (result.user1?.imgUrl ?? "")
+            : (result.user2?.imgUrl ?? ""),
         );
         setOtherUserImgUrl(
           result.user1?.id !== userId
-            ? result.user1?.imgUrl ?? ""
-            : result.user2?.imgUrl ?? "",
+            ? (result.user1?.imgUrl ?? "")
+            : (result.user2?.imgUrl ?? ""),
         );
       } catch (err) {
         if (!isCancelled) {
@@ -125,8 +123,9 @@ const MessagesSection = ({
 
   const selectedChat = useMemo(
     () =>
-      filteredChats.find((chat) => (chat.chatId ?? chat.id) === selectedChatId) ??
-      null,
+      filteredChats.find(
+        (chat) => (chat.chatId ?? chat.id) === selectedChatId,
+      ) ?? null,
     [filteredChats, selectedChatId],
   );
 
@@ -139,7 +138,8 @@ const MessagesSection = ({
             {filteredChats.length > 0 ? (
               filteredChats.map((chat) => {
                 const chatId = chat.chatId ?? chat.id;
-                const counterpart = chat.user2?.id === userId ? chat.user1 : chat.user2;
+                const counterpart =
+                  chat.user2?.id === userId ? chat.user1 : chat.user2;
                 const lastMessage = Array.isArray(chat.messages)
                   ? chat.messages[chat.messages.length - 1]
                   : null;
@@ -193,9 +193,11 @@ const MessagesSection = ({
           {selectedChat ? (
             <>
               <div className={styles.title}>
-                {`${(selectedChat.user2?.id === userId
-                  ? selectedChat.user1?.firstName
-                  : selectedChat.user2?.firstName) ?? "Chat"}`}
+                {`${
+                  (selectedChat.user2?.id === userId
+                    ? selectedChat.user1?.firstName
+                    : selectedChat.user2?.firstName) ?? "Chat"
+                }`}
               </div>
               {isLoadingChat ? (
                 <div className={styles.emptyState}>Loading messages...</div>

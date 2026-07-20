@@ -13,7 +13,11 @@ import {
   markSystemNannowChatRead,
   replySystemNannowChat,
 } from "@/pages/api/fetch";
-import { ChatMessageType, ChatType, GetAdminChatsResponse } from "@/types/Chats";
+import {
+  ChatMessageType,
+  ChatType,
+  GetAdminChatsResponse,
+} from "@/types/Chats";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
 import paginateStyles from "@/styles/paginate.module.css";
 import listStyles from "@/components/AdminChats/adminChats.module.css";
@@ -44,7 +48,7 @@ const formatDateTime = (value?: string | null) =>
         hour: "2-digit",
         minute: "2-digit",
       })
-    : "—";
+    : "-";
 
 const isChatUnread = (chat: ChatType) => {
   if (!Array.isArray(chat.messages)) {
@@ -58,10 +62,8 @@ const isChatUnread = (chat: ChatType) => {
   );
 };
 
-const getChatReadAt = (
-  chat: ChatType,
-  lastMessage?: ChatMessageType | null,
-) => lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+const getChatReadAt = (chat: ChatType, lastMessage?: ChatMessageType | null) =>
+  lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
 
 const parseChatsResponse = (
   response: unknown,
@@ -70,7 +72,8 @@ const parseChatsResponse = (
     | GetAdminChatsResponse
     | { result?: GetAdminChatsResponse };
   const data =
-    (payload as { result?: GetAdminChatsResponse }).result ?? (payload as GetAdminChatsResponse);
+    (payload as { result?: GetAdminChatsResponse }).result ??
+    (payload as GetAdminChatsResponse);
   const items = Array.isArray(data?.items) ? data.items : [];
   const total = Number(data?.total ?? items.length);
   const pageSize = Number(data?.pageSize ?? items.length ?? 20) || 20;
@@ -84,7 +87,9 @@ const NannowChats = () => {
   const { lastEvent } = useAdminSocket();
   const [items, setItems] = useState<ChatType[]>([]);
   const [selectedChatId, setSelectedChatId] = useState("");
-  const [selectedChat, setSelectedChat] = useState<ChatDetailsResponse | null>(null);
+  const [selectedChat, setSelectedChat] = useState<ChatDetailsResponse | null>(
+    null,
+  );
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [itemOffset, setItemOffset] = useState(0);
   const [pageCount, setPageCount] = useState(0);
@@ -191,14 +196,20 @@ const NannowChats = () => {
           search: appliedSearch,
           unreadOnly: true,
         });
-        const { items: nextItems, total: nextTotal, pageSize: nextPageSize } =
-          parseChatsResponse(response.data);
+        const {
+          items: nextItems,
+          total: nextTotal,
+          pageSize: nextPageSize,
+        } = parseChatsResponse(response.data);
 
         setItems(nextItems);
         setPageSize(nextPageSize);
         setPageCount(Math.max(1, Math.ceil(nextTotal / nextPageSize)));
         setSelectedChatId((prev) => {
-          if (prev && nextItems.some((item) => (item.chatId ?? item.id) === prev)) {
+          if (
+            prev &&
+            nextItems.some((item) => (item.chatId ?? item.id) === prev)
+          ) {
             return prev;
           }
           return nextItems[0]?.chatId ?? nextItems[0]?.id ?? "";
@@ -212,14 +223,20 @@ const NannowChats = () => {
         sort: selectedSort,
         search: appliedSearch,
       });
-      const { items: nextItems, total: nextTotal, pageSize: nextPageSize } =
-        parseChatsResponse(response.data);
+      const {
+        items: nextItems,
+        total: nextTotal,
+        pageSize: nextPageSize,
+      } = parseChatsResponse(response.data);
 
       setItems(nextItems);
       setPageSize(nextPageSize);
       setPageCount(Math.max(1, Math.ceil(nextTotal / nextPageSize)));
       setSelectedChatId((prev) => {
-        if (prev && nextItems.some((item) => (item.chatId ?? item.id) === prev)) {
+        if (
+          prev &&
+          nextItems.some((item) => (item.chatId ?? item.id) === prev)
+        ) {
           return prev;
         }
         return nextItems[0]?.chatId ?? nextItems[0]?.id ?? "";
@@ -254,13 +271,16 @@ const NannowChats = () => {
     if (!router.isReady) return;
     const sortFromQuery =
       typeof router.query.sort === "string" ? router.query.sort : "latest";
-    const sortIndex = SORT_OPTIONS.findIndex((option) => option.value === sortFromQuery);
+    const sortIndex = SORT_OPTIONS.findIndex(
+      (option) => option.value === sortFromQuery,
+    );
     setSelectedSortOption(sortIndex >= 0 ? sortIndex : 0);
 
     const qFromQuery = typeof router.query.q === "string" ? router.query.q : "";
     setSearchText(qFromQuery);
     setAppliedSearch(qFromQuery);
-    const idFromQuery = typeof router.query.id === "string" ? router.query.id : "";
+    const idFromQuery =
+      typeof router.query.id === "string" ? router.query.id : "";
     if (idFromQuery) {
       setSelectedChatId(idFromQuery);
     }
@@ -511,15 +531,17 @@ const NannowChats = () => {
                     } ${unread ? listStyles.chatRowUnread : ""}`}
                     onClick={() => {
                       setSelectedChatId(chatId);
-                        updateNannowChatsQuery({
-                          page:
-                            pageCount === 0 ? 1 : Math.floor(itemOffset / pageSize) + 1,
-                          sort: selectedSort,
-                          q: appliedSearch,
-                          id: chatId,
-                          unread: showUnreadOnly,
-                        });
-                      }}
+                      updateNannowChatsQuery({
+                        page:
+                          pageCount === 0
+                            ? 1
+                            : Math.floor(itemOffset / pageSize) + 1,
+                        sort: selectedSort,
+                        q: appliedSearch,
+                        id: chatId,
+                        unread: showUnreadOnly,
+                      });
+                    }}
                   >
                     {unread && <span className={listStyles.unreadDot} />}
                     <div className={listStyles.chatAvatars}>
@@ -584,7 +606,9 @@ const NannowChats = () => {
                   title={isReplying ? "Sending..." : "Reply"}
                   type="BLACK"
                   onClick={handleReply}
-                  isDisabled={isReplying || isMarkingRead || replyText.trim().length === 0}
+                  isDisabled={
+                    isReplying || isMarkingRead || replyText.trim().length === 0
+                  }
                   isLoading={isReplying}
                 />
               </div>
@@ -592,7 +616,9 @@ const NannowChats = () => {
           )}
           {loadingChat ? (
             <div className={listStyles.emptyState}>Loading messages...</div>
-          ) : messages.length > 0 && selectedChat?.user1 && selectedChat?.user2 ? (
+          ) : messages.length > 0 &&
+            selectedChat?.user1 &&
+            selectedChat?.user2 ? (
             <ChatMessages
               messages={messages}
               userId={selectedChat.user2.id}

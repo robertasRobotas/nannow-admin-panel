@@ -46,7 +46,12 @@ import styles from "./analytics.module.css";
 const TIMEZONE = "Europe/Vilnius";
 const DEFAULT_TOP_LIMIT = 10;
 
-type PeriodPreset = "today" | "this_week" | "this_month" | "this_year" | "custom";
+type PeriodPreset =
+  | "today"
+  | "this_week"
+  | "this_month"
+  | "this_year"
+  | "custom";
 
 type DateRange = {
   startInput: string;
@@ -165,7 +170,10 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = Array.from(
   new Map(
     orderStatusOptions
       .filter((option) => option.value)
-      .map((option) => [option.value, { title: option.title, value: option.value }]),
+      .map((option) => [
+        option.value,
+        { title: option.title, value: option.value },
+      ]),
   ).values(),
 );
 
@@ -365,7 +373,10 @@ const openNativeDatePicker = (input: HTMLInputElement | null) => {
   input.click();
 };
 
-const formatNetIncomeBucketLabel = (bucket: string, density: "tight" | "wide") => {
+const formatNetIncomeBucketLabel = (
+  bucket: string,
+  density: "tight" | "wide",
+) => {
   const date = getBucketDate(bucket);
   if (!date) return [bucket];
 
@@ -381,7 +392,10 @@ const formatNetIncomeBucketLabel = (bucket: string, density: "tight" | "wide") =
   return [formatWeekday(date), formatShortDate(date)];
 };
 
-const shouldShowNetIncomeLabel = (data: NetIncomeDailyItem[], index: number) => {
+const shouldShowNetIncomeLabel = (
+  data: NetIncomeDailyItem[],
+  index: number,
+) => {
   if (index === 0 || index === data.length - 1) return true;
 
   if (data.length <= 10) return true;
@@ -415,8 +429,10 @@ const downloadCsv = (
   URL.revokeObjectURL(url);
 };
 
-const getUserDisplayName = (firstName?: string | null, lastName?: string | null) =>
-  `${firstName ?? "Deleted"} ${lastName ?? "User"}`.trim();
+const getUserDisplayName = (
+  firstName?: string | null,
+  lastName?: string | null,
+) => `${firstName ?? "Deleted"} ${lastName ?? "User"}`.trim();
 
 const MultiSelectFilter = ({
   label,
@@ -440,8 +456,7 @@ const MultiSelectFilter = ({
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const selectedTitles = options
@@ -517,7 +532,9 @@ const OrdersTimeseriesChart = ({
 }) => {
   if (data.length === 0) {
     return (
-      <div className={styles.chartEmpty}>No timeseries data for selected filters</div>
+      <div className={styles.chartEmpty}>
+        No timeseries data for selected filters
+      </div>
     );
   }
 
@@ -534,7 +551,11 @@ const OrdersTimeseriesChart = ({
   const barWidth = Math.max(8, Math.min(18, slotWidth * 0.24));
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={styles.chartSvg}
+      role="img"
+    >
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
         const y = padding.top + chartHeight * ratio;
         const label = Math.round(maxValue * (1 - ratio));
@@ -547,7 +568,11 @@ const OrdersTimeseriesChart = ({
               y2={y}
               className={styles.chartGridLine}
             />
-            <text x={padding.left - 8} y={y + 4} className={styles.chartAxisLabel}>
+            <text
+              x={padding.left - 8}
+              y={y + 4}
+              className={styles.chartAxisLabel}
+            >
               {label}
             </text>
           </g>
@@ -629,7 +654,9 @@ const RevenueChart = ({
 }) => {
   if (data.length === 0) {
     return (
-      <div className={styles.chartEmpty}>No revenue data for selected filters</div>
+      <div className={styles.chartEmpty}>
+        No revenue data for selected filters
+      </div>
     );
   }
 
@@ -643,7 +670,11 @@ const RevenueChart = ({
   const barWidth = Math.max(12, Math.min(32, slotWidth * 0.54));
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={styles.chartSvg}
+      role="img"
+    >
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
         const y = padding.top + chartHeight * ratio;
         const label = formatMoneyFromCents(maxValue * (1 - ratio));
@@ -722,13 +753,13 @@ const RevenueChart = ({
   );
 };
 
-const NetIncomeChart = ({
-  data,
-}: {
-  data: NetIncomeDailyItem[];
-}) => {
+const NetIncomeChart = ({ data }: { data: NetIncomeDailyItem[] }) => {
   if (data.length === 0) {
-    return <div className={styles.chartEmpty}>No net income data for selected period</div>;
+    return (
+      <div className={styles.chartEmpty}>
+        No net income data for selected period
+      </div>
+    );
   }
 
   const width = 900;
@@ -745,7 +776,11 @@ const NetIncomeChart = ({
   const labelDensity = data.length > 90 ? "wide" : "tight";
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={styles.chartSvg}
+      role="img"
+    >
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
         const value = maxValue - range * ratio;
         const y = padding.top + chartHeight * ratio;
@@ -756,7 +791,11 @@ const NetIncomeChart = ({
               y1={y}
               x2={width - padding.right}
               y2={y}
-              className={Math.abs(value) < range * 0.02 ? styles.chartZeroLine : styles.chartGridLine}
+              className={
+                Math.abs(value) < range * 0.02
+                  ? styles.chartZeroLine
+                  : styles.chartGridLine
+              }
             />
             <text
               x={padding.left - 8}
@@ -775,10 +814,7 @@ const NetIncomeChart = ({
         const bucketCenterX = baseX + slotWidth / 2;
         const value = item.netIncomeCents;
         const valueHeight = (Math.abs(value) / range) * chartHeight;
-        const y =
-          value >= 0
-            ? zeroY - valueHeight
-            : zeroY;
+        const y = value >= 0 ? zeroY - valueHeight : zeroY;
         const shouldShowLabel = shouldShowNetIncomeLabel(data, index);
         const labelLines = formatNetIncomeBucketLabel(item.day, labelDensity);
         const shouldShowMonthBoundary =
@@ -815,7 +851,11 @@ const NetIncomeChart = ({
                 className={styles.chartAxisLabel}
               >
                 {labelLines.map((line, lineIndex) => (
-                  <tspan key={`${item.day}-${line}`} x={bucketCenterX} dy={lineIndex === 0 ? 0 : 13}>
+                  <tspan
+                    key={`${item.day}-${line}`}
+                    x={bucketCenterX}
+                    dy={lineIndex === 0 ? 0 : 13}
+                  >
                     {line}
                   </tspan>
                 ))}
@@ -837,7 +877,9 @@ const OnboardingSeriesChart = ({
 }) => {
   if (items.length === 0) {
     return (
-      <div className={styles.chartEmpty}>No onboarding data for selected period</div>
+      <div className={styles.chartEmpty}>
+        No onboarding data for selected period
+      </div>
     );
   }
 
@@ -869,7 +911,11 @@ const OnboardingSeriesChart = ({
   }));
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={styles.chartSvg} role="img">
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={styles.chartSvg}
+      role="img"
+    >
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
         const y = padding.top + chartHeight * ratio;
         const label = Math.round(maxValue * (1 - ratio));
@@ -882,7 +928,11 @@ const OnboardingSeriesChart = ({
               y2={y}
               className={styles.chartGridLine}
             />
-            <text x={padding.left - 8} y={y + 4} className={styles.chartAxisLabel}>
+            <text
+              x={padding.left - 8}
+              y={y + 4}
+              className={styles.chartAxisLabel}
+            >
               {label}
             </text>
           </g>
@@ -911,8 +961,7 @@ const OnboardingSeriesChart = ({
         const labelLines = dayDate
           ? [formatWeekday(dayDate), formatShortDate(dayDate)]
           : [item.day];
-        const shouldShowWeekBoundary =
-          index > 0 && dayDate?.getDay() === 1;
+        const shouldShowWeekBoundary = index > 0 && dayDate?.getDay() === 1;
 
         return (
           <g key={`${item.day}-${index}`}>
@@ -972,7 +1021,9 @@ const TopUsersTable = ({
   kind,
 }: {
   title: string;
-  items: MarketplaceAnalyticsParentTopItem[] | MarketplaceAnalyticsSitterTopItem[];
+  items:
+    | MarketplaceAnalyticsParentTopItem[]
+    | MarketplaceAnalyticsSitterTopItem[];
   kind: "parent" | "sitter";
 }) => {
   return (
@@ -996,7 +1047,10 @@ const TopUsersTable = ({
               kind === "parent"
                 ? (item as MarketplaceAnalyticsParentTopItem).paidOrdersCount
                 : (item as MarketplaceAnalyticsSitterTopItem).paidBookingsCount;
-            const href = kind === "parent" ? `/client/${item.userId}` : `/provider/${item.userId}`;
+            const href =
+              kind === "parent"
+                ? `/client/${item.userId}`
+                : `/provider/${item.userId}`;
             return (
               <Link
                 href={href}
@@ -1011,7 +1065,9 @@ const TopUsersTable = ({
                   />
                   <span className={styles.topUserMeta}>
                     <span className={styles.topUserName}>{name}</span>
-                    <span className={styles.topUserEmail}>{item.email || "—"}</span>
+                    <span className={styles.topUserEmail}>
+                      {item.email || "-"}
+                    </span>
                   </span>
                 </span>
                 <span className={styles.topMetric}>{formatNumber(count)}</span>
@@ -1037,7 +1093,8 @@ const CohortTable = ({
   tone: "parent" | "sitter";
 }) => {
   const maxPeriod = rows.reduce(
-    (acc, row) => Math.max(acc, ...row.periods.map((period) => period.period), 0),
+    (acc, row) =>
+      Math.max(acc, ...row.periods.map((period) => period.period), 0),
     0,
   );
 
@@ -1048,7 +1105,9 @@ const CohortTable = ({
         <div className={styles.panelSubtle}>{`${rows.length} cohorts`}</div>
       </div>
       {rows.length === 0 ? (
-        <div className={styles.chartEmpty}>No cohort data for selected period</div>
+        <div className={styles.chartEmpty}>
+          No cohort data for selected period
+        </div>
       ) : (
         <div className={styles.cohortWrap}>
           <div
@@ -1059,7 +1118,10 @@ const CohortTable = ({
           >
             <div className={styles.cohortHeadSticky}>Cohort</div>
             {Array.from({ length: maxPeriod + 1 }, (_, index) => (
-              <div key={index} className={styles.cohortHeadCell}>{`P${index}`}</div>
+              <div
+                key={index}
+                className={styles.cohortHeadCell}
+              >{`P${index}`}</div>
             ))}
           </div>
           {rows.map((row) => (
@@ -1072,10 +1134,14 @@ const CohortTable = ({
             >
               <div className={styles.cohortStickyCell}>
                 <div className={styles.cohortLabel}>{row.cohort}</div>
-                <div className={styles.cohortSize}>{`${row.cohortSize} users`}</div>
+                <div
+                  className={styles.cohortSize}
+                >{`${row.cohortSize} users`}</div>
               </div>
               {Array.from({ length: maxPeriod + 1 }, (_, index) => {
-                const cell = row.periods.find((period) => period.period === index);
+                const cell = row.periods.find(
+                  (period) => period.period === index,
+                );
                 const rate = cell?.retentionRate ?? 0;
                 return (
                   <div
@@ -1089,11 +1155,15 @@ const CohortTable = ({
                   >
                     {cell ? (
                       <>
-                        <span className={styles.cohortCellValue}>{cell.activeUsers}</span>
-                        <span className={styles.cohortCellRate}>{formatPercent(cell.retentionRate)}</span>
+                        <span className={styles.cohortCellValue}>
+                          {cell.activeUsers}
+                        </span>
+                        <span className={styles.cohortCellRate}>
+                          {formatPercent(cell.retentionRate)}
+                        </span>
                       </>
                     ) : (
-                      <span className={styles.cohortCellRate}>—</span>
+                      <span className={styles.cohortCellRate}>-</span>
                     )}
                   </div>
                 );
@@ -1148,7 +1218,9 @@ const BreakdownList = ({
   );
 };
 
-const exportOverviewCsv = (timeseries: MarketplaceAnalyticsTimeseriesItem[]) => {
+const exportOverviewCsv = (
+  timeseries: MarketplaceAnalyticsTimeseriesItem[],
+) => {
   downloadCsv("analytics-overview.csv", [
     ["bucket", "total_orders", "paid_orders", "revenue_eur"],
     ...timeseries.map((item) => [
@@ -1239,9 +1311,12 @@ const Analytics = () => {
   const defaultRange = useMemo(() => getPresetRange("this_month"), []);
   const [analytics, setAnalytics] =
     useState<MarketplaceAnalyticsResponseData>(EMPTY_ANALYTICS_DATA);
-  const [netIncomeSummary, setNetIncomeSummary] =
-    useState<NetIncomeSummary>(EMPTY_NET_INCOME_SUMMARY);
-  const [netIncomeItems, setNetIncomeItems] = useState<NetIncomeDailyItem[]>([]);
+  const [netIncomeSummary, setNetIncomeSummary] = useState<NetIncomeSummary>(
+    EMPTY_NET_INCOME_SUMMARY,
+  );
+  const [netIncomeItems, setNetIncomeItems] = useState<NetIncomeDailyItem[]>(
+    [],
+  );
   const [onboardingByDayItems, setOnboardingByDayItems] = useState<
     OnboardingRegistrationsByDayItem[]
   >([]);
@@ -1258,13 +1333,19 @@ const Analytics = () => {
     useState<PeriodPreset>("this_month");
   const [startDateInput, setStartDateInput] = useState(defaultRange.startInput);
   const [endDateInput, setEndDateInput] = useState(defaultRange.endInput);
-  const [appliedStartDate, setAppliedStartDate] = useState(defaultRange.startIso);
+  const [appliedStartDate, setAppliedStartDate] = useState(
+    defaultRange.startIso,
+  );
   const [appliedEndDate, setAppliedEndDate] = useState(defaultRange.endIso);
-  const [locations, setLocations] = useState<MarketplaceAnalyticsLocationCountry[]>([]);
+  const [locations, setLocations] = useState<
+    MarketplaceAnalyticsLocationCountry[]
+  >([]);
   const [selectedCountryCode, setSelectedCountryCode] = useState("");
   const [selectedCityName, setSelectedCityName] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedPaymentStatuses, setSelectedPaymentStatuses] = useState<string[]>([]);
+  const [selectedPaymentStatuses, setSelectedPaymentStatuses] = useState<
+    string[]
+  >([]);
   const [selectedIntervalOption, setSelectedIntervalOption] = useState(0);
   const [selectedTopLimitOption, setSelectedTopLimitOption] = useState(1);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -1273,8 +1354,8 @@ const Analytics = () => {
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
   const selectedInterval =
-    (INTERVAL_OPTIONS[selectedIntervalOption]?.value as MarketplaceAnalyticsInterval) ||
-    "day";
+    (INTERVAL_OPTIONS[selectedIntervalOption]
+      ?.value as MarketplaceAnalyticsInterval) || "day";
   const selectedTopLimit = Number(
     TOP_LIMIT_OPTIONS[selectedTopLimitOption]?.value ?? DEFAULT_TOP_LIMIT,
   );
@@ -1353,7 +1434,10 @@ const Analytics = () => {
 
       const nextPaymentStatuses =
         params.paymentStatuses ?? selectedPaymentStatuses;
-      if (Array.isArray(nextPaymentStatuses) && nextPaymentStatuses.length > 0) {
+      if (
+        Array.isArray(nextPaymentStatuses) &&
+        nextPaymentStatuses.length > 0
+      ) {
         nextQuery.paymentStatuses = nextPaymentStatuses.join(",");
       } else {
         delete nextQuery.paymentStatuses;
@@ -1386,7 +1470,8 @@ const Analytics = () => {
     const fetchLocations = async () => {
       try {
         const response = await getMarketplaceAnalyticsLocations();
-        const payload = response.data as GetMarketplaceAnalyticsLocationsResponse;
+        const payload =
+          response.data as GetMarketplaceAnalyticsLocationsResponse;
         setLocations(Array.isArray(payload?.result) ? payload.result : []);
       } catch (err) {
         console.log(err);
@@ -1410,7 +1495,8 @@ const Analytics = () => {
 
   const cityOptions = useMemo(() => {
     const cities = selectedCountryCode
-      ? locations.find((country) => country.code === selectedCountryCode)?.cities ?? []
+      ? (locations.find((country) => country.code === selectedCountryCode)
+          ?.cities ?? [])
       : Array.from(
           new Map(
             locations
@@ -1432,7 +1518,9 @@ const Analytics = () => {
     () =>
       Math.max(
         0,
-        countryOptions.findIndex((option) => option.value === selectedCountryCode),
+        countryOptions.findIndex(
+          (option) => option.value === selectedCountryCode,
+        ),
       ),
     [countryOptions, selectedCountryCode],
   );
@@ -1494,10 +1582,7 @@ const Analytics = () => {
       setNetIncomeLoading(true);
       setNetIncomeError("");
 
-      const period =
-        selectedPeriod === "custom"
-          ? "custom"
-          : selectedPeriod;
+      const period = selectedPeriod === "custom" ? "custom" : selectedPeriod;
 
       const response = await getNetIncomeDaily({
         period: period as NetIncomePeriod,
@@ -1550,7 +1635,9 @@ const Analytics = () => {
       );
 
       const payload = response.data as GetOnboardingRegistrationsByDayResponse;
-      setOnboardingByDayItems(Array.isArray(payload?.items) ? payload.items : []);
+      setOnboardingByDayItems(
+        Array.isArray(payload?.items) ? payload.items : [],
+      );
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         router.push("/");
@@ -1589,7 +1676,9 @@ const Analytics = () => {
     if (!router.isReady) return;
 
     const periodFromQuery =
-      typeof router.query.period === "string" ? router.query.period : "this_month";
+      typeof router.query.period === "string"
+        ? router.query.period
+        : "this_month";
     const safePeriod: PeriodPreset =
       periodFromQuery === "today" ||
       periodFromQuery === "this_week" ||
@@ -1602,7 +1691,8 @@ const Analytics = () => {
     if (safePeriod === "custom") {
       const startFromQuery =
         typeof router.query.start === "string" ? router.query.start : "";
-      const endFromQuery = typeof router.query.end === "string" ? router.query.end : "";
+      const endFromQuery =
+        typeof router.query.end === "string" ? router.query.end : "";
       if (startFromQuery && endFromQuery) {
         setSelectedPeriod("custom");
         setStartDateInput(startFromQuery);
@@ -1630,7 +1720,9 @@ const Analytics = () => {
       typeof router.query.top === "string"
         ? Number(router.query.top)
         : DEFAULT_TOP_LIMIT;
-    const safeTop = Number.isFinite(topFromQuery) ? topFromQuery : DEFAULT_TOP_LIMIT;
+    const safeTop = Number.isFinite(topFromQuery)
+      ? topFromQuery
+      : DEFAULT_TOP_LIMIT;
     const topIndex = TOP_LIMIT_OPTIONS.findIndex(
       (option) => Number(option.value) === safeTop,
     );
@@ -1638,7 +1730,8 @@ const Analytics = () => {
 
     const countryFromQuery =
       typeof router.query.country === "string" ? router.query.country : "";
-    const cityFromQuery = typeof router.query.city === "string" ? router.query.city : "";
+    const cityFromQuery =
+      typeof router.query.city === "string" ? router.query.city : "";
     setSelectedCountryCode(countryFromQuery);
     setSelectedCityName(cityFromQuery);
 
@@ -1773,7 +1866,9 @@ const Analytics = () => {
         <div className={styles.headerActions}>
           {isSuperAdmin && (
             <Button
-              title={isRebuildLoading ? "Rebuilding..." : "Rebuild daily snapshots"}
+              title={
+                isRebuildLoading ? "Rebuilding..." : "Rebuild daily snapshots"
+              }
               type="OUTLINED"
               onClick={rebuildSnapshots}
               isLoading={isRebuildLoading}
@@ -1816,7 +1911,9 @@ const Analytics = () => {
                 key={option.value}
                 type="button"
                 className={`${styles.periodButton} ${
-                  selectedPeriod === option.value ? styles.periodButtonActive : ""
+                  selectedPeriod === option.value
+                    ? styles.periodButtonActive
+                    : ""
                 }`}
                 onClick={() => applyPresetRange(option.value)}
               >
@@ -1842,7 +1939,9 @@ const Analytics = () => {
                 <button
                   type="button"
                   className={styles.datePickerBtn}
-                  onClick={() => openNativeDatePicker(startDateInputRef.current)}
+                  onClick={() =>
+                    openNativeDatePicker(startDateInputRef.current)
+                  }
                   aria-label="Open start date picker"
                 >
                   <img src={calendarImg.src} alt="" />
@@ -1896,8 +1995,8 @@ const Analytics = () => {
               const nextIndex = nextOption as number;
               setSelectedIntervalOption(nextIndex);
               const nextInterval =
-                (INTERVAL_OPTIONS[nextIndex]?.value as MarketplaceAnalyticsInterval) ||
-                "day";
+                (INTERVAL_OPTIONS[nextIndex]
+                  ?.value as MarketplaceAnalyticsInterval) || "day";
               updateAnalyticsQuery({ interval: nextInterval });
             }}
           />
@@ -1917,9 +2016,7 @@ const Analytics = () => {
             }}
           />
           <div className={styles.textFieldWrap}>
-            <label className={styles.fieldLabel}>
-              Country
-            </label>
+            <label className={styles.fieldLabel}>Country</label>
             <DropDownButton
               options={countryOptions}
               selectedOption={selectedCountryOption}
@@ -1936,9 +2033,7 @@ const Analytics = () => {
             />
           </div>
           <div className={styles.textFieldWrap}>
-            <label className={styles.fieldLabel}>
-              City
-            </label>
+            <label className={styles.fieldLabel}>City</label>
             <DropDownButton
               options={cityOptions}
               selectedOption={selectedCityOption}
@@ -1973,11 +2068,11 @@ const Analytics = () => {
           />
         </div>
 
-        <div className={styles.filterSummary}>{`Period ${appliedStartLabel} - ${appliedEndLabel} · Timezone ${TIMEZONE}${
+        <div
+          className={styles.filterSummary}
+        >{`Period ${appliedStartLabel} - ${appliedEndLabel} · Timezone ${TIMEZONE}${
           selectedCountryCode ? ` · Country ${selectedCountryCode}` : ""
-        }${
-          selectedCityName ? ` · City ${selectedCityName}` : ""
-        }${
+        }${selectedCityName ? ` · City ${selectedCityName}` : ""}${
           appliedFilters.statuses && appliedFilters.statuses.length > 0
             ? ` · ${appliedFilters.statuses.length} booking statuses`
             : ""
@@ -1988,10 +2083,14 @@ const Analytics = () => {
             : ""
         }`}</div>
 
-        {validationError && <div className={styles.validationError}>{validationError}</div>}
+        {validationError && (
+          <div className={styles.validationError}>{validationError}</div>
+        )}
       </div>
 
-      {loading && <div className={styles.loadingState}>Loading analytics...</div>}
+      {loading && (
+        <div className={styles.loadingState}>Loading analytics...</div>
+      )}
       {!loading && error && <div className={styles.loadingState}>{error}</div>}
 
       {!loading && !error && (
@@ -2072,7 +2171,9 @@ const Analytics = () => {
             </div>
 
             {onboardingLoading && (
-              <div className={styles.loadingState}>Loading onboarding analytics...</div>
+              <div className={styles.loadingState}>
+                Loading onboarding analytics...
+              </div>
             )}
             {!onboardingLoading && onboardingError && (
               <div className={styles.loadingState}>{onboardingError}</div>
@@ -2097,7 +2198,10 @@ const Analytics = () => {
                       </span>
                     </div>
                   </div>
-                  <OnboardingSeriesChart items={onboardingByDayItems} kind="client" />
+                  <OnboardingSeriesChart
+                    items={onboardingByDayItems}
+                    kind="client"
+                  />
                 </div>
                 <div className={styles.panelCard}>
                   <div className={styles.panelHeader}>
@@ -2117,7 +2221,10 @@ const Analytics = () => {
                       </span>
                     </div>
                   </div>
-                  <OnboardingSeriesChart items={onboardingByDayItems} kind="provider" />
+                  <OnboardingSeriesChart
+                    items={onboardingByDayItems}
+                    kind="provider"
+                  />
                 </div>
               </div>
             )}
@@ -2126,44 +2233,64 @@ const Analytics = () => {
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Overview</h3>
-              <div className={styles.sectionSubtle}>KPI cards and marketplace volume</div>
+              <div className={styles.sectionSubtle}>
+                KPI cards and marketplace volume
+              </div>
             </div>
             <div className={styles.kpiGrid}>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Total orders</div>
-                <div className={styles.kpiValue}>{formatNumber(kpis.totalOrders)}</div>
+                <div className={styles.kpiValue}>
+                  {formatNumber(kpis.totalOrders)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Paid orders</div>
-                <div className={styles.kpiValue}>{formatNumber(kpis.paidOrders)}</div>
+                <div className={styles.kpiValue}>
+                  {formatNumber(kpis.paidOrders)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Completed orders</div>
-                <div className={styles.kpiValue}>{formatNumber(kpis.completedOrders)}</div>
+                <div className={styles.kpiValue}>
+                  {formatNumber(kpis.completedOrders)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Cancelled orders</div>
-                <div className={styles.kpiValue}>{formatNumber(kpis.canceledOrders)}</div>
+                <div className={styles.kpiValue}>
+                  {formatNumber(kpis.canceledOrders)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>GMV</div>
-                <div className={styles.kpiValue}>{formatMoneyFromCents(kpis.revenueCents)}</div>
+                <div className={styles.kpiValue}>
+                  {formatMoneyFromCents(kpis.revenueCents)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Unique paying parents</div>
-                <div className={styles.kpiValue}>{formatNumber(kpis.uniquePayingParents)}</div>
+                <div className={styles.kpiValue}>
+                  {formatNumber(kpis.uniquePayingParents)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Unique active sitters</div>
-                <div className={styles.kpiValue}>{formatNumber(kpis.uniqueActiveSitters)}</div>
+                <div className={styles.kpiValue}>
+                  {formatNumber(kpis.uniqueActiveSitters)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Repeat parent rate</div>
-                <div className={styles.kpiValue}>{formatPercent(kpis.repeatParentRate)}</div>
+                <div className={styles.kpiValue}>
+                  {formatPercent(kpis.repeatParentRate)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiLabel}>Repeat sitter rate</div>
-                <div className={styles.kpiValue}>{formatPercent(kpis.repeatSitterRate)}</div>
+                <div className={styles.kpiValue}>
+                  {formatPercent(kpis.repeatSitterRate)}
+                </div>
               </div>
             </div>
 
@@ -2173,21 +2300,30 @@ const Analytics = () => {
                   <h3 className={styles.panelTitle}>Total vs paid orders</h3>
                   <div className={styles.chartLegend}>
                     <span className={styles.legendItem}>
-                      <span className={`${styles.legendDot} ${styles.legendDotTotal}`} />
+                      <span
+                        className={`${styles.legendDot} ${styles.legendDotTotal}`}
+                      />
                       Total orders
                     </span>
                     <span className={styles.legendItem}>
-                      <span className={`${styles.legendDot} ${styles.legendDotPaid}`} />
+                      <span
+                        className={`${styles.legendDot} ${styles.legendDotPaid}`}
+                      />
                       Paid orders
                     </span>
                   </div>
                 </div>
-                <OrdersTimeseriesChart data={timeseries} interval={selectedInterval} />
+                <OrdersTimeseriesChart
+                  data={timeseries}
+                  interval={selectedInterval}
+                />
               </div>
               <div className={styles.panelCard}>
                 <div className={styles.panelHeader}>
                   <h3 className={styles.panelTitle}>Revenue over time</h3>
-                  <div className={styles.panelSubtle}>{`Interval ${selectedInterval}`}</div>
+                  <div
+                    className={styles.panelSubtle}
+                  >{`Interval ${selectedInterval}`}</div>
                 </div>
                 <RevenueChart data={timeseries} interval={selectedInterval} />
               </div>
@@ -2197,39 +2333,49 @@ const Analytics = () => {
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Repeat analytics</h3>
-              <div className={styles.sectionSubtle}>Parents and sitters with 2+ paid bookings</div>
+              <div className={styles.sectionSubtle}>
+                Parents and sitters with 2+ paid bookings
+              </div>
             </div>
 
             <div className={styles.repeatSummaryGrid}>
               <div className={styles.panelCard}>
                 <div className={styles.panelHeader}>
                   <h3 className={styles.panelTitle}>Parents</h3>
-                  <div className={styles.panelSubtle}>{formatPercent(repeatParents.repeatRate)}</div>
+                  <div className={styles.panelSubtle}>
+                    {formatPercent(repeatParents.repeatRate)}
+                  </div>
                 </div>
                 <div className={styles.repeatMetricsGrid}>
                   <div className={styles.repeatMetric}>
-                    <span className={styles.repeatMetricLabel}>Repeat users</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Repeat users
+                    </span>
                     <span className={styles.repeatMetricValue}>{`${formatNumber(
                       repeatParents.repeatUsers,
                     )} / ${formatNumber(repeatParents.uniqueUsers)}`}</span>
                   </div>
                   <div className={styles.repeatMetric}>
-                    <span className={styles.repeatMetricLabel}>Average paid orders</span>
-                    <span className={styles.repeatMetricValue}>{formatAverage(
-                      repeatParents.averagePaidOrdersPerUser,
-                    )}</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Average paid orders
+                    </span>
+                    <span className={styles.repeatMetricValue}>
+                      {formatAverage(repeatParents.averagePaidOrdersPerUser)}
+                    </span>
                   </div>
                   <div className={styles.repeatMetric}>
-                    <span className={styles.repeatMetricLabel}>Total paid orders</span>
-                    <span className={styles.repeatMetricValue}>{formatNumber(
-                      repeatParents.totalPaidOrders,
-                    )}</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Total paid orders
+                    </span>
+                    <span className={styles.repeatMetricValue}>
+                      {formatNumber(repeatParents.totalPaidOrders)}
+                    </span>
                   </div>
                   <div className={styles.repeatMetric}>
                     <span className={styles.repeatMetricLabel}>Revenue</span>
-                    <span className={styles.repeatMetricValue}>{formatMoneyFromCents(
-                      repeatParents.totalRevenueCents,
-                    )}</span>
+                    <span className={styles.repeatMetricValue}>
+                      {formatMoneyFromCents(repeatParents.totalRevenueCents)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2237,32 +2383,40 @@ const Analytics = () => {
               <div className={styles.panelCard}>
                 <div className={styles.panelHeader}>
                   <h3 className={styles.panelTitle}>Sitters</h3>
-                  <div className={styles.panelSubtle}>{formatPercent(repeatSitters.repeatRate)}</div>
+                  <div className={styles.panelSubtle}>
+                    {formatPercent(repeatSitters.repeatRate)}
+                  </div>
                 </div>
                 <div className={styles.repeatMetricsGrid}>
                   <div className={styles.repeatMetric}>
-                    <span className={styles.repeatMetricLabel}>Repeat users</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Repeat users
+                    </span>
                     <span className={styles.repeatMetricValue}>{`${formatNumber(
                       repeatSitters.repeatUsers,
                     )} / ${formatNumber(repeatSitters.uniqueUsers)}`}</span>
                   </div>
                   <div className={styles.repeatMetric}>
-                    <span className={styles.repeatMetricLabel}>Average bookings</span>
-                    <span className={styles.repeatMetricValue}>{formatAverage(
-                      repeatSitters.averagePaidOrdersPerUser,
-                    )}</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Average bookings
+                    </span>
+                    <span className={styles.repeatMetricValue}>
+                      {formatAverage(repeatSitters.averagePaidOrdersPerUser)}
+                    </span>
                   </div>
                   <div className={styles.repeatMetric}>
-                    <span className={styles.repeatMetricLabel}>Total paid bookings</span>
-                    <span className={styles.repeatMetricValue}>{formatNumber(
-                      repeatSitters.totalPaidOrders,
-                    )}</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Total paid bookings
+                    </span>
+                    <span className={styles.repeatMetricValue}>
+                      {formatNumber(repeatSitters.totalPaidOrders)}
+                    </span>
                   </div>
                   <div className={styles.repeatMetric}>
                     <span className={styles.repeatMetricLabel}>Revenue</span>
-                    <span className={styles.repeatMetricValue}>{formatMoneyFromCents(
-                      repeatSitters.totalRevenueCents,
-                    )}</span>
+                    <span className={styles.repeatMetricValue}>
+                      {formatMoneyFromCents(repeatSitters.totalRevenueCents)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2285,13 +2439,17 @@ const Analytics = () => {
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Retention and conversion</h3>
-              <div className={styles.sectionSubtle}>Cohorts, funnel, and cancellation patterns</div>
+              <div className={styles.sectionSubtle}>
+                Cohorts, funnel, and cancellation patterns
+              </div>
             </div>
 
             <div className={styles.twoColumnGrid}>
               <div className={styles.panelCard}>
                 <div className={styles.panelHeader}>
-                  <h3 className={styles.panelTitle}>Created → paid → completed funnel</h3>
+                  <h3 className={styles.panelTitle}>
+                    Created → paid → completed funnel
+                  </h3>
                   <div className={styles.panelSubtle}>{`${formatNumber(
                     funnel.createdOrders,
                   )} created orders`}</div>
@@ -2299,38 +2457,44 @@ const Analytics = () => {
                 <div className={styles.funnelRow}>
                   <div className={styles.funnelStep}>
                     <span className={styles.funnelLabel}>Created</span>
-                    <span className={styles.funnelValue}>{formatNumber(funnel.createdOrders)}</span>
+                    <span className={styles.funnelValue}>
+                      {formatNumber(funnel.createdOrders)}
+                    </span>
                     <span className={styles.funnelRate}>100%</span>
                   </div>
                   <div className={styles.funnelArrow}>→</div>
                   <div className={styles.funnelStep}>
                     <span className={styles.funnelLabel}>Paid</span>
-                    <span className={styles.funnelValue}>{formatNumber(funnel.paidOrders)}</span>
-                    <span className={styles.funnelRate}>{formatPercent(
-                      funnel.paidRateFromCreated,
-                    )}</span>
+                    <span className={styles.funnelValue}>
+                      {formatNumber(funnel.paidOrders)}
+                    </span>
+                    <span className={styles.funnelRate}>
+                      {formatPercent(funnel.paidRateFromCreated)}
+                    </span>
                   </div>
                   <div className={styles.funnelArrow}>→</div>
                   <div className={styles.funnelStep}>
                     <span className={styles.funnelLabel}>Completed</span>
-                    <span className={styles.funnelValue}>{formatNumber(
-                      funnel.completedOrders,
-                    )}</span>
-                    <span className={styles.funnelRate}>{formatPercent(
-                      funnel.completedRateFromPaid,
-                    )}</span>
+                    <span className={styles.funnelValue}>
+                      {formatNumber(funnel.completedOrders)}
+                    </span>
+                    <span className={styles.funnelRate}>
+                      {formatPercent(funnel.completedRateFromPaid)}
+                    </span>
                   </div>
                   <div className={styles.funnelArrow}>→</div>
                   <div className={styles.funnelStep}>
                     <span className={styles.funnelLabel}>Cancelled</span>
-                    <span className={styles.funnelValue}>{formatNumber(
-                      funnel.canceledOrders,
-                    )}</span>
-                    <span className={styles.funnelRate}>{formatPercent(
-                      funnel.createdOrders > 0
-                        ? funnel.canceledOrders / funnel.createdOrders
-                        : 0,
-                    )}</span>
+                    <span className={styles.funnelValue}>
+                      {formatNumber(funnel.canceledOrders)}
+                    </span>
+                    <span className={styles.funnelRate}>
+                      {formatPercent(
+                        funnel.createdOrders > 0
+                          ? funnel.canceledOrders / funnel.createdOrders
+                          : 0,
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2344,22 +2508,28 @@ const Analytics = () => {
                 </div>
                 <div className={styles.cancellationCards}>
                   <div className={styles.cancellationMetric}>
-                    <span className={styles.repeatMetricLabel}>Total canceled orders</span>
-                    <span className={styles.cancellationMetricValue}>{formatNumber(
-                      cancellationBreakdown.totalCanceledOrders,
-                    )}</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Total canceled orders
+                    </span>
+                    <span className={styles.cancellationMetricValue}>
+                      {formatNumber(cancellationBreakdown.totalCanceledOrders)}
+                    </span>
                   </div>
                   <div className={styles.cancellationMetric}>
-                    <span className={styles.repeatMetricLabel}>Paid from created</span>
-                    <span className={styles.cancellationMetricValue}>{formatPercent(
-                      funnel.paidRateFromCreated,
-                    )}</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Paid from created
+                    </span>
+                    <span className={styles.cancellationMetricValue}>
+                      {formatPercent(funnel.paidRateFromCreated)}
+                    </span>
                   </div>
                   <div className={styles.cancellationMetric}>
-                    <span className={styles.repeatMetricLabel}>Completed from created</span>
-                    <span className={styles.cancellationMetricValue}>{formatPercent(
-                      funnel.completedRateFromCreated,
-                    )}</span>
+                    <span className={styles.repeatMetricLabel}>
+                      Completed from created
+                    </span>
+                    <span className={styles.cancellationMetricValue}>
+                      {formatPercent(funnel.completedRateFromCreated)}
+                    </span>
                   </div>
                 </div>
               </div>

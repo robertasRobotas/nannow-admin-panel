@@ -28,7 +28,7 @@ const formatDateTime = (value?: string | null) =>
         hour: "2-digit",
         minute: "2-digit",
       })
-    : "—";
+    : "-";
 
 const dispatchUnreadCountUpdate = (count: number) => {
   window.dispatchEvent(

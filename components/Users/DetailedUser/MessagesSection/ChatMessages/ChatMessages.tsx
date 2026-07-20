@@ -19,7 +19,7 @@ import styles from "./chatMessages.module.css";
 import avatarImg from "../../../../../assets/images/default-avatar.png";
 
 const formatDateTime = (value?: string) => {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("en-US", {
@@ -61,9 +61,9 @@ const getMessageFlag = (message: ChatMessageType) => {
 };
 
 const getSnapshotText = (snapshot?: ChatMessageHistorySnapshot | null) => {
-  if (!snapshot) return "—";
+  if (!snapshot) return "-";
   if (snapshot.isDeleted) return "Message deleted by admin";
-  return snapshot.content?.trim() || "—";
+  return snapshot.content?.trim() || "-";
 };
 
 const getSnapshotImageUrl = (snapshot?: ChatMessageHistorySnapshot | null) =>
@@ -106,12 +106,12 @@ const getHistoryActionLabel = (entry: ChatMessageHistoryEntry) => {
 const hasMessageHistory = (message: ChatMessageType) =>
   Boolean(
     message.isEdited ||
-      message.isDeleted ||
-      message.isModerated ||
-      message.editedAt ||
-      message.lastEditedByAdminId ||
-      message.lastEditedByAdminName ||
-      message.paymentRisk?.status === "ACKNOWLEDGED",
+    message.isDeleted ||
+    message.isModerated ||
+    message.editedAt ||
+    message.lastEditedByAdminId ||
+    message.lastEditedByAdminName ||
+    message.paymentRisk?.status === "ACKNOWLEDGED",
   );
 
 const ChatMessages = ({
@@ -122,10 +122,12 @@ const ChatMessages = ({
   canModerate = false,
   useSuperHistoryRoute = false,
 }: ChatMessagesProps) => {
-  const [displayMessages, setDisplayMessages] = useState<ChatMessageType[]>(messages);
+  const [displayMessages, setDisplayMessages] =
+    useState<ChatMessageType[]>(messages);
   const [openedImageUrl, setOpenedImageUrl] = useState("");
   const [imageZoom, setImageZoom] = useState(1);
-  const [messageToDelete, setMessageToDelete] = useState<ChatMessageType | null>(null);
+  const [messageToDelete, setMessageToDelete] =
+    useState<ChatMessageType | null>(null);
   const [messageToRemoveImage, setMessageToRemoveImage] =
     useState<ChatMessageType | null>(null);
   const [editingMessageId, setEditingMessageId] = useState("");
@@ -290,8 +292,11 @@ const ChatMessages = ({
   const acknowledgePaymentRisk = async (message: ChatMessageType) => {
     try {
       setLoadingActionKey(`acknowledge-${message.id}`);
-      const response = await acknowledgeChatMessagePaymentRiskByAdmin(message.id);
-      const nextMessage = response.data?.item ?? response.data?.result?.item ?? null;
+      const response = await acknowledgeChatMessagePaymentRiskByAdmin(
+        message.id,
+      );
+      const nextMessage =
+        response.data?.item ?? response.data?.result?.item ?? null;
 
       syncMessage(message.id, (current) => ({
         ...current,
@@ -337,7 +342,10 @@ const ChatMessages = ({
     }
   };
 
-  const historyEntries = useMemo(() => historyState.history ?? [], [historyState.history]);
+  const historyEntries = useMemo(
+    () => historyState.history ?? [],
+    [historyState.history],
+  );
   const historyEntriesWithoutCurrentState = useMemo(() => {
     if (historyEntries.length === 0) return [];
 
@@ -359,7 +367,9 @@ const ChatMessages = ({
   );
   const originalSnapshot = historyEntries[0]?.before ?? null;
   const latestHistoryEntry =
-    historyEntries.length > 0 ? historyEntries[historyEntries.length - 1] : null;
+    historyEntries.length > 0
+      ? historyEntries[historyEntries.length - 1]
+      : null;
   const currentStateTimestamp =
     historyState.message?.editedAt ??
     historyState.message?.createdAt ??
@@ -378,14 +388,16 @@ const ChatMessages = ({
           const isFromUser = message.senderId === userId;
           const visibleContent = message.isDeleted
             ? "Message deleted by admin"
-            : message.content ?? "";
+            : (message.content ?? "");
           const hasText = String(visibleContent).trim().length > 0;
           const hasImage = String(message.imageUrl ?? "").trim().length > 0;
           const messageFlag = getMessageFlag(message);
           const isEditing = editingMessageId === message.id;
           const canShowHistory = hasMessageHistory(message);
           const isAcknowledged = message.paymentRisk?.status === "ACKNOWLEDGED";
-          const warningSuppressed = Boolean(message.paymentRisk?.userWarningSuppressed);
+          const warningSuppressed = Boolean(
+            message.paymentRisk?.userWarningSuppressed,
+          );
           const riskIndicatorColor = isAcknowledged
             ? "#d97706"
             : warningSuppressed
@@ -445,157 +457,188 @@ const ChatMessages = ({
               {!isFromUser && (
                 <div style={{ position: "relative" }}>
                   {riskIndicator}
-                  <img className={styles.profileImg} src={otherUserImgUrl.length > 0 ? otherUserImgUrl : avatarImg.src} />
+                  <img
+                    className={styles.profileImg}
+                    src={
+                      otherUserImgUrl.length > 0
+                        ? otherUserImgUrl
+                        : avatarImg.src
+                    }
+                  />
                 </div>
               )}
               <div className={styles.messageContent}>
-              <div
-                className={`${styles.chatBubble} ${
-                  isFromUser ? styles.sent : styles.received
-                } ${message.isDeleted ? styles.deletedBubble : ""}`}
-                style={{ position: "relative" }}
-              >
-                {!message.isRead && <span className={styles.messageUnreadDot} />}
-                {isEditing ? (
-                  <div className={styles.editComposer}>
-                    <textarea
-                      className={styles.editTextarea}
-                      rows={3}
-                      value={editedContent}
-                      onChange={(event) => {
-                        setEditedContent(event.target.value);
-                        setEditError("");
-                      }}
-                    />
-                    {editError && <span className={styles.messageFlagError}>{editError}</span>}
-                    <div className={styles.messageActions}>
-                      <button
-                        type="button"
-                        className={styles.messageActionBtn}
-                        onClick={cancelEditing}
-                        disabled={loadingActionKey === `edit-${message.id}`}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.messageActionBtn}
-                        onClick={() => saveMessageEdit(message)}
-                        disabled={loadingActionKey === `edit-${message.id}`}
-                      >
-                        {loadingActionKey === `edit-${message.id}` ? "Saving..." : "Save"}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {hasText && <span>{visibleContent}</span>}
-                    {hasImage && (
-                      <button
-                        type="button"
-                        className={styles.messageImageButton}
-                        onClick={() => {
-                          setImageZoom(1);
-                          setOpenedImageUrl(message.imageUrl ?? "");
+                <div
+                  className={`${styles.chatBubble} ${
+                    isFromUser ? styles.sent : styles.received
+                  } ${message.isDeleted ? styles.deletedBubble : ""}`}
+                  style={{ position: "relative" }}
+                >
+                  {!message.isRead && (
+                    <span className={styles.messageUnreadDot} />
+                  )}
+                  {isEditing ? (
+                    <div className={styles.editComposer}>
+                      <textarea
+                        className={styles.editTextarea}
+                        rows={3}
+                        value={editedContent}
+                        onChange={(event) => {
+                          setEditedContent(event.target.value);
+                          setEditError("");
                         }}
-                      >
-                        <img
-                          className={styles.messageImage}
-                          src={message.imageUrl ?? ""}
-                          alt="Chat image"
-                        />
-                      </button>
-                    )}
-                    <div className={styles.messageMetaRow}>
-                      <span className={styles.messageTimestamp}>
-                        {formatDateTime(message.createdAt)}
-                      </span>
-                      {message.readAt && (
-                        <span className={styles.messageReadAt}>
-                          Read: {formatDateTime(message.readAt)}
+                      />
+                      {editError && (
+                        <span className={styles.messageFlagError}>
+                          {editError}
                         </span>
                       )}
-                      {messageFlag && (
-                        <span
-                          className={`${styles.messageFlag} ${
-                            message.isDeleted ? styles.messageFlagDeleted : ""
-                          }`}
-                        >
-                          {messageFlag}
-                        </span>
-                      )}
-                    </div>
-                    {canModerate && (
                       <div className={styles.messageActions}>
-                        {message.paymentRisk?.isSuspicious && !isAcknowledged && (
-                          <button
-                            type="button"
-                            className={styles.messageActionBtn}
-                            onClick={() => acknowledgePaymentRisk(message)}
-                            disabled={loadingActionKey === `acknowledge-${message.id}`}
-                          >
-                            {loadingActionKey === `acknowledge-${message.id}`
-                              ? "Acknowledging..."
-                              : "Acknowledge"}
-                          </button>
+                        <button
+                          type="button"
+                          className={styles.messageActionBtn}
+                          onClick={cancelEditing}
+                          disabled={loadingActionKey === `edit-${message.id}`}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.messageActionBtn}
+                          onClick={() => saveMessageEdit(message)}
+                          disabled={loadingActionKey === `edit-${message.id}`}
+                        >
+                          {loadingActionKey === `edit-${message.id}`
+                            ? "Saving..."
+                            : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {hasText && <span>{visibleContent}</span>}
+                      {hasImage && (
+                        <button
+                          type="button"
+                          className={styles.messageImageButton}
+                          onClick={() => {
+                            setImageZoom(1);
+                            setOpenedImageUrl(message.imageUrl ?? "");
+                          }}
+                        >
+                          <img
+                            className={styles.messageImage}
+                            src={message.imageUrl ?? ""}
+                            alt="Chat image"
+                          />
+                        </button>
+                      )}
+                      <div className={styles.messageMetaRow}>
+                        <span className={styles.messageTimestamp}>
+                          {formatDateTime(message.createdAt)}
+                        </span>
+                        {message.readAt && (
+                          <span className={styles.messageReadAt}>
+                            Read: {formatDateTime(message.readAt)}
+                          </span>
                         )}
-                        {!message.isDeleted && (
-                          <button
-                            type="button"
-                            className={styles.messageActionBtn}
-                            onClick={() => startEditing(message)}
+                        {messageFlag && (
+                          <span
+                            className={`${styles.messageFlag} ${
+                              message.isDeleted ? styles.messageFlagDeleted : ""
+                            }`}
                           >
-                            Edit
-                          </button>
-                        )}
-                        {!message.isDeleted && hasImage && (
-                          <button
-                            type="button"
-                            className={styles.messageActionBtn}
-                            onClick={() => setMessageToRemoveImage(message)}
-                            disabled={loadingActionKey === `image-${message.id}`}
-                          >
-                            {loadingActionKey === `image-${message.id}`
-                              ? "Removing..."
-                              : "Remove image"}
-                          </button>
-                        )}
-                        {canShowHistory && (
-                          <button
-                            type="button"
-                            className={styles.messageActionBtn}
-                            onClick={() => openHistory(message.id)}
-                          >
-                            History
-                          </button>
-                        )}
-                        {!message.isDeleted && (
-                          <button
-                            type="button"
-                            className={`${styles.messageActionBtn} ${styles.messageActionDelete}`}
-                            onClick={() => setMessageToDelete(message)}
-                            disabled={loadingActionKey === `delete-${message.id}`}
-                          >
-                            {loadingActionKey === `delete-${message.id}`
-                              ? "Deleting..."
-                              : "Delete"}
-                          </button>
+                            {messageFlag}
+                          </span>
                         )}
                       </div>
+                      {canModerate && (
+                        <div className={styles.messageActions}>
+                          {message.paymentRisk?.isSuspicious &&
+                            !isAcknowledged && (
+                              <button
+                                type="button"
+                                className={styles.messageActionBtn}
+                                onClick={() => acknowledgePaymentRisk(message)}
+                                disabled={
+                                  loadingActionKey ===
+                                  `acknowledge-${message.id}`
+                                }
+                              >
+                                {loadingActionKey ===
+                                `acknowledge-${message.id}`
+                                  ? "Acknowledging..."
+                                  : "Acknowledge"}
+                              </button>
+                            )}
+                          {!message.isDeleted && (
+                            <button
+                              type="button"
+                              className={styles.messageActionBtn}
+                              onClick={() => startEditing(message)}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {!message.isDeleted && hasImage && (
+                            <button
+                              type="button"
+                              className={styles.messageActionBtn}
+                              onClick={() => setMessageToRemoveImage(message)}
+                              disabled={
+                                loadingActionKey === `image-${message.id}`
+                              }
+                            >
+                              {loadingActionKey === `image-${message.id}`
+                                ? "Removing..."
+                                : "Remove image"}
+                            </button>
+                          )}
+                          {canShowHistory && (
+                            <button
+                              type="button"
+                              className={styles.messageActionBtn}
+                              onClick={() => openHistory(message.id)}
+                            >
+                              History
+                            </button>
+                          )}
+                          {!message.isDeleted && (
+                            <button
+                              type="button"
+                              className={`${styles.messageActionBtn} ${styles.messageActionDelete}`}
+                              onClick={() => setMessageToDelete(message)}
+                              disabled={
+                                loadingActionKey === `delete-${message.id}`
+                              }
+                            >
+                              {loadingActionKey === `delete-${message.id}`
+                                ? "Deleting..."
+                                : "Delete"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                {isAcknowledged && (
+                  <span className={styles.acknowledgedMeta}>
+                    Acknowledged by{" "}
+                    {message.paymentRisk?.acknowledgedByAdminName || "admin"} ·{" "}
+                    {formatDateTime(
+                      message.paymentRisk?.acknowledgedAt ?? undefined,
                     )}
-                  </>
+                  </span>
                 )}
-              </div>
-              {isAcknowledged && (
-                <span className={styles.acknowledgedMeta}>
-                  Acknowledged by {message.paymentRisk?.acknowledgedByAdminName || "admin"} · {formatDateTime(message.paymentRisk?.acknowledgedAt ?? undefined)}
-                </span>
-              )}
               </div>
               {isFromUser && (
                 <div style={{ position: "relative" }}>
                   {riskIndicator}
-                  <img className={styles.profileImg} src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src} />
+                  <img
+                    className={styles.profileImg}
+                    src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src}
+                  />
                 </div>
               )}
             </div>
@@ -683,7 +726,7 @@ const ChatMessages = ({
                       <div className={styles.historyContent}>
                         {historyState.message.isDeleted
                           ? "Message deleted by admin"
-                          : historyState.message.content || "—"}
+                          : historyState.message.content || "-"}
                       </div>
                       {historyState.message.imageUrl && (
                         <button
@@ -691,7 +734,9 @@ const ChatMessages = ({
                           className={styles.messageImageButton}
                           onClick={() => {
                             setImageZoom(1);
-                            setOpenedImageUrl(historyState.message?.imageUrl ?? "");
+                            setOpenedImageUrl(
+                              historyState.message?.imageUrl ?? "",
+                            );
                           }}
                         >
                           <img
@@ -708,7 +753,9 @@ const ChatMessages = ({
                     </>
                   ) : (
                     <>
-                      <div className={styles.historyContent}>Message deleted by admin</div>
+                      <div className={styles.historyContent}>
+                        Message deleted by admin
+                      </div>
                       <div className={styles.historyFlagRow}>
                         <span>{formatDateTime(currentStateTimestamp)}</span>
                         {currentStateLabel && <span>{currentStateLabel}</span>}
@@ -739,8 +786,12 @@ const ChatMessages = ({
                           <span>{formatDateTime(entry.createdAt)}</span>
                         </div>
                         <div className={styles.historyPrevious}>
-                          <span className={styles.historyPreviousLabel}>Previous</span>
-                          <div className={styles.historyContent}>{previousText}</div>
+                          <span className={styles.historyPreviousLabel}>
+                            Previous
+                          </span>
+                          <div className={styles.historyContent}>
+                            {previousText}
+                          </div>
                           {previousImageUrl && (
                             <button
                               type="button"
@@ -787,8 +838,12 @@ const ChatMessages = ({
                   {originalSnapshot && (
                     <div className={styles.historyCard}>
                       <div className={styles.historyHeader}>
-                        <span className={styles.historyBadgeOriginal}>Original</span>
-                        <span>{formatDateTime(historyEntries[0]?.createdAt)}</span>
+                        <span className={styles.historyBadgeOriginal}>
+                          Original
+                        </span>
+                        <span>
+                          {formatDateTime(historyEntries[0]?.createdAt)}
+                        </span>
                       </div>
                       <div className={styles.historyContent}>
                         {getSnapshotText(originalSnapshot)}
@@ -799,7 +854,9 @@ const ChatMessages = ({
                           className={styles.messageImageButton}
                           onClick={() => {
                             setImageZoom(1);
-                            setOpenedImageUrl(getSnapshotImageUrl(originalSnapshot));
+                            setOpenedImageUrl(
+                              getSnapshotImageUrl(originalSnapshot),
+                            );
                           }}
                         >
                           <img
@@ -825,7 +882,8 @@ const ChatMessages = ({
           >
             <h2 className={styles.confirmationTitle}>Delete message?</h2>
             <p className={styles.confirmationBody}>
-              This will hide the message for users and mark it as deleted by admin.
+              This will hide the message for users and mark it as deleted by
+              admin.
             </p>
             <div className={styles.confirmationActions}>
               <Button
@@ -859,15 +917,17 @@ const ChatMessages = ({
           >
             <h2 className={styles.confirmationTitle}>Remove image?</h2>
             <p className={styles.confirmationBody}>
-              This will remove the image from the message and mark the message as
-              moderated.
+              This will remove the image from the message and mark the message
+              as moderated.
             </p>
             <div className={styles.confirmationActions}>
               <Button
                 title="Cancel"
                 type="OUTLINED"
                 onClick={closeRemoveImageModal}
-                isDisabled={loadingActionKey === `image-${messageToRemoveImage.id}`}
+                isDisabled={
+                  loadingActionKey === `image-${messageToRemoveImage.id}`
+                }
               />
               <Button
                 title={
@@ -877,7 +937,9 @@ const ChatMessages = ({
                 }
                 type="DELETE"
                 onClick={removeMessageImage}
-                isDisabled={loadingActionKey === `image-${messageToRemoveImage.id}`}
+                isDisabled={
+                  loadingActionKey === `image-${messageToRemoveImage.id}`
+                }
               />
             </div>
           </div>
