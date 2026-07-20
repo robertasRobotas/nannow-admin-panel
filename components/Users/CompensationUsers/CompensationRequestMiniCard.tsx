@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { isAxiosError } from "axios";
 import styles from "./CompensationRequestMiniCard.module.css";
 import requestStyles from "../CompensationRequests/compensationRequests.module.css";
 import Button from "@/components/Button/Button";
@@ -10,7 +11,7 @@ import {
   getCompensationRequestStatusTone,
   normalizeCompensationRequests,
 } from "@/data/compensationRequests";
-import { updateClientCompensationRequestStatus } from "@/pages/api/fetch";
+import { getLatestCompensationInfoEmail, sendCompensationInfoEmail, updateClientCompensationRequestStatus } from "@/pages/api/fetch";
 
 type CompensationRequestMiniCardProps = {
   user: UserWithCompensationDetails;
@@ -24,6 +25,13 @@ const normalizeCommentText = (value: unknown) => {
       .join("\n");
   }
   return "";
+};
+
+const createIdempotencyKey = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `compensation-email-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
 const getStatusToneClass = (
@@ -60,6 +68,8 @@ const CompensationRequestMiniCard = ({
   const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
   const [savedStatus, setSavedStatus] = useState("");
   const [savedComment, setSavedComment] = useState("");
+  const [infoEmailSentAt, setInfoEmailSentAt] = useState<string | null>(null);
+  const [isSendingInfoEmail, setIsSendingInfoEmail] = useState(false);
 
   const hasChanges =
     !!request &&
@@ -84,6 +94,13 @@ const CompensationRequestMiniCard = ({
     setSavedStatus(request.status);
     setSavedComment(comment);
   }, [request]);
+
+  useEffect(() => {
+    if (!request || !apiClientId) return;
+    void getLatestCompensationInfoEmail(apiClientId, request.id)
+      .then((response) => setInfoEmailSentAt(response.data?.email?.sentAt ?? null))
+      .catch(() => setInfoEmailSentAt(null));
+  }, [apiClientId, request]);
 
   const hasRequest = !!request;
   const isFallback = request?.isFallback ?? false;
@@ -135,6 +152,30 @@ const CompensationRequestMiniCard = ({
     }
   };
 
+  const sendInfoEmail = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isSendingInfoEmail) return;
+    if (!request || !apiClientId) {
+      setSaveError("This compensation request is missing its client details. Refresh the page and try again.");
+      return;
+    }
+    try {
+      setIsSendingInfoEmail(true);
+      const response = await sendCompensationInfoEmail(apiClientId, request.id, createIdempotencyKey());
+      const sentAt = response.data?.email?.sentAt ?? new Date().toISOString();
+      setInfoEmailSentAt(sentAt);
+    } catch (error: unknown) {
+      console.log(error);
+      const apiMessage = isAxiosError<{ error?: string }>(error)
+        ? error.response?.data?.error
+        : undefined;
+      setSaveError(apiMessage ?? "Info email could not be sent.");
+    } finally {
+      setIsSendingInfoEmail(false);
+    }
+  };
+
   return (
     <div className={styles.main} data-row-nav-exclude>
       {!hasRequest ? (
@@ -156,6 +197,20 @@ const CompensationRequestMiniCard = ({
                 </div>
               </div>
             </div>
+            {!isFallback && request && (
+              <div className={styles.infoEmailAction} data-row-nav-exclude>
+              <Button
+                title={isSendingInfoEmail ? "Sending..." : infoEmailSentAt ? "Send again" : "Info email"}
+                type="OUTLINED"
+                height={32}
+                isDisabled={isSendingInfoEmail}
+                onClick={(event) => {
+                  void sendInfoEmail(event);
+                }}
+              />
+              {infoEmailSentAt && <span className={styles.infoEmailSent}>sent {formatCompensationDateTime(infoEmailSentAt)}</span>}
+              </div>
+            )}
           </div>
 
           {isFallback && (

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import axios from "axios";
 import styles from "./loginForm.module.css";
 import Cookies from "js-cookie";
 import { useRouter } from "next/router";
@@ -18,6 +19,38 @@ import { GoogleAuthProvider, OAuthProvider, signInWithPopup } from "firebase/aut
 const MASCOT_PHOTO = "/login/remis@2x.png";
 const EYE_ASSET = "/login/eye.svg";
 const EYES_AWAY_ANGLE = -175;
+
+const getFirebaseLoginErrorMessage = (error: unknown, provider: "google" | "apple", apiMode: AdminApiMode) => {
+  if (axios.isAxiosError(error)) {
+    const serverMessage =
+      typeof error.response?.data?.message === "string"
+        ? error.response.data.message
+        : "";
+
+    if (error.response?.status === 403) {
+      return `${serverMessage || "This account is not an authorized admin"} for the ${apiMode} API.`;
+    }
+
+    if (error.response?.status === 401 && apiMode === "test") {
+      return "The test API rejected the Firebase sign-in token. Confirm its Firebase service account is configured for nannow-474710, or turn off Use Test API to sign in to production.";
+    }
+
+    if (serverMessage) return serverMessage;
+    if (!error.response) return "Could not reach the admin API. Check your network connection and try again.";
+  }
+
+  if (typeof error === "object" && error && "code" in error) {
+    const code = String(error.code);
+    if (code === "auth/popup-closed-by-user") return "Google sign-in was cancelled.";
+    if (code === "auth/popup-blocked") return "Your browser blocked the sign-in popup. Allow popups and try again.";
+    if (code === "auth/unauthorized-domain") return "This admin-panel domain is not authorized for Firebase sign-in.";
+    if (code === "auth/account-exists-with-different-credential") {
+      return "This email already uses a different sign-in method.";
+    }
+  }
+
+  return provider === "google" ? "Google login failed. Please try again." : "Apple login failed. Please try again.";
+};
 
 // Eye center positions within the 209×159 mascot container (eyeball top-left + eye center offset)
 const LEFT_EYE_CENTER = { x: 84 + 7.5, y: 68 + 6.5 };
@@ -239,11 +272,9 @@ const LoginForm = () => {
       const firebaseIdToken = await result.user.getIdToken();
       const response = await loginWithFirebase(firebaseIdToken);
       handleAuthResponse(response);
-    } catch {
+    } catch (error) {
       setError(true);
-      setAuthErrorMessage(
-        provider === "google" ? "Google login failed. Please try again." : "Apple login failed. Please try again."
-      );
+      setAuthErrorMessage(getFirebaseLoginErrorMessage(error, provider, apiMode));
     } finally {
       setIsGoogleLoading(false);
       setIsAppleLoading(false);

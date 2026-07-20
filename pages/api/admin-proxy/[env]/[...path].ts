@@ -52,6 +52,7 @@ export default async function handler(
     "content-type",
     "accept",
     "accept-language",
+    "idempotency-key",
   ]) {
     const v = req.headers[h];
     if (v) headers[h] = Array.isArray(v) ? v[0] : v;
