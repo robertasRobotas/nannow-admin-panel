@@ -112,6 +112,7 @@ export type UserDetails = {
     languages?: string[];
     baseProviderRate: number;
     finalPrice?: number;
+    providerCustomPrice?: number | null;
     providerPriceCalculationMethod?: ProviderPriceCalculationMethod;
     isShownManageYourRate?: boolean;
     unavailablePeriods?: {

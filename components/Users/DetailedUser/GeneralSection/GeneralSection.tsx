@@ -106,6 +106,10 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   );
   const [basePriceError, setBasePriceError] = useState<string | null>(null);
   const [isUpdatingBasePrice, setIsUpdatingBasePrice] = useState(false);
+  const [isFinalPriceModalOpen, setIsFinalPriceModalOpen] = useState(false);
+  const [finalPriceInput, setFinalPriceInput] = useState("");
+  const [finalPriceError, setFinalPriceError] = useState<string | null>(null);
+  const [isUpdatingFinalPrice, setIsUpdatingFinalPrice] = useState(false);
   const [openedVideoUrl, setOpenedVideoUrl] = useState<string | null>(null);
   const [
     requestedCompensationInfoAtLocal,
@@ -235,6 +239,49 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     setIsBasePriceModalOpen(true);
   };
 
+  const getFinalPriceValue = () => {
+    return user?.provider?.providerCustomPrice ?? user?.provider?.finalPrice ?? 0;
+  };
+
+  const openFinalPriceModal = () => {
+    setFinalPriceInput(getFinalPriceValue().toFixed(2));
+    setFinalPriceError(null);
+    setIsFinalPriceModalOpen(true);
+  };
+
+  const closeFinalPriceModal = () => {
+    if (isUpdatingFinalPrice) return;
+    setIsFinalPriceModalOpen(false);
+    setFinalPriceError(null);
+  };
+
+  const parsedFinalPrice = parseBasePriceValue(finalPriceInput);
+  const finalPricePreview = parsedFinalPrice.ok
+    ? `€ ${parsedFinalPrice.value.toFixed(2)}`
+    : "-";
+
+  const confirmChangeFinalPrice = async () => {
+    if (!user?.provider?.id || isUpdatingFinalPrice) return;
+    if (!parsedFinalPrice.ok) {
+      setFinalPriceError(parsedFinalPrice.error);
+      return;
+    }
+    try {
+      setIsUpdatingFinalPrice(true);
+      await updateProviderFields(user.provider.id, {
+        providerCustomPrice: parsedFinalPrice.value,
+      });
+      toast.success("Final price updated");
+      setIsFinalPriceModalOpen(false);
+      router.reload();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update final price");
+    } finally {
+      setIsUpdatingFinalPrice(false);
+    }
+  };
+
   const openBanModal = () => {
     setBanReason("");
     setBanReasonError(null);
@@ -313,7 +360,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     setBasePriceError(null);
   };
 
-  const parseBasePriceValue = (rawValue: string): BasePriceParseResult => {
+  function parseBasePriceValue(rawValue: string): BasePriceParseResult {
     const normalized = rawValue.trim().replace(",", ".");
     if (normalized.length === 0) {
       return { ok: false, error: "Price is required." };
@@ -329,7 +376,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       return { ok: false, error: "Price cannot be negative." };
     }
     return { ok: true, value: parsed };
-  };
+  }
 
   const parsedBasePrice = parseBasePriceValue(basePriceInput);
   const basePricePreview = parsedBasePrice.ok
@@ -617,6 +664,14 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                   onClick={openBasePriceModal}
                 />
               )}
+            {c.actionButton?.action === "CHANGE_FINAL_PRICE" &&
+              mode === "provider" && (
+                <Button
+                  title={c.actionButton.title}
+                  type="OUTLINED"
+                  onClick={openFinalPriceModal}
+                />
+              )}
             {c.actionButton?.action === "BAN_USER" && (
               <Button
                 title={c.actionButton.title}
@@ -729,6 +784,52 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 type="BLACK"
                 onClick={confirmChangeBasePrice}
                 isDisabled={isUpdatingBasePrice}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isFinalPriceModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Change final price?</h2>
+            <div className={styles.inputBlock}>
+              <label className={styles.inputLabel} htmlFor="final-price-input">
+                Final price
+              </label>
+              <input
+                id="final-price-input"
+                type="text"
+                inputMode="decimal"
+                value={finalPriceInput}
+                onChange={(e) => {
+                  setFinalPriceInput(e.target.value);
+                  setFinalPriceError(null);
+                }}
+                className={styles.textInput}
+                placeholder="e.g. 8.00"
+                disabled={isUpdatingFinalPrice}
+              />
+              {finalPriceError && (
+                <span className={styles.inputError}>{finalPriceError}</span>
+              )}
+            </div>
+            <p className={styles.confirmationBody}>
+              Confirm setting provider final price to <b>{finalPricePreview}</b>.
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeFinalPriceModal}
+                isDisabled={isUpdatingFinalPrice}
+              />
+              <Button
+                title={isUpdatingFinalPrice ? "Updating..." : "Confirm"}
+                type="BLACK"
+                onClick={confirmChangeFinalPrice}
+                isDisabled={isUpdatingFinalPrice}
               />
             </div>
           </div>

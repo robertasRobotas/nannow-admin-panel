@@ -34,6 +34,7 @@ export type InfoCard = {
     action:
       | "DELETE_STRIPE"
       | "CHANGE_BASE_PRICE"
+      | "CHANGE_FINAL_PRICE"
       | "BAN_USER"
       | "REBUILD_PUBLIC_URL";
   };
@@ -387,6 +388,14 @@ export const getInfoCards = (
           typeof data?.provider?.finalPrice === "number"
             ? `€ ${data.provider.finalPrice.toFixed(2)}`
             : "-",
+        ...(data?.provider?.providerPriceCalculationMethod === "CUSTOM"
+          ? {
+              actionButton: {
+                title: "Change",
+                action: "CHANGE_FINAL_PRICE" as const,
+              },
+            }
+          : {}),
       },
       {
         title: "Price calculation method",

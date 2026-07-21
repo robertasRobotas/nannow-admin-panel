@@ -1277,6 +1277,7 @@ export const updateProviderFields = async (
   providerId: string,
   updates: {
     baseProviderRate?: number;
+    providerCustomPrice?: number;
   },
 ) => {
   const jwt = Cookies.get("@user_jwt");
