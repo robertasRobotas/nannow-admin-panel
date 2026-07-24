@@ -1,0 +1,145 @@
+.root {
+  width: 100%;
+  min-height: 100%;
+  padding: 36px;
+  color: #18233b;
+}
+
+.headingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #7b61ff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.08;
+}
+
+.description {
+  max-width: 680px;
+  margin: 12px 0 0;
+  color: #667085;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.refreshButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  color: #667085;
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  min-height: 180px;
+  padding: 24px;
+  border: 1px solid #e8eaf0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(24 35 59 / 5%);
+}
+
+.cardLabel {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cardValue {
+  display: block;
+  margin-top: 18px;
+  color: #18233b;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.cardDetail {
+  margin: 16px 0 0;
+  color: #7b8498;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ruleNote {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 18px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: #f6f4ff;
+  color: #4d426e;
+}
+
+.ruleNote p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 22px;
+  border: 1px solid #f3b8b8;
+  border-radius: 14px;
+  background: #fff3f3;
+  color: #9a2e2e;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .root {
+    padding: 22px 16px;
+  }
+
+  .headingRow,
+  .summary {
+    flex-direction: column;
+  }
+
+  .grid,
+  .ruleNote {
+    grid-template-columns: 1fr;
+  }
+
+  .refreshButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -4,6 +4,7 @@ export const links: HeaderLink[] = [
   { title: "Orders", link: "/orders" },
   { title: "Schedule", link: "/schedule" },
   { title: "Users", link: "/users" },
+  { title: "Nanny forecast", link: "/nanny-forecast" },
   {
     title: "Compensation",
     link: "/compensation?mode=clients&hasRequestedCompensationInfoAt=true&page=1",
