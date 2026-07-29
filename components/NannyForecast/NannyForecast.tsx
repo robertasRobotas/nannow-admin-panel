@@ -8,22 +8,15 @@ const PAGE_SIZE = 250;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const INACTIVE_DAYS = 5;
 const HIDDEN_DAYS = 60;
-const MAP_RADIUS_KM = 100000;
-const VILNIUS_LATITUDE = 54.6872;
-const VILNIUS_LONGITUDE = 25.2797;
 
 type NannyForecastItem = {
   id: string;
   userId: string;
   isOnboardingFinished?: boolean;
   isAvailableStatus?: boolean;
+  isHidden?: boolean;
   lastLoginAt?: string | null;
   createdAt?: string | null;
-};
-
-type MapProvider = {
-  id: string;
-  userId: string;
 };
 
 type ProviderPage = {
@@ -58,7 +51,6 @@ const passesActivityRule = (nanny: NannyForecastItem, activityCutoff: Date) => {
 
 const NannyForecast = () => {
   const [nannies, setNannies] = useState<NannyForecastItem[]>([]);
-  const [mapProviders, setMapProviders] = useState<MapProvider[]>([]);
   const [reportedTotal, setReportedTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,9 +61,6 @@ const NannyForecast = () => {
     setError("");
 
     try {
-      const mapProvidersRequest = getAllUsers(
-        `providers/find-providers-by-radius/public?radiusKm=${MAP_RADIUS_KM}&latitude=${VILNIUS_LATITUDE}&longitude=${VILNIUS_LONGITUDE}`,
-      );
       const byId = new Map<string, NannyForecastItem>();
       let startIndex = 0;
       let total = 0;
@@ -96,18 +85,7 @@ const NannyForecast = () => {
         if (!hasMore || items.length === 0) break;
       }
 
-      const mapResponse = await mapProvidersRequest;
-      const returnedMapProviders = Array.isArray(mapResponse.data)
-        ? (mapResponse.data as MapProvider[])
-        : [];
-      const uniqueMapProviders = new Map<string, MapProvider>();
-      returnedMapProviders.forEach((provider) => {
-        const key = provider.id || provider.userId;
-        if (key) uniqueMapProviders.set(key, provider);
-      });
-
       setNannies(Array.from(byId.values()));
-      setMapProviders(Array.from(uniqueMapProviders.values()));
       setReportedTotal(total);
       setRefreshedAt(new Date());
     } catch (loadError) {
@@ -131,118 +109,64 @@ const NannyForecast = () => {
     const finished = nannies.filter(
       (nanny) => nanny.isOnboardingFinished === true,
     );
-    const hidden = nannies.filter(
+    const finishedNotSelfHidden = finished.filter(
+      (nanny) => nanny.isHidden !== true,
+    );
+    const inactive60Days = finishedNotSelfHidden.filter(
       (nanny) => !passesActivityRule(nanny, hiddenCutoff),
     );
-    const finishedHidden = finished.filter(
-      (nanny) => !passesActivityRule(nanny, hiddenCutoff),
+    const inactive60DaysInSitterMode = inactive60Days.filter(
+      (nanny) => nanny.isAvailableStatus === true,
     );
-    const finishedVisible = finished.filter((nanny) =>
-      passesActivityRule(nanny, hiddenCutoff),
-    );
-    const activityByProviderId = new Map<string, NannyForecastItem>();
-    nannies.forEach((nanny) => {
-      if (nanny.id) activityByProviderId.set(nanny.id, nanny);
-      if (nanny.userId) activityByProviderId.set(nanny.userId, nanny);
-    });
-    const getMapProviderNanny = (provider: MapProvider) =>
-      activityByProviderId.get(provider.id) ??
-      activityByProviderId.get(provider.userId);
-    const finalMapProviders = mapProviders.filter((provider) => {
-      const nanny = getMapProviderNanny(provider);
-      return nanny ? passesActivityRule(nanny, hiddenCutoff) : false;
-    });
-    const mapProvidersMissingActivity = mapProviders.filter(
-      (provider) => !getMapProviderNanny(provider),
-    );
-    const currentMapFinished = mapProviders.filter(
-      (provider) =>
-        getMapProviderNanny(provider)?.isOnboardingFinished === true,
-    ).length;
-    const finalMapFinished = finalMapProviders.filter(
-      (provider) =>
-        getMapProviderNanny(provider)?.isOnboardingFinished === true,
-    ).length;
-    const unknownActivity = nannies.filter(
-      (nanny) => getEffectiveActivityDate(nanny) === null,
-    );
-    const pendingSitterModeOff = nannies.filter(
+    const sitterModeAutoOff = finishedNotSelfHidden.filter(
       (nanny) =>
         nanny.isAvailableStatus === true &&
         isOlderThan(parseDate(nanny.lastLoginAt), inactiveCutoff),
     );
+    const unknownActivity = finishedNotSelfHidden.filter(
+      (nanny) => getEffectiveActivityDate(nanny) === null,
+    );
 
     return {
       total: nannies.length,
-      unfinished: nannies.length - finished.length,
       finished: finished.length,
-      sitterMode: finishedVisible.filter(
-        (nanny) => nanny.isAvailableStatus === true,
-      ).length,
-      notSitterMode: finishedVisible.filter(
-        (nanny) => nanny.isAvailableStatus !== true,
-      ).length,
-      hidden: hidden.length,
-      finishedHidden: finishedHidden.length,
-      currentMapProviders: mapProviders.length,
-      currentMapFinished,
-      currentMapWithWarning:
-        mapProviders.length -
-        currentMapFinished -
-        mapProvidersMissingActivity.length,
-      finalMapProviders: finalMapProviders.length,
-      finalMapFinished,
-      finalMapWithWarning: finalMapProviders.length - finalMapFinished,
-      mapProvidersHidden:
-        mapProviders.length -
-        finalMapProviders.length -
-        mapProvidersMissingActivity.length,
-      mapProvidersMissingActivity: mapProvidersMissingActivity.length,
+      finishedNotSelfHidden: finishedNotSelfHidden.length,
+      selfHidden: finished.length - finishedNotSelfHidden.length,
+      inactive60Days: inactive60Days.length,
+      inactive60DaysInSitterMode: inactive60DaysInSitterMode.length,
+      remainingAfter60Days:
+        finishedNotSelfHidden.length - inactive60Days.length,
+      sitterModeAutoOff: sitterModeAutoOff.length,
       unknownActivity: unknownActivity.length,
-      pendingSitterModeOff: pendingSitterModeOff.length,
     };
-  }, [mapProviders, nannies]);
+  }, [nannies]);
 
   const cards = [
     {
-      label: "Nannies in total",
+      label: "Total registered providers",
       value: forecast.total,
-      detail: `${forecast.unfinished.toLocaleString()} with unfinished onboarding`,
+      detail: "Every registered provider account",
     },
     {
-      label: "Fully finished onboarding",
+      label: "Finished onboarding",
       value: forecast.finished,
-      detail: "Across all nanny accounts, not only providers on the map",
+      detail:
+        "Allowed to work; includes both fully completed and warning statuses",
     },
     {
-      label: "In sitter mode",
-      value: forecast.sitterMode,
-      detail: `Finished onboarding and used the app within ${HIDDEN_DAYS} days`,
+      label: "Finished onboarding and not self-hidden",
+      value: forecast.finishedNotSelfHidden,
+      detail: `${forecast.selfHidden.toLocaleString()} finished providers chose to hide from the map`,
     },
     {
-      label: "Not in sitter mode",
-      value: forecast.notSitterMode,
-      detail: `Finished onboarding and used the app within ${HIDDEN_DAYS} days`,
+      label: `Not self-hidden and inactive ${HIDDEN_DAYS}+ days`,
+      value: forecast.inactive60Days,
+      detail: `${forecast.remainingAfter60Days.toLocaleString()} remain after the ${HIDDEN_DAYS}-day map rule`,
     },
     {
-      label: `Inactive ${HIDDEN_DAYS}+ days`,
-      value: forecast.hidden,
-      detail: `${forecast.finishedHidden.toLocaleString()} finished onboarding; ${forecast.mapProvidersHidden.toLocaleString()} currently on map`,
-    },
-    {
-      label: `Sitter mode auto-off forecast`,
-      value: forecast.pendingSitterModeOff,
-      detail: `Currently in sitter mode with no login for ${INACTIVE_DAYS}+ days`,
-    },
-    {
-      label: "Current providers on map",
-      value: forecast.currentMapProviders,
-      detail: `${forecast.currentMapFinished.toLocaleString()} fully onboarded; ${forecast.currentMapWithWarning.toLocaleString()} shown with onboarding warning`,
-    },
-    {
-      label: `Final providers on map`,
-      value: forecast.finalMapProviders,
-      detail: `${forecast.finalMapFinished.toLocaleString()} fully onboarded; ${forecast.finalMapWithWarning.toLocaleString()} shown with onboarding warning`,
+      label: `Inactive ${HIDDEN_DAYS}+ days and in sitter mode`,
+      value: forecast.inactive60DaysInSitterMode,
+      detail: `Subset of inactive providers whose sitter mode is still on`,
     },
   ];
 
@@ -253,8 +177,8 @@ const NannyForecast = () => {
           <p className={styles.eyebrow}>Activity forecast</p>
           <h1 className={styles.title}>Nanny visibility forecast</h1>
           <p className={styles.description}>
-            Activity counts use all nanny records. Map counts use the same
-            unlimited-radius provider endpoint as the app.
+            Shows how the {INACTIVE_DAYS}-day sitter-mode rule and {HIDDEN_DAYS}
+            -day map rule affect providers who are allowed to work.
           </p>
         </div>
         <Button
@@ -306,27 +230,24 @@ const NannyForecast = () => {
 
           <div className={styles.ruleNote}>
             <div>
-              <strong>How map quantities are calculated</strong>
+              <strong>{INACTIVE_DAYS}-day sitter mode rule</strong>
               <p>
-                Current providers are returned by the public map endpoint using
-                Vilnius as the center and the app&apos;s{" "}
-                {MAP_RADIUS_KM.toLocaleString()} km unlimited radius. Final
-                providers are that same list after the {HIDDEN_DAYS}-day
-                activity rule. Personal client filters can reduce a signed-in
-                app result further.
-                {forecast.mapProvidersMissingActivity > 0
-                  ? ` ${forecast.mapProvidersMissingActivity.toLocaleString()} map providers could not be matched to activity records and are excluded from the final count.`
-                  : ""}
+                {forecast.sitterModeAutoOff.toLocaleString()} finished,
+                non-hidden providers are currently in sitter mode and have not
+                logged in for {INACTIVE_DAYS}+ days. Their sitter mode will be
+                switched off.
               </p>
             </div>
             <div>
-              <strong>Legacy activity records</strong>
+              <strong>{HIDDEN_DAYS}-day map rule</strong>
               <p>
-                When last login is missing, account creation time is used for
-                the {HIDDEN_DAYS}-day map rule, matching the API visibility
-                logic.
+                {forecast.inactive60Days.toLocaleString()} finished, non-hidden
+                providers will fail the activity rule, including{" "}
+                {forecast.inactive60DaysInSitterMode.toLocaleString()} whose
+                sitter mode is still on. When last login is missing, account
+                creation time is used.
                 {forecast.unknownActivity > 0
-                  ? ` ${forecast.unknownActivity.toLocaleString()} records have neither date and fail the activity rule.`
+                  ? ` ${forecast.unknownActivity.toLocaleString()} records have neither date and fail this rule.`
                   : ""}
               </p>
             </div>
