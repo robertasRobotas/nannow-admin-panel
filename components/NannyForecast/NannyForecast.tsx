@@ -64,7 +64,7 @@ const NannyForecast = () => {
     void loadSnapshot();
   }, [loadSnapshot]);
 
-  const cards = snapshot
+  const overviewCards = snapshot
     ? [
         {
           label: "Total registered providers",
@@ -82,25 +82,52 @@ const NannyForecast = () => {
           value: snapshot.finishedOnboardingNotSelfHiddenProviders,
           detail: "Finished providers whose map visibility preference is on",
         },
+      ]
+    : [];
+
+  const inactiveCards = snapshot
+    ? [
         {
           label: "Finished onboarding, not self-hidden, inactive 60+ days",
           value: snapshot.inactive60DaysProviders,
           detail: "Will be hidden by the 60-day map activity rule",
-          secondaryDetail: `Active in the last 60 days: ${formatSnapshotCount(snapshot.active60DaysProviders)}`,
         },
         {
           label:
             "Finished onboarding, not self-hidden, inactive 60+ days, in sitter mode",
           value: snapshot.inactive60DaysInSitterModeProviders,
           detail: "Subset whose sitter mode is still on",
-          secondaryDetail: `Active in the last 60 days, in sitter mode: ${formatSnapshotCount(snapshot.active60DaysInSitterModeProviders)}`,
         },
         {
           label: "Not active — no app use for 5+ days",
           value: snapshot.inactive5DaysInSitterModeProviders,
           detail: "In sitter mode and will be switched off by the 5-day rule",
-          secondaryDetail: `Used the app in the last 5 days: ${formatSnapshotCount(snapshot.active5DaysInSitterModeProviders)}`,
         },
+      ]
+    : [];
+
+  const activeCards = snapshot
+    ? [
+        {
+          label: "Active in the last 60 days",
+          value: snapshot.active60DaysProviders,
+          detail: "Finished, not self-hidden providers who remain on the map",
+        },
+        {
+          label: "Active in the last 60 days, in sitter mode",
+          value: snapshot.active60DaysInSitterModeProviders,
+          detail: "Active finished providers whose sitter mode is on",
+        },
+        {
+          label: "Used the app in the last 5 days",
+          value: snapshot.active5DaysInSitterModeProviders,
+          detail: "In sitter mode and not affected by the 5-day rule",
+        },
+      ]
+    : [];
+
+  const finalCards = snapshot
+    ? [
         {
           label: "Final on map",
           value: snapshot.finalOnMapProviders,
@@ -155,22 +182,57 @@ const NannyForecast = () => {
                 <strong className={styles.cardValue}>—</strong>
               </article>
             ) : (
-              cards.map((card) => (
+              overviewCards.map((card) => (
                 <article className={styles.card} key={card.label}>
                   <p className={styles.cardLabel}>{card.label}</p>
                   <strong className={styles.cardValue}>
-                    {card.value.toLocaleString()}
+                    {formatSnapshotCount(card.value)}
                   </strong>
                   <p className={styles.cardDetail}>{card.detail}</p>
-                  {card.secondaryDetail && (
-                    <p className={styles.cardSecondaryDetail}>
-                      {card.secondaryDetail}
-                    </p>
-                  )}
                 </article>
               ))
             )}
           </div>
+
+          {snapshot && (
+            <>
+              <div className={`${styles.grid} ${styles.activityGrid}`}>
+                {inactiveCards.map((card) => (
+                  <article className={styles.card} key={card.label}>
+                    <p className={styles.cardLabel}>{card.label}</p>
+                    <strong className={styles.cardValue}>
+                      {formatSnapshotCount(card.value)}
+                    </strong>
+                    <p className={styles.cardDetail}>{card.detail}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className={`${styles.grid} ${styles.activityGrid}`}>
+                {activeCards.map((card) => (
+                  <article className={styles.card} key={card.label}>
+                    <p className={styles.cardLabel}>{card.label}</p>
+                    <strong className={styles.cardValue}>
+                      {formatSnapshotCount(card.value)}
+                    </strong>
+                    <p className={styles.cardDetail}>{card.detail}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className={`${styles.grid} ${styles.activityGrid}`}>
+                {finalCards.map((card) => (
+                  <article className={styles.card} key={card.label}>
+                    <p className={styles.cardLabel}>{card.label}</p>
+                    <strong className={styles.cardValue}>
+                      {formatSnapshotCount(card.value)}
+                    </strong>
+                    <p className={styles.cardDetail}>{card.detail}</p>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
 
           {snapshot && (
             <>

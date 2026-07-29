@@ -58,6 +58,10 @@
   gap: 16px;
 }
 
+.activityGrid {
+  margin-top: 16px;
+}
+
 .card {
   min-height: 180px;
   padding: 24px;
@@ -86,14 +90,6 @@
   margin: 16px 0 0;
   color: #7b8498;
   font-size: 13px;
-  line-height: 1.5;
-}
-
-.cardSecondaryDetail {
-  margin: 6px 0 0;
-  color: #4d5a73;
-  font-size: 13px;
-  font-weight: 700;
   line-height: 1.5;
 }
 
