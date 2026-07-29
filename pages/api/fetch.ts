@@ -385,6 +385,22 @@ export const rebuildNannyForecastSnapshot = async () => {
   );
 };
 
+export const getAdminMap = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/map`, {
+    headers: { Authorization: jwt },
+  });
+};
+
+export const rebuildAdminMapSnapshot = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/map/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getClientById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/clients/${id}`, {
