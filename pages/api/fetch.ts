@@ -376,6 +376,15 @@ export const getAllUsers = async (url: string) => {
   return response;
 };
 
+export const rebuildNannyForecastSnapshot = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/nanny-forecast/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getClientById = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/clients/${id}`, {

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import { getAllUsers } from "@/pages/api/fetch";
+import {
+  getAllUsers,
+  rebuildNannyForecastSnapshot,
+} from "@/pages/api/fetch";
 import Button from "@/components/Button/Button";
 import styles from "./nannyForecast.module.css";
 
@@ -38,12 +41,14 @@ const NannyForecast = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadSnapshot = useCallback(async () => {
+  const loadSnapshot = useCallback(async (rebuild = false) => {
     setIsLoading(true);
     setError("");
 
     try {
-      const response = await getAllUsers("admin/nanny-forecast");
+      const response = rebuild
+        ? await rebuildNannyForecastSnapshot()
+        : await getAllUsers("admin/nanny-forecast");
       setSnapshot(response.data as NannyForecastSnapshot);
     } catch (loadError) {
       const message = axios.isAxiosError(loadError)
@@ -120,7 +125,7 @@ const NannyForecast = () => {
         <Button
           title={isLoading ? "Loading…" : "Refresh"}
           type="OUTLINED"
-          onClick={() => void loadSnapshot()}
+          onClick={() => void loadSnapshot(true)}
           isDisabled={isLoading}
           isLoading={isLoading}
           className={styles.refreshButton}
