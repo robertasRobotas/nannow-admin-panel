@@ -8,6 +8,9 @@ const PAGE_SIZE = 250;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const INACTIVE_DAYS = 5;
 const HIDDEN_DAYS = 60;
+const MAP_RADIUS_KM = 100000;
+const VILNIUS_LATITUDE = 54.6872;
+const VILNIUS_LONGITUDE = 25.2797;
 
 type NannyForecastItem = {
   id: string;
@@ -16,6 +19,11 @@ type NannyForecastItem = {
   isAvailableStatus?: boolean;
   lastLoginAt?: string | null;
   createdAt?: string | null;
+};
+
+type MapProvider = {
+  id: string;
+  userId: string;
 };
 
 type ProviderPage = {
@@ -38,8 +46,22 @@ const getEffectiveActivityDate = (nanny: NannyForecastItem) =>
 const isOlderThan = (date: Date | null, cutoff: Date) =>
   date !== null && date.getTime() < cutoff.getTime();
 
+const passesActivityRule = (
+  nanny: NannyForecastItem,
+  activityCutoff: Date,
+) => {
+  const lastLoginAt = parseDate(nanny.lastLoginAt);
+  if (lastLoginAt) {
+    return lastLoginAt.getTime() >= activityCutoff.getTime();
+  }
+
+  const createdAt = parseDate(nanny.createdAt);
+  return createdAt !== null && createdAt.getTime() >= activityCutoff.getTime();
+};
+
 const NannyForecast = () => {
   const [nannies, setNannies] = useState<NannyForecastItem[]>([]);
+  const [mapProviders, setMapProviders] = useState<MapProvider[]>([]);
   const [reportedTotal, setReportedTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -50,6 +72,9 @@ const NannyForecast = () => {
     setError("");
 
     try {
+      const mapProvidersRequest = getAllUsers(
+        `providers/find-providers-by-radius/public?radiusKm=${MAP_RADIUS_KM}&latitude=${VILNIUS_LATITUDE}&longitude=${VILNIUS_LONGITUDE}`,
+      );
       const byId = new Map<string, NannyForecastItem>();
       let startIndex = 0;
       let total = 0;
@@ -76,7 +101,18 @@ const NannyForecast = () => {
         if (!hasMore || items.length === 0) break;
       }
 
+      const mapResponse = await mapProvidersRequest;
+      const returnedMapProviders = Array.isArray(mapResponse.data)
+        ? (mapResponse.data as MapProvider[])
+        : [];
+      const uniqueMapProviders = new Map<string, MapProvider>();
+      returnedMapProviders.forEach((provider) => {
+        const key = provider.id || provider.userId;
+        if (key) uniqueMapProviders.set(key, provider);
+      });
+
       setNannies(Array.from(byId.values()));
+      setMapProviders(Array.from(uniqueMapProviders.values()));
       setReportedTotal(total);
       setRefreshedAt(new Date());
     } catch (loadError) {
@@ -100,15 +136,30 @@ const NannyForecast = () => {
     const finished = nannies.filter(
       (nanny) => nanny.isOnboardingFinished === true,
     );
-    const hidden = nannies.filter((nanny) =>
-      isOlderThan(getEffectiveActivityDate(nanny), hiddenCutoff),
+    const hidden = nannies.filter(
+      (nanny) => !passesActivityRule(nanny, hiddenCutoff),
     );
     const finishedHidden = finished.filter((nanny) =>
-      isOlderThan(getEffectiveActivityDate(nanny), hiddenCutoff),
+      !passesActivityRule(nanny, hiddenCutoff),
     );
     const finishedVisible = finished.filter(
-      (nanny) =>
-        !isOlderThan(getEffectiveActivityDate(nanny), hiddenCutoff),
+      (nanny) => passesActivityRule(nanny, hiddenCutoff),
+    );
+    const activityByProviderId = new Map<string, NannyForecastItem>();
+    nannies.forEach((nanny) => {
+      if (nanny.id) activityByProviderId.set(nanny.id, nanny);
+      if (nanny.userId) activityByProviderId.set(nanny.userId, nanny);
+    });
+    const finalMapProviders = mapProviders.filter((provider) => {
+      const nanny =
+        activityByProviderId.get(provider.id) ??
+        activityByProviderId.get(provider.userId);
+      return nanny ? passesActivityRule(nanny, hiddenCutoff) : false;
+    });
+    const mapProvidersMissingActivity = mapProviders.filter(
+      (provider) =>
+        !activityByProviderId.has(provider.id) &&
+        !activityByProviderId.has(provider.userId),
     );
     const unknownActivity = nannies.filter(
       (nanny) => getEffectiveActivityDate(nanny) === null,
@@ -131,10 +182,17 @@ const NannyForecast = () => {
       ).length,
       hidden: hidden.length,
       finishedHidden: finishedHidden.length,
+      currentMapProviders: mapProviders.length,
+      finalMapProviders: finalMapProviders.length,
+      mapProvidersHidden:
+        mapProviders.length -
+        finalMapProviders.length -
+        mapProvidersMissingActivity.length,
+      mapProvidersMissingActivity: mapProvidersMissingActivity.length,
       unknownActivity: unknownActivity.length,
       pendingSitterModeOff: pendingSitterModeOff.length,
     };
-  }, [nannies]);
+  }, [mapProviders, nannies]);
 
   const cards = [
     {
@@ -146,6 +204,16 @@ const NannyForecast = () => {
       label: "Finished onboarding",
       value: forecast.finished,
       detail: "Includes every completed nanny profile",
+    },
+    {
+      label: "Current providers on map",
+      value: forecast.currentMapProviders,
+      detail: `Returned by the app map endpoint with a ${MAP_RADIUS_KM.toLocaleString()} km radius`,
+    },
+    {
+      label: `Final providers on map`,
+      value: forecast.finalMapProviders,
+      detail: `${forecast.mapProvidersHidden.toLocaleString()} will be hidden by the ${HIDDEN_DAYS}-day rule`,
     },
     {
       label: "In sitter mode",
@@ -160,7 +228,7 @@ const NannyForecast = () => {
     {
       label: `Inactive ${HIDDEN_DAYS}+ days`,
       value: forecast.hidden,
-      detail: `${forecast.finishedHidden.toLocaleString()} finished onboarding; hidden from map`,
+      detail: `${forecast.finishedHidden.toLocaleString()} finished onboarding; ${forecast.mapProvidersHidden.toLocaleString()} currently on map`,
     },
     {
       label: `Sitter mode auto-off forecast`,
@@ -176,8 +244,8 @@ const NannyForecast = () => {
           <p className={styles.eyebrow}>Activity forecast</p>
           <h1 className={styles.title}>Nanny visibility forecast</h1>
           <p className={styles.description}>
-            Counts are calculated in this page from all nanny records returned
-            by the existing users endpoint.
+            Activity counts use all nanny records. Map counts use the same
+            unlimited-radius provider endpoint as the app.
           </p>
         </div>
         <Button
@@ -229,12 +297,17 @@ const NannyForecast = () => {
 
           <div className={styles.ruleNote}>
             <div>
-              <strong>How the forecast is grouped</strong>
+              <strong>How map quantities are calculated</strong>
               <p>
-                Finished onboarding = in sitter mode + not in sitter mode +
-                inactive {HIDDEN_DAYS}+ days. The first two groups exclude
-                nannies already forecast to be hidden, so the breakdown does
-                not double-count.
+                Current providers are returned by the public map endpoint
+                using Vilnius as the center and the app&apos;s{" "}
+                {MAP_RADIUS_KM.toLocaleString()} km unlimited radius. Final
+                providers are that same list after the {HIDDEN_DAYS}-day
+                activity rule. Personal client filters can reduce a signed-in
+                app result further.
+                {forecast.mapProvidersMissingActivity > 0
+                  ? ` ${forecast.mapProvidersMissingActivity.toLocaleString()} map providers could not be matched to activity records and are excluded from the final count.`
+                  : ""}
               </p>
             </div>
             <div>
@@ -244,7 +317,7 @@ const NannyForecast = () => {
                 the {HIDDEN_DAYS}-day map rule, matching the API visibility
                 logic.
                 {forecast.unknownActivity > 0
-                  ? ` ${forecast.unknownActivity.toLocaleString()} records have neither date and remain outside the inactive count.`
+                  ? ` ${forecast.unknownActivity.toLocaleString()} records have neither date and fail the activity rule.`
                   : ""}
               </p>
             </div>
