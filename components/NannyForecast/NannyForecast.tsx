@@ -14,7 +14,6 @@ type NannyForecastItem = {
   userId: string;
   isOnboardingFinished?: boolean;
   isAvailableStatus?: boolean;
-  isHidden?: boolean;
   lastLoginAt?: string | null;
   createdAt?: string | null;
 };
@@ -109,33 +108,27 @@ const NannyForecast = () => {
     const finished = nannies.filter(
       (nanny) => nanny.isOnboardingFinished === true,
     );
-    const finishedNotSelfHidden = finished.filter(
-      (nanny) => nanny.isHidden !== true,
-    );
-    const inactive60Days = finishedNotSelfHidden.filter(
+    const inactive60Days = finished.filter(
       (nanny) => !passesActivityRule(nanny, hiddenCutoff),
     );
     const inactive60DaysInSitterMode = inactive60Days.filter(
       (nanny) => nanny.isAvailableStatus === true,
     );
-    const sitterModeAutoOff = finishedNotSelfHidden.filter(
+    const sitterModeAutoOff = finished.filter(
       (nanny) =>
         nanny.isAvailableStatus === true &&
         isOlderThan(parseDate(nanny.lastLoginAt), inactiveCutoff),
     );
-    const unknownActivity = finishedNotSelfHidden.filter(
+    const unknownActivity = finished.filter(
       (nanny) => getEffectiveActivityDate(nanny) === null,
     );
 
     return {
       total: nannies.length,
       finished: finished.length,
-      finishedNotSelfHidden: finishedNotSelfHidden.length,
-      selfHidden: finished.length - finishedNotSelfHidden.length,
       inactive60Days: inactive60Days.length,
       inactive60DaysInSitterMode: inactive60DaysInSitterMode.length,
-      remainingAfter60Days:
-        finishedNotSelfHidden.length - inactive60Days.length,
+      remainingAfter60Days: finished.length - inactive60Days.length,
       sitterModeAutoOff: sitterModeAutoOff.length,
       unknownActivity: unknownActivity.length,
     };
@@ -154,14 +147,14 @@ const NannyForecast = () => {
         "Allowed to work; includes both fully completed and warning statuses",
     },
     {
-      label: "Finished onboarding and not self-hidden",
-      value: forecast.finishedNotSelfHidden,
-      detail: `${forecast.selfHidden.toLocaleString()} finished providers chose to hide from the map`,
+      label: `Remaining after the ${HIDDEN_DAYS}-day rule`,
+      value: forecast.remainingAfter60Days,
+      detail: "Finished providers who pass the new activity rule",
     },
     {
-      label: `Not self-hidden and inactive ${HIDDEN_DAYS}+ days`,
+      label: `Finished onboarding and inactive ${HIDDEN_DAYS}+ days`,
       value: forecast.inactive60Days,
-      detail: `${forecast.remainingAfter60Days.toLocaleString()} remain after the ${HIDDEN_DAYS}-day map rule`,
+      detail: `Will fail the new ${HIDDEN_DAYS}-day map activity rule`,
     },
     {
       label: `Inactive ${HIDDEN_DAYS}+ days and in sitter mode`,
@@ -232,17 +225,16 @@ const NannyForecast = () => {
             <div>
               <strong>{INACTIVE_DAYS}-day sitter mode rule</strong>
               <p>
-                {forecast.sitterModeAutoOff.toLocaleString()} finished,
-                non-hidden providers are currently in sitter mode and have not
-                logged in for {INACTIVE_DAYS}+ days. Their sitter mode will be
-                switched off.
+                {forecast.sitterModeAutoOff.toLocaleString()} finished providers
+                are currently in sitter mode and have not logged in for{" "}
+                {INACTIVE_DAYS}+ days. Their sitter mode will be switched off.
               </p>
             </div>
             <div>
               <strong>{HIDDEN_DAYS}-day map rule</strong>
               <p>
-                {forecast.inactive60Days.toLocaleString()} finished, non-hidden
-                providers will fail the activity rule, including{" "}
+                {forecast.inactive60Days.toLocaleString()} finished providers
+                will fail the activity rule, including{" "}
                 {forecast.inactive60DaysInSitterMode.toLocaleString()} whose
                 sitter mode is still on. When last login is missing, account
                 creation time is used.
