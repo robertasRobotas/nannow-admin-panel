@@ -8,14 +8,29 @@ const PAGE_SIZE = 250;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const INACTIVE_DAYS = 5;
 const HIDDEN_DAYS = 60;
+const MAP_RADIUS_KM = 100000;
+const VILNIUS_LATITUDE = 54.6872;
+const VILNIUS_LONGITUDE = 25.2797;
 
 type NannyForecastItem = {
   id: string;
   userId: string;
   isOnboardingFinished?: boolean;
   isAvailableStatus?: boolean;
+  stripeAccountId?: string | null;
+  isStripeOnboardingFinished?: boolean | null;
+  kycStatus?: string | null;
+  bankOnboardingStatus?: string | null;
+  isBankKycFinished?: boolean | null;
+  isStripePayoutsEnabled?: boolean | null;
+  isStripeChargesEnabled?: boolean | null;
   lastLoginAt?: string | null;
   createdAt?: string | null;
+};
+
+type MapProvider = {
+  id: string;
+  userId: string;
 };
 
 type ProviderPage = {
@@ -24,6 +39,42 @@ type ProviderPage = {
   startIndex?: number;
   pageSize?: number;
   hasMore?: boolean;
+};
+
+type StatusRow = {
+  label: string;
+  value: number;
+};
+
+type StatusGroup = {
+  label: string;
+  rows: StatusRow[];
+};
+
+const normalizeStatus = (value?: string | null) => {
+  const normalized = value?.trim().toUpperCase();
+  return normalized || "UNKNOWN";
+};
+
+const formatStatusLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/^\w/, (letter) => letter.toUpperCase());
+
+const buildStatusRows = (values: string[], expectedStatuses: string[]) => {
+  const counts = new Map<string, number>(
+    expectedStatuses.map((status) => [status, 0]),
+  );
+
+  values.forEach((value) => {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  });
+
+  return Array.from(counts.entries()).map(([status, value]) => ({
+    label: formatStatusLabel(status),
+    value,
+  }));
 };
 
 const parseDate = (value?: string | null) => {
@@ -50,6 +101,7 @@ const passesActivityRule = (nanny: NannyForecastItem, activityCutoff: Date) => {
 
 const NannyForecast = () => {
   const [nannies, setNannies] = useState<NannyForecastItem[]>([]);
+  const [mapProviders, setMapProviders] = useState<MapProvider[]>([]);
   const [reportedTotal, setReportedTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,6 +112,9 @@ const NannyForecast = () => {
     setError("");
 
     try {
+      const mapProvidersRequest = getAllUsers(
+        `providers/find-providers-by-radius/public?radiusKm=${MAP_RADIUS_KM}&latitude=${VILNIUS_LATITUDE}&longitude=${VILNIUS_LONGITUDE}`,
+      );
       const byId = new Map<string, NannyForecastItem>();
       let startIndex = 0;
       let total = 0;
@@ -84,7 +139,18 @@ const NannyForecast = () => {
         if (!hasMore || items.length === 0) break;
       }
 
+      const mapResponse = await mapProvidersRequest;
+      const returnedMapProviders = Array.isArray(mapResponse.data)
+        ? (mapResponse.data as MapProvider[])
+        : [];
+      const uniqueMapProviders = new Map<string, MapProvider>();
+      returnedMapProviders.forEach((provider) => {
+        const key = provider.id || provider.userId;
+        if (key) uniqueMapProviders.set(key, provider);
+      });
+
       setNannies(Array.from(byId.values()));
+      setMapProviders(Array.from(uniqueMapProviders.values()));
       setReportedTotal(total);
       setRefreshedAt(new Date());
     } catch (loadError) {
@@ -122,6 +188,99 @@ const NannyForecast = () => {
     const unknownActivity = finished.filter(
       (nanny) => getEffectiveActivityDate(nanny) === null,
     );
+    const detailsByProviderId = new Map<string, NannyForecastItem>();
+    nannies.forEach((nanny) => {
+      if (nanny.id) detailsByProviderId.set(nanny.id, nanny);
+      if (nanny.userId) detailsByProviderId.set(nanny.userId, nanny);
+    });
+    const mapProviderDetails = mapProviders
+      .map(
+        (provider) =>
+          detailsByProviderId.get(provider.id) ??
+          detailsByProviderId.get(provider.userId),
+      )
+      .filter((provider): provider is NannyForecastItem => Boolean(provider));
+    const stripeStatusGroups: StatusGroup[] = [
+      {
+        label: "Stripe account",
+        rows: buildStatusRows(
+          mapProviderDetails.map((provider) =>
+            provider.stripeAccountId?.trim() ? "PRESENT" : "MISSING",
+          ),
+          ["PRESENT", "MISSING"],
+        ),
+      },
+      {
+        label: "Stripe onboarding",
+        rows: buildStatusRows(
+          mapProviderDetails.map((provider) =>
+            provider.isStripeOnboardingFinished === true
+              ? "FINISHED"
+              : provider.isStripeOnboardingFinished === false
+                ? "NOT_FINISHED"
+                : "UNKNOWN",
+          ),
+          ["FINISHED", "NOT_FINISHED", "UNKNOWN"],
+        ),
+      },
+      {
+        label: "KYC status",
+        rows: buildStatusRows(
+          mapProviderDetails.map((provider) =>
+            normalizeStatus(provider.kycStatus),
+          ),
+          ["VERIFIED", "PENDING", "REJECTED", "NOT_SUBMITTED", "UNKNOWN"],
+        ),
+      },
+      {
+        label: "Bank onboarding",
+        rows: buildStatusRows(
+          mapProviderDetails.map((provider) =>
+            normalizeStatus(provider.bankOnboardingStatus),
+          ),
+          ["APPROVED", "PENDING", "REJECTED", "NOT_STARTED", "UNKNOWN"],
+        ),
+      },
+      {
+        label: "Bank KYC",
+        rows: buildStatusRows(
+          mapProviderDetails.map((provider) =>
+            provider.isBankKycFinished === true
+              ? "FINISHED"
+              : provider.isBankKycFinished === false
+                ? "NOT_FINISHED"
+                : "UNKNOWN",
+          ),
+          ["FINISHED", "NOT_FINISHED", "UNKNOWN"],
+        ),
+      },
+      {
+        label: "Stripe payouts",
+        rows: buildStatusRows(
+          mapProviderDetails.map((provider) =>
+            provider.isStripePayoutsEnabled === true
+              ? "ENABLED"
+              : provider.isStripePayoutsEnabled === false
+                ? "DISABLED"
+                : "UNKNOWN",
+          ),
+          ["ENABLED", "DISABLED", "UNKNOWN"],
+        ),
+      },
+      {
+        label: "Stripe charges",
+        rows: buildStatusRows(
+          mapProviderDetails.map((provider) =>
+            provider.isStripeChargesEnabled === true
+              ? "ENABLED"
+              : provider.isStripeChargesEnabled === false
+                ? "DISABLED"
+                : "UNKNOWN",
+          ),
+          ["ENABLED", "DISABLED", "UNKNOWN"],
+        ),
+      },
+    ];
 
     return {
       total: nannies.length,
@@ -131,8 +290,12 @@ const NannyForecast = () => {
       remainingAfter60Days: finished.length - inactive60Days.length,
       sitterModeAutoOff: sitterModeAutoOff.length,
       unknownActivity: unknownActivity.length,
+      mapProviderCount: mapProviders.length,
+      mapProvidersMissingDetails:
+        mapProviders.length - mapProviderDetails.length,
+      stripeStatusGroups,
     };
-  }, [nannies]);
+  }, [mapProviders, nannies]);
 
   const cards = [
     {
@@ -243,6 +406,35 @@ const NannyForecast = () => {
                   : ""}
               </p>
             </div>
+          </div>
+
+          <div className={styles.sectionHeading}>
+            <h2 className={styles.sectionTitle}>
+              Providers on map by Stripe status
+            </h2>
+            <p className={styles.sectionDescription}>
+              Based on {forecast.mapProviderCount.toLocaleString()} providers
+              returned by the app&apos;s unlimited-radius map endpoint.
+              {forecast.mapProvidersMissingDetails > 0
+                ? ` ${forecast.mapProvidersMissingDetails.toLocaleString()} could not be matched to admin provider records.`
+                : ""}
+            </p>
+          </div>
+
+          <div className={styles.grid}>
+            {forecast.stripeStatusGroups.map((group) => (
+              <article className={styles.card} key={group.label}>
+                <p className={styles.cardLabel}>{group.label}</p>
+                <div className={styles.statusRows}>
+                  {group.rows.map((row) => (
+                    <div className={styles.statusRow} key={row.label}>
+                      <span>{row.label}</span>
+                      <strong>{row.value.toLocaleString()}</strong>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
           </div>
         </>
       )}
