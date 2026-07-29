@@ -30,6 +30,9 @@ type NannyForecastSnapshot = {
   stripeStatusGroups: StatusGroup[];
 };
 
+const formatSnapshotCount = (value?: number) =>
+  typeof value === "number" ? value.toLocaleString() : "—";
+
 const NannyForecast = () => {
   const [snapshot, setSnapshot] = useState<NannyForecastSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,20 +81,20 @@ const NannyForecast = () => {
           label: "Finished onboarding, not self-hidden, inactive 60+ days",
           value: snapshot.inactive60DaysProviders,
           detail: "Will be hidden by the 60-day map activity rule",
-          secondaryDetail: `Active in the last 60 days: ${snapshot.active60DaysProviders.toLocaleString()}`,
+          secondaryDetail: `Active in the last 60 days: ${formatSnapshotCount(snapshot.active60DaysProviders)}`,
         },
         {
           label:
             "Finished onboarding, not self-hidden, inactive 60+ days, in sitter mode",
           value: snapshot.inactive60DaysInSitterModeProviders,
           detail: "Subset whose sitter mode is still on",
-          secondaryDetail: `Active in the last 60 days, in sitter mode: ${snapshot.active60DaysInSitterModeProviders.toLocaleString()}`,
+          secondaryDetail: `Active in the last 60 days, in sitter mode: ${formatSnapshotCount(snapshot.active60DaysInSitterModeProviders)}`,
         },
         {
           label: "Not active — no app use for 5+ days",
           value: snapshot.inactive5DaysInSitterModeProviders,
           detail: "In sitter mode and will be switched off by the 5-day rule",
-          secondaryDetail: `Used the app in the last 5 days: ${snapshot.active5DaysInSitterModeProviders.toLocaleString()}`,
+          secondaryDetail: `Used the app in the last 5 days: ${formatSnapshotCount(snapshot.active5DaysInSitterModeProviders)}`,
         },
         {
           label: "Final on map",
