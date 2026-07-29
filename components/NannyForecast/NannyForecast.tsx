@@ -206,16 +206,6 @@ const NannyForecast = () => {
       detail: "Includes every completed nanny profile",
     },
     {
-      label: "Current providers on map",
-      value: forecast.currentMapProviders,
-      detail: `Returned by the app map endpoint with a ${MAP_RADIUS_KM.toLocaleString()} km radius`,
-    },
-    {
-      label: `Final providers on map`,
-      value: forecast.finalMapProviders,
-      detail: `${forecast.mapProvidersHidden.toLocaleString()} will be hidden by the ${HIDDEN_DAYS}-day rule`,
-    },
-    {
       label: "In sitter mode",
       value: forecast.sitterMode,
       detail: `Finished onboarding and used the app within ${HIDDEN_DAYS} days`,
@@ -234,6 +224,16 @@ const NannyForecast = () => {
       label: `Sitter mode auto-off forecast`,
       value: forecast.pendingSitterModeOff,
       detail: `Currently in sitter mode with no login for ${INACTIVE_DAYS}+ days`,
+    },
+    {
+      label: "Current providers on map",
+      value: forecast.currentMapProviders,
+      detail: `Returned by the app map endpoint with a ${MAP_RADIUS_KM.toLocaleString()} km radius`,
+    },
+    {
+      label: `Final providers on map`,
+      value: forecast.finalMapProviders,
+      detail: `${forecast.mapProvidersHidden.toLocaleString()} will be hidden by the ${HIDDEN_DAYS}-day rule`,
     },
   ];
 
