@@ -46,10 +46,7 @@ const getEffectiveActivityDate = (nanny: NannyForecastItem) =>
 const isOlderThan = (date: Date | null, cutoff: Date) =>
   date !== null && date.getTime() < cutoff.getTime();
 
-const passesActivityRule = (
-  nanny: NannyForecastItem,
-  activityCutoff: Date,
-) => {
+const passesActivityRule = (nanny: NannyForecastItem, activityCutoff: Date) => {
   const lastLoginAt = parseDate(nanny.lastLoginAt);
   if (lastLoginAt) {
     return lastLoginAt.getTime() >= activityCutoff.getTime();
@@ -94,9 +91,7 @@ const NannyForecast = () => {
         total = Number(page.total ?? total) || 0;
         startIndex += items.length;
         const hasMore =
-          typeof page.hasMore === "boolean"
-            ? page.hasMore
-            : startIndex < total;
+          typeof page.hasMore === "boolean" ? page.hasMore : startIndex < total;
 
         if (!hasMore || items.length === 0) break;
       }
@@ -139,28 +134,35 @@ const NannyForecast = () => {
     const hidden = nannies.filter(
       (nanny) => !passesActivityRule(nanny, hiddenCutoff),
     );
-    const finishedHidden = finished.filter((nanny) =>
-      !passesActivityRule(nanny, hiddenCutoff),
+    const finishedHidden = finished.filter(
+      (nanny) => !passesActivityRule(nanny, hiddenCutoff),
     );
-    const finishedVisible = finished.filter(
-      (nanny) => passesActivityRule(nanny, hiddenCutoff),
+    const finishedVisible = finished.filter((nanny) =>
+      passesActivityRule(nanny, hiddenCutoff),
     );
     const activityByProviderId = new Map<string, NannyForecastItem>();
     nannies.forEach((nanny) => {
       if (nanny.id) activityByProviderId.set(nanny.id, nanny);
       if (nanny.userId) activityByProviderId.set(nanny.userId, nanny);
     });
+    const getMapProviderNanny = (provider: MapProvider) =>
+      activityByProviderId.get(provider.id) ??
+      activityByProviderId.get(provider.userId);
     const finalMapProviders = mapProviders.filter((provider) => {
-      const nanny =
-        activityByProviderId.get(provider.id) ??
-        activityByProviderId.get(provider.userId);
+      const nanny = getMapProviderNanny(provider);
       return nanny ? passesActivityRule(nanny, hiddenCutoff) : false;
     });
     const mapProvidersMissingActivity = mapProviders.filter(
-      (provider) =>
-        !activityByProviderId.has(provider.id) &&
-        !activityByProviderId.has(provider.userId),
+      (provider) => !getMapProviderNanny(provider),
     );
+    const currentMapFinished = mapProviders.filter(
+      (provider) =>
+        getMapProviderNanny(provider)?.isOnboardingFinished === true,
+    ).length;
+    const finalMapFinished = finalMapProviders.filter(
+      (provider) =>
+        getMapProviderNanny(provider)?.isOnboardingFinished === true,
+    ).length;
     const unknownActivity = nannies.filter(
       (nanny) => getEffectiveActivityDate(nanny) === null,
     );
@@ -183,7 +185,14 @@ const NannyForecast = () => {
       hidden: hidden.length,
       finishedHidden: finishedHidden.length,
       currentMapProviders: mapProviders.length,
+      currentMapFinished,
+      currentMapWithWarning:
+        mapProviders.length -
+        currentMapFinished -
+        mapProvidersMissingActivity.length,
       finalMapProviders: finalMapProviders.length,
+      finalMapFinished,
+      finalMapWithWarning: finalMapProviders.length - finalMapFinished,
       mapProvidersHidden:
         mapProviders.length -
         finalMapProviders.length -
@@ -201,9 +210,9 @@ const NannyForecast = () => {
       detail: `${forecast.unfinished.toLocaleString()} with unfinished onboarding`,
     },
     {
-      label: "Finished onboarding",
+      label: "Fully finished onboarding",
       value: forecast.finished,
-      detail: "Includes every completed nanny profile",
+      detail: "Across all nanny accounts, not only providers on the map",
     },
     {
       label: "In sitter mode",
@@ -228,12 +237,12 @@ const NannyForecast = () => {
     {
       label: "Current providers on map",
       value: forecast.currentMapProviders,
-      detail: `Returned by the app map endpoint with a ${MAP_RADIUS_KM.toLocaleString()} km radius`,
+      detail: `${forecast.currentMapFinished.toLocaleString()} fully onboarded; ${forecast.currentMapWithWarning.toLocaleString()} shown with onboarding warning`,
     },
     {
       label: `Final providers on map`,
       value: forecast.finalMapProviders,
-      detail: `${forecast.mapProvidersHidden.toLocaleString()} will be hidden by the ${HIDDEN_DAYS}-day rule`,
+      detail: `${forecast.finalMapFinished.toLocaleString()} fully onboarded; ${forecast.finalMapWithWarning.toLocaleString()} shown with onboarding warning`,
     },
   ];
 
@@ -299,8 +308,8 @@ const NannyForecast = () => {
             <div>
               <strong>How map quantities are calculated</strong>
               <p>
-                Current providers are returned by the public map endpoint
-                using Vilnius as the center and the app&apos;s{" "}
+                Current providers are returned by the public map endpoint using
+                Vilnius as the center and the app&apos;s{" "}
                 {MAP_RADIUS_KM.toLocaleString()} km unlimited radius. Final
                 providers are that same list after the {HIDDEN_DAYS}-day
                 activity rule. Personal client filters can reduce a signed-in
