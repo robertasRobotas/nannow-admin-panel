@@ -22,6 +22,9 @@ type NannyForecastSnapshot = {
   inactive60DaysProviders: number;
   inactive60DaysInSitterModeProviders: number;
   inactive5DaysInSitterModeProviders: number;
+  active60DaysProviders: number;
+  active60DaysInSitterModeProviders: number;
+  active5DaysInSitterModeProviders: number;
   finalOnMapProviders: number;
   mapProviderCount: number;
   stripeStatusGroups: StatusGroup[];
@@ -75,17 +78,20 @@ const NannyForecast = () => {
           label: "Finished onboarding, not self-hidden, inactive 60+ days",
           value: snapshot.inactive60DaysProviders,
           detail: "Will be hidden by the 60-day map activity rule",
+          secondaryDetail: `Active in the last 60 days: ${snapshot.active60DaysProviders.toLocaleString()}`,
         },
         {
           label:
             "Finished onboarding, not self-hidden, inactive 60+ days, in sitter mode",
           value: snapshot.inactive60DaysInSitterModeProviders,
           detail: "Subset whose sitter mode is still on",
+          secondaryDetail: `Active in the last 60 days, in sitter mode: ${snapshot.active60DaysInSitterModeProviders.toLocaleString()}`,
         },
         {
           label: "Not active — no app use for 5+ days",
           value: snapshot.inactive5DaysInSitterModeProviders,
           detail: "In sitter mode and will be switched off by the 5-day rule",
+          secondaryDetail: `Used the app in the last 5 days: ${snapshot.active5DaysInSitterModeProviders.toLocaleString()}`,
         },
         {
           label: "Final on map",
@@ -148,6 +154,11 @@ const NannyForecast = () => {
                     {card.value.toLocaleString()}
                   </strong>
                   <p className={styles.cardDetail}>{card.detail}</p>
+                  {card.secondaryDetail && (
+                    <p className={styles.cardSecondaryDetail}>
+                      {card.secondaryDetail}
+                    </p>
+                  )}
                 </article>
               ))
             )}

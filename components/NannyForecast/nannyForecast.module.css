@@ -89,6 +89,14 @@
   line-height: 1.5;
 }
 
+.cardSecondaryDetail {
+  margin: 6px 0 0;
+  color: #4d5a73;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .sectionHeading {
   margin: 34px 0 14px;
 }
