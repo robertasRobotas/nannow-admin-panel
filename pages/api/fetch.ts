@@ -2469,10 +2469,17 @@ export const getOrderById = async (id: string) => {
   return response;
 };
 
-export const getClosedOrders = async (startIndex = 0) => {
+export const getClosedOrders = async (
+  startIndex = 0,
+  filters?: { clientId?: string; approvedProviderId?: string },
+) => {
   const jwt = Cookies.get("@user_jwt");
+  const params = new URLSearchParams({ startIndex: String(startIndex) });
+  if (filters && Object.keys(filters).length > 0) {
+    params.set("filters", JSON.stringify(filters));
+  }
   const response = await axios.get(
-    `${BASE_URL}/admin/orders/closed?startIndex=${startIndex}`,
+    `${BASE_URL}/admin/orders/closed?${params.toString()}`,
     {
       headers: {
         Authorization: jwt,

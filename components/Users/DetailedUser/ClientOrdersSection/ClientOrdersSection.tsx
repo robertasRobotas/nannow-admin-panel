@@ -4,7 +4,7 @@ import Button from "@/components/Button/Button";
 import { useMediaQuery } from "react-responsive";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserDetails } from "@/types/Client";
-import { getOrders } from "@/pages/api/fetch";
+import { getClosedOrders, getOrders } from "@/pages/api/fetch";
 import axios from "axios";
 import { useRouter } from "next/router";
 import { OrderType } from "@/types/Order";
@@ -29,6 +29,7 @@ const ClientOrdersSection = ({ user, onBackClick }: ClientOrdersSectionProps) =>
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderType[]>([]);
+  const [closedOrders, setClosedOrders] = useState<OrderType[]>([]);
 
   const clientId = user?.client?.id;
   const clientUserId = user?.user?.id;
@@ -117,6 +118,32 @@ const ClientOrdersSection = ({ user, onBackClick }: ClientOrdersSectionProps) =>
     fetchClientOrders();
   }, [fetchClientOrders]);
 
+  const fetchClosedClientOrders = useCallback(async () => {
+    try {
+      const collected: OrderType[] = [];
+      let startIndex = 0;
+      let total = Infinity;
+      let pageSize = 50;
+      while (collected.length < Math.min(total, MAX_SCAN)) {
+        const response = await getClosedOrders(startIndex, { clientId });
+        const result = response.data.result;
+        const items: OrderType[] = result.items ?? [];
+        pageSize = result.pageSize ?? items.length ?? 50;
+        total = result.total ?? total;
+        collected.push(...items.filter(orderMatchesClient));
+        if (items.length === 0) break;
+        startIndex += pageSize;
+      }
+      setClosedOrders(collected);
+    } catch (err) {
+      console.log(err);
+    }
+  }, [clientId, orderMatchesClient]);
+
+  useEffect(() => {
+    fetchClosedClientOrders();
+  }, [fetchClosedClientOrders]);
+
   const filteredOrders = useMemo(() => {
     return orders.filter(orderMatchesClient);
   }, [orders, orderMatchesClient]);
@@ -154,7 +181,7 @@ const ClientOrdersSection = ({ user, onBackClick }: ClientOrdersSectionProps) =>
 
       {loading && <div className={styles.empty}>Loading...</div>}
       {error && <div className={styles.empty}>{error}</div>}
-      {!loading && !error && filteredOrders.length === 0 && (
+      {!loading && !error && filteredOrders.length === 0 && closedOrders.length === 0 && (
         <div className={styles.empty}>No orders for this user</div>
       )}
 
@@ -210,6 +237,56 @@ const ClientOrdersSection = ({ user, onBackClick }: ClientOrdersSectionProps) =>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && !error && closedOrders.length > 0 && (
+        <div className={styles.groups}>
+          <div className={styles.group}>
+            <div className={styles.groupHeader}>
+              <span className={`${styles.groupTitle} ${nunito.className}`}>
+                Closed by Admin
+              </span>
+              <span className={styles.groupBadge}>{closedOrders.length}</span>
+            </div>
+            <div className={styles.groupContent}>
+              {closedOrders.map((u) => {
+                const requiredDirectProvider =
+                  u.isDirectOrderToProvider &&
+                  !!u.requiredProvider &&
+                  !u.approvedProvider &&
+                  !u.approvedProviderId
+                    ? u.requiredProvider
+                    : null;
+                const displayProvider = u.approvedProvider ?? requiredDirectProvider;
+                const providerUser = displayProvider?.user;
+                const clientUser = u.clientUser;
+                return (
+                  <Order
+                    key={u.id}
+                    providerImgUrl={getUserImage(providerUser?.imgUrl)}
+                    clientImgUrl={getUserImage(clientUser?.imgUrl)}
+                    id={u.id}
+                    createdAt={u.createdAt}
+                    updatedAt={u.updatedAt}
+                    startsAt={u.startsAt}
+                    endsAt={u.endsAt}
+                    totalPrice={u.totalPrice}
+                    isDirectOrderToProvider={u.isDirectOrderToProvider}
+                    providerName={getProviderName(
+                      getUserName(providerUser?.firstName, providerUser?.lastName),
+                      !!displayProvider,
+                    )}
+                    clientName={`${getUserName(
+                      clientUser?.firstName,
+                      clientUser?.lastName,
+                    )} (Client)`}
+                    status={u.status}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
