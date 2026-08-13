@@ -206,7 +206,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
 
   const openRecipientCorrection = (giftCard: GiftCardRow) => {
     setGiftCardToCorrect(giftCard);
-    setCorrectedRecipientEmail(giftCard.recipientEmail ?? "");
+    setCorrectedRecipientEmail("");
     setError("");
   };
 
@@ -269,7 +269,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
       setGiftCardToRefund(null);
       setNotice(
         response.data?.action === "AUTHORIZATION_RELEASED"
-          ? "Authorization released. The customer was not charged."
+          ? "Payment hold canceled. The customer was not charged."
           : "Captured gift-card payment refunded.",
       );
       await fetchRows();
@@ -380,7 +380,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                       disabled={status !== "ACTIVE"}
                       onClick={() => openRecipientCorrection(g)}
                     >
-                      Fix recipient
+                      Change recipient
                     </button>
                     {g.isRefundable && (
                       <button
@@ -392,7 +392,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                         }}
                       >
                         {g.refundAction === "RELEASE_AUTHORIZATION"
-                          ? "Release"
+                          ? "Cancel hold"
                           : "Refund"}
                       </button>
                     )}
@@ -429,10 +429,10 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
       {giftCardToCorrect && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
-            <h3>Correct gift-card recipient</h3>
+            <h3>Change gift-card recipient</h3>
             <p>
-              Correct the recipient for {giftCardToCorrect.code}. The old code
-              will be invalidated and replaced.
+              Use this only when the recipient email was entered incorrectly.
+              Enter the replacement email for {giftCardToCorrect.code}.
             </p>
             <label className={styles.modalField}>
               <span>Current recipient</span>
@@ -443,6 +443,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
               <input
                 type="email"
                 value={correctedRecipientEmail}
+                placeholder="Enter the new recipient email"
                 onChange={(event) =>
                   setCorrectedRecipientEmail(event.target.value)
                 }
@@ -474,7 +475,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                 disabled={isCorrectingRecipient}
                 onClick={applyRecipientCorrection}
               >
-                {isCorrectingRecipient ? "Applying..." : "Apply fix"}
+                {isCorrectingRecipient ? "Applying..." : "Apply change"}
               </button>
             </div>
           </div>
@@ -486,7 +487,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
           <div className={styles.modalCard}>
             <h3>
               {giftCardToRefund.refundAction === "RELEASE_AUTHORIZATION"
-                ? "Release gift-card authorization?"
+                ? "Cancel reserved payment?"
                 : "Refund gift card?"}
             </h3>
             <p>
@@ -496,7 +497,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
             </p>
             <p className={styles.modalWarning}>
               {giftCardToRefund.refundAction === "RELEASE_AUTHORIZATION"
-                ? "The payment is only reserved. Releasing it means the customer will not be charged."
+                ? "The payment is only reserved. This cancels the hold—no money will be captured and the customer will not be charged."
                 : "The payment was captured. This will create a Stripe refund to the original payment method."}
             </p>
             {error && <div className={styles.modalError}>{error}</div>}
@@ -521,7 +522,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                 {isRefundingGiftCard
                   ? "Processing..."
                   : giftCardToRefund.refundAction === "RELEASE_AUTHORIZATION"
-                    ? "Release authorization"
+                    ? "Cancel payment hold"
                     : "Refund payment"}
               </button>
             </div>

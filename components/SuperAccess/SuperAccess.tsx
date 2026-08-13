@@ -2816,7 +2816,7 @@ const SuperAccess = () => {
       setIsGiftCardRefundModalOpen(false);
       setNotice(
         response.data?.action === "AUTHORIZATION_RELEASED"
-          ? "Gift-card authorization released. The customer was not charged."
+          ? "Gift-card payment hold canceled. The customer was not charged."
           : "Captured gift-card payment refunded through Stripe.",
       );
     } catch (err) {
@@ -4390,7 +4390,7 @@ const SuperAccess = () => {
                       ? "Processing..."
                       : selectedGiftCardRefundAction ===
                           "RELEASE_AUTHORIZATION"
-                        ? "Release authorization"
+                        ? "Cancel payment hold"
                         : "Refund gift card"
                   }
                   type="OUTLINED"
@@ -4416,7 +4416,7 @@ const SuperAccess = () => {
                       : entity === "gift-cards"
                         ? isCorrectingGiftCardRecipient
                           ? "Applying..."
-                          : "Apply recipient fix"
+                          : "Change recipient"
                         : entity === "financial-ledger" ||
                             entity === "chats" ||
                             entity === "schedule"
@@ -5602,7 +5602,7 @@ const SuperAccess = () => {
           <div className={styles.modalCard}>
             <h3 className={styles.modalTitle}>
               {selectedGiftCardRefundAction === "RELEASE_AUTHORIZATION"
-                ? "Release gift-card authorization?"
+                ? "Cancel reserved payment?"
                 : "Refund gift card?"}
             </h3>
             <p className={styles.modalText}>
@@ -5612,7 +5612,7 @@ const SuperAccess = () => {
             </p>
             <p className={styles.modalText}>
               {selectedGiftCardRefundAction === "RELEASE_AUTHORIZATION"
-                ? "The payment is only reserved. Releasing it means the customer will not be charged."
+                ? "The payment is only reserved. This cancels the hold—no money will be captured and the customer will not be charged."
                 : "The payment was captured. This creates a Stripe refund to the original payment method."}
             </p>
             {error && <div className={styles.modalError}>{error}</div>}
@@ -5632,7 +5632,7 @@ const SuperAccess = () => {
                     ? "Processing..."
                     : selectedGiftCardRefundAction ===
                         "RELEASE_AUTHORIZATION"
-                      ? "Release authorization"
+                      ? "Cancel payment hold"
                       : "Refund payment"
                 }
                 type="BLACK"
@@ -5649,7 +5649,7 @@ const SuperAccess = () => {
       {isGiftCardRecipientCorrectionModalOpen && selectedItem && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
-            <h3 className={styles.modalTitle}>Apply recipient correction?</h3>
+            <h3 className={styles.modalTitle}>Change gift-card recipient?</h3>
             <p className={styles.modalText}>
               Confirm the corrected email for gift card{" "}
               {String(selectedItem.code ?? selectedId)}.
@@ -5683,7 +5683,9 @@ const SuperAccess = () => {
               />
               <Button
                 title={
-                  isCorrectingGiftCardRecipient ? "Applying..." : "Apply fix"
+                  isCorrectingGiftCardRecipient
+                    ? "Applying..."
+                    : "Apply change"
                 }
                 type="BLACK"
                 onClick={correctGiftCardRecipient}
