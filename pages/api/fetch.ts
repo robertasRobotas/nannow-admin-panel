@@ -3120,6 +3120,45 @@ export const getAdminGiftCards = async (params?: {
   return response;
 };
 
+export type GiftCardMigrationStats = {
+  scanned: number;
+  assigned: number;
+  alreadyAssigned: number;
+  emailsNormalized: number;
+  senderEmailsRecovered: number;
+  purchaseEventsCreated: number;
+  redemptionEventsCreated: number;
+  unmatchedRecipientEmails: number;
+  duplicateClientEmails: number;
+  missingRecipientEmails: number;
+  concurrentlyChanged: number;
+};
+
+export const previewGiftCardAssignmentMigration = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/gift-cards/assignment-migration`,
+    { mode: "DRY_RUN" },
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const runGiftCardAssignmentMigration = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/gift-cards/assignment-migration`,
+    { mode: "APPLY", confirm: true },
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getGiftCardAssignmentMigrationStatus = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/gift-cards/assignment-migration/status`, {
+    headers: { Authorization: jwt },
+  });
+};
+
 export const getUserCredits = async (
   userId: string,
   params?: CreditsListParams,

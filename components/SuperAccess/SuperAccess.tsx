@@ -43,6 +43,11 @@ import {
   getSuperAccessList,
   reconcileStripeKyc,
   getCurrentAdminProfileFromJwt,
+  getAdminGiftCards,
+  getGiftCardAssignmentMigrationStatus,
+  previewGiftCardAssignmentMigration,
+  runGiftCardAssignmentMigration,
+  type GiftCardMigrationStats,
   sendStripeKycUpdateEmail,
   normalizeAdminRoles,
   regenerateOrderSchedule,
@@ -196,7 +201,8 @@ type SuperAccessViewEntity =
   | "alerts"
   | "connected-admins"
   | "financial-ledger"
-  | "broadcast-sender";
+  | "broadcast-sender"
+  | "gift-cards";
 
 type SuperMenuItem = {
   title: string;
@@ -214,6 +220,7 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Chats", key: "chats" },
   { title: "Schedule", key: "schedule" },
   { title: "Financial ledger", key: "financial-ledger" },
+  { title: "Gift cards", key: "gift-cards" },
   { title: "Broadcast sender", key: "broadcast-sender" },
   { title: "WS connected Admins", key: "connected-admins" },
 ];
@@ -223,6 +230,15 @@ const PAGE_SIZE_OPTIONS = [
   { title: "50 / page", value: "50" },
   { title: "100 / page", value: "100" },
 ] as const;
+
+type GiftCardStatusFilter = "ALL" | "NOT_REDEEMED" | "REDEEMED" | "EXPIRED";
+
+type GiftCardMigrationRun = {
+  status: "RUNNING" | "COMPLETED" | "FAILED";
+  stats?: GiftCardMigrationStats;
+  error?: string | null;
+  completedAt?: string | null;
+};
 
 const ORDER_STATUSES = orderStatusOptions
   .map((item) => item.value)
@@ -919,6 +935,12 @@ const SuperAccess = () => {
   const [adminPassword, setAdminPassword] = useState("");
   const [removeAdminPassword, setRemoveAdminPassword] = useState(false);
   const [notice, setNotice] = useState("");
+  const [giftCardStatusFilter, setGiftCardStatusFilter] =
+    useState<GiftCardStatusFilter>("ALL");
+  const [giftCardMigrationRun, setGiftCardMigrationRun] =
+    useState<GiftCardMigrationRun | null>(null);
+  const [isRunningGiftCardMigration, setIsRunningGiftCardMigration] =
+    useState(false);
   const [newAdminFirstName, setNewAdminFirstName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
@@ -1052,7 +1074,7 @@ const SuperAccess = () => {
     setEntity(nextEntity);
     setIsCompactListView((currentCompactView) => {
       if (nextEntity !== entity) {
-        return nextEntity === "financial-ledger";
+        return nextEntity === "financial-ledger" || nextEntity === "gift-cards";
       }
       return currentCompactView;
     });
@@ -1119,6 +1141,44 @@ const SuperAccess = () => {
           return;
         }
         setError("Failed to load broadcast sender.");
+      } finally {
+        setLoadingList(false);
+      }
+      return;
+    }
+    if (entity === "gift-cards") {
+      try {
+        setLoadingList(true);
+        setError("");
+        const [cardsResponse, migrationResponse] = await Promise.all([
+          getAdminGiftCards({
+            filter:
+              giftCardStatusFilter === "ALL"
+                ? undefined
+                : giftCardStatusFilter,
+            startIndex,
+            pageSize,
+            q: appliedSearch.trim() || undefined,
+          }),
+          getGiftCardAssignmentMigrationStatus(),
+        ]);
+        const items = Array.isArray(cardsResponse.data?.items)
+          ? (cardsResponse.data.items as EntityRecord[])
+          : [];
+        setList(items);
+        setTotal(Number(cardsResponse.data?.total ?? 0));
+        setGiftCardMigrationRun(
+          (migrationResponse.data?.run as GiftCardMigrationRun | null) ?? null,
+        );
+        if (items.length > 0 && !selectedId) {
+          selectItem(pickId(items[0]), "replace");
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          router.push("/");
+          return;
+        }
+        setError("Failed to load gift cards.");
       } finally {
         setLoadingList(false);
       }
@@ -1215,6 +1275,7 @@ const SuperAccess = () => {
   }, [
     appliedSearch,
     entity,
+    giftCardStatusFilter,
     pageSize,
     router,
     selectItem,
@@ -1235,6 +1296,12 @@ const SuperAccess = () => {
       return;
     }
     if (entity === "financial-ledger") {
+      const listItem = list.find((item) => pickId(item) === selectedId) ?? null;
+      setSelectedItem(listItem);
+      setDraft(listItem ?? {});
+      return;
+    }
+    if (entity === "gift-cards") {
       const listItem = list.find((item) => pickId(item) === selectedId) ?? null;
       setSelectedItem(listItem);
       setDraft(listItem ?? {});
@@ -2579,6 +2646,58 @@ const SuperAccess = () => {
     );
   };
 
+  const handleRunGiftCardMigration = async () => {
+    if (isRunningGiftCardMigration || giftCardMigrationRun?.status === "COMPLETED") return;
+    try {
+      setIsRunningGiftCardMigration(true);
+      setError("");
+      setNotice("Checking existing gift cards…");
+      const previewResponse = await previewGiftCardAssignmentMigration();
+      const stats = previewResponse.data?.stats as GiftCardMigrationStats | undefined;
+      if (!stats) throw new Error("Migration preview did not return statistics.");
+
+      const confirmed = window.confirm(
+        [
+          `Scanned: ${stats.scanned}`,
+          `Cards to assign: ${stats.assigned}`,
+          `Unmatched recipient emails: ${stats.unmatchedRecipientEmails}`,
+          `Missing recipient emails: ${stats.missingRecipientEmails}`,
+          `Purchase events to create: ${stats.purchaseEventsCreated}`,
+          `Redemption events to create: ${stats.redemptionEventsCreated}`,
+          "",
+          "Run this migration? It can only complete once.",
+        ].join("\n"),
+      );
+      if (!confirmed) {
+        setNotice("Gift-card migration cancelled after dry run.");
+        return;
+      }
+
+      const response = await runGiftCardAssignmentMigration();
+      const run = (response.data?.run as GiftCardMigrationRun | undefined) ?? null;
+      setGiftCardMigrationRun(run);
+      setNotice(
+        run?.status === "COMPLETED"
+          ? `Gift-card migration completed. ${run.stats?.assigned ?? 0} cards assigned.`
+          : "Gift-card migration request finished.",
+      );
+      await fetchList();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as
+          | { error?: string; reason?: string; run?: GiftCardMigrationRun }
+          | undefined;
+        if (data?.run) setGiftCardMigrationRun(data.run);
+        setError(data?.error ?? data?.reason ?? "Failed to run gift-card migration.");
+      } else {
+        setError((err as Error).message || "Failed to run gift-card migration.");
+      }
+      setNotice("");
+    } finally {
+      setIsRunningGiftCardMigration(false);
+    }
+  };
+
   const invalidateEntityCaches = (targetEntity: SuperAccessEntity) => {
     if (targetEntity === "orders") {
       setOrdersById({});
@@ -2614,7 +2733,7 @@ const SuperAccess = () => {
   };
 
   const saveChanges = async () => {
-    if (entity === "alerts" || entity === "connected-admins") return;
+    if (entity === "alerts" || entity === "connected-admins" || entity === "gift-cards") return;
     if (!selectedId || isSaving) return;
     try {
       setIsSaving(true);
@@ -3133,7 +3252,9 @@ const SuperAccess = () => {
                 setStripeKycAuditFilterUserId("");
                 setIsChatNormalizationConfirmModalOpen(false);
                 setIsChatNormalizationProgressModalOpen(false);
-                setIsCompactListView(menuItem.key === "financial-ledger");
+                setIsCompactListView(
+                  menuItem.key === "financial-ledger" || menuItem.key === "gift-cards",
+                );
                 setStartIndex(0);
                 setSearchText("");
                 setAppliedSearch("");
@@ -3156,6 +3277,8 @@ const SuperAccess = () => {
                       ? "Order schedule"
                       : entity === "broadcast-sender"
                         ? "Broadcast sender"
+                        : entity === "gift-cards"
+                          ? "Gift cards"
                         : entity === "connected-admins"
                           ? "WS connected Admins"
                           : prettyTitle(entity)}
@@ -3167,6 +3290,12 @@ const SuperAccess = () => {
                     ? `${total} ledger orders, page ${currentPage}/${totalPages}`
                     : entity === "broadcast-sender"
                       ? "Manage the SYSTEM_NANNOW sender profile."
+                      : entity === "gift-cards"
+                        ? `${total} gift cards, page ${currentPage}/${totalPages}${
+                            giftCardMigrationRun?.status
+                              ? ` · migration ${giftCardMigrationRun.status.toLowerCase()}`
+                              : ""
+                          }`
                       : entity === "schedule"
                         ? "Order schedule rows and snapshots."
                         : entity === "connected-admins"
@@ -3180,6 +3309,44 @@ const SuperAccess = () => {
               entity !== "connected-admins" &&
               entity !== "broadcast-sender" && (
                 <div className={styles.listHeaderActions}>
+                  {entity === "gift-cards" && (
+                    <>
+                      <select
+                        aria-label="Gift-card status"
+                        className={styles.providerActionsSelect}
+                        value={giftCardStatusFilter}
+                        onChange={(event) => {
+                          setGiftCardStatusFilter(event.target.value as GiftCardStatusFilter);
+                          setStartIndex(0);
+                          setSelectedId("");
+                          setSelectedItem(null);
+                          updateSuperAccessQuery({ page: 1, id: "" });
+                        }}
+                      >
+                        <option value="ALL">All statuses</option>
+                        <option value="NOT_REDEEMED">Active</option>
+                        <option value="REDEEMED">Redeemed</option>
+                        <option value="EXPIRED">Expired</option>
+                      </select>
+                      <Button
+                        title={
+                          giftCardMigrationRun?.status === "COMPLETED"
+                            ? "Migration completed"
+                            : isRunningGiftCardMigration
+                              ? "Running migration…"
+                              : "Run migration"
+                        }
+                        type="BLACK"
+                        onClick={handleRunGiftCardMigration}
+                        isDisabled={
+                          isRunningGiftCardMigration ||
+                          giftCardMigrationRun?.status === "RUNNING" ||
+                          giftCardMigrationRun?.status === "COMPLETED"
+                        }
+                        isLoading={isRunningGiftCardMigration}
+                      />
+                    </>
+                  )}
                   {entity === "schedule" && (
                     <Button
                       title={
@@ -3193,7 +3360,7 @@ const SuperAccess = () => {
                       isLoading={isScheduleRegenerationRunning}
                     />
                   )}
-                  {entity !== "financial-ledger" && (
+                  {entity !== "financial-ledger" && entity !== "gift-cards" && (
                     <button
                       type="button"
                       className={styles.listViewSwitchButton}
@@ -3341,13 +3508,21 @@ const SuperAccess = () => {
                     </select>
                   )}
                   <SearchBar
-                    placeholder="Type to search"
+                    placeholder={entity === "gift-cards" ? "Search email" : "Type to search"}
                     searchText={searchText}
                     setSearchText={setSearchText}
                     onButtonClick={() => {
                       setStartIndex(0);
+                      if (entity === "gift-cards") {
+                        setSelectedId("");
+                        setSelectedItem(null);
+                      }
                       setAppliedSearch(searchText);
-                      updateSuperAccessQuery({ page: 1, q: searchText });
+                      updateSuperAccessQuery({
+                        page: 1,
+                        q: searchText,
+                        ...(entity === "gift-cards" ? { id: "" } : {}),
+                      });
                     }}
                   />
                 </div>
@@ -3703,6 +3878,7 @@ const SuperAccess = () => {
                     defaultUserImg.src,
                   );
                   const isFinancialLedgerItem = entity === "financial-ledger";
+                  const isGiftCardItem = entity === "gift-cards";
                   const financialLedgerOrder = item as FinancialOrderRow;
                   const financialProviderName = isFinancialLedgerItem
                     ? getUserName(
@@ -3731,7 +3907,32 @@ const SuperAccess = () => {
                       onClick={() => selectItem(id)}
                       onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
-                      {isFinancialLedgerItem ? (
+                      {isGiftCardItem ? (
+                        <div className={styles.giftCardRow}>
+                          <div className={styles.giftCardPrimary}>
+                            <span className={styles.giftCardCode}>
+                              {String(item.code ?? "-")}
+                            </span>
+                            <span className={styles.giftCardAmount}>
+                              €{(Number(item.amountCents ?? 0) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className={styles.giftCardMeta}>
+                            <span>
+                              {item.status === "REDEEMED"
+                                ? "REDEEMED"
+                                : item.expiresAt && new Date(String(item.expiresAt)).getTime() <= Date.now()
+                                  ? "EXPIRED"
+                                  : "ACTIVE"}
+                            </span>
+                            <span>{String(item.recipientEmail ?? "No recipient email")}</span>
+                          </div>
+                          <div className={styles.giftCardMeta}>
+                            <span>From: {String(item.senderName ?? item.senderEmail ?? "-")}</span>
+                            <span>Recipient: {String(item.recipientName ?? "-")}</span>
+                          </div>
+                        </div>
+                      ) : isFinancialLedgerItem ? (
                         <div className={styles.financialLedgerRow}>
                           <label
                             className={styles.financialLedgerCheckbox}
@@ -3918,6 +4119,8 @@ const SuperAccess = () => {
                 ? "Send message"
                 : entity === "broadcast-sender"
                   ? "Broadcast sender"
+                  : entity === "gift-cards"
+                    ? "Gift card detail"
                   : entity === "schedule"
                     ? "Schedule detail"
                     : entity === "connected-admins"
@@ -3984,7 +4187,8 @@ const SuperAccess = () => {
                         : "Save sender"
                       : entity === "financial-ledger" ||
                           entity === "chats" ||
-                          entity === "schedule"
+                          entity === "schedule" ||
+                          entity === "gift-cards"
                         ? "Read only"
                         : entity === "connected-admins"
                           ? "Read only"
@@ -4001,7 +4205,8 @@ const SuperAccess = () => {
                       ? loadingItem || isSaving
                       : entity === "financial-ledger" ||
                           entity === "chats" ||
-                          entity === "schedule"
+                          entity === "schedule" ||
+                          entity === "gift-cards"
                         ? true
                         : entity === "connected-admins"
                           ? true
@@ -4014,7 +4219,8 @@ const SuperAccess = () => {
                       entity !== "connected-admins" &&
                       entity !== "financial-ledger" &&
                       entity !== "chats" &&
-                      entity !== "schedule"
+                      entity !== "schedule" &&
+                      entity !== "gift-cards"
                 }
               />
             </div>
@@ -4133,7 +4339,8 @@ const SuperAccess = () => {
 
               {(entity === "financial-ledger" ||
                 entity === "chats" ||
-                entity === "schedule") &&
+                entity === "schedule" ||
+                entity === "gift-cards") &&
                 selectedId &&
                 !loadingItem &&
                 selectedItem && (
@@ -4202,7 +4409,8 @@ const SuperAccess = () => {
 
               {entity !== "financial-ledger" &&
                 entity !== "chats" &&
-                entity !== "schedule" && (
+                entity !== "schedule" &&
+                entity !== "gift-cards" && (
                   <>
                     {entity === "admins" && (
                       <div className={styles.adminCreateCard}>
