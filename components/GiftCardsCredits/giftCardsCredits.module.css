@@ -165,6 +165,16 @@
   color: #d58000;
 }
 
+.badge_REFUNDED {
+  background: rgba(225, 72, 95, 0.14);
+  color: #c92d45;
+}
+
+.badge_CANCELED {
+  background: rgba(213, 128, 0, 0.14);
+  color: #9a5c00;
+}
+
 .noticeText {
   color: #137a2d;
   font-size: 15px;
@@ -173,6 +183,7 @@
 }
 
 .fixButton,
+.refundButton,
 .cancelButton,
 .applyButton {
   border-radius: 10px;
@@ -186,6 +197,18 @@
   border: 1px solid #000;
   background: #fff;
   color: #000;
+}
+
+.refundButton {
+  border: 1px solid #c92d45;
+  background: #fff;
+  color: #c92d45;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .fixButton:disabled,

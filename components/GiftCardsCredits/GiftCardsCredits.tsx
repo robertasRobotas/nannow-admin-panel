@@ -6,6 +6,7 @@ import {
   correctAdminGiftCardRecipient,
   getAdminGiftCards,
   getCredits,
+  refundAdminGiftCard,
 } from "@/pages/api/fetch";
 import styles from "./giftCardsCredits.module.css";
 import paginateStyles from "@/styles/paginate.module.css";
@@ -13,14 +14,20 @@ import paginateStyles from "@/styles/paginate.module.css";
 const PAGE_SIZE = 20;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type TabKey = "ALL" | "NOT_REDEEMED" | "REDEEMED" | "EXPIRED" | "MANUAL";
+type TabKey =
+  | "ALL"
+  | "NOT_REDEEMED"
+  | "REDEEMED"
+  | "EXPIRED"
+  | "REFUNDED"
+  | "MANUAL";
 
 // Which data sets a tab needs: gift cards (with an optional status filter) and/or credits.
 const TABS: {
   key: TabKey;
   label: string;
   showGift: boolean;
-  giftFilter?: "REDEEMED" | "NOT_REDEEMED" | "EXPIRED";
+  giftFilter?: "REDEEMED" | "NOT_REDEEMED" | "EXPIRED" | "REFUNDED";
   showCredit: boolean;
 }[] = [
   { key: "ALL", label: "All", showGift: true, showCredit: true },
@@ -46,6 +53,13 @@ const TABS: {
     showCredit: false,
   },
   {
+    key: "REFUNDED",
+    label: "Refunded",
+    showGift: true,
+    giftFilter: "REFUNDED",
+    showCredit: false,
+  },
+  {
     key: "MANUAL",
     label: "Manually added credit",
     showGift: false,
@@ -64,6 +78,10 @@ type GiftCardRow = {
   expiresAt?: string | null;
   redeemedAt?: string | null;
   redeemedByUserId?: string | null;
+  paymentStatus?: string | null;
+  isRefundable?: boolean;
+  hasBeenTransferred?: boolean;
+  refundAction?: "RELEASE_AUTHORIZATION" | "REFUND_PAYMENT" | null;
   createdAt: string;
 };
 
@@ -109,6 +127,9 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
     useState<GiftCardRow | null>(null);
   const [correctedRecipientEmail, setCorrectedRecipientEmail] = useState("");
   const [isCorrectingRecipient, setIsCorrectingRecipient] = useState(false);
+  const [giftCardToRefund, setGiftCardToRefund] =
+    useState<GiftCardRow | null>(null);
+  const [isRefundingGiftCard, setIsRefundingGiftCard] = useState(false);
 
   const activeTab = useMemo(() => TABS.find((t) => t.key === tab)!, [tab]);
 
@@ -239,6 +260,32 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
     }
   };
 
+  const applyGiftCardRefund = async () => {
+    if (!giftCardToRefund || isRefundingGiftCard) return;
+    try {
+      setIsRefundingGiftCard(true);
+      setError("");
+      const response = await refundAdminGiftCard(giftCardToRefund.id);
+      setGiftCardToRefund(null);
+      setNotice(
+        response.data?.action === "AUTHORIZATION_RELEASED"
+          ? "Authorization released. The customer was not charged."
+          : "Captured gift-card payment refunded.",
+      );
+      await fetchRows();
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        setError(
+          axios.isAxiosError(err)
+            ? (err.response?.data?.error ?? "Failed to refund gift card.")
+            : "Failed to refund gift card.",
+        );
+      }
+    } finally {
+      setIsRefundingGiftCard(false);
+    }
+  };
+
   const giftPageCount = Math.max(1, Math.ceil(giftTotal / PAGE_SIZE));
   const creditPageCount = Math.max(1, Math.ceil(creditTotal / PAGE_SIZE));
   const isEmpty =
@@ -297,7 +344,12 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
               const expired =
                 !!g.expiresAt && new Date(g.expiresAt).getTime() <= Date.now();
               const status =
-                g.status === "REDEEMED"
+                g.status === "REFUNDED"
+                  ? "REFUNDED"
+                  : g.paymentStatus === "AUTHORIZATION_CANCELED" ||
+                      g.paymentStatus === "AUTHORIZATION_EXPIRED"
+                    ? "CANCELED"
+                  : g.status === "REDEEMED"
                   ? "REDEEMED"
                   : expired
                     ? "EXPIRED"
@@ -321,7 +373,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                   </div>
                   <div className={styles.muted}>{date(g.expiresAt)}</div>
                   <div className={styles.muted}>{date(g.createdAt)}</div>
-                  <div>
+                  <div className={styles.rowActions}>
                     <button
                       type="button"
                       className={styles.fixButton}
@@ -330,6 +382,20 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                     >
                       Fix recipient
                     </button>
+                    {g.isRefundable && (
+                      <button
+                        type="button"
+                        className={styles.refundButton}
+                        onClick={() => {
+                          setGiftCardToRefund(g);
+                          setError("");
+                        }}
+                      >
+                        {g.refundAction === "RELEASE_AUTHORIZATION"
+                          ? "Release"
+                          : "Refund"}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -409,6 +475,54 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                 onClick={applyRecipientCorrection}
               >
                 {isCorrectingRecipient ? "Applying..." : "Apply fix"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {giftCardToRefund && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3>
+              {giftCardToRefund.refundAction === "RELEASE_AUTHORIZATION"
+                ? "Release gift-card authorization?"
+                : "Refund gift card?"}
+            </h3>
+            <p>
+              Gift card <strong>{giftCardToRefund.code}</strong> for{" "}
+              <strong>{euro(giftCardToRefund.amountCents)}</strong> will be
+              permanently disabled.
+            </p>
+            <p className={styles.modalWarning}>
+              {giftCardToRefund.refundAction === "RELEASE_AUTHORIZATION"
+                ? "The payment is only reserved. Releasing it means the customer will not be charged."
+                : "The payment was captured. This will create a Stripe refund to the original payment method."}
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                disabled={isRefundingGiftCard}
+                onClick={() => {
+                  setGiftCardToRefund(null);
+                  setError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.applyButton}
+                disabled={isRefundingGiftCard}
+                onClick={applyGiftCardRefund}
+              >
+                {isRefundingGiftCard
+                  ? "Processing..."
+                  : giftCardToRefund.refundAction === "RELEASE_AUTHORIZATION"
+                    ? "Release authorization"
+                    : "Refund payment"}
               </button>
             </div>
           </div>

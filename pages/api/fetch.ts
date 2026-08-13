@@ -3179,7 +3179,7 @@ export const getCredits = async (params?: CreditsListParams) => {
 };
 
 export const getAdminGiftCards = async (params?: {
-  filter?: "REDEEMED" | "NOT_REDEEMED" | "EXPIRED";
+  filter?: "REDEEMED" | "NOT_REDEEMED" | "EXPIRED" | "REFUNDED";
   startIndex?: number;
   pageSize?: number;
   q?: string;
@@ -3207,6 +3207,15 @@ export const correctAdminGiftCardRecipient = async (
   return axios.patch(
     `${BASE_URL}/admin/gift-cards/${encodeURIComponent(giftCardId)}/recipient`,
     { recipientEmail },
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const refundAdminGiftCard = async (giftCardId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/gift-cards/${encodeURIComponent(giftCardId)}/refund`,
+    {},
     { headers: { Authorization: jwt } },
   );
 };
