@@ -338,19 +338,22 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
           {giftPageCount > 1 && (
             <ReactPaginate
               breakLabel="..."
-              nextLabel=">"
+              nextLabel=""
               onPageChange={(e) => setGiftOffset(e.selected * PAGE_SIZE)}
               pageRangeDisplayed={2}
               marginPagesDisplayed={1}
               pageCount={giftPageCount}
-              previousLabel="<"
+              previousLabel=""
               renderOnZeroPageCount={null}
-              containerClassName={paginateStyles.pagination}
+              containerClassName={paginateStyles.paginateWrapper}
+              pageClassName={paginateStyles.pageBtn}
               pageLinkClassName={paginateStyles.pageLink}
-              previousLinkClassName={paginateStyles.pageLink}
-              nextLinkClassName={paginateStyles.pageLink}
-              breakLinkClassName={paginateStyles.pageLink}
-              activeLinkClassName={paginateStyles.activePageLink}
+              activeClassName={paginateStyles.activePage}
+              nextClassName={paginateStyles.nextPageBtn}
+              nextLinkClassName={paginateStyles.nextLink}
+              previousClassName={paginateStyles.prevPageBtn}
+              previousLinkClassName={paginateStyles.prevLink}
+              breakClassName={paginateStyles.break}
               forcePage={Math.floor(giftOffset / PAGE_SIZE)}
             />
           )}
@@ -448,19 +451,22 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
           {creditPageCount > 1 && (
             <ReactPaginate
               breakLabel="..."
-              nextLabel=">"
+              nextLabel=""
               onPageChange={(e) => setCreditOffset(e.selected * PAGE_SIZE)}
               pageRangeDisplayed={2}
               marginPagesDisplayed={1}
               pageCount={creditPageCount}
-              previousLabel="<"
+              previousLabel=""
               renderOnZeroPageCount={null}
-              containerClassName={paginateStyles.pagination}
+              containerClassName={paginateStyles.paginateWrapper}
+              pageClassName={paginateStyles.pageBtn}
               pageLinkClassName={paginateStyles.pageLink}
-              previousLinkClassName={paginateStyles.pageLink}
-              nextLinkClassName={paginateStyles.pageLink}
-              breakLinkClassName={paginateStyles.pageLink}
-              activeLinkClassName={paginateStyles.activePageLink}
+              activeClassName={paginateStyles.activePage}
+              nextClassName={paginateStyles.nextPageBtn}
+              nextLinkClassName={paginateStyles.nextLink}
+              previousClassName={paginateStyles.prevPageBtn}
+              previousLinkClassName={paginateStyles.prevLink}
+              breakClassName={paginateStyles.break}
               forcePage={Math.floor(creditOffset / PAGE_SIZE)}
             />
           )}
