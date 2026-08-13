@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
+import { MoreHorizontal } from "lucide-react";
 import {
   correctAdminGiftCardRecipient,
   getAdminGiftCards,
@@ -106,6 +107,88 @@ const date = (v?: string | null) => {
   if (!v) return "-";
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("en-GB");
+};
+
+const GiftCardActionsMenu = ({
+  giftCard,
+  canChangeRecipient,
+  onChangeRecipient,
+  onRefund,
+}: {
+  giftCard: GiftCardRow;
+  canChangeRecipient: boolean;
+  onChangeRecipient: () => void;
+  onRefund: () => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const hasActions = canChangeRecipient || giftCard.isRefundable === true;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  const selectAction = (action: () => void) => {
+    setIsOpen(false);
+    action();
+  };
+
+  return (
+    <div className={styles.actionsMenu} ref={menuRef}>
+      <button
+        type="button"
+        className={styles.moreButton}
+        aria-label={`More actions for gift card ${giftCard.code}`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        disabled={!hasActions}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <MoreHorizontal aria-hidden="true" size={22} strokeWidth={2.2} />
+      </button>
+
+      {isOpen && (
+        <div className={styles.actionsDropdown} role="menu">
+          {canChangeRecipient && (
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.dropdownAction}
+              onClick={() => selectAction(onChangeRecipient)}
+            >
+              Change recipient
+            </button>
+          )}
+          {giftCard.isRefundable && (
+            <button
+              type="button"
+              role="menuitem"
+              className={`${styles.dropdownAction} ${styles.dropdownDangerAction}`}
+              onClick={() => selectAction(onRefund)}
+            >
+              {giftCard.refundAction === "RELEASE_AUTHORIZATION"
+                ? "Cancel payment hold"
+                : "Refund payment"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const GiftCardsCredits = ({ title }: { title: string }) => {
@@ -338,7 +421,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
               <div>Recipient</div>
               <div>Expires</div>
               <div>Created</div>
-              <div>Action</div>
+              <div>Actions</div>
             </div>
             {giftItems.map((g) => {
               const expired =
@@ -374,28 +457,15 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                   <div className={styles.muted}>{date(g.expiresAt)}</div>
                   <div className={styles.muted}>{date(g.createdAt)}</div>
                   <div className={styles.rowActions}>
-                    <button
-                      type="button"
-                      className={styles.fixButton}
-                      disabled={status !== "ACTIVE"}
-                      onClick={() => openRecipientCorrection(g)}
-                    >
-                      Change recipient
-                    </button>
-                    {g.isRefundable && (
-                      <button
-                        type="button"
-                        className={styles.refundButton}
-                        onClick={() => {
-                          setGiftCardToRefund(g);
-                          setError("");
-                        }}
-                      >
-                        {g.refundAction === "RELEASE_AUTHORIZATION"
-                          ? "Cancel hold"
-                          : "Refund"}
-                      </button>
-                    )}
+                    <GiftCardActionsMenu
+                      giftCard={g}
+                      canChangeRecipient={status === "ACTIVE"}
+                      onChangeRecipient={() => openRecipientCorrection(g)}
+                      onRefund={() => {
+                        setGiftCardToRefund(g);
+                        setError("");
+                      }}
+                    />
                   </div>
                 </div>
               );

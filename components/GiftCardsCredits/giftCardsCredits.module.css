@@ -86,7 +86,7 @@
 .table {
   border-radius: 12px;
   background: #f9f9f9;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .headerRowTable {
@@ -182,8 +182,6 @@
   padding: 12px 2px;
 }
 
-.fixButton,
-.refundButton,
 .cancelButton,
 .applyButton {
   border-radius: 10px;
@@ -193,29 +191,98 @@
   cursor: pointer;
 }
 
-.fixButton {
-  border: 1px solid #000;
-  background: #fff;
-  color: #000;
-}
-
-.refundButton {
-  border: 1px solid #c92d45;
-  background: #fff;
-  color: #c92d45;
-}
-
 .rowActions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.fixButton:disabled,
 .cancelButton:disabled,
 .applyButton:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.actionsMenu {
+  position: relative;
+  display: inline-flex;
+}
+
+.moreButton {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.moreButton:hover:not(:disabled),
+.moreButton[aria-expanded="true"] {
+  border-color: #000;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.moreButton:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.moreButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.actionsDropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  overflow: hidden;
+  padding: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.dropdownAction {
+  width: 100%;
+  display: block;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dropdownAction:hover,
+.dropdownAction:focus-visible {
+  background: rgba(0, 0, 0, 0.06);
+  outline: none;
+}
+
+.dropdownDangerAction {
+  color: #c92d45;
+}
+
+.dropdownDangerAction:hover,
+.dropdownDangerAction:focus-visible {
+  background: rgba(225, 72, 95, 0.08);
 }
 
 .modalBackdrop {
