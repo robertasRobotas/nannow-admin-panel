@@ -47,6 +47,7 @@ import {
   getAdminGiftCards,
   getGiftCardAssignmentMigrationStatus,
   previewGiftCardAssignmentMigration,
+  refundAdminGiftCard,
   runGiftCardAssignmentMigration,
   type GiftCardMigrationStats,
   sendStripeKycUpdateEmail,
@@ -234,7 +235,12 @@ const PAGE_SIZE_OPTIONS = [
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type GiftCardStatusFilter = "ALL" | "NOT_REDEEMED" | "REDEEMED" | "EXPIRED";
+type GiftCardStatusFilter =
+  | "ALL"
+  | "NOT_REDEEMED"
+  | "REDEEMED"
+  | "EXPIRED"
+  | "REFUNDED";
 
 type GiftCardMigrationRun = {
   status: "RUNNING" | "COMPLETED" | "FAILED";
@@ -964,6 +970,9 @@ const SuperAccess = () => {
   ] = useState(false);
   const [isCorrectingGiftCardRecipient, setIsCorrectingGiftCardRecipient] =
     useState(false);
+  const [isGiftCardRefundModalOpen, setIsGiftCardRefundModalOpen] =
+    useState(false);
+  const [isRefundingGiftCard, setIsRefundingGiftCard] = useState(false);
   const [newAdminFirstName, setNewAdminFirstName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
@@ -2790,6 +2799,41 @@ const SuperAccess = () => {
     }
   };
 
+  const refundGiftCard = async () => {
+    if (!selectedId || isRefundingGiftCard) return;
+    try {
+      setIsRefundingGiftCard(true);
+      setError("");
+      const response = await refundAdminGiftCard(selectedId);
+      const giftCard = response.data?.giftCard as EntityRecord | undefined;
+      if (giftCard) {
+        setSelectedItem(giftCard);
+        setDraft(giftCard);
+        setList((items) =>
+          items.map((item) => (pickId(item) === selectedId ? giftCard : item)),
+        );
+      }
+      setIsGiftCardRefundModalOpen(false);
+      setNotice(
+        response.data?.action === "AUTHORIZATION_RELEASED"
+          ? "Gift-card authorization released. The customer was not charged."
+          : "Captured gift-card payment refunded through Stripe.",
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.error ??
+            err.response?.data?.message ??
+            "Failed to refund gift card.",
+        );
+      } else {
+        setError((err as Error).message || "Failed to refund gift card.");
+      }
+    } finally {
+      setIsRefundingGiftCard(false);
+    }
+  };
+
   const invalidateEntityCaches = (targetEntity: SuperAccessEntity) => {
     if (targetEntity === "orders") {
       setOrdersById({});
@@ -3309,6 +3353,11 @@ const SuperAccess = () => {
     isSelectedGiftCardActive &&
     EMAIL_PATTERN.test(nextGiftCardRecipientEmail) &&
     nextGiftCardRecipientEmail !== currentGiftCardRecipientEmail;
+  const canRefundSelectedGiftCard =
+    entity === "gift-cards" && selectedItem?.isRefundable === true;
+  const selectedGiftCardRefundAction = String(
+    selectedItem?.refundAction ?? "REFUND_PAYMENT",
+  );
 
   return (
     <div className={styles.main}>
@@ -3370,6 +3419,7 @@ const SuperAccess = () => {
                 setIsGiftCardMigrationConfirmModalOpen(false);
                 setGiftCardMigrationPreview(null);
                 setIsGiftCardRecipientCorrectionModalOpen(false);
+                setIsGiftCardRefundModalOpen(false);
                 setIsCompactListView(
                   menuItem.key === "financial-ledger" ||
                     menuItem.key === "gift-cards",
@@ -3448,6 +3498,7 @@ const SuperAccess = () => {
                         <option value="NOT_REDEEMED">Active</option>
                         <option value="REDEEMED">Redeemed</option>
                         <option value="EXPIRED">Expired</option>
+                        <option value="REFUNDED">Refunded</option>
                       </select>
                       <Button
                         title={
@@ -4055,7 +4106,14 @@ const SuperAccess = () => {
                           </div>
                           <div className={styles.giftCardMeta}>
                             <span>
-                              {item.status === "REDEEMED"
+                              {item.status === "REFUNDED"
+                                ? "REFUNDED"
+                                : item.paymentStatus ===
+                                      "AUTHORIZATION_CANCELED" ||
+                                    item.paymentStatus ===
+                                      "AUTHORIZATION_EXPIRED"
+                                  ? "CANCELED"
+                                : item.status === "REDEEMED"
                                 ? "REDEEMED"
                                 : item.expiresAt &&
                                     new Date(
@@ -4325,6 +4383,26 @@ const SuperAccess = () => {
                     isDisabled={loadingItem || isSaving}
                   />
                 )}
+              {entity === "gift-cards" && selectedId && (
+                <Button
+                  title={
+                    isRefundingGiftCard
+                      ? "Processing..."
+                      : selectedGiftCardRefundAction ===
+                          "RELEASE_AUTHORIZATION"
+                        ? "Release authorization"
+                        : "Refund gift card"
+                  }
+                  type="OUTLINED"
+                  onClick={() => setIsGiftCardRefundModalOpen(true)}
+                  isDisabled={
+                    loadingItem ||
+                    isRefundingGiftCard ||
+                    !canRefundSelectedGiftCard
+                  }
+                  isLoading={isRefundingGiftCard}
+                />
+              )}
               <Button
                 title={
                   entity === "alerts"
@@ -5519,6 +5597,55 @@ const SuperAccess = () => {
           )}
         </section>
       </div>
+      {isGiftCardRefundModalOpen && selectedItem && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>
+              {selectedGiftCardRefundAction === "RELEASE_AUTHORIZATION"
+                ? "Release gift-card authorization?"
+                : "Refund gift card?"}
+            </h3>
+            <p className={styles.modalText}>
+              Gift card {String(selectedItem.code ?? selectedId)} for €
+              {(Number(selectedItem.amountCents ?? 0) / 100).toFixed(2)} will be
+              permanently disabled.
+            </p>
+            <p className={styles.modalText}>
+              {selectedGiftCardRefundAction === "RELEASE_AUTHORIZATION"
+                ? "The payment is only reserved. Releasing it means the customer will not be charged."
+                : "The payment was captured. This creates a Stripe refund to the original payment method."}
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => {
+                  setIsGiftCardRefundModalOpen(false);
+                  setError("");
+                }}
+                isDisabled={isRefundingGiftCard}
+              />
+              <Button
+                title={
+                  isRefundingGiftCard
+                    ? "Processing..."
+                    : selectedGiftCardRefundAction ===
+                        "RELEASE_AUTHORIZATION"
+                      ? "Release authorization"
+                      : "Refund payment"
+                }
+                type="BLACK"
+                onClick={refundGiftCard}
+                isDisabled={
+                  !canRefundSelectedGiftCard || isRefundingGiftCard
+                }
+                isLoading={isRefundingGiftCard}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {isGiftCardRecipientCorrectionModalOpen && selectedItem && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
