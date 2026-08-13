@@ -300,6 +300,55 @@
   width: 100%;
 }
 
+.giftCardRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.2fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+
+.giftCardPrimary,
+.giftCardMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
+.giftCardCode {
+  color: #000;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.giftCardAmount {
+  color: #19ad3e;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.giftCardMeta {
+  color: rgba(0, 0, 0, 0.66);
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.giftCardMeta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .giftCardRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
 .financialLedgerCheckbox {
   display: inline-flex;
   align-items: center;
