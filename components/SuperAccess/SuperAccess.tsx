@@ -939,6 +939,16 @@ const SuperAccess = () => {
     useState<GiftCardStatusFilter>("ALL");
   const [giftCardMigrationRun, setGiftCardMigrationRun] =
     useState<GiftCardMigrationRun | null>(null);
+  const [giftCardMigrationPreview, setGiftCardMigrationPreview] =
+    useState<GiftCardMigrationStats | null>(null);
+  const [
+    isGiftCardMigrationConfirmModalOpen,
+    setIsGiftCardMigrationConfirmModalOpen,
+  ] = useState(false);
+  const [
+    isLoadingGiftCardMigrationPreview,
+    setIsLoadingGiftCardMigrationPreview,
+  ] = useState(false);
   const [isRunningGiftCardMigration, setIsRunningGiftCardMigration] =
     useState(false);
   const [newAdminFirstName, setNewAdminFirstName] = useState("");
@@ -2647,35 +2657,54 @@ const SuperAccess = () => {
   };
 
   const handleRunGiftCardMigration = async () => {
-    if (isRunningGiftCardMigration || giftCardMigrationRun?.status === "COMPLETED") return;
+    if (
+      isLoadingGiftCardMigrationPreview ||
+      isRunningGiftCardMigration ||
+      giftCardMigrationRun?.status === "COMPLETED"
+    ) {
+      return;
+    }
+
     try {
-      setIsRunningGiftCardMigration(true);
+      setIsLoadingGiftCardMigrationPreview(true);
       setError("");
       setNotice("Checking existing gift cards…");
       const previewResponse = await previewGiftCardAssignmentMigration();
-      const stats = previewResponse.data?.stats as GiftCardMigrationStats | undefined;
+      const stats = previewResponse.data?.stats as
+        | GiftCardMigrationStats
+        | undefined;
       if (!stats) throw new Error("Migration preview did not return statistics.");
-
-      const confirmed = window.confirm(
-        [
-          `Scanned: ${stats.scanned}`,
-          `Cards to assign: ${stats.assigned}`,
-          `Unmatched recipient emails: ${stats.unmatchedRecipientEmails}`,
-          `Missing recipient emails: ${stats.missingRecipientEmails}`,
-          `Purchase events to create: ${stats.purchaseEventsCreated}`,
-          `Redemption events to create: ${stats.redemptionEventsCreated}`,
-          "",
-          "Run this migration? It can only complete once.",
-        ].join("\n"),
-      );
-      if (!confirmed) {
-        setNotice("Gift-card migration cancelled after dry run.");
-        return;
+      setGiftCardMigrationPreview(stats);
+      setIsGiftCardMigrationConfirmModalOpen(true);
+      setNotice("");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as
+          | { error?: string; reason?: string; run?: GiftCardMigrationRun }
+          | undefined;
+        if (data?.run) setGiftCardMigrationRun(data.run);
+        setError(data?.error ?? data?.reason ?? "Failed to run gift-card migration.");
+      } else {
+        setError((err as Error).message || "Failed to run gift-card migration.");
       }
+      setNotice("");
+    } finally {
+      setIsLoadingGiftCardMigrationPreview(false);
+    }
+  };
 
+  const confirmGiftCardMigration = async () => {
+    if (isRunningGiftCardMigration || !giftCardMigrationPreview) return;
+
+    try {
+      setIsRunningGiftCardMigration(true);
+      setError("");
       const response = await runGiftCardAssignmentMigration();
-      const run = (response.data?.run as GiftCardMigrationRun | undefined) ?? null;
+      const run =
+        (response.data?.run as GiftCardMigrationRun | undefined) ?? null;
       setGiftCardMigrationRun(run);
+      setIsGiftCardMigrationConfirmModalOpen(false);
+      setGiftCardMigrationPreview(null);
       setNotice(
         run?.status === "COMPLETED"
           ? `Gift-card migration completed. ${run.stats?.assigned ?? 0} cards assigned.`
@@ -2688,7 +2717,9 @@ const SuperAccess = () => {
           | { error?: string; reason?: string; run?: GiftCardMigrationRun }
           | undefined;
         if (data?.run) setGiftCardMigrationRun(data.run);
-        setError(data?.error ?? data?.reason ?? "Failed to run gift-card migration.");
+        setError(
+          data?.error ?? data?.reason ?? "Failed to run gift-card migration.",
+        );
       } else {
         setError((err as Error).message || "Failed to run gift-card migration.");
       }
@@ -3252,6 +3283,8 @@ const SuperAccess = () => {
                 setStripeKycAuditFilterUserId("");
                 setIsChatNormalizationConfirmModalOpen(false);
                 setIsChatNormalizationProgressModalOpen(false);
+                setIsGiftCardMigrationConfirmModalOpen(false);
+                setGiftCardMigrationPreview(null);
                 setIsCompactListView(
                   menuItem.key === "financial-ledger" || menuItem.key === "gift-cards",
                 );
@@ -3332,18 +3365,24 @@ const SuperAccess = () => {
                         title={
                           giftCardMigrationRun?.status === "COMPLETED"
                             ? "Migration completed"
-                            : isRunningGiftCardMigration
+                            : isLoadingGiftCardMigrationPreview
+                              ? "Checking gift cards…"
+                              : isRunningGiftCardMigration
                               ? "Running migration…"
                               : "Run migration"
                         }
                         type="BLACK"
                         onClick={handleRunGiftCardMigration}
                         isDisabled={
+                          isLoadingGiftCardMigrationPreview ||
                           isRunningGiftCardMigration ||
                           giftCardMigrationRun?.status === "RUNNING" ||
                           giftCardMigrationRun?.status === "COMPLETED"
                         }
-                        isLoading={isRunningGiftCardMigration}
+                        isLoading={
+                          isLoadingGiftCardMigrationPreview ||
+                          isRunningGiftCardMigration
+                        }
                       />
                     </>
                   )}
@@ -5322,6 +5361,80 @@ const SuperAccess = () => {
           )}
         </section>
       </div>
+      {isGiftCardMigrationConfirmModalOpen && giftCardMigrationPreview && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Run gift-card migration?</h3>
+            <p className={styles.modalText}>
+              The dry run found the following changes. Review them before
+              starting the migration.
+            </p>
+            <div className={styles.chatProgressList}>
+              {[
+                ["Gift cards scanned", giftCardMigrationPreview.scanned],
+                ["Cards to assign", giftCardMigrationPreview.assigned],
+                ["Already assigned", giftCardMigrationPreview.alreadyAssigned],
+                ["Emails to normalize", giftCardMigrationPreview.emailsNormalized],
+                [
+                  "Sender emails to recover",
+                  giftCardMigrationPreview.senderEmailsRecovered,
+                ],
+                [
+                  "Purchase events to create",
+                  giftCardMigrationPreview.purchaseEventsCreated,
+                ],
+                [
+                  "Redemption events to create",
+                  giftCardMigrationPreview.redemptionEventsCreated,
+                ],
+                [
+                  "Unmatched recipient emails",
+                  giftCardMigrationPreview.unmatchedRecipientEmails,
+                ],
+                [
+                  "Duplicate client emails",
+                  giftCardMigrationPreview.duplicateClientEmails,
+                ],
+                [
+                  "Missing recipient emails",
+                  giftCardMigrationPreview.missingRecipientEmails,
+                ],
+              ].map(([label, value]) => (
+                <div key={label} className={styles.chatProgressRow}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+            <p className={styles.modalText}>
+              This migration is protected against duplicate execution and can
+              only complete once.
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => {
+                  setIsGiftCardMigrationConfirmModalOpen(false);
+                  setGiftCardMigrationPreview(null);
+                  setError("");
+                }}
+                isDisabled={isRunningGiftCardMigration}
+              />
+              <Button
+                title={
+                  isRunningGiftCardMigration ? "Running…" : "Run migration"
+                }
+                type="BLACK"
+                onClick={confirmGiftCardMigration}
+                isDisabled={isRunningGiftCardMigration}
+                isLoading={isRunningGiftCardMigration}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {isChatNormalizationConfirmModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
