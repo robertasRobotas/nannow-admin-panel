@@ -100,7 +100,7 @@
 .giftHeader,
 .giftRow {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.9fr 1.1fr 1.4fr 0.9fr 0.9fr;
+  grid-template-columns: 1.35fr 0.7fr 0.85fr 1fr 1.35fr 0.85fr 0.85fr 0.9fr;
   gap: 12px;
   padding: 12px 14px;
   align-items: center;
@@ -163,4 +163,135 @@
 .badge_EXPIRED {
   background: rgba(213, 128, 0, 0.14);
   color: #d58000;
+}
+
+.noticeText {
+  color: #137a2d;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 2px;
+}
+
+.fixButton,
+.cancelButton,
+.applyButton {
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fixButton {
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+}
+
+.fixButton:disabled,
+.cancelButton:disabled,
+.applyButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modalCard h3,
+.modalCard p {
+  margin: 0;
+}
+
+.modalCard h3 {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.modalCard p {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #000;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.modalField input {
+  min-height: 44px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+
+.modalField input:focus {
+  border-color: #000;
+  outline: none;
+}
+
+.modalField input:disabled {
+  background: #f2f2f2;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.modalWarning {
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff5e8;
+  color: #8a4e00 !important;
+}
+
+.modalError {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff0f2;
+  color: #c92d45;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancelButton {
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+}
+
+.applyButton {
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
 }

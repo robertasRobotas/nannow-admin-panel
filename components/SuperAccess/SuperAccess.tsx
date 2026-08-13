@@ -17,6 +17,7 @@ import {
   ADMIN_ROLE_OPTIONS,
   AdminRole,
   createAdminUser,
+  correctAdminGiftCardRecipient,
   deleteFinancialLedgerOrders,
   getChatsNormalizationAnalysis,
   getChatsContactSharingRebuildJob,
@@ -230,6 +231,8 @@ const PAGE_SIZE_OPTIONS = [
   { title: "50 / page", value: "50" },
   { title: "100 / page", value: "100" },
 ] as const;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type GiftCardStatusFilter = "ALL" | "NOT_REDEEMED" | "REDEEMED" | "EXPIRED";
 
@@ -893,12 +896,16 @@ const SuperAccess = () => {
     isRebuildingAllProviderCompletionStats,
     setIsRebuildingAllProviderCompletionStats,
   ] = useState(false);
-  const [providerPublicUrlGenerationJobId, setProviderPublicUrlGenerationJobId] =
-    useState("");
+  const [
+    providerPublicUrlGenerationJobId,
+    setProviderPublicUrlGenerationJobId,
+  ] = useState("");
   const [providerPublicUrlGenerationJob, setProviderPublicUrlGenerationJob] =
     useState<ProviderPublicUrlGenerationJob | null>(null);
-  const [isProviderPublicUrlGenerationModalOpen, setIsProviderPublicUrlGenerationModalOpen] =
-    useState(false);
+  const [
+    isProviderPublicUrlGenerationModalOpen,
+    setIsProviderPublicUrlGenerationModalOpen,
+  ] = useState(false);
   const [
     isProviderPublicUrlGenerationConfirmModalOpen,
     setIsProviderPublicUrlGenerationConfirmModalOpen,
@@ -950,6 +957,12 @@ const SuperAccess = () => {
     setIsLoadingGiftCardMigrationPreview,
   ] = useState(false);
   const [isRunningGiftCardMigration, setIsRunningGiftCardMigration] =
+    useState(false);
+  const [
+    isGiftCardRecipientCorrectionModalOpen,
+    setIsGiftCardRecipientCorrectionModalOpen,
+  ] = useState(false);
+  const [isCorrectingGiftCardRecipient, setIsCorrectingGiftCardRecipient] =
     useState(false);
   const [newAdminFirstName, setNewAdminFirstName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -1163,9 +1176,7 @@ const SuperAccess = () => {
         const [cardsResponse, migrationResponse] = await Promise.all([
           getAdminGiftCards({
             filter:
-              giftCardStatusFilter === "ALL"
-                ? undefined
-                : giftCardStatusFilter,
+              giftCardStatusFilter === "ALL" ? undefined : giftCardStatusFilter,
             startIndex,
             pageSize,
             q: appliedSearch.trim() || undefined,
@@ -1996,8 +2007,7 @@ const SuperAccess = () => {
       const response = await getChatsNormalizationAnalysis();
       const payload =
         (response.data?.result?.analysis as
-          | ChatNormalizationAnalysis
-          | undefined) ??
+          ChatNormalizationAnalysis | undefined) ??
         (response.data?.analysis as ChatNormalizationAnalysis | undefined) ??
         (response.data?.result as ChatNormalizationAnalysis | undefined) ??
         (response.data as ChatNormalizationAnalysis);
@@ -2076,11 +2086,9 @@ const SuperAccess = () => {
         const job =
           (response.data?.job as ChatsContactSharingRebuildJob | undefined) ??
           (response.data?.result?.job as
-            | ChatsContactSharingRebuildJob
-            | undefined) ??
+            ChatsContactSharingRebuildJob | undefined) ??
           (response.data?.result as
-            | ChatsContactSharingRebuildJob
-            | undefined) ??
+            ChatsContactSharingRebuildJob | undefined) ??
           (response.data as ChatsContactSharingRebuildJob | undefined);
         if (!isCancelled && job) {
           setChatContactSharingRebuildJob(job);
@@ -2115,14 +2123,11 @@ const SuperAccess = () => {
         );
         const job =
           (response.data?.job as
-            | ProviderCompletionStatsRebuildJob
-            | undefined) ??
+            ProviderCompletionStatsRebuildJob | undefined) ??
           (response.data?.result?.job as
-            | ProviderCompletionStatsRebuildJob
-            | undefined) ??
+            ProviderCompletionStatsRebuildJob | undefined) ??
           (response.data?.result as
-            | ProviderCompletionStatsRebuildJob
-            | undefined) ??
+            ProviderCompletionStatsRebuildJob | undefined) ??
           (response.data as ProviderCompletionStatsRebuildJob | undefined);
         if (!isCancelled && job) {
           setProviderCompletionStatsRebuildJob(job);
@@ -2156,11 +2161,15 @@ const SuperAccess = () => {
     let isCancelled = false;
     const pollJob = async () => {
       try {
-        const response = await getProviderPublicUrlGenerationJob(providerPublicUrlGenerationJobId);
+        const response = await getProviderPublicUrlGenerationJob(
+          providerPublicUrlGenerationJobId,
+        );
         const job =
           (response.data?.job as ProviderPublicUrlGenerationJob | undefined) ??
-          (response.data?.result?.job as ProviderPublicUrlGenerationJob | undefined) ??
-          (response.data?.result as ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data?.result?.job as
+            ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data?.result as
+            ProviderPublicUrlGenerationJob | undefined) ??
           (response.data as ProviderPublicUrlGenerationJob | undefined);
         if (!isCancelled && job) setProviderPublicUrlGenerationJob(job);
       } catch {
@@ -2174,7 +2183,10 @@ const SuperAccess = () => {
       isCancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [providerPublicUrlGenerationJob?.status, providerPublicUrlGenerationJobId]);
+  }, [
+    providerPublicUrlGenerationJob?.status,
+    providerPublicUrlGenerationJobId,
+  ]);
 
   useEffect(() => {
     if (!scheduleRegenerationJobId) return;
@@ -2194,8 +2206,7 @@ const SuperAccess = () => {
         const job =
           (response.data?.job as OrderScheduleRegenerationJob | undefined) ??
           (response.data?.result?.job as
-            | OrderScheduleRegenerationJob
-            | undefined) ??
+            OrderScheduleRegenerationJob | undefined) ??
           (response.data?.result as OrderScheduleRegenerationJob | undefined) ??
           (response.data as OrderScheduleRegenerationJob | undefined);
         if (!isCancelled && job) {
@@ -2272,8 +2283,7 @@ const SuperAccess = () => {
       const job =
         (response.data?.job as ChatsContactSharingRebuildJob | undefined) ??
         (response.data?.result?.job as
-          | ChatsContactSharingRebuildJob
-          | undefined) ??
+          ChatsContactSharingRebuildJob | undefined) ??
         (response.data?.result as ChatsContactSharingRebuildJob | undefined) ??
         (response.data as ChatsContactSharingRebuildJob | undefined);
 
@@ -2310,11 +2320,9 @@ const SuperAccess = () => {
       const job =
         (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
         (response.data?.result?.job as
-          | ProviderCompletionStatsRebuildJob
-          | undefined) ??
+          ProviderCompletionStatsRebuildJob | undefined) ??
         (response.data?.result as
-          | ProviderCompletionStatsRebuildJob
-          | undefined) ??
+          ProviderCompletionStatsRebuildJob | undefined) ??
         (response.data as ProviderCompletionStatsRebuildJob | undefined);
       if (job?.id) {
         setProviderCompletionStatsRebuildJob(job);
@@ -2348,7 +2356,8 @@ const SuperAccess = () => {
       const response = await rebuildAllProviderPublicUrls();
       const job =
         (response.data?.job as ProviderPublicUrlGenerationJob | undefined) ??
-        (response.data?.result?.job as ProviderPublicUrlGenerationJob | undefined) ??
+        (response.data?.result?.job as
+          ProviderPublicUrlGenerationJob | undefined) ??
         (response.data?.result as ProviderPublicUrlGenerationJob | undefined) ??
         (response.data as ProviderPublicUrlGenerationJob | undefined);
       if (job?.id) {
@@ -2360,7 +2369,8 @@ const SuperAccess = () => {
     } catch (err) {
       setError(
         axios.isAxiosError(err)
-          ? (err.response?.data as { error?: string })?.error ?? "Failed to generate public URLs."
+          ? ((err.response?.data as { error?: string })?.error ??
+              "Failed to generate public URLs.")
           : "Failed to rebuild public URLs.",
       );
     } finally {
@@ -2388,8 +2398,7 @@ const SuperAccess = () => {
       const job =
         (response.data?.job as OrderScheduleRegenerationJob | undefined) ??
         (response.data?.result?.job as
-          | OrderScheduleRegenerationJob
-          | undefined) ??
+          OrderScheduleRegenerationJob | undefined) ??
         (response.data?.result as OrderScheduleRegenerationJob | undefined) ??
         (response.data as OrderScheduleRegenerationJob | undefined);
       const started = Boolean(
@@ -2671,9 +2680,9 @@ const SuperAccess = () => {
       setNotice("Checking existing gift cards…");
       const previewResponse = await previewGiftCardAssignmentMigration();
       const stats = previewResponse.data?.stats as
-        | GiftCardMigrationStats
-        | undefined;
-      if (!stats) throw new Error("Migration preview did not return statistics.");
+        GiftCardMigrationStats | undefined;
+      if (!stats)
+        throw new Error("Migration preview did not return statistics.");
       setGiftCardMigrationPreview(stats);
       setIsGiftCardMigrationConfirmModalOpen(true);
       setNotice("");
@@ -2683,9 +2692,13 @@ const SuperAccess = () => {
           | { error?: string; reason?: string; run?: GiftCardMigrationRun }
           | undefined;
         if (data?.run) setGiftCardMigrationRun(data.run);
-        setError(data?.error ?? data?.reason ?? "Failed to run gift-card migration.");
+        setError(
+          data?.error ?? data?.reason ?? "Failed to run gift-card migration.",
+        );
       } else {
-        setError((err as Error).message || "Failed to run gift-card migration.");
+        setError(
+          (err as Error).message || "Failed to run gift-card migration.",
+        );
       }
       setNotice("");
     } finally {
@@ -2721,11 +2734,59 @@ const SuperAccess = () => {
           data?.error ?? data?.reason ?? "Failed to run gift-card migration.",
         );
       } else {
-        setError((err as Error).message || "Failed to run gift-card migration.");
+        setError(
+          (err as Error).message || "Failed to run gift-card migration.",
+        );
       }
       setNotice("");
     } finally {
       setIsRunningGiftCardMigration(false);
+    }
+  };
+
+  const correctGiftCardRecipient = async () => {
+    const recipientEmail = String(draft.recipientEmail ?? "").trim();
+    if (!selectedId || !recipientEmail || isCorrectingGiftCardRecipient) return;
+
+    try {
+      setIsCorrectingGiftCardRecipient(true);
+      setError("");
+      const response = await correctAdminGiftCardRecipient(
+        selectedId,
+        recipientEmail,
+      );
+      const giftCard = response.data?.giftCard as EntityRecord | undefined;
+      if (giftCard) {
+        setSelectedItem(giftCard);
+        setDraft(giftCard);
+        setList((items) =>
+          items.map((item) => (pickId(item) === selectedId ? giftCard : item)),
+        );
+      }
+      setIsGiftCardRecipientCorrectionModalOpen(false);
+      const assignmentMessage = response.data?.assignedToExistingClient
+        ? " It was assigned to the matching client."
+        : " No matching client exists yet; the new code can still be redeemed by email.";
+      const emailMessage = response.data?.confirmationEmailsSent
+        ? " Confirmation emails were sent."
+        : " The correction was applied, but confirmation email delivery failed.";
+      setNotice(
+        `Gift-card recipient corrected.${assignmentMessage}${emailMessage}`,
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.error ??
+            err.response?.data?.message ??
+            "Failed to correct gift-card recipient.",
+        );
+      } else {
+        setError(
+          (err as Error).message || "Failed to correct gift-card recipient.",
+        );
+      }
+    } finally {
+      setIsCorrectingGiftCardRecipient(false);
     }
   };
 
@@ -2764,7 +2825,12 @@ const SuperAccess = () => {
   };
 
   const saveChanges = async () => {
-    if (entity === "alerts" || entity === "connected-admins" || entity === "gift-cards") return;
+    if (
+      entity === "alerts" ||
+      entity === "connected-admins" ||
+      entity === "gift-cards"
+    )
+      return;
     if (!selectedId || isSaving) return;
     try {
       setIsSaving(true);
@@ -3226,6 +3292,24 @@ const SuperAccess = () => {
     setError("Client/Provider object for this user was not found.");
   };
 
+  const currentGiftCardRecipientEmail = String(
+    selectedItem?.recipientEmail ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  const nextGiftCardRecipientEmail = String(draft.recipientEmail ?? "")
+    .trim()
+    .toLowerCase();
+  const isSelectedGiftCardActive =
+    entity === "gift-cards" &&
+    selectedItem?.status === "CREATED" &&
+    (!selectedItem.expiresAt ||
+      new Date(String(selectedItem.expiresAt)).getTime() > Date.now());
+  const canCorrectGiftCardRecipient =
+    isSelectedGiftCardActive &&
+    EMAIL_PATTERN.test(nextGiftCardRecipientEmail) &&
+    nextGiftCardRecipientEmail !== currentGiftCardRecipientEmail;
+
   return (
     <div className={styles.main}>
       {error && <p className={styles.error}>{error}</p>}
@@ -3285,8 +3369,10 @@ const SuperAccess = () => {
                 setIsChatNormalizationProgressModalOpen(false);
                 setIsGiftCardMigrationConfirmModalOpen(false);
                 setGiftCardMigrationPreview(null);
+                setIsGiftCardRecipientCorrectionModalOpen(false);
                 setIsCompactListView(
-                  menuItem.key === "financial-ledger" || menuItem.key === "gift-cards",
+                  menuItem.key === "financial-ledger" ||
+                    menuItem.key === "gift-cards",
                 );
                 setStartIndex(0);
                 setSearchText("");
@@ -3312,9 +3398,9 @@ const SuperAccess = () => {
                         ? "Broadcast sender"
                         : entity === "gift-cards"
                           ? "Gift cards"
-                        : entity === "connected-admins"
-                          ? "WS connected Admins"
-                          : prettyTitle(entity)}
+                          : entity === "connected-admins"
+                            ? "WS connected Admins"
+                            : prettyTitle(entity)}
               </h2>
               <span className={styles.listHeaderMeta}>
                 {entity === "alerts"
@@ -3329,13 +3415,13 @@ const SuperAccess = () => {
                               ? ` · migration ${giftCardMigrationRun.status.toLowerCase()}`
                               : ""
                           }`
-                      : entity === "schedule"
-                        ? "Order schedule rows and snapshots."
-                        : entity === "connected-admins"
-                          ? `${total} admins connected right now.`
-                          : entity === "chats"
-                            ? `${total} chats total, page ${currentPage}/${totalPages}`
-                            : `${total} total, page ${currentPage}/${totalPages}`}
+                        : entity === "schedule"
+                          ? "Order schedule rows and snapshots."
+                          : entity === "connected-admins"
+                            ? `${total} admins connected right now.`
+                            : entity === "chats"
+                              ? `${total} chats total, page ${currentPage}/${totalPages}`
+                              : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
             {entity !== "alerts" &&
@@ -3349,7 +3435,9 @@ const SuperAccess = () => {
                         className={styles.providerActionsSelect}
                         value={giftCardStatusFilter}
                         onChange={(event) => {
-                          setGiftCardStatusFilter(event.target.value as GiftCardStatusFilter);
+                          setGiftCardStatusFilter(
+                            event.target.value as GiftCardStatusFilter,
+                          );
                           setStartIndex(0);
                           setSelectedId("");
                           setSelectedItem(null);
@@ -3368,8 +3456,8 @@ const SuperAccess = () => {
                             : isLoadingGiftCardMigrationPreview
                               ? "Checking gift cards…"
                               : isRunningGiftCardMigration
-                              ? "Running migration…"
-                              : "Run migration"
+                                ? "Running migration…"
+                                : "Run migration"
                         }
                         type="BLACK"
                         onClick={handleRunGiftCardMigration}
@@ -3541,13 +3629,21 @@ const SuperAccess = () => {
                       }
                     >
                       <option value="">Actions</option>
-                      <option value="PUBLIC_URLS">Rebuild all public URLs</option>
-                      <option value="COMPLETION">Rebuild completion rates</option>
+                      <option value="PUBLIC_URLS">
+                        Rebuild all public URLs
+                      </option>
+                      <option value="COMPLETION">
+                        Rebuild completion rates
+                      </option>
                       <option value="STRIPE">Scan Stripe status</option>
                     </select>
                   )}
                   <SearchBar
-                    placeholder={entity === "gift-cards" ? "Search email" : "Type to search"}
+                    placeholder={
+                      entity === "gift-cards"
+                        ? "Search email"
+                        : "Type to search"
+                    }
                     searchText={searchText}
                     setSearchText={setSearchText}
                     onButtonClick={() => {
@@ -3953,22 +4049,37 @@ const SuperAccess = () => {
                               {String(item.code ?? "-")}
                             </span>
                             <span className={styles.giftCardAmount}>
-                              €{(Number(item.amountCents ?? 0) / 100).toFixed(2)}
+                              €
+                              {(Number(item.amountCents ?? 0) / 100).toFixed(2)}
                             </span>
                           </div>
                           <div className={styles.giftCardMeta}>
                             <span>
                               {item.status === "REDEEMED"
                                 ? "REDEEMED"
-                                : item.expiresAt && new Date(String(item.expiresAt)).getTime() <= Date.now()
+                                : item.expiresAt &&
+                                    new Date(
+                                      String(item.expiresAt),
+                                    ).getTime() <= Date.now()
                                   ? "EXPIRED"
                                   : "ACTIVE"}
                             </span>
-                            <span>{String(item.recipientEmail ?? "No recipient email")}</span>
+                            <span>
+                              {String(
+                                item.recipientEmail ?? "No recipient email",
+                              )}
+                            </span>
                           </div>
                           <div className={styles.giftCardMeta}>
-                            <span>From: {String(item.senderName ?? item.senderEmail ?? "-")}</span>
-                            <span>Recipient: {String(item.recipientName ?? "-")}</span>
+                            <span>
+                              From:{" "}
+                              {String(
+                                item.senderName ?? item.senderEmail ?? "-",
+                              )}
+                            </span>
+                            <span>
+                              Recipient: {String(item.recipientName ?? "-")}
+                            </span>
                           </div>
                         </div>
                       ) : isFinancialLedgerItem ? (
@@ -4160,11 +4271,11 @@ const SuperAccess = () => {
                   ? "Broadcast sender"
                   : entity === "gift-cards"
                     ? "Gift card detail"
-                  : entity === "schedule"
-                    ? "Schedule detail"
-                    : entity === "connected-admins"
-                      ? "Connected admin"
-                      : "Detail"}
+                    : entity === "schedule"
+                      ? "Schedule detail"
+                      : entity === "connected-admins"
+                        ? "Connected admin"
+                        : "Detail"}
             </h2>
             <div className={styles.detailHeaderActions}>
               {entity === "addresses" && selectedId && (
@@ -4224,42 +4335,54 @@ const SuperAccess = () => {
                       ? isSaving
                         ? "Saving..."
                         : "Save sender"
-                      : entity === "financial-ledger" ||
-                          entity === "chats" ||
-                          entity === "schedule" ||
-                          entity === "gift-cards"
-                        ? "Read only"
-                        : entity === "connected-admins"
+                      : entity === "gift-cards"
+                        ? isCorrectingGiftCardRecipient
+                          ? "Applying..."
+                          : "Apply recipient fix"
+                        : entity === "financial-ledger" ||
+                            entity === "chats" ||
+                            entity === "schedule"
                           ? "Read only"
-                          : isSaving
-                            ? "Saving..."
-                            : "Save"
+                          : entity === "connected-admins"
+                            ? "Read only"
+                            : isSaving
+                              ? "Saving..."
+                              : "Save"
                 }
                 type="BLACK"
-                onClick={entity === "alerts" ? submitAdminAlert : saveChanges}
+                onClick={
+                  entity === "alerts"
+                    ? submitAdminAlert
+                    : entity === "gift-cards"
+                      ? () => setIsGiftCardRecipientCorrectionModalOpen(true)
+                      : saveChanges
+                }
                 isDisabled={
                   entity === "alerts"
                     ? !adminAlertText.trim() || isSendingAlert
                     : entity === "broadcast-sender"
                       ? loadingItem || isSaving
-                      : entity === "financial-ledger" ||
-                          entity === "chats" ||
-                          entity === "schedule" ||
-                          entity === "gift-cards"
-                        ? true
-                        : entity === "connected-admins"
+                      : entity === "gift-cards"
+                        ? !canCorrectGiftCardRecipient ||
+                          isCorrectingGiftCardRecipient
+                        : entity === "financial-ledger" ||
+                            entity === "chats" ||
+                            entity === "schedule"
                           ? true
-                          : !selectedId || loadingItem || isSaving
+                          : entity === "connected-admins"
+                            ? true
+                            : !selectedId || loadingItem || isSaving
                 }
                 isLoading={
                   entity === "alerts"
                     ? isSendingAlert
                     : isSaving &&
-                      entity !== "connected-admins" &&
-                      entity !== "financial-ledger" &&
-                      entity !== "chats" &&
-                      entity !== "schedule" &&
-                      entity !== "gift-cards"
+                        entity !== "connected-admins" &&
+                        entity !== "financial-ledger" &&
+                        entity !== "chats" &&
+                        entity !== "schedule"
+                      ? true
+                      : entity === "gift-cards" && isCorrectingGiftCardRecipient
                 }
               />
             </div>
@@ -4436,10 +4559,45 @@ const SuperAccess = () => {
                             <span>{prettyTitle(key)}</span>
                             <input
                               id={fieldId}
-                              type="text"
-                              value={value == null ? "" : String(value)}
-                              disabled
+                              type={
+                                entity === "gift-cards" &&
+                                key === "recipientEmail"
+                                  ? "email"
+                                  : "text"
+                              }
+                              value={
+                                entity === "gift-cards" &&
+                                key === "recipientEmail"
+                                  ? String(draft.recipientEmail ?? "")
+                                  : value == null
+                                    ? ""
+                                    : String(value)
+                              }
+                              onChange={
+                                entity === "gift-cards" &&
+                                key === "recipientEmail"
+                                  ? (event) =>
+                                      handleFieldChange(
+                                        "recipientEmail",
+                                        event.target.value,
+                                      )
+                                  : undefined
+                              }
+                              disabled={
+                                entity !== "gift-cards" ||
+                                key !== "recipientEmail" ||
+                                !isSelectedGiftCardActive
+                              }
                             />
+                            {entity === "gift-cards" &&
+                              key === "recipientEmail" &&
+                              isSelectedGiftCardActive && (
+                                <small>
+                                  Applying a correction rotates the code,
+                                  updates account assignment, and emails the
+                                  sender and corrected recipient.
+                                </small>
+                              )}
                           </label>
                         );
                       })}
@@ -5361,6 +5519,56 @@ const SuperAccess = () => {
           )}
         </section>
       </div>
+      {isGiftCardRecipientCorrectionModalOpen && selectedItem && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Apply recipient correction?</h3>
+            <p className={styles.modalText}>
+              Confirm the corrected email for gift card{" "}
+              {String(selectedItem.code ?? selectedId)}.
+            </p>
+            <div className={styles.chatProgressList}>
+              <div className={styles.chatProgressRow}>
+                <span>Current recipient</span>
+                <strong>{currentGiftCardRecipientEmail || "-"}</strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Corrected recipient</span>
+                <strong>{nextGiftCardRecipientEmail}</strong>
+              </div>
+            </div>
+            <p className={styles.modalText}>
+              The old code will stop working. A new code will be generated, the
+              card will be assigned to a matching verified client when
+              available, and confirmation emails will be sent to the sender and
+              corrected recipient.
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => {
+                  setIsGiftCardRecipientCorrectionModalOpen(false);
+                  setError("");
+                }}
+                isDisabled={isCorrectingGiftCardRecipient}
+              />
+              <Button
+                title={
+                  isCorrectingGiftCardRecipient ? "Applying..." : "Apply fix"
+                }
+                type="BLACK"
+                onClick={correctGiftCardRecipient}
+                isDisabled={
+                  !canCorrectGiftCardRecipient || isCorrectingGiftCardRecipient
+                }
+                isLoading={isCorrectingGiftCardRecipient}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {isGiftCardMigrationConfirmModalOpen && giftCardMigrationPreview && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
@@ -5374,7 +5582,10 @@ const SuperAccess = () => {
                 ["Gift cards scanned", giftCardMigrationPreview.scanned],
                 ["Cards to assign", giftCardMigrationPreview.assigned],
                 ["Already assigned", giftCardMigrationPreview.alreadyAssigned],
-                ["Emails to normalize", giftCardMigrationPreview.emailsNormalized],
+                [
+                  "Emails to normalize",
+                  giftCardMigrationPreview.emailsNormalized,
+                ],
                 [
                   "Sender emails to recover",
                   giftCardMigrationPreview.senderEmailsRecovered,
@@ -5608,29 +5819,63 @@ const SuperAccess = () => {
       {isProviderPublicUrlGenerationModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
-            <h3 className={styles.modalTitle}>Rebuild all provider public URLs</h3>
+            <h3 className={styles.modalTitle}>
+              Rebuild all provider public URLs
+            </h3>
             <p className={styles.modalText}>
               {`Job: ${providerPublicUrlGenerationJob?.id || providerPublicUrlGenerationJobId || "—"} • Status: ${
                 providerPublicUrlGenerationJob?.status ?? "PENDING"
               }`}
             </p>
             <div className={styles.chatProgressList}>
-              <div className={styles.chatProgressRow}><span>Providers total</span><strong>{providerPublicUrlGenerationJob?.progress.providersTotal ?? "—"}</strong></div>
-              <div className={styles.chatProgressRow}><span>Processed</span><strong>{providerPublicUrlGenerationJob?.progress.providersProcessed ?? "—"}</strong></div>
-              <div className={styles.chatProgressRow}><span>URLs rebuilt</span><strong>{providerPublicUrlGenerationJob?.progress.urlsRebuilt ?? "—"}</strong></div>
-              <div className={styles.chatProgressRow}><span>Unsupported region</span><strong>{providerPublicUrlGenerationJob?.progress.unsupportedOrMissingRegion ?? "—"}</strong></div>
-              <div className={styles.chatProgressRow}><span>Failed</span><strong>{providerPublicUrlGenerationJob?.progress.providersFailed ?? "—"}</strong></div>
+              <div className={styles.chatProgressRow}>
+                <span>Providers total</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress.providersTotal ??
+                    "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Processed</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress
+                    .providersProcessed ?? "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>URLs rebuilt</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress.urlsRebuilt ?? "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Unsupported region</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress
+                    .unsupportedOrMissingRegion ?? "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Failed</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress.providersFailed ??
+                    "—"}
+                </strong>
+              </div>
             </div>
-            {(providerPublicUrlGenerationJob?.error || providerPublicUrlGenerationJob?.errors?.length) && (
+            {(providerPublicUrlGenerationJob?.error ||
+              providerPublicUrlGenerationJob?.errors?.length) && (
               <div className={styles.modalError}>
-                {providerPublicUrlGenerationJob.error || providerPublicUrlGenerationJob.errors[0]?.message}
+                {providerPublicUrlGenerationJob.error ||
+                  providerPublicUrlGenerationJob.errors[0]?.message}
               </div>
             )}
             <div className={styles.modalActions}>
               <Button
                 title={
                   providerPublicUrlGenerationJob?.status === "COMPLETED" ||
-                  providerPublicUrlGenerationJob?.status === "COMPLETED_WITH_ERRORS" ||
+                  providerPublicUrlGenerationJob?.status ===
+                    "COMPLETED_WITH_ERRORS" ||
                   providerPublicUrlGenerationJob?.status === "FAILED"
                     ? "Close"
                     : "Hide"
@@ -5645,15 +5890,21 @@ const SuperAccess = () => {
       {isProviderPublicUrlGenerationConfirmModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
-            <h3 className={styles.modalTitle}>Rebuild all provider public URLs?</h3>
+            <h3 className={styles.modalTitle}>
+              Rebuild all provider public URLs?
+            </h3>
             <p className={styles.modalText}>
-              This regenerates every public URL. Current public links will stop working. Providers without a supported region will remain without a public URL.
+              This regenerates every public URL. Current public links will stop
+              working. Providers without a supported region will remain without
+              a public URL.
             </p>
             <div className={styles.modalActions}>
               <Button
                 title="Cancel"
                 type="OUTLINED"
-                onClick={() => setIsProviderPublicUrlGenerationConfirmModalOpen(false)}
+                onClick={() =>
+                  setIsProviderPublicUrlGenerationConfirmModalOpen(false)
+                }
               />
               <Button
                 title="Rebuild all URLs"

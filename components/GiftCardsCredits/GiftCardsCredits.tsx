@@ -2,11 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
-import { getAdminGiftCards, getCredits } from "@/pages/api/fetch";
+import {
+  correctAdminGiftCardRecipient,
+  getAdminGiftCards,
+  getCredits,
+} from "@/pages/api/fetch";
 import styles from "./giftCardsCredits.module.css";
 import paginateStyles from "@/styles/paginate.module.css";
 
 const PAGE_SIZE = 20;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type TabKey = "ALL" | "NOT_REDEEMED" | "REDEEMED" | "EXPIRED" | "MANUAL";
 
@@ -99,6 +104,11 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [giftCardToCorrect, setGiftCardToCorrect] =
+    useState<GiftCardRow | null>(null);
+  const [correctedRecipientEmail, setCorrectedRecipientEmail] = useState("");
+  const [isCorrectingRecipient, setIsCorrectingRecipient] = useState(false);
 
   const activeTab = useMemo(() => TABS.find((t) => t.key === tab)!, [tab]);
 
@@ -173,6 +183,62 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
     setCreditOffset(0);
   };
 
+  const openRecipientCorrection = (giftCard: GiftCardRow) => {
+    setGiftCardToCorrect(giftCard);
+    setCorrectedRecipientEmail(giftCard.recipientEmail ?? "");
+    setError("");
+  };
+
+  const applyRecipientCorrection = async () => {
+    if (!giftCardToCorrect || isCorrectingRecipient) return;
+    const nextEmail = correctedRecipientEmail.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(nextEmail)) {
+      setError("Enter a valid corrected recipient email.");
+      return;
+    }
+    if (
+      nextEmail ===
+      String(giftCardToCorrect.recipientEmail ?? "")
+        .trim()
+        .toLowerCase()
+    ) {
+      setError("The recipient email is unchanged.");
+      return;
+    }
+
+    try {
+      setIsCorrectingRecipient(true);
+      setError("");
+      const response = await correctAdminGiftCardRecipient(
+        giftCardToCorrect.id,
+        nextEmail,
+      );
+      const giftCard = response.data?.giftCard as GiftCardRow | undefined;
+      if (giftCard) {
+        setGiftItems((items) =>
+          items.map((item) => (item.id === giftCard.id ? giftCard : item)),
+        );
+      }
+      setGiftCardToCorrect(null);
+      setCorrectedRecipientEmail("");
+      setNotice(
+        response.data?.confirmationEmailsSent
+          ? "Recipient corrected, code rotated, and confirmation emails sent."
+          : "Recipient corrected and code rotated, but confirmation email delivery failed.",
+      );
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        setError(
+          axios.isAxiosError(err)
+            ? (err.response?.data?.error ?? "Failed to correct recipient.")
+            : "Failed to correct recipient.",
+        );
+      }
+    } finally {
+      setIsCorrectingRecipient(false);
+    }
+  };
+
   const giftPageCount = Math.max(1, Math.ceil(giftTotal / PAGE_SIZE));
   const creditPageCount = Math.max(1, Math.ceil(creditTotal / PAGE_SIZE));
   const isEmpty =
@@ -208,6 +274,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
 
       {loading && <div className={styles.stateText}>Loading…</div>}
       {!loading && error && <div className={styles.errorText}>{error}</div>}
+      {!loading && notice && <div className={styles.noticeText}>{notice}</div>}
       {isEmpty && <div className={styles.stateText}>No records.</div>}
 
       {!loading && !error && activeTab.showGift && giftItems.length > 0 && (
@@ -224,6 +291,7 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
               <div>Recipient</div>
               <div>Expires</div>
               <div>Created</div>
+              <div>Action</div>
             </div>
             {giftItems.map((g) => {
               const expired =
@@ -247,10 +315,22 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
                   </div>
                   <div className={styles.muted}>{g.senderName || "-"}</div>
                   <div className={styles.muted}>
-                    {g.recipientName || g.recipientEmail || "-"}
+                    {[g.recipientName, g.recipientEmail]
+                      .filter(Boolean)
+                      .join(" · ") || "-"}
                   </div>
                   <div className={styles.muted}>{date(g.expiresAt)}</div>
                   <div className={styles.muted}>{date(g.createdAt)}</div>
+                  <div>
+                    <button
+                      type="button"
+                      className={styles.fixButton}
+                      disabled={status !== "ACTIVE"}
+                      onClick={() => openRecipientCorrection(g)}
+                    >
+                      Fix recipient
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -274,6 +354,61 @@ const GiftCardsCredits = ({ title }: { title: string }) => {
               forcePage={Math.floor(giftOffset / PAGE_SIZE)}
             />
           )}
+        </div>
+      )}
+
+      {giftCardToCorrect && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3>Correct gift-card recipient</h3>
+            <p>
+              Correct the recipient for {giftCardToCorrect.code}. The old code
+              will be invalidated and replaced.
+            </p>
+            <label className={styles.modalField}>
+              <span>Current recipient</span>
+              <input value={giftCardToCorrect.recipientEmail ?? ""} disabled />
+            </label>
+            <label className={styles.modalField}>
+              <span>Corrected recipient email</span>
+              <input
+                type="email"
+                value={correctedRecipientEmail}
+                onChange={(event) =>
+                  setCorrectedRecipientEmail(event.target.value)
+                }
+                autoFocus
+                disabled={isCorrectingRecipient}
+              />
+            </label>
+            <p className={styles.modalWarning}>
+              Applying this fix rotates the code, updates assignment to a
+              matching verified client, and emails the sender and corrected
+              recipient.
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                disabled={isCorrectingRecipient}
+                onClick={() => {
+                  setGiftCardToCorrect(null);
+                  setError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.applyButton}
+                disabled={isCorrectingRecipient}
+                onClick={applyRecipientCorrection}
+              >
+                {isCorrectingRecipient ? "Applying..." : "Apply fix"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
