@@ -3501,6 +3501,7 @@ export type CompanyDetails = {
   email: string | null;
   phone: string;
   vatRatePercent: number;
+  vatHistory?: Array<{ vatRatePercent: number; effectiveFrom: string; changedByAdminId?: string | null }>;
 };
 
 export const getCompanyDetails = async () => {
