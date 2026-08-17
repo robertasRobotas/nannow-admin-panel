@@ -3,6 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  height: 100%;
+  min-height: 0;
 }
 
 .headerRow {
@@ -47,7 +49,8 @@
 .layout {
   display: grid;
   grid-template-columns: 420px minmax(0, 1fr);
-  min-height: 720px;
+  flex: 1;
+  min-height: 0;
   border-radius: 24px;
   background: #fff;
   box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
@@ -56,11 +59,17 @@
 }
 
 .chatListPane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
   min-width: 0;
 }
 
 .messagesPane {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   min-width: 0;
 }
 
@@ -78,6 +87,9 @@
 .chatList {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .chatRow {
@@ -220,6 +232,7 @@
 @media (max-width: 936px) {
   .main {
     padding: 20px;
+    height: auto;
   }
 
   .headerRow {
@@ -234,6 +247,8 @@
 
   .layout {
     grid-template-columns: 1fr;
+    flex: initial;
+    min-height: 720px;
   }
 
   .chatListPane {

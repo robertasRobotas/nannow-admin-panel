@@ -3,7 +3,7 @@ import AdminChats from "@/components/AdminChats/AdminChats";
 
 const ChatsPage = () => {
   return (
-    <ModalPageTemplate isScrollable={true}>
+    <ModalPageTemplate>
       <AdminChats />
     </ModalPageTemplate>
   );
