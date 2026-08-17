@@ -3493,6 +3493,26 @@ export const getSuperAccessList = async (
   return response;
 };
 
+export type CompanyDetails = {
+  name: string;
+  companyCode: string;
+  vatNumber: string;
+  address: string;
+  email: string | null;
+  phone: string;
+  vatRatePercent: number;
+};
+
+export const getCompanyDetails = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get<CompanyDetails>(`${BASE_URL}/admin/super/company-details`, { headers: { Authorization: jwt } });
+};
+
+export const updateCompanyDetails = async (payload: CompanyDetails) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.patch<CompanyDetails>(`${BASE_URL}/admin/super/company-details`, payload, { headers: { Authorization: jwt } });
+};
+
 export const getChatsNormalizationAnalysis = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(

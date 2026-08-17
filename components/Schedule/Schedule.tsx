@@ -364,9 +364,23 @@ const shouldShowScheduleItem = (
   filters: Pick<ScheduleFilterState, "showCanceled" | "showPast">,
 ) => {
   const normalizedStatus = String(item.status ?? "").toUpperCase();
-  if (!filters.showCanceled && normalizedStatus.includes("CANCEL")) {
-    return false;
-  }
+
+  // The schedule is for actionable or completed bookings—not offers or orders
+  // canceled before approval. Other canceled bookings remain behind the
+  // dedicated visibility toggle.
+  if (normalizedStatus === "CANCELED_NOT_PAID_BY_CLIENT") return false;
+  if (normalizedStatus.includes("CANCEL")) return filters.showCanceled;
+
+  const isEligibleStatus =
+    normalizedStatus === "BOTH_APPROVED" ||
+    normalizedStatus === "PROVIDER_ACCEPTED_DIRECT_OFFER" ||
+    normalizedStatus === "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS" ||
+    normalizedStatus === "PROVIDER_MARKED_AS_SERVICE_ENDED" ||
+    normalizedStatus === "NOT_STARTED_IN_TIME" ||
+    normalizedStatus === "NOT_ENDED_IN_TIME" ||
+    Boolean(item.finishedAt);
+  if (!isEligibleStatus) return false;
+
   if (!filters.showPast && new Date(item.startsAt).getTime() < Date.now()) {
     return false;
   }
@@ -632,9 +646,12 @@ const Schedule = () => {
       const payload = (response.data?.result ??
         response.data) as OrderScheduleListResponse;
       const nextItems = Array.isArray(payload.items) ? payload.items : [];
-      setItems(nextItems);
-      setTotal(Number(payload.total ?? nextItems.length) || 0);
-      if (nextItems.length === 0) {
+      const visibleItems = nextItems.filter((item) =>
+        shouldShowScheduleItem(item, appliedFilters),
+      );
+      setItems(visibleItems);
+      setTotal(visibleItems.length);
+      if (visibleItems.length === 0) {
         setSelectedId("");
       }
     } catch (err) {

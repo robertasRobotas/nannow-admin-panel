@@ -204,7 +204,8 @@ type SuperAccessViewEntity =
   | "connected-admins"
   | "financial-ledger"
   | "broadcast-sender"
-  | "gift-cards";
+  | "gift-cards"
+  | "company-details";
 
 type SuperMenuItem = {
   title: string;
@@ -212,6 +213,7 @@ type SuperMenuItem = {
 };
 
 const MENU_ITEMS: SuperMenuItem[] = [
+  { title: "Company details", key: "company-details" },
   { title: "Admins", key: "admins" },
   { title: "Users", key: "users" },
   { title: "Clients", key: "clients" },
@@ -3373,6 +3375,10 @@ const SuperAccess = () => {
                 entity === menuItem.key ? styles.sideBtnActive : ""
               }`}
               onClick={() => {
+                if (menuItem.key === "company-details") {
+                  void router.push("/company-details");
+                  return;
+                }
                 setList([]);
                 setTotal(0);
                 updateSuperAccessQuery(

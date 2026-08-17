@@ -533,7 +533,7 @@ const Header = () => {
   const usersAttentionNumber =
     notFinishedOnboardingCount + pendingProviderSpecialSkillsCount;
   const visibleLinks = isSuperAdmin
-    ? [{ title: "Super Access", link: "/super-access" }, ...links]
+    ? [{ title: "Super Access", link: "/super-access" }, { title: "Company details", link: "/company-details" }, ...links]
     : links;
 
   const openTotpSetupModal = async () => {
