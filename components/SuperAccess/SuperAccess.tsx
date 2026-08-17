@@ -70,6 +70,9 @@ import type {
 } from "@/types/FinancialOrder";
 import type { BroadcastNotificationSender } from "@/types/BroadcastNotifications";
 
+const buildCommitSha = process.env.NEXT_PUBLIC_BUILD_COMMIT_SHA ?? "unknown";
+const buildBranch = process.env.NEXT_PUBLIC_BUILD_BRANCH ?? "unknown";
+
 type EntityRecord = {
   [key: string]: unknown;
   id?: string;
@@ -3447,6 +3450,11 @@ const SuperAccess = () => {
               {menuItem.title}
             </button>
           ))}
+          <div className={styles.buildInfo}>
+            <span>Deployed build</span>
+            <strong>{buildCommitSha}</strong>
+            <span>{buildBranch}</span>
+          </div>
         </aside>
 
         <section className={styles.listPane}>
