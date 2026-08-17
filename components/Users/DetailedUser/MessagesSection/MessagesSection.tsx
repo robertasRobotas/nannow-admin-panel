@@ -3,7 +3,8 @@ import styles from "./messagesSection.module.css";
 import ChatMessages from "./ChatMessages/ChatMessages";
 import Button from "@/components/Button/Button";
 import { ChatMessageType, ChatType } from "@/types/Chats";
-import { getChatById, getCurrentAdminRolesFromJwt } from "@/pages/api/fetch";
+import { getChatById, getCurrentAdminRolesFromJwt, resetChatCashPaymentWarningConfirmation } from "@/pages/api/fetch";
+import { toast } from "react-toastify";
 import avatarImg from "../../../../assets/images/default-avatar.png";
 
 const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
@@ -19,6 +20,7 @@ type ChatDetails = {
   user1?: ChatType["user1"];
   user2?: ChatType["user2"];
   messages?: ChatMessageType[];
+  cashPaymentWarningConfirmedAt?: string | null;
 };
 
 const isChatUnread = (chat: ChatType) => {
@@ -64,6 +66,8 @@ const MessagesSection = ({
   const [userImgUrl, setUserImgUrl] = useState("");
   const [otherUserImgUrl, setOtherUserImgUrl] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [cashPaymentWarningConfirmedAt, setCashPaymentWarningConfirmedAt] = useState<string | null>(null);
+  const [isResettingWarning, setIsResettingWarning] = useState(false);
   const filteredChats = useMemo(
     () => chats.filter((chat) => !isSystemNannowChat(chat)),
     [chats],
@@ -92,6 +96,7 @@ const MessagesSection = ({
         if (isCancelled) return;
 
         setMessages(Array.isArray(result.messages) ? result.messages : []);
+        setCashPaymentWarningConfirmedAt(result.cashPaymentWarningConfirmedAt ?? null);
         setUserImgUrl(
           result.user1?.id === userId
             ? (result.user1?.imgUrl ?? "")
@@ -120,6 +125,21 @@ const MessagesSection = ({
       isCancelled = true;
     };
   }, [selectedChatId, userId]);
+
+  const resetWarningConfirmation = async () => {
+    if (!selectedChatId || isResettingWarning) return;
+    try {
+      setIsResettingWarning(true);
+      await resetChatCashPaymentWarningConfirmation(selectedChatId);
+      setCashPaymentWarningConfirmedAt(null);
+      toast.success("Cash payment warning confirmation reset");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to reset cash payment warning confirmation");
+    } finally {
+      setIsResettingWarning(false);
+    }
+  };
 
   const selectedChat = useMemo(
     () =>
@@ -193,11 +213,17 @@ const MessagesSection = ({
           {selectedChat ? (
             <>
               <div className={styles.title}>
-                {`${
+                <span>{`${
                   (selectedChat.user2?.id === userId
                     ? selectedChat.user1?.firstName
                     : selectedChat.user2?.firstName) ?? "Chat"
-                }`}
+                }`}</span>
+                <div className={styles.warningStatus}>
+                  <span>{cashPaymentWarningConfirmedAt ? `Cash warning confirmed: ${formatDateTime(cashPaymentWarningConfirmedAt)}` : "Cash warning not confirmed"}</span>
+                  {cashPaymentWarningConfirmedAt && (
+                    <Button title={isResettingWarning ? "Resetting..." : "Reset confirmation"} type="OUTLINED" onClick={resetWarningConfirmation} isDisabled={isResettingWarning} />
+                  )}
+                </div>
               </div>
               {isLoadingChat ? (
                 <div className={styles.emptyState}>Loading messages...</div>

@@ -88,6 +88,7 @@ export type User = {
   locale?: string;
   requestedCompensationInfoAt?: string | null;
   contactedRegardingCompensationAt?: string | null;
+  cashPaymentWarningConfirmedAt?: string | null;
 };
 
 export type UserDetails = {
@@ -384,6 +385,7 @@ export type UserDetails = {
     imgUrlRemovedAt?: string | null;
     imgUrlRemovedByAdminId?: string | null;
     creditBalanceCents?: number;
+    cashPaymentWarningConfirmedAt?: string | null;
     userAppLanguage?: string;
     isSuspendedByAdmin: boolean;
     suspensionReason: string;

@@ -72,6 +72,7 @@ export type ChatType = {
   unreadMessagesCount?: number;
   suspiciousMessagesCount?: number;
   isSuspicious?: boolean;
+  cashPaymentWarningConfirmedAt?: string | null;
   user1: ChatUserType;
   user2: ChatUserType;
   participants?: ChatUserType[];

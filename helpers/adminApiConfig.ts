@@ -8,7 +8,7 @@ export const ADMIN_API_CONFIG = {
   },
   test: {
     origin: "https://nannow-api-test.com",
-    // origin: "http://localhost:8080",
+    //origin: "http://localhost:8080",
     apiVersion: "/v1",
     wsTransports: ["websocket"] as const,
   },

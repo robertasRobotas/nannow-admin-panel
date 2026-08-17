@@ -29,6 +29,15 @@
   font-weight: 800;
 }
 
+.warningStatus {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .chatList {
   display: flex;
   flex-direction: column;

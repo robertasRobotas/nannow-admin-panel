@@ -1042,6 +1042,15 @@ export const setUserBanStatus = async (
   return response;
 };
 
+export const resetCashPaymentWarningConfirmation = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/users/${userId}/cash-payment-warning/reset`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getBannedUsers = async (params?: {
   search?: string;
   startIndex?: number;
@@ -1436,6 +1445,15 @@ export const getChatById = async (id: string) => {
     },
   });
   return response;
+};
+
+export const resetChatCashPaymentWarningConfirmation = async (chatId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/chats/${chatId}/cash-payment-warning/reset`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
 };
 
 export const getUserChatsById = async (id: string) => {
