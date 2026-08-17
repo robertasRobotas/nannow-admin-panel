@@ -2881,6 +2881,7 @@ const SuperAccess = () => {
     try {
       setIsSaving(true);
       setError("");
+      setNotice("");
       if (entity === "broadcast-sender") {
         await updateBroadcastNotificationSender({
           firstName:
@@ -2898,6 +2899,7 @@ const SuperAccess = () => {
         return;
       }
       if (entity === "admins") {
+        const isChangingPassword = Boolean(adminPassword.trim());
         const payload: Record<string, unknown> = {
           firstName:
             typeof draft.firstName === "string" && draft.firstName.trim()
@@ -2917,6 +2919,13 @@ const SuperAccess = () => {
           payload.password = adminPassword.trim();
         }
         await updateSuperAccessItem(entity, selectedId, payload);
+        if (removeAdminPassword) {
+          setNotice("Password login removed for this admin.");
+        } else if (isChangingPassword) {
+          setNotice("Admin password changed successfully.");
+        } else {
+          setNotice("Admin details saved.");
+        }
       } else {
         if (!isSuperAccessEntity(entity)) return;
         await updateSuperAccessItem(entity, selectedId, draft);
@@ -4763,6 +4772,7 @@ const SuperAccess = () => {
                                 onChange={(e) =>
                                   setAdminPassword(e.target.value)
                                 }
+                                autoComplete="new-password"
                                 placeholder="Leave empty to keep current"
                                 disabled={removeAdminPassword}
                               />
@@ -4771,9 +4781,10 @@ const SuperAccess = () => {
                               <input
                                 type="checkbox"
                                 checked={removeAdminPassword}
-                                onChange={(e) =>
-                                  setRemoveAdminPassword(e.target.checked)
-                                }
+                                onChange={(e) => {
+                                  setRemoveAdminPassword(e.target.checked);
+                                  if (e.target.checked) setAdminPassword("");
+                                }}
                               />
                               <span>Remove password login</span>
                             </label>
