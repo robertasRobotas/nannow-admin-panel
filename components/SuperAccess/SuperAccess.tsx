@@ -35,6 +35,8 @@ import {
   getProviderPublicUrlGenerationJob,
   rebuildChatsContactSharing,
   getProviderCompletionStatsRebuildJob,
+  findDuplicatePayouts,
+  cancelDuplicatePayouts,
   runChatsNormalization,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
@@ -923,6 +925,16 @@ const SuperAccess = () => {
   ] = useState(false);
   const [isGeneratingProviderPublicUrls, setIsGeneratingProviderPublicUrls] =
     useState(false);
+  const [isDuplicatePayoutModalOpen, setIsDuplicatePayoutModalOpen] =
+    useState(false);
+  const [isFindingDuplicatePayouts, setIsFindingDuplicatePayouts] =
+    useState(false);
+  const [isCancelingDuplicatePayouts, setIsCancelingDuplicatePayouts] =
+    useState(false);
+  const [duplicatePayoutAudit, setDuplicatePayoutAudit] = useState<{
+    groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
+    cancelablePayoutIds: string[];
+  } | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
     "ONE",
   );
@@ -2399,6 +2411,53 @@ const SuperAccess = () => {
       void handleRebuildAllProvidersCompletionStats();
     } else if (action === "STRIPE") {
       void refreshStripeKycAudit(undefined, { openModal: true });
+    } else if (action === "DUPLICATE_PAYOUTS") {
+      void handleFindDuplicatePayouts();
+    }
+  };
+
+  const handleFindDuplicatePayouts = async () => {
+    const paidUserId = String(selectedItem?.userId ?? draft.userId ?? "").trim();
+    if (!paidUserId) {
+      setError("Select a provider before checking duplicate payouts.");
+      return;
+    }
+    try {
+      setIsFindingDuplicatePayouts(true);
+      setError("");
+      const response = await findDuplicatePayouts({ paidUserId });
+      setDuplicatePayoutAudit(response.data);
+      setIsDuplicatePayoutModalOpen(true);
+    } catch (err) {
+      setError(
+        axios.isAxiosError(err)
+          ? ((err.response?.data as { error?: string })?.error ?? "Failed to find duplicate payouts.")
+          : "Failed to find duplicate payouts.",
+      );
+    } finally {
+      setIsFindingDuplicatePayouts(false);
+    }
+  };
+
+  const handleCancelDuplicatePayouts = async () => {
+    const payoutIds = duplicatePayoutAudit?.cancelablePayoutIds ?? [];
+    if (!payoutIds.length || isCancelingDuplicatePayouts) return;
+    if (!window.confirm(`Cancel ${payoutIds.length} pending duplicate payout(s) and reverse their transfers?`)) return;
+    try {
+      setIsCancelingDuplicatePayouts(true);
+      setError("");
+      const response = await cancelDuplicatePayouts(payoutIds, true);
+      const result = response.data as { canceled?: Array<unknown> };
+      setNotice(`Canceled ${result.canceled?.length ?? 0} duplicate payout(s).`);
+      await handleFindDuplicatePayouts();
+    } catch (err) {
+      setError(
+        axios.isAxiosError(err)
+          ? ((err.response?.data as { error?: string })?.error ?? "Failed to cancel duplicate payouts.")
+          : "Failed to cancel duplicate payouts.",
+      );
+    } finally {
+      setIsCancelingDuplicatePayouts(false);
     }
   };
 
@@ -3699,7 +3758,8 @@ const SuperAccess = () => {
                       }}
                       disabled={
                         isGeneratingProviderPublicUrls ||
-                        isRebuildingAllProviderCompletionStats
+                        isRebuildingAllProviderCompletionStats ||
+                        isFindingDuplicatePayouts
                       }
                     >
                       <option value="">Actions</option>
@@ -3710,6 +3770,9 @@ const SuperAccess = () => {
                         Rebuild completion rates
                       </option>
                       <option value="STRIPE">Scan Stripe status</option>
+                      <option value="DUPLICATE_PAYOUTS">
+                        Find duplicate payouts
+                      </option>
                     </select>
                   )}
                   <SearchBar
@@ -6611,6 +6674,39 @@ const SuperAccess = () => {
                 }
                 isDisabled={isRegeneratingAddress || isRegeneratingAllAddresses}
                 isLoading={isRegeneratingAddress || isRegeneratingAllAddresses}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isDuplicatePayoutModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Duplicate provider payouts</h3>
+            <p className={styles.modalText}>
+              {duplicatePayoutAudit?.groups.length ?? 0} duplicate group(s) found. Only pending duplicates can be canceled.
+            </p>
+            {(duplicatePayoutAudit?.groups ?? []).map((group) => (
+              <div className={styles.chatProgressRow} key={group.key}>
+                <span>{group.payoutIds.length} payouts · keeping the first</span>
+                <strong>{group.duplicatePayoutIds.length} duplicate(s)</strong>
+              </div>
+            ))}
+            {!duplicatePayoutAudit?.groups.length && (
+              <p className={styles.modalText}>No duplicate payouts were found for this provider.</p>
+            )}
+            <div className={styles.modalActions}>
+              <Button
+                title="Close"
+                type="OUTLINED"
+                onClick={() => setIsDuplicatePayoutModalOpen(false)}
+              />
+              <Button
+                title={isCancelingDuplicatePayouts ? "Canceling..." : `Cancel ${duplicatePayoutAudit?.cancelablePayoutIds.length ?? 0} pending duplicate(s)`}
+                type="BLACK"
+                onClick={() => void handleCancelDuplicatePayouts()}
+                isDisabled={!duplicatePayoutAudit?.cancelablePayoutIds.length || isCancelingDuplicatePayouts}
+                isLoading={isCancelingDuplicatePayouts}
               />
             </div>
           </div>
