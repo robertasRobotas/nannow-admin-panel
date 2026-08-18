@@ -611,6 +611,15 @@
   gap: 10px;
 }
 
+.duplicatePayoutResults {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .stripeKycModalCard {
   max-width: 980px;
   height: min(90dvh, 980px);

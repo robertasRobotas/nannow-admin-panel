@@ -936,7 +936,7 @@ const SuperAccess = () => {
     scannedPayoutCount?: number;
     totalPayoutCount?: number;
     groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
-    stripeTransferGroups?: Array<{ key: string; transferIds: string[]; amount: number; currency: string; hasOrderMetadata: boolean }>;
+    stripeTransferGroups?: Array<{ key: string; transferIds: string[]; amount: number; currency: string; hasOrderMetadata: boolean; destinationAccountId: string | null; providerName: string | null }>;
     cancelablePayoutIds: string[];
   } | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
@@ -6710,6 +6710,7 @@ const SuperAccess = () => {
                   {` Database contains ${duplicatePayoutAudit?.totalPayoutCount ?? 0} payout record(s) total.`}
                   {` Search completed in ${duplicatePayoutSearchMs ?? 0} ms.`}
                 </p>
+                <div className={styles.duplicatePayoutResults}>
                 {(duplicatePayoutAudit?.groups ?? []).map((group) => (
               <div className={styles.chatProgressRow} key={group.key}>
                 <span>{group.payoutIds.length} payouts · keeping the first</span>
@@ -6718,10 +6719,15 @@ const SuperAccess = () => {
                 ))}
                 {(duplicatePayoutAudit?.stripeTransferGroups ?? []).map((group) => (
                   <div className={styles.chatProgressRow} key={`stripe-${group.key}`}>
-                    <span>Stripe transfers: {group.transferIds.length} × {(group.amount / 100).toFixed(2)} {group.currency.toUpperCase()}</span>
-                    <strong>{group.hasOrderMetadata ? "same order" : "same account/amount"}</strong>
+                    <span>
+                      <strong>{group.providerName ?? "Unknown provider"}</strong><br />
+                      Stripe transfers: {group.transferIds.length} × {(group.amount / 100).toFixed(2)} {group.currency.toUpperCase()}<br />
+                      Account: <code>{group.destinationAccountId ?? "unknown"}</code>
+                    </span>
+                    <strong>{group.hasOrderMetadata ? "same order" : "same order (local link)"}</strong>
                   </div>
                 ))}
+                </div>
                 {!duplicatePayoutAudit?.groups.length && (
                   <p className={styles.modalText}>No locally recorded duplicate payouts were found across providers.</p>
                 )}
