@@ -2422,7 +2422,8 @@ const SuperAccess = () => {
   const handleFindDuplicatePayouts = async () => {
     try {
       const startedAt = performance.now();
-      console.info("[duplicate-payout-audit] start", { scope: "all-providers" });
+      const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      console.info("[duplicate-payout-audit] start", { scope: "all-providers", requestId });
       setIsFindingDuplicatePayouts(true);
       setDuplicatePayoutAudit(null);
       setDuplicatePayoutSearchMs(null);
@@ -2433,6 +2434,7 @@ const SuperAccess = () => {
       const audit = response.data as { scannedPayoutCount?: number; totalPayoutCount?: number; groups?: unknown[] };
       console.info("[duplicate-payout-audit] complete", {
         scope: "all-providers",
+        requestId,
         elapsedMs,
         scannedPayoutCount: audit.scannedPayoutCount ?? 0,
         totalPayoutCount: audit.totalPayoutCount ?? 0,

@@ -2508,8 +2508,8 @@ export const refreshPayoutByOrderId = async (orderId: string) => {
 export const findDuplicatePayouts = async (params?: { orderId?: string; paidUserId?: string }) => {
   const jwt = Cookies.get("@user_jwt");
   return axios.get(`${BASE_URL}/admin/payouts/duplicates`, {
-    params,
-    headers: { Authorization: jwt },
+    params: { ...(params ?? {}), _auditRequestId: `${Date.now()}-${Math.random().toString(36).slice(2)}` },
+    headers: { Authorization: jwt, "Cache-Control": "no-cache", Pragma: "no-cache" },
   });
 };
 
