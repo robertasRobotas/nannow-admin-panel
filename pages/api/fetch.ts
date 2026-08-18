@@ -2522,6 +2522,15 @@ export const cancelDuplicatePayouts = async (payoutIds: string[], confirm = true
   );
 };
 
+export const reconcileUnrecordedStripeTransfer = async (transferId: string, orderId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/payouts/reconcile-transfer`,
+    { transferId, orderId },
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getAdditionalPaymentsNotPayoutedOrders = async (
   startIndex = 0,
 ) => {

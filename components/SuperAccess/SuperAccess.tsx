@@ -37,6 +37,7 @@ import {
   getProviderCompletionStatsRebuildJob,
   findDuplicatePayouts,
   cancelDuplicatePayouts,
+  reconcileUnrecordedStripeTransfer,
   runChatsNormalization,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
@@ -931,12 +932,15 @@ const SuperAccess = () => {
     useState(false);
   const [isCancelingDuplicatePayouts, setIsCancelingDuplicatePayouts] =
     useState(false);
+  const [reconcilingTransferId, setReconcilingTransferId] = useState<string | null>(null);
+  const [transferReconcileResults, setTransferReconcileResults] = useState<Record<string, { ok: boolean; message: string }>>({});
   const [duplicatePayoutSearchMs, setDuplicatePayoutSearchMs] = useState<number | null>(null);
   const [duplicatePayoutAudit, setDuplicatePayoutAudit] = useState<{
     scannedPayoutCount?: number;
     totalPayoutCount?: number;
     groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
     stripeTransferGroups?: Array<{ key: string; transferIds: string[]; amount: number; currency: string; hasOrderMetadata: boolean; destinationAccountId: string | null; providerName: string | null }>;
+    unrecordedStripeTransfers?: Array<{ transferId: string; destinationAccountId: string; providerUserId: string; orderId: string; amount: number; currency: string }>;
     cancelablePayoutIds: string[];
   } | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
@@ -2432,7 +2436,7 @@ const SuperAccess = () => {
       setError("");
       const response = await findDuplicatePayouts();
       const elapsedMs = Math.round(performance.now() - startedAt);
-      const audit = response.data as { scannedPayoutCount?: number; totalPayoutCount?: number; groups?: unknown[]; stripeTransferGroups?: unknown[] };
+      const audit = response.data as { scannedPayoutCount?: number; totalPayoutCount?: number; groups?: unknown[]; stripeTransferGroups?: unknown[]; unrecordedStripeTransfers?: unknown[] };
       console.info("[duplicate-payout-audit] complete", {
         scope: "all-providers",
         requestId,
@@ -2441,6 +2445,7 @@ const SuperAccess = () => {
         totalPayoutCount: audit.totalPayoutCount ?? 0,
         duplicateGroupCount: audit.groups?.length ?? 0,
         stripeTransferDuplicateGroupCount: audit.stripeTransferGroups?.length ?? 0,
+        unrecordedStripeTransferCount: audit.unrecordedStripeTransfers?.length ?? 0,
       });
       setDuplicatePayoutSearchMs(elapsedMs);
       setDuplicatePayoutAudit(response.data);
@@ -2475,6 +2480,25 @@ const SuperAccess = () => {
       );
     } finally {
       setIsCancelingDuplicatePayouts(false);
+    }
+  };
+
+  const handleReconcileTransfer = async (transfer: { transferId: string; orderId: string }) => {
+    if (!window.confirm(`Record transfer ${transfer.transferId} as the provider payout and mark order ${transfer.orderId} paid?`)) return;
+    try {
+      setReconcilingTransferId(transfer.transferId);
+      setError("");
+      const response = await reconcileUnrecordedStripeTransfer(transfer.transferId, transfer.orderId);
+      console.info("[duplicate-payout-reconcile] success", { transferId: transfer.transferId, orderId: transfer.orderId, response: response.data });
+      setTransferReconcileResults((current) => ({ ...current, [transfer.transferId]: { ok: true, message: "Recorded and order marked paid" } }));
+      setNotice(`Recorded transfer ${transfer.transferId} and marked the order paid.`);
+      await handleFindDuplicatePayouts();
+    } catch (err) {
+      const message = axios.isAxiosError(err) ? ((err.response?.data as { error?: string })?.error ?? `Request failed (${err.response?.status ?? "unknown"})`) : "Failed to reconcile transfer.";
+      console.error("[duplicate-payout-reconcile] failed", { transferId: transfer.transferId, orderId: transfer.orderId, status: axios.isAxiosError(err) ? err.response?.status : undefined, message, error: err });
+      setTransferReconcileResults((current) => ({ ...current, [transfer.transferId]: { ok: false, message } }));
+    } finally {
+      setReconcilingTransferId(null);
     }
   };
 
@@ -6725,6 +6749,30 @@ const SuperAccess = () => {
                       Account: <code>{group.destinationAccountId ?? "unknown"}</code>
                     </span>
                     <strong>{group.hasOrderMetadata ? "same order" : "same order (local link)"}</strong>
+                  </div>
+                ))}
+                {(duplicatePayoutAudit?.unrecordedStripeTransfers ?? []).map((transfer) => (
+                  <div className={styles.chatProgressRow} key={`unrecorded-${transfer.transferId}`}>
+                    <span>
+                      <strong>Stripe transfer not recorded locally</strong><br />
+                      Order: <code>{transfer.orderId}</code><br />
+                      Provider user: <code>{transfer.providerUserId}</code><br />
+                      Account: <code>{transfer.destinationAccountId}</code><br />
+                      Transfer: <code>{transfer.transferId}</code>
+                    </span>
+                    <strong>{(transfer.amount / 100).toFixed(2)} {transfer.currency.toUpperCase()}</strong>
+                    <Button
+                      title={reconcilingTransferId === transfer.transferId ? "Recording..." : "Record payout"}
+                      type="OUTLINED"
+                      onClick={() => void handleReconcileTransfer(transfer)}
+                      isDisabled={Boolean(reconcilingTransferId)}
+                      isLoading={reconcilingTransferId === transfer.transferId}
+                    />
+                    {transferReconcileResults[transfer.transferId] && (
+                      <small className={transferReconcileResults[transfer.transferId].ok ? styles.reconcileSuccess : styles.reconcileError}>
+                        {transferReconcileResults[transfer.transferId].message}
+                      </small>
+                    )}
                   </div>
                 ))}
                 </div>
