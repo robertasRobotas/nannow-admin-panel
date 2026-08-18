@@ -277,17 +277,34 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       return fallback;
     }
 
-    const payload = maybeData as { error?: unknown; details?: unknown };
+    const payload = maybeData as {
+      error?: unknown;
+      details?: unknown;
+      code?: unknown;
+    };
+    const code = typeof payload.code === "string" ? payload.code : null;
     const message =
-      typeof payload.error === "string" && payload.error.trim().length > 0
-        ? payload.error
-        : fallback.message;
+      code === "PROVIDER_STRIPE_PAYOUTS_DISABLED"
+        ? "Provider payouts are disabled for this Stripe account. Ask the provider to resolve the Stripe account restriction, then try again."
+        : typeof payload.error === "string" && payload.error.trim().length > 0
+          ? payload.error
+          : fallback.message;
     const details =
       typeof payload.details === "string" && payload.details.trim().length > 0
         ? payload.details
         : null;
 
-    return { message, details };
+    return {
+      message,
+      details: code === "PROVIDER_STRIPE_PAYOUTS_DISABLED" ? null : details,
+    };
+  };
+
+  const showPayoutError = (error: unknown) => {
+    const parsedError = extractReleaseFundsError(error);
+    setReleaseFundsErrorMessage(parsedError.message);
+    setReleaseFundsErrorDetails(parsedError.details);
+    setIsReleaseFundsErrorModalOpen(true);
   };
 
   const confirmPayOrder = async () => {
@@ -299,10 +316,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     } catch (error) {
       console.warn("Failed to release funds");
-      const parsedError = extractReleaseFundsError(error);
-      setReleaseFundsErrorMessage(parsedError.message);
-      setReleaseFundsErrorDetails(parsedError.details);
-      setIsReleaseFundsErrorModalOpen(true);
+      showPayoutError(error);
     } finally {
       setIsReleasingFunds(false);
       setIsConfirmModalOpen(false);
@@ -396,6 +410,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     } catch (error) {
       console.error("Failed to payout cancel fee", error);
+      showPayoutError(error);
     } finally {
       setIsPayingCancelFee(false);
     }
@@ -411,6 +426,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     } catch (error) {
       console.error("Failed to payout additional payments", error);
+      showPayoutError(error);
     } finally {
       setIsPayingAdditionalPayments(false);
     }

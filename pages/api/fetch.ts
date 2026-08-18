@@ -2505,6 +2505,23 @@ export const refreshPayoutByOrderId = async (orderId: string) => {
   return response;
 };
 
+export const findDuplicatePayouts = async (params?: { orderId?: string; paidUserId?: string }) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/payouts/duplicates`, {
+    params,
+    headers: { Authorization: jwt },
+  });
+};
+
+export const cancelDuplicatePayouts = async (payoutIds: string[], confirm = true) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/payouts/duplicates/cancel`,
+    { payoutIds, confirm },
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getAdditionalPaymentsNotPayoutedOrders = async (
   startIndex = 0,
 ) => {
