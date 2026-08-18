@@ -931,6 +931,7 @@ const SuperAccess = () => {
     useState(false);
   const [isCancelingDuplicatePayouts, setIsCancelingDuplicatePayouts] =
     useState(false);
+  const [duplicatePayoutSearchMs, setDuplicatePayoutSearchMs] = useState<number | null>(null);
   const [duplicatePayoutAudit, setDuplicatePayoutAudit] = useState<{
     scannedPayoutCount?: number;
     groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
@@ -2424,13 +2425,26 @@ const SuperAccess = () => {
       return;
     }
     try {
+      const startedAt = performance.now();
+      console.info("[duplicate-payout-audit] start", { paidUserId });
       setIsFindingDuplicatePayouts(true);
       setDuplicatePayoutAudit(null);
+      setDuplicatePayoutSearchMs(null);
       setIsDuplicatePayoutModalOpen(true);
       setError("");
       const response = await findDuplicatePayouts({ paidUserId });
+      const elapsedMs = Math.round(performance.now() - startedAt);
+      const audit = response.data as { scannedPayoutCount?: number; groups?: unknown[] };
+      console.info("[duplicate-payout-audit] complete", {
+        paidUserId,
+        elapsedMs,
+        scannedPayoutCount: audit.scannedPayoutCount ?? 0,
+        duplicateGroupCount: audit.groups?.length ?? 0,
+      });
+      setDuplicatePayoutSearchMs(elapsedMs);
       setDuplicatePayoutAudit(response.data);
     } catch (err) {
+      console.error("[duplicate-payout-audit] failed", { paidUserId, err });
       setError(
         axios.isAxiosError(err)
           ? ((err.response?.data as { error?: string })?.error ?? "Failed to find duplicate payouts.")
@@ -6692,6 +6706,7 @@ const SuperAccess = () => {
                 <p className={styles.modalText}>
                   {duplicatePayoutAudit?.groups.length ?? 0} duplicate group(s) found. Only pending duplicates can be canceled.
                   {` Scanned ${duplicatePayoutAudit?.scannedPayoutCount ?? 0} payout record(s).`}
+                  {` Search completed in ${duplicatePayoutSearchMs ?? 0} ms.`}
                 </p>
                 {(duplicatePayoutAudit?.groups ?? []).map((group) => (
               <div className={styles.chatProgressRow} key={group.key}>
