@@ -936,6 +936,7 @@ const SuperAccess = () => {
     scannedPayoutCount?: number;
     totalPayoutCount?: number;
     groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
+    stripeTransferGroups?: Array<{ key: string; transferIds: string[]; amount: number; currency: string; hasOrderMetadata: boolean }>;
     cancelablePayoutIds: string[];
   } | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
@@ -2431,7 +2432,7 @@ const SuperAccess = () => {
       setError("");
       const response = await findDuplicatePayouts();
       const elapsedMs = Math.round(performance.now() - startedAt);
-      const audit = response.data as { scannedPayoutCount?: number; totalPayoutCount?: number; groups?: unknown[] };
+      const audit = response.data as { scannedPayoutCount?: number; totalPayoutCount?: number; groups?: unknown[]; stripeTransferGroups?: unknown[] };
       console.info("[duplicate-payout-audit] complete", {
         scope: "all-providers",
         requestId,
@@ -2439,6 +2440,7 @@ const SuperAccess = () => {
         scannedPayoutCount: audit.scannedPayoutCount ?? 0,
         totalPayoutCount: audit.totalPayoutCount ?? 0,
         duplicateGroupCount: audit.groups?.length ?? 0,
+        stripeTransferDuplicateGroupCount: audit.stripeTransferGroups?.length ?? 0,
       });
       setDuplicatePayoutSearchMs(elapsedMs);
       setDuplicatePayoutAudit(response.data);
@@ -6703,7 +6705,7 @@ const SuperAccess = () => {
             ) : (
               <>
                 <p className={styles.modalText}>
-                  {duplicatePayoutAudit?.groups.length ?? 0} duplicate group(s) found across all providers. Only pending duplicates can be canceled.
+                  {duplicatePayoutAudit?.groups.length ?? 0} local duplicate payout group(s) found. Stripe transfer audit found {duplicatePayoutAudit?.stripeTransferGroups?.length ?? 0} possible duplicate group(s).
                   {` Scanned ${duplicatePayoutAudit?.scannedPayoutCount ?? 0} payout record(s).`}
                   {` Database contains ${duplicatePayoutAudit?.totalPayoutCount ?? 0} payout record(s) total.`}
                   {` Search completed in ${duplicatePayoutSearchMs ?? 0} ms.`}
@@ -6714,8 +6716,14 @@ const SuperAccess = () => {
                 <strong>{group.duplicatePayoutIds.length} duplicate(s)</strong>
               </div>
                 ))}
+                {(duplicatePayoutAudit?.stripeTransferGroups ?? []).map((group) => (
+                  <div className={styles.chatProgressRow} key={`stripe-${group.key}`}>
+                    <span>Stripe transfers: {group.transferIds.length} × {(group.amount / 100).toFixed(2)} {group.currency.toUpperCase()}</span>
+                    <strong>{group.hasOrderMetadata ? "same order" : "same account/amount"}</strong>
+                  </div>
+                ))}
                 {!duplicatePayoutAudit?.groups.length && (
-                  <p className={styles.modalText}>No duplicate payouts were found across providers.</p>
+                  <p className={styles.modalText}>No locally recorded duplicate payouts were found across providers.</p>
                 )}
               </>
             )}
