@@ -932,6 +932,7 @@ const SuperAccess = () => {
   const [isCancelingDuplicatePayouts, setIsCancelingDuplicatePayouts] =
     useState(false);
   const [duplicatePayoutAudit, setDuplicatePayoutAudit] = useState<{
+    scannedPayoutCount?: number;
     groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
     cancelablePayoutIds: string[];
   } | null>(null);
@@ -2424,10 +2425,11 @@ const SuperAccess = () => {
     }
     try {
       setIsFindingDuplicatePayouts(true);
+      setDuplicatePayoutAudit(null);
+      setIsDuplicatePayoutModalOpen(true);
       setError("");
       const response = await findDuplicatePayouts({ paidUserId });
       setDuplicatePayoutAudit(response.data);
-      setIsDuplicatePayoutModalOpen(true);
     } catch (err) {
       setError(
         axios.isAxiosError(err)
@@ -6683,17 +6685,24 @@ const SuperAccess = () => {
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
             <h3 className={styles.modalTitle}>Duplicate provider payouts</h3>
-            <p className={styles.modalText}>
-              {duplicatePayoutAudit?.groups.length ?? 0} duplicate group(s) found. Only pending duplicates can be canceled.
-            </p>
-            {(duplicatePayoutAudit?.groups ?? []).map((group) => (
+            {isFindingDuplicatePayouts ? (
+              <p className={styles.modalText}>Searching this provider’s payout records…</p>
+            ) : (
+              <>
+                <p className={styles.modalText}>
+                  {duplicatePayoutAudit?.groups.length ?? 0} duplicate group(s) found. Only pending duplicates can be canceled.
+                  {` Scanned ${duplicatePayoutAudit?.scannedPayoutCount ?? 0} payout record(s).`}
+                </p>
+                {(duplicatePayoutAudit?.groups ?? []).map((group) => (
               <div className={styles.chatProgressRow} key={group.key}>
                 <span>{group.payoutIds.length} payouts · keeping the first</span>
                 <strong>{group.duplicatePayoutIds.length} duplicate(s)</strong>
               </div>
-            ))}
-            {!duplicatePayoutAudit?.groups.length && (
-              <p className={styles.modalText}>No duplicate payouts were found for this provider.</p>
+                ))}
+                {!duplicatePayoutAudit?.groups.length && (
+                  <p className={styles.modalText}>No duplicate payouts were found for this provider.</p>
+                )}
+              </>
             )}
             <div className={styles.modalActions}>
               <Button
@@ -6705,7 +6714,7 @@ const SuperAccess = () => {
                 title={isCancelingDuplicatePayouts ? "Canceling..." : `Cancel ${duplicatePayoutAudit?.cancelablePayoutIds.length ?? 0} pending duplicate(s)`}
                 type="BLACK"
                 onClick={() => void handleCancelDuplicatePayouts()}
-                isDisabled={!duplicatePayoutAudit?.cancelablePayoutIds.length || isCancelingDuplicatePayouts}
+                isDisabled={isFindingDuplicatePayouts || !duplicatePayoutAudit?.cancelablePayoutIds.length || isCancelingDuplicatePayouts}
                 isLoading={isCancelingDuplicatePayouts}
               />
             </div>
