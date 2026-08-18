@@ -934,6 +934,7 @@ const SuperAccess = () => {
   const [duplicatePayoutSearchMs, setDuplicatePayoutSearchMs] = useState<number | null>(null);
   const [duplicatePayoutAudit, setDuplicatePayoutAudit] = useState<{
     scannedPayoutCount?: number;
+    totalPayoutCount?: number;
     groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
     cancelablePayoutIds: string[];
   } | null>(null);
@@ -2419,32 +2420,28 @@ const SuperAccess = () => {
   };
 
   const handleFindDuplicatePayouts = async () => {
-    const paidUserId = String(selectedItem?.userId ?? draft.userId ?? "").trim();
-    if (!paidUserId) {
-      setError("Select a provider before checking duplicate payouts.");
-      return;
-    }
     try {
       const startedAt = performance.now();
-      console.info("[duplicate-payout-audit] start", { paidUserId });
+      console.info("[duplicate-payout-audit] start", { scope: "all-providers" });
       setIsFindingDuplicatePayouts(true);
       setDuplicatePayoutAudit(null);
       setDuplicatePayoutSearchMs(null);
       setIsDuplicatePayoutModalOpen(true);
       setError("");
-      const response = await findDuplicatePayouts({ paidUserId });
+      const response = await findDuplicatePayouts();
       const elapsedMs = Math.round(performance.now() - startedAt);
-      const audit = response.data as { scannedPayoutCount?: number; groups?: unknown[] };
+      const audit = response.data as { scannedPayoutCount?: number; totalPayoutCount?: number; groups?: unknown[] };
       console.info("[duplicate-payout-audit] complete", {
-        paidUserId,
+        scope: "all-providers",
         elapsedMs,
         scannedPayoutCount: audit.scannedPayoutCount ?? 0,
+        totalPayoutCount: audit.totalPayoutCount ?? 0,
         duplicateGroupCount: audit.groups?.length ?? 0,
       });
       setDuplicatePayoutSearchMs(elapsedMs);
       setDuplicatePayoutAudit(response.data);
     } catch (err) {
-      console.error("[duplicate-payout-audit] failed", { paidUserId, err });
+      console.error("[duplicate-payout-audit] failed", { scope: "all-providers", err });
       setError(
         axios.isAxiosError(err)
           ? ((err.response?.data as { error?: string })?.error ?? "Failed to find duplicate payouts.")
@@ -6700,12 +6697,13 @@ const SuperAccess = () => {
           <div className={styles.modalCard}>
             <h3 className={styles.modalTitle}>Duplicate provider payouts</h3>
             {isFindingDuplicatePayouts ? (
-              <p className={styles.modalText}>Searching this provider’s payout records…</p>
+              <p className={styles.modalText}>Searching payout records for all providers…</p>
             ) : (
               <>
                 <p className={styles.modalText}>
-                  {duplicatePayoutAudit?.groups.length ?? 0} duplicate group(s) found. Only pending duplicates can be canceled.
+                  {duplicatePayoutAudit?.groups.length ?? 0} duplicate group(s) found across all providers. Only pending duplicates can be canceled.
                   {` Scanned ${duplicatePayoutAudit?.scannedPayoutCount ?? 0} payout record(s).`}
+                  {` Database contains ${duplicatePayoutAudit?.totalPayoutCount ?? 0} payout record(s) total.`}
                   {` Search completed in ${duplicatePayoutSearchMs ?? 0} ms.`}
                 </p>
                 {(duplicatePayoutAudit?.groups ?? []).map((group) => (
@@ -6715,7 +6713,7 @@ const SuperAccess = () => {
               </div>
                 ))}
                 {!duplicatePayoutAudit?.groups.length && (
-                  <p className={styles.modalText}>No duplicate payouts were found for this provider.</p>
+                  <p className={styles.modalText}>No duplicate payouts were found across providers.</p>
                 )}
               </>
             )}
