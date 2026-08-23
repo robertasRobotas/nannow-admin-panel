@@ -3,6 +3,8 @@ export type ChatUserType = {
   firstName: string;
   lastName?: string;
   imgUrl: string;
+  currentMode?: "CLIENT" | "PROVIDER" | string;
+  userMode?: "CLIENT" | "PROVIDER" | string;
   isVerified?: boolean;
   badgesIds?: string[];
   rating?: number;

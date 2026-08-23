@@ -17,6 +17,7 @@ import {
 import {
   ChatMessageType,
   ChatType,
+  ChatUserType,
   GetAdminChatsResponse,
 } from "@/types/Chats";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
@@ -84,6 +85,32 @@ const getChatReadAt = (chat: ChatType, lastMessage?: ChatMessageType | null) =>
 
 const getChatParticipantId = (chat: ChatType, key: "user1" | "user2") =>
   chat[key]?.id ?? (key === "user1" ? chat.user1Id : chat.user2Id) ?? "";
+
+const getChatUserMode = (
+  user: ChatUserType,
+  fallbackMode: "CLIENT" | "PROVIDER",
+) => {
+  const currentMode = String(
+    user.currentMode ?? user.userMode ?? fallbackMode,
+  ).toUpperCase();
+  return currentMode.includes("PROVIDER") ? "PROVIDER" : "CLIENT";
+};
+
+const getChatUserProfileHref = (
+  user: ChatUserType,
+  fallbackMode: "CLIENT" | "PROVIDER",
+) => {
+  const mode = getChatUserMode(user, fallbackMode);
+  return `/${mode === "PROVIDER" ? "provider" : "client"}/${user.id}`;
+};
+
+const getChatUserName = (user: ChatUserType) =>
+  `${user.firstName} ${user.lastName ?? ""}`.trim();
+
+const getChatUserNameWithMode = (
+  user: ChatUserType,
+  fallbackMode: "CLIENT" | "PROVIDER",
+) => `${getChatUserName(user)} (${getChatUserMode(user, fallbackMode)[0]})`;
 
 const isSystemNannowChat = (chat: ChatType) => {
   const user1Id = getChatParticipantId(chat, "user1");
@@ -369,13 +396,6 @@ const AdminChats = () => {
       id: selectedChatId,
     });
   };
-
-  const selectedTitle = useMemo(() => {
-    if (!selectedChat?.user1 || !selectedChat?.user2) return "Select a chat";
-    return `${selectedChat.user1.firstName} ${selectedChat.user1.lastName ?? ""} / ${
-      selectedChat.user2.firstName
-    } ${selectedChat.user2.lastName ?? ""}`.trim();
-  }, [selectedChat]);
 
   const getChatHref = (chatId: string) => ({
     pathname: router.pathname,
@@ -926,7 +946,34 @@ const AdminChats = () => {
         </div>
 
         <div className={styles.messagesPane}>
-          <div className={styles.paneTitle}>{selectedTitle}</div>
+          <div className={styles.paneTitle}>
+            {selectedChat?.user1 && selectedChat?.user2 ? (
+              <>
+                <Link
+                  href={getChatUserProfileHref(selectedChat.user1, "CLIENT")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.profileLink}
+                >
+                  {getChatUserNameWithMode(selectedChat.user1, "CLIENT")}
+                </Link>
+                <span className={styles.profileDivider}>/</span>
+                <Link
+                  href={getChatUserProfileHref(
+                    selectedChat.user2,
+                    "PROVIDER",
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.profileLink}
+                >
+                  {getChatUserNameWithMode(selectedChat.user2, "PROVIDER")}
+                </Link>
+              </>
+            ) : (
+              "Select a chat"
+            )}
+          </div>
           {loadingChat ? (
             <div className={styles.emptyState}>Loading messages...</div>
           ) : messages.length > 0 &&

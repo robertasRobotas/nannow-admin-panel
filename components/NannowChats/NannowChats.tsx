@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import SearchBar from "@/components/SearchBar/SearchBar";
 import Button from "@/components/Button/Button";
@@ -16,6 +17,7 @@ import {
 import {
   ChatMessageType,
   ChatType,
+  ChatUserType,
   GetAdminChatsResponse,
 } from "@/types/Chats";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
@@ -64,6 +66,19 @@ const isChatUnread = (chat: ChatType) => {
 
 const getChatReadAt = (chat: ChatType, lastMessage?: ChatMessageType | null) =>
   lastMessage?.readAt ?? chat.lastMessageReadAt ?? null;
+
+const getChatUserMode = (user: ChatUserType) => {
+  const currentMode = String(user.currentMode ?? user.userMode ?? "CLIENT").toUpperCase();
+  return currentMode.includes("PROVIDER") ? "PROVIDER" : "CLIENT";
+};
+
+const getChatUserName = (user: ChatUserType) =>
+  `${user.firstName} ${user.lastName ?? ""}`.trim();
+
+const getNannowChatParticipant = (chat: ChatDetailsResponse) => {
+  if (!chat.user1 || !chat.user2) return null;
+  return chat.user1.id === SYSTEM_NANNOW_ID ? chat.user2 : chat.user1;
+};
 
 const parseChatsResponse = (
   response: unknown,
@@ -358,12 +373,10 @@ const NannowChats = () => {
     });
   };
 
-  const selectedTitle = useMemo(() => {
-    if (!selectedChat?.user1 || !selectedChat?.user2) return "Select a chat";
-    return `${selectedChat.user1.firstName} ${selectedChat.user1.lastName ?? ""} / ${
-      selectedChat.user2.firstName
-    } ${selectedChat.user2.lastName ?? ""}`.trim();
-  }, [selectedChat]);
+  const selectedParticipant = useMemo(
+    () => (selectedChat ? getNannowChatParticipant(selectedChat) : null),
+    [selectedChat],
+  );
 
   const handleMarkRead = async () => {
     if (!selectedChatId || isMarkingRead) return;
@@ -585,7 +598,28 @@ const NannowChats = () => {
         </div>
 
         <div className={listStyles.messagesPane}>
-          <div className={listStyles.paneTitle}>{selectedTitle}</div>
+          <div className={listStyles.paneTitle}>
+            {selectedParticipant ? (
+              <>
+                <Link
+                  href={`/${
+                    getChatUserMode(selectedParticipant) === "PROVIDER"
+                      ? "provider"
+                      : "client"
+                  }/${selectedParticipant.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={listStyles.profileLink}
+                >
+                  {getChatUserName(selectedParticipant)} ({getChatUserMode(selectedParticipant)[0]})
+                </Link>
+                <span className={listStyles.profileDivider}>/</span>
+                <span>Nannow</span>
+              </>
+            ) : (
+              "Select a chat"
+            )}
+          </div>
           {selectedChatId && (
             <div className={styles.controls}>
               <textarea
