@@ -70,7 +70,7 @@ type ScheduleVisualStatus =
 
 const TIMEZONE = "Europe/Vilnius";
 const SCHEDULE_VISIBILITY_STORAGE_KEY = "schedule-visibility-filters";
-const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_START_HOUR = 6;
 const DAY_END_HOUR = 22;
 const HOUR_LABELS = Array.from(
@@ -137,7 +137,7 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
-const startOfWeek = (date: Date) => addDays(date, -date.getDay());
+const startOfWeek = (date: Date) => addDays(date, -(date.getDay() + 6) % 7);
 
 const getWeekRange = (dateInputValue: string) => {
   const selected = new Date(`${dateInputValue}T00:00:00`);
@@ -432,7 +432,7 @@ const buildCalendarWeeks = (
 ): CalendarDay[][] => {
   const firstDay = new Date(year, month - 1, 1);
   const firstGridDay = new Date(firstDay);
-  firstGridDay.setDate(firstDay.getDate() - firstDay.getDay());
+  firstGridDay.setDate(firstDay.getDate() - ((firstDay.getDay() + 6) % 7));
   const todayKey = getDateKey(new Date().toISOString(), timeZone);
 
   return Array.from({ length: 6 }, (_, weekIndex) =>
@@ -455,7 +455,7 @@ const buildCalendarWeeks = (
 const buildMonthWeeks = (year: number, month: number) => {
   const firstDay = new Date(year, month - 1, 1);
   const firstGridDay = new Date(firstDay);
-  firstGridDay.setDate(firstDay.getDate() - firstDay.getDay());
+  firstGridDay.setDate(firstDay.getDate() - ((firstDay.getDay() + 6) % 7));
   return Array.from({ length: 6 }, (_, weekIndex) =>
     Array.from({ length: 7 }, (_, dayIndex) => {
       const date = new Date(firstGridDay);
@@ -986,7 +986,7 @@ const Schedule = () => {
           const isToday = key === todayInput();
           return (
             <div key={key} className={styles.timedDayHeader}>
-              <span>{WEEKDAY_LABELS[day.getDay()]}</span>
+              <span>{WEEKDAY_LABELS[(day.getDay() + 6) % 7]}</span>
               <strong className={isToday ? styles.dayNumberToday : ""}>
                 {day.getDate()}
               </strong>
