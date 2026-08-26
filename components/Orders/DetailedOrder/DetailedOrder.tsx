@@ -780,11 +780,23 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       (payment) =>
         String(payment?.payoutState ?? "").toUpperCase() === "PENDING",
     );
+  const paymentStatusUpper = String(order?.paymentStatus ?? "").toUpperCase();
+  const isOrderPaid = paymentStatusUpper === "PAID";
+  const isManualCapturePayment = order?.paymentCaptureMethod === "MANUAL";
+  const isPaymentAuthorized = paymentStatusUpper === "AUTHORIZED";
+  const isAuthorizationReleased =
+    paymentStatusUpper === "AUTHORIZATION_CANCELED";
+  const isAuthorizationExpired =
+    paymentStatusUpper === "AUTHORIZATION_EXPIRED" ||
+    !!order?.paymentRecoveryRequired;
+  const hasRefundableOrderPayment = isOrderPaid || isPaymentAuthorized;
   const requiresRefund =
-    isCanceledByAdmin ||
-    isCanceledByProvider ||
-    (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h);
-  const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
+    hasRefundableOrderPayment &&
+    (isCanceledByAdmin ||
+      isCanceledByProvider ||
+      (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h));
+  const requiresCancelFeePayout =
+    hasRefundableOrderPayment && (isCanceledLate12h || isCanceledLate2h);
   const providerCostAmount =
     typeof order?.totalProviderPrice === "number"
       ? order.totalProviderPrice
@@ -828,16 +840,6 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     requiresCancelFeePayout;
   const shouldShowProviderDocumentCard =
     shouldShowInvoiceCards && !!order?.approvedProviderId;
-  const isOrderPaid =
-    String(order?.paymentStatus ?? "").toUpperCase() === "PAID";
-  const paymentStatusUpper = String(order?.paymentStatus ?? "").toUpperCase();
-  const isManualCapturePayment = order?.paymentCaptureMethod === "MANUAL";
-  const isPaymentAuthorized = paymentStatusUpper === "AUTHORIZED";
-  const isAuthorizationReleased =
-    paymentStatusUpper === "AUTHORIZATION_CANCELED";
-  const isAuthorizationExpired =
-    paymentStatusUpper === "AUTHORIZATION_EXPIRED" ||
-    !!order?.paymentRecoveryRequired;
   const captureDeadlineDate = order?.captureDeadlineAt
     ? new Date(order.captureDeadlineAt)
     : null;
@@ -962,24 +964,28 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       })
     : "-";
   const finalPrimaryTitle = isCanceledOrder
-    ? requiresRefund || isCanceledLate12h
-      ? isRefundDone
-        ? "Refunded to parent"
-        : "Refund to parent"
-      : isCanceledByClient
-        ? "Cancel fee to sitter"
-        : "Canceled order payments"
+    ? !hasRefundableOrderPayment
+      ? "No payment on this order"
+      : requiresRefund || isCanceledLate12h
+        ? isRefundDone
+          ? "Refunded to parent"
+          : "Refund to parent"
+        : isCanceledByClient
+          ? "Cancel fee to sitter"
+          : "Canceled order payments"
     : "Final price to pay the sitter";
   const finalPrimaryValue = isCanceledOrder
-    ? requiresRefund || isCanceledLate12h
-      ? refundDisplayAmount != null
-        ? `€${refundDisplayAmount.toFixed(2)}`
-        : "-"
-      : isCanceledByClient
-        ? cancelFeeDisplayAmount != null
-          ? `€${cancelFeeDisplayAmount.toFixed(2)}`
+    ? !hasRefundableOrderPayment
+      ? "-"
+      : requiresRefund || isCanceledLate12h
+        ? refundDisplayAmount != null
+          ? `€${refundDisplayAmount.toFixed(2)}`
           : "-"
-        : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
+        : isCanceledByClient
+          ? cancelFeeDisplayAmount != null
+            ? `€${cancelFeeDisplayAmount.toFixed(2)}`
+            : "-"
+          : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
     : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`;
   const showCanceledFeeBreakdown =
     isCanceledByClient &&
