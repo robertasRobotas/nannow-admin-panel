@@ -2370,6 +2370,32 @@ export const rebuildFinancialLedgerForOrder = async (orderId: string) => {
   return response;
 };
 
+export const rebuildOrderEventHistory = async (orderId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/super/orders/${encodeURIComponent(orderId)}/events/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const rebuildAllOrderEventHistory = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/super/orders/events/rebuild-all`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getOrderEventHistoryRebuildJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/super/orders/events/rebuild/jobs/${encodeURIComponent(jobId)}`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getPlatformFeeInvoiceReports = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
@@ -2590,6 +2616,20 @@ export const getOrderById = async (id: string) => {
     },
   });
   return response;
+};
+
+export const getOrderEvents = async (id: string, before?: string | null, limit = 50) => {
+  const jwt = Cookies.get("@user_jwt");
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before) params.set("before", before);
+  return axios.get(`${BASE_URL}/admin/orders/${encodeURIComponent(id)}/events?${params.toString()}`, {
+    headers: { Authorization: jwt },
+  });
+};
+
+export const getOrderEventsList = async (params: { page?: number; pageSize?: number; sort?: string; orderPrettyId?: string; eventName?: string; dateFrom?: string; dateTo?: string } = {}) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/order-events`, { params, headers: { Authorization: jwt } });
 };
 
 export const getClosedOrders = async (

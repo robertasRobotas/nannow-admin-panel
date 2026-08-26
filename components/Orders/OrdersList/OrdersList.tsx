@@ -26,14 +26,9 @@ const OrdersList = ({
   return (
     <div className={styles.main}>
       {orders.map((u) => {
-        const requiredDirectProvider =
-          u.isDirectOrderToProvider &&
-          !!u.requiredProvider &&
-          !u.approvedProvider &&
-          !u.approvedProviderId
-            ? u.requiredProvider
-            : null;
-        const displayProvider = u.approvedProvider ?? requiredDirectProvider;
+        const displayProvider =
+          u.approvedProvider ??
+          (u.isDirectOrderToProvider ? u.requiredProvider : null);
         const providerUser = displayProvider?.user;
         const clientUser = u.clientUser;
 

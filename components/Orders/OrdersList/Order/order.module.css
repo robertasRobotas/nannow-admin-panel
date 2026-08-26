@@ -77,16 +77,19 @@
   height: 32px;
   border-radius: 50%;
   position: relative;
-  border: 4px solid white;
+  border: 2px solid white;
+  box-sizing: border-box;
   z-index: 5;
 }
 
 .clientImg {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   position: relative;
-  left: -8px;
+  left: -4px;
+  border: 2px solid white;
+  box-sizing: border-box;
   z-index: 1;
 }
 

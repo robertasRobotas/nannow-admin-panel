@@ -150,14 +150,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const getUserName = (name?: string, lastName?: string) =>
     `${name ?? "Deleted"} ${lastName ?? "User"}`;
 
-  const requiredDirectProvider =
-    order?.isDirectOrderToProvider &&
-    !!order?.requiredProvider &&
-    !order?.approvedProvider &&
-    !order?.approvedProviderId
-      ? order.requiredProvider
-      : null;
-  const sitterUser = order?.approvedProvider ?? requiredDirectProvider;
+  const sitterUser =
+    order?.approvedProvider ??
+    (order?.isDirectOrderToProvider ? order?.requiredProvider : null);
   const parentUser = order?.clientUser;
 
   const parentLocation = `${order?.address?.street ?? "Unknown"} ${

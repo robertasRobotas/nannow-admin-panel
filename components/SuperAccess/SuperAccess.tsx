@@ -30,6 +30,8 @@ import {
   regenerateUsersFullNameSearch,
   rebuildAllFinancialLedgerOrders,
   rebuildFinancialLedgerForOrder,
+  rebuildAllOrderEventHistory,
+  getOrderEventHistoryRebuildJob,
   rebuildAllProvidersCompletionStats,
   rebuildAllProviderPublicUrls,
   getProviderPublicUrlGenerationJob,
@@ -123,6 +125,13 @@ type ChatsContactSharingRebuildJob = {
   phase?: string | null;
   error?: string | null;
   warnings?: string[];
+  progress?: Record<string, unknown> | null;
+};
+
+type OrderEventRebuildJob = {
+  id: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  error?: string | null;
   progress?: Record<string, unknown> | null;
 };
 
@@ -857,6 +866,11 @@ const SuperAccess = () => {
     isOrderFinancialRebuildModalOpen,
     setIsOrderFinancialRebuildModalOpen,
   ] = useState(false);
+  const [isOrderEventRebuildConfirmModalOpen, setIsOrderEventRebuildConfirmModalOpen] = useState(false);
+  const [isOrderEventRebuildProgressModalOpen, setIsOrderEventRebuildProgressModalOpen] = useState(false);
+  const [isRebuildingOrderEvents, setIsRebuildingOrderEvents] = useState(false);
+  const [orderEventRebuildResult, setOrderEventRebuildResult] = useState<Record<string, unknown> | null>(null);
+  const [orderEventRebuildJob, setOrderEventRebuildJob] = useState<OrderEventRebuildJob | null>(null);
   const [
     isChatNormalizationConfirmModalOpen,
     setIsChatNormalizationConfirmModalOpen,
@@ -3146,6 +3160,45 @@ const SuperAccess = () => {
     }
   };
 
+  const handleRebuildOrderEventHistory = async () => {
+    if (isRebuildingOrderEvents) return;
+    setIsOrderEventRebuildConfirmModalOpen(false);
+    setIsOrderEventRebuildProgressModalOpen(true);
+    setIsRebuildingOrderEvents(true);
+    setOrderEventRebuildResult(null);
+    setError("");
+    setNotice("");
+    try {
+      const response = await rebuildAllOrderEventHistory();
+      const job = (response.data?.job ?? response.data?.result?.job ?? response.data?.result ?? response.data) as OrderEventRebuildJob;
+      if (!job?.id) throw new Error("Failed to start order event history rebuild.");
+      setOrderEventRebuildJob(job);
+      setOrderEventRebuildResult(job as unknown as Record<string, unknown>);
+      setNotice(`Started order event history rebuild job ${job.id}.`);
+    } catch (err) {
+      const message = axios.isAxiosError(err)
+        ? ((err.response?.data as { error?: string })?.error ?? "Failed to rebuild order event history.")
+        : "Failed to rebuild order event history.";
+      setError(message);
+      setOrderEventRebuildResult({ status: "FAILED", error: message });
+    } finally {
+      setIsRebuildingOrderEvents(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!orderEventRebuildJob?.id || !isOrderEventRebuildProgressModalOpen || ["COMPLETED", "FAILED"].includes(orderEventRebuildJob.status)) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await getOrderEventHistoryRebuildJob(orderEventRebuildJob.id);
+        const nextJob = (response.data?.job ?? response.data) as OrderEventRebuildJob;
+        setOrderEventRebuildJob(nextJob);
+        setOrderEventRebuildResult(nextJob as unknown as Record<string, unknown>);
+      } catch { /* modal retains the last known progress */ }
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [orderEventRebuildJob?.id, orderEventRebuildJob?.status, isOrderEventRebuildProgressModalOpen]);
+
   const formatPointValue = (value: unknown) => {
     if (!value || typeof value !== "object") return "-";
     const point = value as { coordinates?: unknown };
@@ -3647,6 +3700,15 @@ const SuperAccess = () => {
                         }
                       />
                     </>
+                  )}
+                  {entity === "orders" && (
+                    <Button
+                      title={isRebuildingOrderEvents ? "Rebuilding history..." : "Rebuild missing event history"}
+                      type="OUTLINED"
+                      onClick={() => setIsOrderEventRebuildConfirmModalOpen(true)}
+                      isDisabled={loadingList || isSaving || isRebuildingOrderEvents}
+                      isLoading={isRebuildingOrderEvents}
+                    />
                   )}
                   {entity === "schedule" && (
                     <Button
@@ -6647,6 +6709,49 @@ const SuperAccess = () => {
                 isDisabled={isSaving}
                 isLoading={isSaving}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      {isOrderEventRebuildConfirmModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Rebuild order event history?</h3>
+            <p className={styles.modalText}>
+              This reconstructs missing order history from the order, payment, refund, review, and financial records. Existing events are preserved.
+            </p>
+            <div className={styles.modalActions}>
+              <Button title="Cancel" type="OUTLINED" onClick={() => setIsOrderEventRebuildConfirmModalOpen(false)} isDisabled={isRebuildingOrderEvents} />
+              <Button title="Rebuild history" type="BLACK" onClick={() => void handleRebuildOrderEventHistory()} isDisabled={isRebuildingOrderEvents} isLoading={isRebuildingOrderEvents} />
+            </div>
+          </div>
+        </div>
+      )}
+      {isOrderEventRebuildProgressModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Order event history rebuild</h3>
+            <p className={styles.modalText}>{orderEventRebuildJob?.id ? `Job: ${orderEventRebuildJob.id} • ` : ""}{orderEventRebuildJob?.status ?? (isRebuildingOrderEvents ? "IN_PROGRESS" : "COMPLETED")}</p>
+            {isRebuildingOrderEvents && <p className={styles.modalText}>Reading historical order records and creating missing events...</p>}
+            {orderEventRebuildJob?.progress && (
+              <div className={styles.chatProgressList}>
+                <div className={styles.chatProgressRow}><span>Orders processed</span><strong>{String(orderEventRebuildJob.progress.ordersProcessed ?? 0)} / {String(orderEventRebuildJob.progress.ordersTotal ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Orders already with history</span><strong>{String(orderEventRebuildJob.progress.ordersWithHistory ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Orders rebuilt</span><strong>{String(orderEventRebuildJob.progress.ordersRebuilt ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Events created</span><strong>{String(orderEventRebuildJob.progress.eventsCreated ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Failed orders</span><strong>{String(orderEventRebuildJob.progress.failedCount ?? 0)}</strong></div>
+              </div>
+            )}
+            {orderEventRebuildResult?.error != null && <div className={styles.modalError}>{String(orderEventRebuildResult.error)}</div>}
+            {orderEventRebuildResult && !orderEventRebuildJob?.progress && (
+              <div className={styles.chatProgressList}>
+                {Object.entries(orderEventRebuildResult).map(([key, value]) => (
+                  <div key={key} className={styles.chatProgressRow}><span>{prettyTitle(key)}</span><strong>{typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "-")}</strong></div>
+                ))}
+              </div>
+            )}
+            <div className={styles.modalActions}>
+              <Button title={isRebuildingOrderEvents ? "Hide" : "Close"} type="OUTLINED" onClick={() => setIsOrderEventRebuildProgressModalOpen(false)} />
             </div>
           </div>
         </div>
