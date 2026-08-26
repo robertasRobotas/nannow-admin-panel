@@ -61,6 +61,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     useState(false);
   const [releaseFundsErrorMessage, setReleaseFundsErrorMessage] =
     useState<string>("");
+  const [releaseFundsErrorTitle, setReleaseFundsErrorTitle] =
+    useState("Payment failed");
   const [releaseFundsErrorDetails, setReleaseFundsErrorDetails] = useState<
     string | null
   >(null);
@@ -256,6 +258,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const extractReleaseFundsError = (error: unknown) => {
     const fallback = {
+      title: "Payment failed",
       message: "Failed to release funds",
       details: null as string | null,
     };
@@ -278,6 +281,24 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       code?: unknown;
     };
     const code = typeof payload.code === "string" ? payload.code : null;
+    const rawError = typeof payload.error === "string" ? payload.error : "";
+    const rawDetails =
+      typeof payload.details === "string" ? payload.details : "";
+    const combinedError = `${rawError} ${rawDetails}`;
+    const isAlreadyPaid =
+      /already paid/i.test(combinedError) ||
+      (/E11000|duplicate key/i.test(combinedError) &&
+        /eventKey/i.test(combinedError));
+
+    if (isAlreadyPaid) {
+      return {
+        title: "Order already paid",
+        message:
+          "This order has already been paid. No further payment is needed.",
+        details: null,
+      };
+    }
+
     const message =
       code === "PROVIDER_STRIPE_PAYOUTS_DISABLED"
         ? "Provider payouts are disabled for this Stripe account. Ask the provider to resolve the Stripe account restriction, then try again."
@@ -290,6 +311,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         : null;
 
     return {
+      title: fallback.title,
       message,
       details: code === "PROVIDER_STRIPE_PAYOUTS_DISABLED" ? null : details,
     };
@@ -297,6 +319,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const showPayoutError = (error: unknown) => {
     const parsedError = extractReleaseFundsError(error);
+    setReleaseFundsErrorTitle(parsedError.title);
     setReleaseFundsErrorMessage(parsedError.message);
     setReleaseFundsErrorDetails(parsedError.details);
     setIsReleaseFundsErrorModalOpen(true);
@@ -2078,7 +2101,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       {isReleaseFundsErrorModalOpen && (
         <div className={styles.confirmationBackdrop}>
           <div className={`${styles.confirmationModal} ${nunito.className}`}>
-            <h2 className={styles.confirmationTitle}>Payment failed</h2>
+            <h2 className={styles.confirmationTitle}>
+              {releaseFundsErrorTitle}
+            </h2>
             <p className={styles.confirmationBody}>
               {releaseFundsErrorMessage}
             </p>
