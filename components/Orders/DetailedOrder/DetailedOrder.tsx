@@ -83,6 +83,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
     useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const [isReturnMoneyModalOpen, setIsReturnMoneyModalOpen] = useState(false);
   const [isReturningMoney, setIsReturningMoney] = useState(false);
   const [returnMoneyError, setReturnMoneyError] = useState<string | null>(null);
@@ -285,10 +286,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     const rawDetails =
       typeof payload.details === "string" ? payload.details : "";
     const combinedError = `${rawError} ${rawDetails}`;
-    const isAlreadyPaid =
-      /already paid/i.test(combinedError) ||
-      (/E11000|duplicate key/i.test(combinedError) &&
-        /eventKey/i.test(combinedError));
+    const isAlreadyPaid = /already paid/i.test(combinedError);
 
     if (isAlreadyPaid) {
       return {
@@ -345,12 +343,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     if (isRefunding) return;
     try {
       setIsRefunding(true);
+      setRefundError(null);
       const response = await refundOrderById(order.id);
       if (response.status === 200) {
         window.location.reload();
       }
     } catch (error) {
       console.error("Failed to refund order", error);
+      setRefundError(extractPaymentActionError(error));
     } finally {
       setIsRefunding(false);
     }
@@ -801,6 +801,10 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const paymentStatusUpper = String(order?.paymentStatus ?? "").toUpperCase();
   const isOrderPaid = paymentStatusUpper === "PAID";
   const isManualCapturePayment = order?.paymentCaptureMethod === "MANUAL";
+  const creditsAppliedCents = Math.max(0, Number(order?.creditsAppliedCents ?? 0));
+  const totalOrderCents = Math.round(Number(order?.totalPrice ?? 0) * 100);
+  const isFullyPaidWithCredits =
+    isOrderPaid && creditsAppliedCents > 0 && creditsAppliedCents >= totalOrderCents;
   const isPaymentAuthorized = paymentStatusUpper === "AUTHORIZED";
   const isAuthorizationReleased =
     paymentStatusUpper === "AUTHORIZATION_CANCELED";
@@ -896,7 +900,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       : isAuthorizationExpired
         ? "Reservation expired - payment recovery needed"
         : isOrderPaid
-          ? "Paid (captured)"
+          ? isFullyPaidWithCredits
+            ? "Paid with credits"
+            : "Paid (captured)"
           : paymentStatusUpper || "-";
   const isRejectedDirectOffer =
     orderStatusUpper === "PROVIDER_REJECTED_DIRECT_OFFER";
@@ -1797,7 +1803,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           </div>
         )}
       </div>
-      {(isManualCapturePayment ||
+      {(isFullyPaidWithCredits ||
+        isManualCapturePayment ||
         isPaymentAuthorized ||
         isAuthorizationReleased ||
         isAuthorizationExpired) && (
@@ -1805,7 +1812,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           <div className={styles.paymentCaptureHeader}>
             <span className={styles.paymentCaptureTitle}>Payment</span>
             <span className={styles.paymentCaptureType}>
-              {isManualCapturePayment
+              {isFullyPaidWithCredits
+                ? "Paid with credits"
+                : isManualCapturePayment
                 ? "Reserved on card (manual capture)"
                 : "Charged immediately"}
             </span>
@@ -1817,24 +1826,35 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 {paymentStatusTitle}
               </span>
             </div>
-            <div className={styles.breakdownRow}>
-              <span className={styles.breakdownLabel}>Reserved amount</span>
-              <span className={styles.breakdownAmount}>
-                {formatCents(order?.authorizedAmountCents)}
-                {order?.authorizedAt
-                  ? ` (at ${formatPaymentDate(order.authorizedAt)})`
-                  : ""}
-              </span>
-            </div>
-            <div className={styles.breakdownRow}>
-              <span className={styles.breakdownLabel}>Captured amount</span>
-              <span className={styles.breakdownAmount}>
-                {formatCents(order?.capturedAmountCents)}
-                {order?.capturedAt
-                  ? ` (at ${formatPaymentDate(order.capturedAt)})`
-                  : ""}
-              </span>
-            </div>
+            {isFullyPaidWithCredits ? (
+              <div className={styles.breakdownRow}>
+                <span className={styles.breakdownLabel}>Credits used</span>
+                <span className={styles.breakdownAmount}>
+                  {formatCents(creditsAppliedCents)}
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className={styles.breakdownRow}>
+                  <span className={styles.breakdownLabel}>Reserved amount</span>
+                  <span className={styles.breakdownAmount}>
+                    {formatCents(order?.authorizedAmountCents)}
+                    {order?.authorizedAt
+                      ? ` (at ${formatPaymentDate(order.authorizedAt)})`
+                      : ""}
+                  </span>
+                </div>
+                <div className={styles.breakdownRow}>
+                  <span className={styles.breakdownLabel}>Captured amount</span>
+                  <span className={styles.breakdownAmount}>
+                    {formatCents(order?.capturedAmountCents)}
+                    {order?.capturedAt
+                      ? ` (at ${formatPaymentDate(order.capturedAt)})`
+                      : ""}
+                  </span>
+                </div>
+              </>
+            )}
             {captureDeadlineDate &&
               !isOrderPaid &&
               !isAuthorizationReleased && (
@@ -2004,6 +2024,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               )}
             </div>
           )}
+        {refundError && (
+          <p className={styles.errorDetails}>{refundError}</p>
+        )}
       </div>
       <div className={styles.closeOrderRow}>
         {!isCanceledOrder &&
@@ -2045,7 +2068,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             <p className={styles.confirmationBody}>
               {isPaymentAuthorized
                 ? "The reserved money will be released back to the parent's card for free (no charge was made)."
-                : "The captured payment will be refunded to the parent via Stripe."}{" "}
+                : "The captured payment will be returned to the parent. Card payments are refunded through Stripe; credit-paid orders are returned as credits."}{" "}
               This action cannot be undone.
             </p>
             {order?.isReleasedFundsToProvider && (

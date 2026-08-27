@@ -25,6 +25,9 @@ const reviewIssuer = (event: EventRow, data: Record<string, unknown>) => {
 const eventDetail = (event: EventRow) => {
   const data = event.data ?? {};
   if (event.type === "STATUS_CHANGED") return data.to ? pretty(String(data.to)) : null;
+  if (event.type === "PROVIDER_PAYOUT" && data.ledgerType === "PROVIDER_TRANSFER_CREATED") return amount(data);
+  if (event.type === "PROVIDER_PAYOUT" && data.ledgerType === "PROVIDER_PAYOUT_PAID") return amount(data);
+  if (event.type === "PROVIDER_PAYOUT" && data.ledgerType === "PROVIDER_PAYOUT_FAILED") return amount(data);
   if (event.type.startsWith("PAYMENT_") || event.type.startsWith("REFUND_") || event.type === "PROVIDER_PAYOUT" || event.type === "CANCELLATION_FEE") return amount(data);
   if (event.type === "REVIEW_SUBMITTED" || event.type === "RATING_SUBMITTED") {
     const issuer = reviewIssuer(event, data);
@@ -41,7 +44,13 @@ const eventDetail = (event: EventRow) => {
   if (event.type === "PRICE_CHANGED" && Array.isArray(data.fields)) return `Changed: ${data.fields.map((field) => pretty(String(field))).join(", ")}`;
   return null;
 };
-const eventTitle = (event: EventRow) => event.type === "REVIEW_SUBMITTED" && event.data?.hasText === false ? "Rating Submitted" : pretty(event.type);
+const eventTitle = (event: EventRow) => {
+  if (event.type === "REVIEW_SUBMITTED" && event.data?.hasText === false) return "Rating Submitted";
+  if (event.type === "PROVIDER_PAYOUT" && event.data?.ledgerType === "PROVIDER_TRANSFER_CREATED") return "Provider Transfer Created";
+  if (event.type === "PROVIDER_PAYOUT" && event.data?.ledgerType === "PROVIDER_PAYOUT_PAID") return "Provider Payout Paid";
+  if (event.type === "PROVIDER_PAYOUT" && event.data?.ledgerType === "PROVIDER_PAYOUT_FAILED") return "Provider Payout Failed";
+  return pretty(event.type);
+};
 const axiosErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null) {
     const response = (error as { response?: { data?: { error?: string } } }).response;
