@@ -24,12 +24,18 @@ const eventTitle = (event: OrderEvent) => {
   if (event.type === "PROVIDER_PAYOUT" && ledgerType === "PROVIDER_PAYOUT_FAILED") return "Provider Payout Failed";
   return title(event.type);
 };
-const isPayoutBookkeepingEvent = (event: OrderEvent) =>
+const isInternalBookkeepingEvent = (event: OrderEvent) =>
   event.type === "ADMIN_CHANGED" &&
   Array.isArray(event.data?.fields) &&
   event.data.fields.length > 0 &&
   event.data.fields.every((field) =>
-    ["isReleasedFundsToProvider", "releasedFundsToProviderAt", "releasedFundsToProviderByAdminId"].includes(String(field)),
+    [
+      "isReleasedFundsToProvider",
+      "releasedFundsToProviderAt",
+      "releasedFundsToProviderByAdminId",
+      "stripePaymentIntentId",
+      "paymentCaptureMethod",
+    ].includes(String(field)),
   );
 const detail = (event: OrderEvent) => {
   const data = event.data ?? {};
@@ -62,7 +68,7 @@ export default function OrderHistory({ orderId }: { orderId: string }) {
       setError(null);
       const response = await getOrderEvents(orderId, before);
       const result = response.data as { events?: OrderEvent[]; hasMore?: boolean; nextBefore?: string | null };
-      const visibleEvents = (result.events ?? []).filter((event) => !isPayoutBookkeepingEvent(event));
+      const visibleEvents = (result.events ?? []).filter((event) => !isInternalBookkeepingEvent(event));
       setEvents((current) => before ? [...current, ...visibleEvents] : visibleEvents);
       setHasMore(Boolean(result.hasMore));
       setNextBefore(result.nextBefore ?? null);
