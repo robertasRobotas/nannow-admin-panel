@@ -4,7 +4,7 @@ import { getOrderEventsList } from "@/pages/api/fetch";
 import styles from "./orderEvents.module.css";
 
 type EventUser = { firstName?: string; lastName?: string; imgUrl?: string };
-type EventRow = { id: string; type: string; category?: string; orderId: string; orderPrettyId?: string; occurredAt?: string; actorType?: string; source?: string; data?: Record<string, unknown> | null; provider?: EventUser | null; client?: EventUser | null };
+type EventRow = { id: string; type: string; category?: string; orderId: string; orderPrettyId?: string; orderStatus?: string; occurredAt?: string; actorType?: string; source?: string; data?: Record<string, unknown> | null; provider?: EventUser | null; client?: EventUser | null };
 const pretty = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/(^| )\w/g, (m) => m.toUpperCase());
 const date = (value?: string) => value ? new Date(value).toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }) : "-";
 const userName = (user?: EventUser | null) => `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim();
@@ -24,7 +24,12 @@ const reviewIssuer = (event: EventRow, data: Record<string, unknown>) => {
 };
 const eventDetail = (event: EventRow) => {
   const data = event.data ?? {};
-  if (event.type === "STATUS_CHANGED") return data.to ? pretty(String(data.to)) : null;
+  if (event.type === "STATUS_CHANGED") {
+    // Older/backfilled events may not have retained `to`; the order snapshot
+    // returned by the endpoint gives the best available resulting status.
+    const nextStatus = data.to ?? data.newStatus ?? data.status ?? event.orderStatus;
+    return nextStatus ? pretty(String(nextStatus)) : "Status updated";
+  }
   if (event.type === "PROVIDER_PAYOUT" && data.ledgerType === "PROVIDER_TRANSFER_CREATED") return amount(data);
   if (event.type === "PROVIDER_PAYOUT" && data.ledgerType === "PROVIDER_PAYOUT_PAID") return amount(data);
   if (event.type === "PROVIDER_PAYOUT" && data.ledgerType === "PROVIDER_PAYOUT_FAILED") return amount(data);

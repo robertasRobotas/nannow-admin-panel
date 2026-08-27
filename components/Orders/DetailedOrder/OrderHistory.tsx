@@ -33,7 +33,12 @@ const isPayoutBookkeepingEvent = (event: OrderEvent) =>
   );
 const detail = (event: OrderEvent) => {
   const data = event.data ?? {};
-  if (event.type === "STATUS_CHANGED") return `${String(data.from ?? "-")} → ${String(data.to ?? "-")}`;
+  if (event.type === "STATUS_CHANGED") {
+    const nextStatus = data.to ?? data.newStatus ?? data.status;
+    return nextStatus
+      ? `${data.from ? `${String(data.from)} → ` : ""}${String(nextStatus)}`
+      : "Status updated";
+  }
   if (event.type === "REMINDER_SENT" || event.type === "REMINDER_FAILED" || event.type === "REMINDER_ATTEMPTED") return `${String(data.reminderType ?? "Reminder")} · ${String(data.channel ?? "-")} · sequence ${String(data.sequence ?? "-")}`;
   if (event.type === "REVIEW_SUBMITTED") return `${String(data.reviewType ?? "Review")} · rating ${String(data.rating ?? "-")}`;
   if (event.type === "ADMIN_CHANGED") return Array.isArray(data.fields) ? `Fields: ${data.fields.join(", ")}` : String(data.action ?? "Order changed by admin");
