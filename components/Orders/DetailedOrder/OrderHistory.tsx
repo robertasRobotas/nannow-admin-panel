@@ -38,7 +38,8 @@ const detail = (event: OrderEvent) => {
   if (event.type === "REVIEW_SUBMITTED") return `${String(data.reviewType ?? "Review")} · rating ${String(data.rating ?? "-")}`;
   if (event.type === "ADMIN_CHANGED") return Array.isArray(data.fields) ? `Fields: ${data.fields.join(", ")}` : String(data.action ?? "Order changed by admin");
   if (event.type === "PROVIDER_PAYOUT" && data.ledgerType) return amount(data);
-  if (data.providerId) return `Provider: ${String(data.providerId)}`;
+  if (data.providerName) return `Provider: ${String(data.providerName)}`;
+  if (data.providerId) return "Provider unavailable";
   return null;
 };
 
