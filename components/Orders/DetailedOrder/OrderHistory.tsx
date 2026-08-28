@@ -35,6 +35,8 @@ const isInternalBookkeepingEvent = (event: OrderEvent) =>
       "releasedFundsToProviderByAdminId",
       "stripePaymentIntentId",
       "paymentCaptureMethod",
+      "isClosedByAdmin",
+      "closedByAdminId",
     ].includes(String(field)),
   );
 const detail = (event: OrderEvent) => {
