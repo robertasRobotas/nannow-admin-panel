@@ -2618,6 +2618,23 @@ export const getOrderById = async (id: string) => {
   return response;
 };
 
+export const checkDailyOrderChildren = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/super/orders/${encodeURIComponent(id)}/daily-children/reconcile`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const repairDailyOrderChildren = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/super/orders/${encodeURIComponent(id)}/daily-children/reconcile`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getOrderEvents = async (id: string, before?: string | null, limit = 50) => {
   const jwt = Cookies.get("@user_jwt");
   const params = new URLSearchParams({ limit: String(limit) });

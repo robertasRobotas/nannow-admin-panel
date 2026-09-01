@@ -21,6 +21,7 @@ import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
 import {
   cancelOrderAuthorizationById,
+  checkDailyOrderChildren,
   cancelOrderByAdmin,
   captureOrderPaymentById,
   closeOrderByAdmin,
@@ -33,6 +34,7 @@ import {
   regenerateAdditionalPaymentInvoices,
   payoutAdditionalPaymentsByOrderId,
   payoutCancelFeeByOrderId,
+  repairDailyOrderChildren,
   refundOrderById,
   releaseFundsByOrderId,
   returnMoneyToParentById,
@@ -45,9 +47,23 @@ import Review from "@/components/Reviews/ReviewsList/Review/Review";
 import callImg from "../../../assets/images/call.svg";
 import closeImg from "../../../assets/images/close.svg";
 import crossRedImg from "../../../assets/images/cross-red.svg";
+import { copyTextToClipboard } from "@/helpers/clipboardWrites";
+import { Check, Copy } from "lucide-react";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
+};
+
+type DailyChildrenCheck = {
+  eligible: boolean;
+  repaired?: boolean;
+  reason?: string | null;
+  expectedChildCount?: number;
+  actualChildCount?: number;
+  scheduleMatches?: boolean;
+  amountsMatch?: boolean;
+  scheduleIssues?: string[];
+  amountIssues?: string[];
 };
 
 const DetailedOrder = ({ order }: DetailedOrderProps) => {
@@ -56,6 +72,12 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isReleaseFundsErrorModalOpen, setIsReleaseFundsErrorModalOpen] =
     useState(false);
   const [isCloseOrderModalOpen, setIsCloseOrderModalOpen] = useState(false);
+  const [isDailyChildrenModalOpen, setIsDailyChildrenModalOpen] = useState(false);
+  const [isDailyChildrenChecking, setIsDailyChildrenChecking] = useState(false);
+  const [isDailyChildrenRepairing, setIsDailyChildrenRepairing] = useState(false);
+  const [dailyChildrenCheck, setDailyChildrenCheck] = useState<DailyChildrenCheck | null>(null);
+  const [dailyChildrenError, setDailyChildrenError] = useState<string | null>(null);
+  const [isGroupIdCopied, setIsGroupIdCopied] = useState(false);
   const [isStatusSelectorOpen, setIsStatusSelectorOpen] = useState(false);
   const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] =
     useState(false);
@@ -365,6 +387,44 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     }
     return "Payment action failed";
+  };
+
+  const checkDailyChildren = async () => {
+    if (isDailyChildrenChecking) return;
+    try {
+      setIsDailyChildrenChecking(true);
+      setDailyChildrenError(null);
+      const response = await checkDailyOrderChildren(order.id);
+      setDailyChildrenCheck(response.data?.result ?? null);
+      setIsDailyChildrenModalOpen(true);
+    } catch (error) {
+      setDailyChildrenError(extractPaymentActionError(error));
+      setIsDailyChildrenModalOpen(true);
+    } finally {
+      setIsDailyChildrenChecking(false);
+    }
+  };
+
+  const repairDailyChildren = async () => {
+    if (isDailyChildrenRepairing) return;
+    try {
+      setIsDailyChildrenRepairing(true);
+      setDailyChildrenError(null);
+      const response = await repairDailyOrderChildren(order.id);
+      setDailyChildrenCheck(response.data?.result ?? null);
+    } catch (error) {
+      setDailyChildrenError(extractPaymentActionError(error));
+    } finally {
+      setIsDailyChildrenRepairing(false);
+    }
+  };
+
+  const copyDailyOrderGroupId = async () => {
+    if (!order.orderGroupId) return;
+    const didCopy = await copyTextToClipboard(order.orderGroupId);
+    if (!didCopy) return;
+    setIsGroupIdCopied(true);
+    window.setTimeout(() => setIsGroupIdCopied(false), 1800);
   };
 
   const capturePayment = async () => {
@@ -1100,6 +1160,42 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               </>
             }
           />
+          {order.status === "SPLIT_INTO_DAILY" && (
+            <InfoCard
+              title="Daily child orders"
+              iconImgUrl={calendarImg.src}
+              type={isMobile ? "SPAN2" : "SPAN3"}
+              action={
+                <Button
+                  title={isDailyChildrenChecking ? "Checking..." : "Check"}
+                  type="OUTLINED"
+                  height={32}
+                  className={styles.statusChangeButton}
+                  isDisabled={isDailyChildrenChecking}
+                  onClick={checkDailyChildren}
+                />
+              }
+              info={
+                <div className={styles.stripeInfoList}>
+                  <div className={styles.dailyChildrenGroupId}>
+                    <span className={styles.stripeInfoLabel}>Group ID:</span>{" "}
+                    {order.orderGroupId ? `${order.orderGroupId.slice(0, 3)}...` : "Missing"}
+                    {order.orderGroupId && (
+                      <button
+                        type="button"
+                        className={styles.groupIdCopyButton}
+                        onClick={copyDailyOrderGroupId}
+                        title={isGroupIdCopied ? "Copied" : "Copy full group ID"}
+                        aria-label={isGroupIdCopied ? "Group ID copied" : "Copy full group ID"}
+                      >
+                        {isGroupIdCopied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              }
+            />
+          )}
           {order?.isUrgent && (
             <InfoCard
               title="Priority"
@@ -2252,6 +2348,46 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 onClick={toggleClosedByAdmin}
                 isDisabled={isTogglingClosedByAdmin}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      {isDailyChildrenModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Daily child orders</h2>
+            {dailyChildrenError ? (
+              <p className={styles.errorDetails}>{dailyChildrenError}</p>
+            ) : !dailyChildrenCheck ? (
+              <p className={styles.confirmationBody}>No check result available.</p>
+            ) : (
+              <>
+                <p className={styles.confirmationBody}>
+                  {dailyChildrenCheck.reason || "Child-order reconciliation completed."}
+                </p>
+                {dailyChildrenCheck.eligible && (
+                  <div className={styles.dailyChildrenResult}>
+                    <div>Expected children: <b>{dailyChildrenCheck.expectedChildCount ?? 0}</b></div>
+                    <div>Existing children: <b>{dailyChildrenCheck.actualChildCount ?? 0}</b></div>
+                    <div>Schedule: <b>{dailyChildrenCheck.scheduleMatches ? "matches" : "needs review"}</b></div>
+                    <div>Amounts: <b>{dailyChildrenCheck.amountsMatch ? "match" : "need review"}</b></div>
+                  </div>
+                )}
+                {[...(dailyChildrenCheck.scheduleIssues ?? []), ...(dailyChildrenCheck.amountIssues ?? [])].length > 0 && (
+                  <ul className={styles.dailyChildrenIssues}>
+                    {[...(dailyChildrenCheck.scheduleIssues ?? []), ...(dailyChildrenCheck.amountIssues ?? [])].map((issue) => <li key={issue}>{issue}</li>)}
+                  </ul>
+                )}
+              </>
+            )}
+            <div className={styles.confirmationActions}>
+              <Button title="Close" type="OUTLINED" onClick={() => setIsDailyChildrenModalOpen(false)} isDisabled={isDailyChildrenRepairing} />
+              {dailyChildrenCheck?.eligible && dailyChildrenCheck.actualChildCount === 0 && !dailyChildrenCheck.repaired && (
+                <Button title={isDailyChildrenRepairing ? "Repairing..." : "Repair child orders"} type="BLACK" onClick={repairDailyChildren} isDisabled={isDailyChildrenRepairing} />
+              )}
+              {dailyChildrenCheck?.repaired && (
+                <Button title="Reload order" type="BLACK" onClick={() => window.location.reload()} />
+              )}
             </div>
           </div>
         </div>

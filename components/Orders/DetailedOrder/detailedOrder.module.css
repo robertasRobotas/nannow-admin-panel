@@ -688,6 +688,44 @@
   margin-top: 8px;
 }
 
+.dailyChildrenResult {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  color: rgba(27, 27, 31, 0.8);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.dailyChildrenIssues {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  padding: 10px 12px 10px 28px;
+  border-radius: 10px;
+  background: #fff5eb;
+  color: #8a3d00;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.dailyChildrenGroupId {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.groupIdCopyButton {
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  color: #4d4d4d;
+  cursor: pointer;
+}
+
 .statusAttention {
   color: #8a3d00;
   font-size: 12px;

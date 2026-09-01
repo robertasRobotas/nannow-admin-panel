@@ -47,6 +47,7 @@ const orderFilterOptions = [
     value: "PROVIDER_REJECTED_DIRECT_OFFER",
   },
   { title: "BOTH_APPROVED", value: "BOTH_APPROVED" },
+  { title: "SPLIT_INTO_DAILY", value: "SPLIT_INTO_DAILY" },
   {
     title: "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
     value: "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS",
