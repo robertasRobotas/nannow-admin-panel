@@ -48,11 +48,15 @@ const BarChart = ({
   metric,
   color,
   formatValue,
+  gridStep,
+  formatBarValue,
 }: {
   data: MonthlyProfit[];
   metric: (item: MonthlyProfit) => number;
   color: "blue" | "green" | "purple";
   formatValue: (value: number) => string;
+  gridStep?: number;
+  formatBarValue?: (value: number) => string;
 }) => {
   const width = 740;
   const height = 260;
@@ -60,19 +64,28 @@ const BarChart = ({
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   const values = data.map(metric);
-  const max = Math.max(1, ...values);
+  const highestValue = Math.max(0, ...values);
+  const max = gridStep
+    ? Math.max(gridStep, Math.ceil(highestValue / gridStep) * gridStep)
+    : Math.max(1, highestValue);
+  const gridValues = gridStep
+    ? Array.from(
+        { length: Math.round(max / gridStep) + 1 },
+        (_, index) => index * gridStep,
+      )
+    : [0, max * 0.5, max];
   const slot = chartWidth / Math.max(data.length, 1);
   const barWidth = Math.min(38, Math.max(16, slot * 0.55));
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className={styles.chart} role="img">
-      {[0, 0.5, 1].map((ratio) => {
-        const y = padding.top + chartHeight * (1 - ratio);
+      {gridValues.map((value) => {
+        const y = padding.top + chartHeight * (1 - value / max);
         return (
-          <g key={ratio}>
+          <g key={value}>
             <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} className={styles.gridLine} />
             <text x={padding.left - 8} y={y + 4} textAnchor="end" className={styles.axisLabel}>
-              {formatValue(max * ratio)}
+              {formatValue(value)}
             </text>
           </g>
         );
@@ -86,6 +99,16 @@ const BarChart = ({
           <g key={item.month}>
             <title>{`${monthName(item.month)}: ${formatValue(value)}`}</title>
             <rect x={x} y={y} width={barWidth} height={barHeight} rx={barWidth / 2} className={styles[`bar${color[0].toUpperCase()}${color.slice(1)}`]} />
+            {formatBarValue && value !== 0 && (
+              <text
+                x={x + barWidth / 2}
+                y={y - 8}
+                textAnchor="middle"
+                className={styles.barValueLabel}
+              >
+                {formatBarValue(value)}
+              </text>
+            )}
             <text x={x + barWidth / 2} y={height - 18} textAnchor="middle" className={styles.axisLabel}>
               {monthName(item.month)}
             </text>
@@ -222,7 +245,7 @@ const ProfitGraphs = () => {
             </article>
             <article className={`${styles.chartCard} ${styles.fullChart}`}>
               <div className={styles.chartHeader}><div><h2>Net profit percentage</h2><p>Monthly net profit as a share of finished order amount</p></div><span className={styles.purpleDot} /></div>
-              <BarChart data={data} metric={(item) => item.netMargin * 100} color="purple" formatValue={(value) => `${value.toFixed(0)}%`} />
+              <BarChart data={data} metric={(item) => item.netMargin * 100} color="purple" formatValue={(value) => `${value.toFixed(0)}%`} gridStep={1} formatBarValue={(value) => `${value.toFixed(2)}%`} />
             </article>
           </section>
         </>

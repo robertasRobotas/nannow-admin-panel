@@ -28,6 +28,7 @@
 .chart { display: block; width: 100%; height: auto; margin-top: 18px; overflow: visible; }
 .gridLine { stroke: rgba(0, 0, 0, .09); vector-effect: non-scaling-stroke; }
 .axisLabel { fill: rgba(0, 0, 0, .54); font-size: 11px; font-weight: 700; }
+.barValueLabel { fill: rgba(0, 0, 0, .72); font-size: 11px; font-weight: 800; }
 .barBlue { fill: #2367c8; }.barGreen { fill: #19ad3e; }.barPurple { fill: #7a46bf; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 960px) { .main { padding: 28px 24px; }.summaryGrid, .chartGrid { grid-template-columns: 1fr; }.fullChart { grid-column: auto; } }
