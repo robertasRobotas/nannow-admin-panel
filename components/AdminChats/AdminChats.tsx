@@ -513,8 +513,12 @@ const AdminChats = () => {
           const user2Name = `${user2?.firstName ?? "Deleted"} ${
             user2?.lastName ?? "User"
           }`.trim();
-          const user1NameWithRole = `${user1Name} (Client)`;
-          const user2NameWithRole = `${user2Name} (Provider)`;
+          const user1NameWithRole = user1
+            ? getChatUserNameWithMode(user1, "CLIENT")
+            : `${user1Name} (C)`;
+          const user2NameWithRole = user2
+            ? getChatUserNameWithMode(user2, "PROVIDER")
+            : `${user2Name} (P)`;
           const messages = Array.isArray(result.messages)
             ? result.messages
             : [];
