@@ -25,6 +25,7 @@ import {
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/financial-ledger": Wallet,
   "/financial-profit-earned": BadgeEuro,
+  "/financial-profit-graphs": BarChart3,
   "/analytics": BarChart3,
   "/schedule": CalendarRange,
   "/users": Users,

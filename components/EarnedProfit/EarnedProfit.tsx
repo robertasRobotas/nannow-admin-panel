@@ -27,6 +27,8 @@ const EMPTY_TOTALS: EarnedProfitTotals = {
   profitCents: 0,
   stripeFeeCents: 0,
   netProfitCents: 0,
+  totalOrderAmountCents: 0,
+  totalOrderCount: 0,
 };
 
 const formatLedgerReportMonth = (year: number, month: number) =>

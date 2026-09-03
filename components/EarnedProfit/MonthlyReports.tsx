@@ -105,7 +105,6 @@ const MonthlyReports = () => {
         return;
       }
       console.log(err);
-      setReports([]);
       setReportsError("Failed to load monthly reports.");
     } finally {
       setReportsLoading(false);
@@ -178,7 +177,6 @@ const MonthlyReports = () => {
       setReportsError("");
       await regeneratePlatformFeeInvoiceReport(year, month);
       await fetchPlatformFeeInvoiceReports();
-      setReportRegenerationTarget(null);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         router.push("/");
@@ -188,6 +186,7 @@ const MonthlyReports = () => {
       setReportsError("Failed to regenerate the report.");
     } finally {
       setRegeneratingReportKey("");
+      setReportRegenerationTarget(null);
     }
   };
 
@@ -225,10 +224,10 @@ const MonthlyReports = () => {
         </div>
 
         <div className={styles.reportsTableBody}>
-          {reportsLoading && (
+          {reportsLoading && reports.length === 0 && (
             <div className={styles.emptyState}>Loading reports...</div>
           )}
-          {!reportsLoading && reportsError && (
+          {reportsError && (
             <div className={styles.emptyState}>{reportsError}</div>
           )}
           {!reportsLoading && !reportsError && reports.length === 0 && (
@@ -237,9 +236,7 @@ const MonthlyReports = () => {
             </div>
           )}
 
-          {!reportsLoading &&
-            !reportsError &&
-            reports.map((report) => {
+          {reports.map((report) => {
               const reportKey = `${report.periodYear}-${report.periodMonth}`;
               const inclusiveEnd = new Date(
                 new Date(report.periodEnd).getTime() - 1,

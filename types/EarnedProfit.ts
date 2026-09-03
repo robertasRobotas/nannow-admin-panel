@@ -11,6 +11,8 @@ export type EarnedProfitTotals = {
   profitCents: number;
   stripeFeeCents: number;
   netProfitCents: number;
+  totalOrderAmountCents: number;
+  totalOrderCount: number;
 };
 
 export type EarnedProfitBreakdownRow = {

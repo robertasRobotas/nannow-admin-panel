@@ -1,0 +1,34 @@
+.main { display: flex; flex-direction: column; gap: 24px; padding: 38px 48px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.title { margin: 0; color: #000; font-size: 42px; font-weight: 800; line-height: 1; }
+.subtitle { margin: 7px 0 0; color: rgba(0, 0, 0, .58); font-size: 14px; font-weight: 600; }
+.refreshButton { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 15px; border: 1px solid rgba(0, 0, 0, .14); border-radius: 14px; color: #000; font-size: 14px; font-weight: 700; cursor: pointer; }
+.refreshButton:hover:not(:disabled) { background: rgba(0, 0, 0, .04); }
+.refreshButton:disabled { cursor: wait; color: rgba(0, 0, 0, .5); }
+.refreshing { animation: spin 1s linear infinite; }
+.message, .summaryCard, .chartCard { border-radius: 24px; background: #fff; box-shadow: 0 10px 4px -10px rgba(0, 0, 0, .06), 0 2px 10px rgba(0, 0, 0, .04); }
+.message { padding: 24px; color: rgba(0, 0, 0, .6); font-size: 14px; font-weight: 700; }
+.summaryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.summaryCard { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; padding: 18px 20px; }
+.cardIcon { grid-row: span 2; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; color: #2367c8; background: rgba(35, 103, 200, .12); }
+.greenIcon { color: #198f37; background: rgba(25, 173, 62, .12); }
+.purpleIcon { color: #7a46bf; background: rgba(122, 70, 191, .12); }
+.cardLabel { align-self: end; color: rgba(0, 0, 0, .58); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.summaryCard strong { grid-column: 1 / -1; margin-top: 14px; color: #000; font-size: 27px; font-weight: 800; line-height: 1.1; }
+.summaryCard .positive { color: #198f37; }
+.cardHint { grid-column: 1 / -1; margin-top: 7px; color: rgba(0, 0, 0, .54); font-size: 12px; font-weight: 600; }
+.chartGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.chartCard { min-width: 0; padding: 20px; }
+.fullChart { grid-column: 1 / -1; }
+.chartHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.chartHeader h2 { margin: 0; color: #000; font-size: 21px; font-weight: 800; }
+.chartHeader p { margin: 4px 0 0; color: rgba(0, 0, 0, .55); font-size: 13px; font-weight: 600; }
+.blueDot, .greenDot, .purpleDot { width: 10px; height: 10px; margin-top: 7px; border-radius: 50%; }
+.blueDot { background: #2367c8; }.greenDot { background: #19ad3e; }.purpleDot { background: #7a46bf; }
+.chart { display: block; width: 100%; height: auto; margin-top: 18px; overflow: visible; }
+.gridLine { stroke: rgba(0, 0, 0, .09); vector-effect: non-scaling-stroke; }
+.axisLabel { fill: rgba(0, 0, 0, .54); font-size: 11px; font-weight: 700; }
+.barBlue { fill: #2367c8; }.barGreen { fill: #19ad3e; }.barPurple { fill: #7a46bf; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 960px) { .main { padding: 28px 24px; }.summaryGrid, .chartGrid { grid-template-columns: 1fr; }.fullChart { grid-column: auto; } }
+@media (max-width: 560px) { .main { padding: 24px 16px; }.header { align-items: flex-start; flex-direction: column; }.title { font-size: 34px; }.summaryCard strong { font-size: 24px; } }
