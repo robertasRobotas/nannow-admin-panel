@@ -1555,12 +1555,18 @@ export const getChatModerationSettings = async () => {
   });
 };
 export const updateChatModerationSettings = async (
-  detectorThreshold: number,
+  detectorThreshold?: number,
+  warningTemplateLt?: string,
+  warningTemplateEn?: string,
 ) => {
   const jwt = Cookies.get("@user_jwt");
   return axios.patch(
     `${BASE_URL}/admin/chat-moderation/settings`,
-    { detectorThreshold },
+    {
+      ...(detectorThreshold !== undefined ? { detectorThreshold } : {}),
+      ...(warningTemplateLt !== undefined ? { warningTemplateLt } : {}),
+      ...(warningTemplateEn !== undefined ? { warningTemplateEn } : {}),
+    },
     { headers: { Authorization: jwt } },
   );
 };
@@ -1664,6 +1670,26 @@ export const acknowledgeChatMessagePaymentRiskByAdmin = async (
   return axios.post(
     `${BASE_URL}/admin/chats/messages/${messageId}/payment-risk/acknowledge`,
     {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getUserChatWarningsByAdmin = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/users/${userId}/chat-warnings`, {
+    headers: { Authorization: jwt },
+  });
+};
+
+export const sendChatWarningsByAdmin = async (
+  messageId: string,
+  recipientUserIds: string[],
+  language: "lt" | "en" = "lt",
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/chats/messages/${messageId}/warnings`,
+    { recipientUserIds, language },
     { headers: { Authorization: jwt } },
   );
 };

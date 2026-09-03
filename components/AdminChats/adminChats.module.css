@@ -58,6 +58,10 @@
   overflow: hidden;
 }
 
+.layoutWithUserDetails {
+  grid-template-columns: 420px minmax(0, 1fr) 320px;
+}
+
 .chatListPane {
   display: flex;
   flex-direction: column;
@@ -71,6 +75,120 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   min-width: 0;
+}
+
+.userDetailsPane {
+  min-width: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.userDetailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  color: #000;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.closeUserDetailsButton {
+  all: unset;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.closeUserDetailsButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.userDetailsContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.userDetailsAvatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.userDetailsContent h3 {
+  margin: 14px 0 4px;
+  color: #000;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.userDetailsRole {
+  color: rgba(0, 0, 0, 0.56);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.openProfileLink {
+  margin-top: 16px;
+  color: #000;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.userChatStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  width: 100%;
+  margin-top: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+}
+
+.userChatStats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 8px;
+}
+
+.userChatStats > div + div {
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.userChatStats strong {
+  color: #000;
+  font-size: 22px;
+}
+
+.userChatStats span {
+  color: rgba(0, 0, 0, 0.56);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.userDetailsHint {
+  margin: 22px 0 0;
+  color: rgba(0, 0, 0, 0.52);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .paneTitle {
@@ -94,6 +212,327 @@
 
 .profileLink:hover {
   opacity: 0.65;
+}
+
+.participantButton {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.participantButton:hover,
+.participantButtonSelected {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.participantButton:focus-visible,
+.closeUserDetailsButton:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.participantAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.warningCountBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #fff4df;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sendWarningButton {
+  border: 1px solid #d97706;
+  border-radius: 10px;
+  background: #fff;
+  color: #b45309;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.moderationActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.reviewAllButton {
+  border: none;
+  border-radius: 10px;
+  background: #1f1f1f;
+  color: #fff;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reviewAllButton:disabled,
+.warningDialogActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.warningHistory {
+  width: 100%;
+  margin-top: 22px;
+  border: 1px solid rgba(180, 83, 9, 0.24);
+  border-radius: 14px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.warningHistoryTitle {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 14px;
+  border-bottom: 1px solid rgba(180, 83, 9, 0.16);
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.warningHistoryTitle span {
+  color: #b45309;
+  font-size: 12px;
+}
+
+.warningHistoryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.warningHistoryItem:last-child {
+  border-bottom: none;
+}
+
+.warningHistoryItem strong {
+  font-size: 12px;
+}
+
+.warningHistoryItem span,
+.warningHistory > p {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.warningHistory > p {
+  padding: 14px;
+}
+
+.warningHistoryItem button {
+  all: unset;
+  width: fit-content;
+  color: #b45309;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.warningDialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.warningDialog {
+  width: min(700px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: 18px;
+  background: #fff;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+}
+
+.warningDialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.warningDialogHeader h3 {
+  margin: 0;
+  color: #000;
+  font-size: 22px;
+}
+
+.warningDialogHeader button {
+  all: unset;
+  cursor: pointer;
+  font-size: 28px;
+}
+
+.warningDialogIntro {
+  margin: 10px 0 18px;
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.warningLanguage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #111;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.warningLanguage select {
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.warningSource,
+.warningPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 12px;
+  background: #f6f6f6;
+  padding: 13px;
+}
+
+.warningSource span,
+.warningPreview > span {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.warningSource strong {
+  max-height: 110px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.warningRecipients {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 0;
+  border: 0;
+}
+
+.warningRecipients legend {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.warningRecipients label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.warningRecipients img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.warningRecipients em {
+  margin-left: auto;
+  color: #b45309;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.warningPreview p {
+  margin: 2px 0 0;
+  color: rgba(0, 0, 0, 0.78);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.warningPreviewMessage {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 10px;
+}
+
+.warningPreviewMessage:first-of-type {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.warningPreviewMessage > strong {
+  color: #111;
+  font-size: 12px;
+}
+
+.warningDialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.warningDialogActions button {
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 9px;
+  background: #fff;
+  padding: 10px 13px;
+  color: #111;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.warningDialogActions .warningDialogSubmit {
+  border-color: #1f1f1f;
+  background: #1f1f1f;
+  color: #fff;
 }
 
 .profileDivider {
@@ -243,6 +682,10 @@
   .layout {
     grid-template-columns: 360px minmax(0, 1fr);
   }
+
+  .layoutWithUserDetails {
+    grid-template-columns: 320px minmax(0, 1fr) 280px;
+  }
 }
 
 @media (max-width: 936px) {
@@ -267,9 +710,18 @@
     min-height: 720px;
   }
 
+  .layoutWithUserDetails {
+    grid-template-columns: 1fr;
+  }
+
   .chatListPane {
     border-right: none;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .userDetailsPane {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-left: none;
   }
 
   .chatRow {

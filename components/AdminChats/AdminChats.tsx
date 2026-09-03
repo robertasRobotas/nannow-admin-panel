@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
+import { toast } from "react-toastify";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
@@ -11,13 +12,18 @@ import {
   getChatById,
   getCurrentAdminRolesFromJwt,
   getChatModerationRules,
+  getChatModerationSettings,
   updateChatModerationRule,
   createChatModerationRule,
+  acknowledgeChatMessagePaymentRiskByAdmin,
+  getUserChatWarningsByAdmin,
+  sendChatWarningsByAdmin,
 } from "@/pages/api/fetch";
 import {
   ChatMessageType,
   ChatType,
   ChatUserType,
+  ChatWarningType,
   GetAdminChatsResponse,
 } from "@/types/Chats";
 import ChatMessages from "@/components/Users/DetailedUser/MessagesSection/ChatMessages/ChatMessages";
@@ -27,6 +33,8 @@ import defaultAvatarImg from "@/assets/images/default-avatar.png";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 
 const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
+const DEFAULT_WARNING_TEMPLATE_LT =
+  "Laba diena, {name},\n\nGavome automatinį sistemos pranešimą, jog tariatės su auklėtiniais už platformos ribų. Tai yra naudojimosi taisyklių pažeidimas. Šis įspėjimas yra paskutinis — pažeidimui pasikartojus sistema užblokuos Jūsų anketą be galimybės susikurti naują.\n\nGeros dienos.";
 
 const SORT_OPTIONS = [
   { title: "Latest", value: "latest" },
@@ -127,6 +135,21 @@ const AdminChats = () => {
   const [selectedChat, setSelectedChat] = useState<ChatDetailsResponse | null>(
     null,
   );
+  const [selectedParticipantId, setSelectedParticipantId] = useState("");
+  const [warningsByUserId, setWarningsByUserId] = useState<
+    Record<string, ChatWarningType[]>
+  >({});
+  const [isWarningDialogOpen, setIsWarningDialogOpen] = useState(false);
+  const [warningSourceMessage, setWarningSourceMessage] =
+    useState<ChatMessageType | null>(null);
+  const [warningRecipientIds, setWarningRecipientIds] = useState<string[]>([]);
+  const [isSendingWarning, setIsSendingWarning] = useState(false);
+  const [warningTemplateLt, setWarningTemplateLt] = useState(
+    DEFAULT_WARNING_TEMPLATE_LT,
+  );
+  const [warningTemplateEn, setWarningTemplateEn] = useState("");
+  const [warningLanguage, setWarningLanguage] = useState<"lt" | "en">("lt");
+  const [isReviewingAll, setIsReviewingAll] = useState(false);
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [itemOffset, setItemOffset] = useState(0);
   const [pageCount, setPageCount] = useState(0);
@@ -149,6 +172,173 @@ const AdminChats = () => {
     weight: 1,
   });
   const currentSort = SORT_OPTIONS[selectedSortOption]?.value ?? "latest";
+
+  const selectedParticipant = useMemo(() => {
+    const participants = [selectedChat?.user1, selectedChat?.user2].filter(
+      (user): user is ChatUserType => Boolean(user),
+    );
+    return participants.find((user) => user.id === selectedParticipantId) ?? null;
+  }, [selectedChat, selectedParticipantId]);
+
+  const selectedParticipantStats = useMemo(() => {
+    if (!selectedParticipant) return { messages: 0, suspiciousMessages: 0 };
+    const sentMessages = messages.filter(
+      (message) => message.senderId === selectedParticipant.id,
+    );
+    return {
+      messages: sentMessages.length,
+      suspiciousMessages: sentMessages.filter(
+        (message) => message.paymentRisk?.isSuspicious,
+      ).length,
+    };
+  }, [messages, selectedParticipant]);
+
+  const selectedParticipantWarnings = selectedParticipant
+    ? warningsByUserId[selectedParticipant.id] ?? []
+    : [];
+
+  const warningCountsByMessageId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.values(warningsByUserId)
+      .flat()
+      .forEach((warning) => {
+        counts[warning.sourceMessageId] =
+          (counts[warning.sourceMessageId] ?? 0) + 1;
+      });
+    return counts;
+  }, [warningsByUserId]);
+
+  const openWarningDialog = (message: ChatMessageType) => {
+    if (!message.paymentRisk?.isSuspicious) return;
+    setWarningSourceMessage(message);
+    setWarningRecipientIds([message.senderId]);
+    setIsWarningDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isWarningDialogOpen) return;
+    getChatModerationSettings()
+      .then((response) => {
+        const template = response.data?.item?.warningTemplateLt;
+        const englishTemplate = response.data?.item?.warningTemplateEn;
+        if (typeof template === "string" && template.trim()) {
+          setWarningTemplateLt(template);
+        }
+        if (typeof englishTemplate === "string" && englishTemplate.trim()) {
+          setWarningTemplateEn(englishTemplate);
+        }
+      })
+      .catch(() => undefined);
+  }, [isWarningDialogOpen]);
+
+  const toLithuanianVocative = (name: string) => {
+    if (/ius$/i.test(name)) return name.replace(/ius$/i, "iau");
+    if (/us$/i.test(name)) return name.replace(/us$/i, "au");
+    if (/as$/i.test(name)) return name.replace(/as$/i, "ai");
+    if (/is$/i.test(name)) return name.replace(/is$/i, "i");
+    if (/ys$/i.test(name)) return name.replace(/ys$/i, "y");
+    if (/ė$/i.test(name)) return name.replace(/ė$/i, "e");
+    return name;
+  };
+
+  const getWarningPreview = (user: ChatUserType) =>
+    (warningLanguage === "en" ? warningTemplateEn : warningTemplateLt).replaceAll(
+      "{name}",
+      warningLanguage === "lt"
+        ? toLithuanianVocative(user.firstName?.trim() || "Nannow nary")
+        : user.firstName?.trim() || "Nannow user",
+    );
+
+  const closeWarningDialog = () => {
+    if (isSendingWarning) return;
+    setIsWarningDialogOpen(false);
+    setWarningSourceMessage(null);
+    setWarningRecipientIds([]);
+  };
+
+  const toggleWarningRecipient = (userId: string) => {
+    setWarningRecipientIds((current) =>
+      current.includes(userId)
+        ? current.filter((id) => id !== userId)
+        : [...current, userId],
+    );
+  };
+
+  const sendWarnings = async () => {
+    if (!warningSourceMessage || warningRecipientIds.length === 0) return;
+    try {
+      setIsSendingWarning(true);
+      const response = await sendChatWarningsByAdmin(
+        warningSourceMessage.id,
+        warningRecipientIds,
+        warningLanguage,
+      );
+      const warnings = Array.isArray(response.data?.result?.warnings)
+        ? (response.data.result.warnings as ChatWarningType[])
+        : [];
+      setWarningsByUserId((current) => {
+        const next = { ...current };
+        warnings.forEach((warning) => {
+          next[warning.userId] = [warning, ...(next[warning.userId] ?? [])];
+        });
+        return next;
+      });
+      toast.success(
+        warningRecipientIds.length === 1 ? "Warning sent" : "Warnings sent",
+      );
+      setIsWarningDialogOpen(false);
+      setWarningSourceMessage(null);
+      setWarningRecipientIds([]);
+    } catch {
+      toast.error("Failed to send warning");
+    } finally {
+      setIsSendingWarning(false);
+    }
+  };
+
+  const reviewAllSuspiciousMessages = async () => {
+    const openMessages = messages.filter(
+      (message) =>
+        message.paymentRisk?.isSuspicious &&
+        message.paymentRisk.status !== "ACKNOWLEDGED",
+    );
+    if (openMessages.length === 0) return;
+    try {
+      setIsReviewingAll(true);
+      const results = await Promise.all(
+        openMessages.map((message) =>
+          acknowledgeChatMessagePaymentRiskByAdmin(message.id),
+        ),
+      );
+      const byId = new Map(
+        results.map((response, index) => [
+          openMessages[index].id,
+          response.data?.item ?? response.data?.result?.item ?? null,
+        ]),
+      );
+      setMessages((current) =>
+        current.map((message) => {
+          const nextMessage = byId.get(message.id);
+          if (!nextMessage) return message;
+          return {
+            ...message,
+            ...nextMessage,
+            paymentRisk: {
+              ...message.paymentRisk!,
+              ...(nextMessage.paymentRisk ?? {}),
+              status: "ACKNOWLEDGED",
+            },
+          };
+        }),
+      );
+      window.dispatchEvent(new CustomEvent("admin-suspicious-chats-count-update"));
+      toast.success(`${openMessages.length} messages reviewed`);
+    } catch {
+      toast.error("Failed to review all suspicious messages");
+    } finally {
+      setIsReviewingAll(false);
+    }
+  };
   const loadKeywords = useCallback(async () => {
     try {
       const response = await getChatModerationRules();
@@ -355,6 +545,7 @@ const AdminChats = () => {
     if (!selectedChatId) {
       setSelectedChat(null);
       setMessages([]);
+      setSelectedParticipantId("");
       return;
     }
 
@@ -368,6 +559,12 @@ const AdminChats = () => {
         if (isCancelled) return;
         setSelectedChat(result);
         setMessages(Array.isArray(result.messages) ? result.messages : []);
+        setSelectedParticipantId((current) => {
+          const participants = [result.user1, result.user2].filter(
+            (user): user is ChatUserType => Boolean(user),
+          );
+          return participants.some((user) => user.id === current) ? current : "";
+        });
       } catch (err) {
         if (!isCancelled) {
           console.log(err);
@@ -387,6 +584,39 @@ const AdminChats = () => {
       isCancelled = true;
     };
   }, [selectedChatId]);
+
+  useEffect(() => {
+    const participants = [selectedChat?.user1, selectedChat?.user2].filter(
+      (user): user is ChatUserType => Boolean(user),
+    );
+    if (!canModerate || participants.length === 0) {
+      setWarningsByUserId({});
+      return;
+    }
+
+    let isCancelled = false;
+    void Promise.all(
+      participants.map(async (user) => {
+        const response = await getUserChatWarningsByAdmin(user.id);
+        return [
+          user.id,
+          Array.isArray(response.data?.result?.items)
+            ? (response.data.result.items as ChatWarningType[])
+            : [],
+        ] as const;
+      }),
+    )
+      .then((entries) => {
+        if (!isCancelled) setWarningsByUserId(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        if (!isCancelled) setWarningsByUserId({});
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [canModerate, selectedChat]);
 
   const handlePageClick = (event: { selected: number }) => {
     updateChatsQuery({
@@ -677,6 +907,97 @@ const AdminChats = () => {
 
       {error && <div className={styles.error}>{error}</div>}
 
+      {isWarningDialogOpen && warningSourceMessage && selectedChat && (
+        <div className={styles.warningDialogOverlay} role="presentation">
+          <div
+            className={styles.warningDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="send-warning-title"
+          >
+            <div className={styles.warningDialogHeader}>
+              <h3 id="send-warning-title">Send warning</h3>
+              <button type="button" onClick={closeWarningDialog} aria-label="Close">
+                ×
+              </button>
+            </div>
+            <p className={styles.warningDialogIntro}>
+              Send the standard Nannow warning. Only the recipient name changes.
+            </p>
+            <label className={styles.warningLanguage}>
+              Warning language
+              <select
+                value={warningLanguage}
+                onChange={(event) =>
+                  setWarningLanguage(event.target.value as "lt" | "en")
+                }
+              >
+                <option value="lt">Lithuanian (LT)</option>
+                <option value="en">English (EN)</option>
+              </select>
+            </label>
+            <div className={styles.warningSource}>
+              <span>Related suspicious message</span>
+              <strong>{warningSourceMessage.content || "Image message"}</strong>
+            </div>
+            <fieldset className={styles.warningRecipients}>
+              <legend>Recipients</legend>
+              {[selectedChat.user1, selectedChat.user2]
+                .filter((user): user is ChatUserType => Boolean(user))
+                .map((user) => (
+                  <label key={user.id}>
+                    <input
+                      type="checkbox"
+                      checked={warningRecipientIds.includes(user.id)}
+                      onChange={() => toggleWarningRecipient(user.id)}
+                    />
+                    <img src={user.imgUrl || defaultAvatarImg.src} alt="" />
+                    {getChatUserNameWithMode(user, "CLIENT")}
+                    {user.id === warningSourceMessage.senderId && (
+                      <em>Sender</em>
+                    )}
+                  </label>
+                ))}
+            </fieldset>
+            <div className={styles.warningPreview}>
+              <span>
+                Message preview · {warningRecipientIds.length} message
+                {warningRecipientIds.length === 1 ? "" : "s"}
+              </span>
+              {[
+                selectedChat.user1,
+                selectedChat.user2,
+              ]
+                .filter(
+                  (user): user is ChatUserType =>
+                    Boolean(user && warningRecipientIds.includes(user.id)),
+                )
+                .map((user) => (
+                  <div className={styles.warningPreviewMessage} key={user.id}>
+                    <strong>To {getChatUserNameWithMode(user, "CLIENT")}</strong>
+                    <p>{getWarningPreview(user)}</p>
+                  </div>
+                ))}
+            </div>
+            <div className={styles.warningDialogActions}>
+              <button type="button" onClick={closeWarningDialog} disabled={isSendingWarning}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.warningDialogSubmit}
+                onClick={sendWarnings}
+                disabled={isSendingWarning || warningRecipientIds.length === 0}
+              >
+                {isSendingWarning
+                  ? "Sending…"
+                  : `Send ${warningRecipientIds.length === 2 ? "2 warnings" : "warning"}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showKeywords && (
         <div
           style={{
@@ -825,7 +1146,11 @@ const AdminChats = () => {
         </div>
       )}
 
-      <div className={styles.layout}>
+      <div
+        className={`${styles.layout} ${
+          selectedParticipant ? styles.layoutWithUserDetails : ""
+        }`}
+      >
         <div className={styles.chatListPane}>
           <div className={styles.paneTitle}>Chat list</div>
           <div className={styles.chatList}>
@@ -953,30 +1278,89 @@ const AdminChats = () => {
           <div className={styles.paneTitle}>
             {selectedChat?.user1 && selectedChat?.user2 ? (
               <>
-                <Link
-                  href={getChatUserProfileHref(selectedChat.user1, "CLIENT")}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.profileLink}
+                <button
+                  type="button"
+                  className={`${styles.participantButton} ${
+                    selectedParticipantId === selectedChat.user1.id
+                      ? styles.participantButtonSelected
+                      : ""
+                  }`}
+                  onClick={() => setSelectedParticipantId(selectedChat.user1.id)}
+                  aria-pressed={selectedParticipantId === selectedChat.user1.id}
                 >
+                  <img
+                    className={styles.participantAvatar}
+                    src={selectedChat.user1.imgUrl || defaultAvatarImg.src}
+                    alt=""
+                  />
                   {getChatUserNameWithMode(selectedChat.user1, "CLIENT")}
-                </Link>
-                <span className={styles.profileDivider}>/</span>
-                <Link
-                  href={getChatUserProfileHref(
-                    selectedChat.user2,
-                    "PROVIDER",
+                  {canModerate && (
+                    <span className={styles.warningCountBadge}>
+                      {warningsByUserId[selectedChat.user1.id]?.length ?? 0} warnings
+                    </span>
                   )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.profileLink}
+                </button>
+                <span className={styles.profileDivider}>/</span>
+                <button
+                  type="button"
+                  className={`${styles.participantButton} ${
+                    selectedParticipantId === selectedChat.user2.id
+                      ? styles.participantButtonSelected
+                      : ""
+                  }`}
+                  onClick={() => setSelectedParticipantId(selectedChat.user2.id)}
+                  aria-pressed={selectedParticipantId === selectedChat.user2.id}
                 >
+                  <img
+                    className={styles.participantAvatar}
+                    src={selectedChat.user2.imgUrl || defaultAvatarImg.src}
+                    alt=""
+                  />
                   {getChatUserNameWithMode(selectedChat.user2, "PROVIDER")}
-                </Link>
+                  {canModerate && (
+                    <span className={styles.warningCountBadge}>
+                      {warningsByUserId[selectedChat.user2.id]?.length ?? 0} warnings
+                    </span>
+                  )}
+                </button>
               </>
             ) : (
               "Select a chat"
             )}
+            {canModerate && (() => {
+              const latestSuspiciousMessage = [...messages]
+                .reverse()
+                .find((message) => message.paymentRisk?.isSuspicious);
+              const unreviewedCount = messages.filter(
+              (message) =>
+                message.paymentRisk?.isSuspicious &&
+                message.paymentRisk.status !== "ACKNOWLEDGED",
+              ).length;
+              if (!latestSuspiciousMessage && unreviewedCount === 0) return null;
+              return (
+                <div className={styles.moderationActions}>
+                  {unreviewedCount > 0 && (
+                    <button
+                      type="button"
+                      className={styles.reviewAllButton}
+                      onClick={reviewAllSuspiciousMessages}
+                      disabled={isReviewingAll}
+                    >
+                      {isReviewingAll ? "Reviewing…" : `Review all (${unreviewedCount})`}
+                    </button>
+                  )}
+                  {latestSuspiciousMessage && (
+                    <button
+                      type="button"
+                      className={styles.sendWarningButton}
+                      onClick={() => openWarningDialog(latestSuspiciousMessage)}
+                    >
+                      Send warning
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           {loadingChat ? (
             <div className={styles.emptyState}>Loading messages...</div>
@@ -990,6 +1374,9 @@ const AdminChats = () => {
               otherUserImgUrl={selectedChat.user1.imgUrl ?? ""}
               canModerate={canModerate}
               useSuperHistoryRoute={useSuperHistoryRoute}
+              onWarnSender={openWarningDialog}
+              onSelectSender={setSelectedParticipantId}
+              warningCountsByMessageId={warningCountsByMessageId}
             />
           ) : (
             <div className={styles.emptyState}>
@@ -997,6 +1384,82 @@ const AdminChats = () => {
             </div>
           )}
         </div>
+
+        {selectedParticipant && (
+          <aside className={styles.userDetailsPane} aria-label="User details">
+            <div className={styles.userDetailsHeader}>
+              <span>User details</span>
+              <button
+                type="button"
+                className={styles.closeUserDetailsButton}
+                onClick={() => setSelectedParticipantId("")}
+                aria-label="Close user details"
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.userDetailsContent}>
+              <img
+                className={styles.userDetailsAvatar}
+                src={selectedParticipant.imgUrl || defaultAvatarImg.src}
+                alt=""
+              />
+              <h3>{getChatUserName(selectedParticipant)}</h3>
+              <span className={styles.userDetailsRole}>
+                {getChatUserMode(selectedParticipant, "CLIENT") === "PROVIDER"
+                  ? "Provider"
+                  : "Parent"}
+              </span>
+              <Link
+                href={getChatUserProfileHref(selectedParticipant, "CLIENT")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.openProfileLink}
+              >
+                Open full profile ↗
+              </Link>
+              <div className={styles.userChatStats}>
+                <div>
+                  <strong>{selectedParticipantStats.messages}</strong>
+                  <span>Messages in this chat</span>
+                </div>
+                <div>
+                  <strong>{selectedParticipantStats.suspiciousMessages}</strong>
+                  <span>Suspicious messages</span>
+                </div>
+              </div>
+              <div className={styles.warningHistory}>
+                <div className={styles.warningHistoryTitle}>
+                  Warnings <span>{selectedParticipantWarnings.length} total</span>
+                </div>
+                {selectedParticipantWarnings.length > 0 ? (
+                  selectedParticipantWarnings.slice(0, 5).map((warning) => (
+                    <div key={warning.id} className={styles.warningHistoryItem}>
+                      <strong>{formatDateTime(warning.sentAt)}</strong>
+                      <span>Sent by {warning.sentByAdminName || "admin"}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedChatId(warning.sourceChatId);
+                          updateChatsQuery({
+                            page: Math.floor(itemOffset / pageSize) + 1,
+                            sort: selectedSort,
+                            q: appliedSearch,
+                            id: warning.sourceChatId,
+                          });
+                        }}
+                      >
+                        Open message ↗
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p>No warnings sent.</p>
+                )}
+              </div>
+            </div>
+          </aside>
+        )}
       </div>
 
       <ReactPaginate

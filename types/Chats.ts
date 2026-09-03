@@ -11,6 +11,17 @@ export type ChatUserType = {
   positiveReviewsCount?: number;
 };
 
+export type ChatWarningType = {
+  id: string;
+  userId: string;
+  sourceChatId: string;
+  sourceMessageId: string;
+  systemChatId: string;
+  systemMessageId: string;
+  sentAt: string;
+  sentByAdminName?: string | null;
+};
+
 export type ChatMessageType = {
   id: string;
   senderId: string;

@@ -39,6 +39,9 @@ type ChatMessagesProps = {
   otherUserImgUrl: string;
   canModerate?: boolean;
   useSuperHistoryRoute?: boolean;
+  onWarnSender?: (message: ChatMessageType) => void;
+  onSelectSender?: (userId: string) => void;
+  warningCountsByMessageId?: Record<string, number>;
 };
 
 type ChatMessageHistoryResponse = {
@@ -97,7 +100,7 @@ const getHistoryActionLabel = (entry: ChatMessageHistoryEntry) => {
     case "DELETE_MESSAGE":
       return `Deleted by ${actor}`;
     case "ACKNOWLEDGE_PAYMENT_RISK":
-      return `Acknowledged by ${actor}`;
+      return `Reviewed by ${actor}`;
     default:
       return `${entry.action.replace(/_/g, " ").toLowerCase()} by ${actor}`;
   }
@@ -121,6 +124,9 @@ const ChatMessages = ({
   otherUserImgUrl,
   canModerate = false,
   useSuperHistoryRoute = false,
+  onWarnSender,
+  onSelectSender,
+  warningCountsByMessageId = {},
 }: ChatMessagesProps) => {
   const [displayMessages, setDisplayMessages] =
     useState<ChatMessageType[]>(messages);
@@ -310,10 +316,10 @@ const ChatMessages = ({
       window.dispatchEvent(
         new CustomEvent("admin-suspicious-chats-count-update"),
       );
-      toast.success("Suspicious message acknowledged");
+      toast.success("Suspicious message reviewed");
     } catch (error) {
       console.log(error);
-      toast.error("Failed to acknowledge suspicious message");
+      toast.error("Failed to review suspicious message");
     } finally {
       setLoadingActionKey("");
     }
@@ -398,13 +404,14 @@ const ChatMessages = ({
           const warningSuppressed = Boolean(
             message.paymentRisk?.userWarningSuppressed,
           );
+          const warningCount = warningCountsByMessageId[message.id] ?? 0;
           const riskIndicatorColor = isAcknowledged
             ? "#d97706"
             : warningSuppressed
               ? "#0f766e"
               : "#dc2626";
           const riskIndicatorTitle = isAcknowledged
-            ? `${warningSuppressed ? "Suspicious payment language detected during an incoming or active order. The user warning was suppressed." : "Suspicious payment language detected"} Acknowledged by ${message.paymentRisk?.acknowledgedByAdminName || "admin"}.`
+            ? `${warningSuppressed ? "Suspicious payment language detected during an incoming or active order. The user warning was suppressed." : "Suspicious payment language detected"} Reviewed by ${message.paymentRisk?.acknowledgedByAdminName || "admin"}.`
             : warningSuppressed
               ? "Suspicious payment language detected during an incoming or active order. The user warning was suppressed."
               : "Suspicious payment language detected";
@@ -464,6 +471,7 @@ const ChatMessages = ({
                         ? otherUserImgUrl
                         : avatarImg.src
                     }
+                    onClick={() => onSelectSender?.(message.senderId)}
                   />
                 </div>
               )}
@@ -573,10 +581,19 @@ const ChatMessages = ({
                               >
                                 {loadingActionKey ===
                                 `acknowledge-${message.id}`
-                                  ? "Acknowledging..."
-                                  : "Acknowledge"}
+                                  ? "Reviewing..."
+                                  : "Review"}
                               </button>
                             )}
+                          {message.paymentRisk?.isSuspicious && onWarnSender && (
+                            <button
+                              type="button"
+                              className={`${styles.messageActionBtn} ${styles.messageActionWarn}`}
+                              onClick={() => onWarnSender(message)}
+                            >
+                              Send warning
+                            </button>
+                          )}
                           {!message.isDeleted && (
                             <button
                               type="button"
@@ -630,11 +647,16 @@ const ChatMessages = ({
                 </div>
                 {isAcknowledged && (
                   <span className={styles.acknowledgedMeta}>
-                    Acknowledged by{" "}
+                    Reviewed by{" "}
                     {message.paymentRisk?.acknowledgedByAdminName || "admin"} ·{" "}
                     {formatDateTime(
                       message.paymentRisk?.acknowledgedAt ?? undefined,
                     )}
+                  </span>
+                )}
+                {warningCount > 0 && (
+                  <span className={styles.warningSentMeta}>
+                    ⚠ Warning sent to {warningCount} {warningCount === 1 ? "participant" : "participants"}
                   </span>
                 )}
               </div>
@@ -644,6 +666,7 @@ const ChatMessages = ({
                   <img
                     className={styles.profileImg}
                     src={userImgUrl.length > 0 ? userImgUrl : avatarImg.src}
+                    onClick={() => onSelectSender?.(message.senderId)}
                   />
                 </div>
               )}
