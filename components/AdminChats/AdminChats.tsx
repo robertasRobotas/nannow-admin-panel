@@ -1285,8 +1285,11 @@ const AdminChats = () => {
                       ? styles.participantButtonSelected
                       : ""
                   }`}
-                  onClick={() => setSelectedParticipantId(selectedChat.user1.id)}
-                  aria-pressed={selectedParticipantId === selectedChat.user1.id}
+                  onClick={() =>
+                    selectedChat.user1 &&
+                    setSelectedParticipantId(selectedChat.user1.id)
+                  }
+                  aria-pressed={selectedParticipantId === selectedChat.user1?.id}
                 >
                   <img
                     className={styles.participantAvatar}
@@ -1308,8 +1311,11 @@ const AdminChats = () => {
                       ? styles.participantButtonSelected
                       : ""
                   }`}
-                  onClick={() => setSelectedParticipantId(selectedChat.user2.id)}
-                  aria-pressed={selectedParticipantId === selectedChat.user2.id}
+                  onClick={() =>
+                    selectedChat.user2 &&
+                    setSelectedParticipantId(selectedChat.user2.id)
+                  }
+                  aria-pressed={selectedParticipantId === selectedChat.user2?.id}
                 >
                   <img
                     className={styles.participantAvatar}
