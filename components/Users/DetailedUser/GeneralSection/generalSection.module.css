@@ -25,6 +25,71 @@
   flex-wrap: wrap;
 }
 
+.warningsCard {
+  width: 603px;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 24px;
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  border-radius: 16px;
+  background: #fffaf2;
+  padding: 18px 20px;
+}
+
+.warningsCardHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.warningsCardHeader h4 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.warningsCardHeader strong {
+  color: #92400e;
+  font-size: 14px;
+}
+
+.warningsTableWrap {
+  overflow-x: auto;
+}
+
+.warningsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.warningsTable th,
+.warningsTable td {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 10px 8px;
+  white-space: nowrap;
+}
+
+.warningsTable th {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.warningsTable a {
+  color: #92400e;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.warningsEmpty {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+}
+
 .infoCardsWrapper {
   display: flex;
   gap: 24px;

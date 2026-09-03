@@ -16,6 +16,7 @@ export type ChatWarningType = {
   userId: string;
   sourceChatId: string;
   sourceMessageId: string;
+  reason?: string;
   systemChatId: string;
   systemMessageId: string;
   sentAt: string;

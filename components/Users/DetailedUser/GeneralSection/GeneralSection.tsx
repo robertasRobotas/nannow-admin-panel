@@ -16,7 +16,9 @@ import {
   setUserSuspendedStatus,
   updateClientRequestedCompensationInfoAt,
   updateProviderFields,
+  getUserChatWarningsByAdmin,
 } from "@/pages/api/fetch";
+import type { ChatWarningType } from "@/types/Chats";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -85,6 +87,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
+  const [chatWarnings, setChatWarnings] = useState<ChatWarningType[]>([]);
   const [isSuspendedLocal, setIsSuspendedLocal] = useState(
     user?.user?.isSuspendedByAdmin ?? false,
   );
@@ -119,6 +122,17 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       user?.client?.requestedCompensationInfoAt,
     ),
   );
+
+  useEffect(() => {
+    const userId = user?.user?.id;
+    if (!userId) return;
+    getUserChatWarningsByAdmin(userId)
+      .then((response) => {
+        const items = response.data?.result?.items ?? response.data?.items ?? [];
+        setChatWarnings(Array.isArray(items) ? items : []);
+      })
+      .catch(() => setChatWarnings([]));
+  }, [user?.user?.id]);
   const [isCompensationModalOpen, setIsCompensationModalOpen] = useState(false);
   const [isCompensationSaving, setIsCompensationSaving] = useState(false);
   const [isRebuildingCompletionStats, setIsRebuildingCompletionStats] =
@@ -551,6 +565,44 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
           </div>
         )}
       </div>
+      {chatWarnings.length > 0 && (
+      <section className={styles.warningsCard} aria-label="Warnings">
+        <div className={styles.warningsCardHeader}>
+          <h4>Warnings</h4>
+          <strong>{chatWarnings.length} total</strong>
+        </div>
+        {chatWarnings.length > 0 ? (
+          <div className={styles.warningsTableWrap}>
+            <table className={styles.warningsTable}>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Reason</th>
+                  <th>Related message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chatWarnings.map((warning) => (
+                  <tr key={warning.id}>
+                    <td>{new Date(warning.sentAt).toLocaleDateString()}</td>
+                    <td>{warning.reason || "Suspicious chat message"}</td>
+                    <td>
+                      <a
+                        href={`/nannow-chats?id=${encodeURIComponent(warning.sourceChatId)}&messageId=${encodeURIComponent(warning.sourceMessageId)}`}
+                      >
+                        Open message ↗
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className={styles.warningsEmpty}>No warnings recorded.</p>
+        )}
+      </section>
+      )}
       <div className={styles.infoCardsWrapper}>
         {cards.map((c, i) => (
           <div

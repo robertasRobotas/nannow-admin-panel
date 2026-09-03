@@ -314,8 +314,8 @@ export const getInfoCards = (
         icon: walletImg,
         value:
           typeof data?.provider?.totalEarnings === "number"
-            ? `${data.provider.totalEarnings}`
-            : "0",
+            ? data.provider.totalEarnings.toFixed(2)
+            : "0.00",
       },
       {
         title: "Public profile URL",

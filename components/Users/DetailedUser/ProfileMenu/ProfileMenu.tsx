@@ -273,7 +273,11 @@ const ProfileMenu = ({
           <img src={balanceImg.src} alt="Balance" />
 
           {mode === "provider" && (
-            <span> Total earnings: € {user?.provider?.totalEarnings}</span>
+            <span>
+              Total earnings: € {typeof user?.provider?.totalEarnings === "number"
+                ? user.provider.totalEarnings.toFixed(2)
+                : "0.00"}
+            </span>
           )}
         </div>
       </div>
