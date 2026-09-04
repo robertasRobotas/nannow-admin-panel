@@ -15,6 +15,8 @@ export type ProviderIncomeRow = {
 
 export type ProviderIncomeTotals = Omit<ProviderIncomeRow, "providerId" | "provider"> & {
   providerCount: number;
+  refundStripeFeeCents: number;
+  netPlatformFeeAfterRefundsAndConnectCents: number;
 };
 
 export type ProviderIncomeReportResponse = {

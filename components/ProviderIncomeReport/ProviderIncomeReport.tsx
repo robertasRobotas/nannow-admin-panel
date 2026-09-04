@@ -149,12 +149,17 @@ const ProviderIncomeReport = () => {
                 ["Finished order amount", formatMoney(totals?.orderAmountCents ?? 0, currency)],
                 ["Provider income", formatMoney(totals?.providerIncomeCents ?? 0, currency)],
                 ["Stripe fees", formatMoney(totals?.stripeFeeCents ?? 0, currency)],
+                ["Refund Stripe fees", formatMoney(totals?.refundStripeFeeCents ?? 0, currency)],
                 ["Active Stripe accounts", totals?.activeStripeAccountCount ?? 0],
                 ["Connect active acct fee", formatMoney(totals?.connectActiveAccountFeeCents ?? 0, currency)],
                 ["Total Stripe cost", formatMoney(totals?.totalStripeCostCents ?? 0, currency)],
                 ["Gross platform fee", formatMoney(totals?.grossPlatformFeeCents ?? 0, currency)],
                 ["Net platform fee", formatMoney(totals?.netPlatformFeeCents ?? 0, currency)],
                 ["Net after Connect", formatMoney(totals?.netPlatformFeeAfterConnectCents ?? 0, currency)],
+                [
+                  "Net after refunds + Connect",
+                  formatMoney(totals?.netPlatformFeeAfterRefundsAndConnectCents ?? 0, currency),
+                ],
               ].map(([label, value]) => (
                 <div className={styles.metricCard} key={String(label)}>
                   <div className={styles.metricLabel}>{label}</div>
