@@ -18,6 +18,7 @@ export const links: HeaderLink[] = [
   { title: "Documents", link: "/documents" },
   { title: "Financial ledger", link: "/financial-ledger" },
   { title: "Earned profit", link: "/financial-profit-earned" },
+  { title: "Provider income", link: "/financial-provider-income" },
   { title: "Profit graphs", link: "/financial-profit-graphs" },
   { title: "Analytics", link: "/analytics" },
   { title: "Map", link: "/map" },

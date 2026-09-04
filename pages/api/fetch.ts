@@ -2469,6 +2469,25 @@ export const downloadPlatformFeeInvoiceReport = async (
   return response;
 };
 
+export const getProviderIncomeByMonth = async (year: number, month: number) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/financial/provider-income/${year}/${month}`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const downloadProviderIncomeReport = async (year: number, month: number) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/financial/provider-income/${year}/${month}/download`,
+    {
+      headers: { Authorization: jwt },
+      responseType: "blob",
+    },
+  );
+};
+
 export const deleteFinancialLedgerOrders = async (orderIds: string[]) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.delete(
