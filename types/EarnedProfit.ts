@@ -13,6 +13,7 @@ export type EarnedProfitTotals = {
   netProfitCents: number;
   totalOrderAmountCents: number;
   totalOrderCount: number;
+  totalProviderPayoutCents: number;
 };
 
 export type EarnedProfitBreakdownRow = {
@@ -23,6 +24,8 @@ export type EarnedProfitBreakdownRow = {
   dateTime: string;
   client: string;
   provider: string;
+  orderAmount: string | null;
+  providerPayout: string | null;
   totalAmount: string | null;
   profit: string;
   stripeFee: string;

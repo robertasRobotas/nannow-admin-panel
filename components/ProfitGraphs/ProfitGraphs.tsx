@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
-import { BarChart3, RefreshCw, TrendingUp, Wallet } from "lucide-react";
+import { BarChart3, CreditCard, RefreshCw, TrendingUp, Wallet } from "lucide-react";
 import { getEarnedProfitByMonth } from "@/pages/api/fetch";
 import { nunito } from "@/helpers/fonts";
 import type { EarnedProfitResponse } from "@/types/EarnedProfit";
@@ -11,7 +11,9 @@ type MonthlyProfit = {
   month: number;
   totalOrderAmountCents: number;
   netProfitCents: number;
+  stripeFeeCents: number;
   netMargin: number;
+  stripeFeeRate: number;
   orderCount: number;
 };
 
@@ -49,13 +51,15 @@ const BarChart = ({
   color,
   formatValue,
   gridStep,
+  gridLabelStep,
   formatBarValue,
 }: {
   data: MonthlyProfit[];
   metric: (item: MonthlyProfit) => number;
-  color: "blue" | "green" | "purple";
+  color: "blue" | "green" | "purple" | "orange";
   formatValue: (value: number) => string;
   gridStep?: number;
+  gridLabelStep?: number;
   formatBarValue?: (value: number) => string;
 }) => {
   const width = 740;
@@ -65,8 +69,9 @@ const BarChart = ({
   const chartHeight = height - padding.top - padding.bottom;
   const values = data.map(metric);
   const highestValue = Math.max(0, ...values);
+  const labelStep = gridLabelStep ?? 1;
   const max = gridStep
-    ? Math.max(gridStep, Math.ceil(highestValue / gridStep) * gridStep)
+    ? Math.max(gridStep, Math.ceil(highestValue / (gridStep * labelStep)) * gridStep * labelStep)
     : Math.max(1, highestValue);
   const gridValues = gridStep
     ? Array.from(
@@ -84,9 +89,11 @@ const BarChart = ({
         return (
           <g key={value}>
             <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} className={styles.gridLine} />
-            <text x={padding.left - 8} y={y + 4} textAnchor="end" className={styles.axisLabel}>
-              {formatValue(value)}
-            </text>
+            {(value === 0 || value === max || !gridStep || value % (gridStep * labelStep) === 0) && (
+              <text x={padding.left - 8} y={y + 4} textAnchor="end" className={styles.axisLabel}>
+                {formatValue(value)}
+              </text>
+            )}
           </g>
         );
       })}
@@ -145,6 +152,7 @@ const ProfitGraphs = () => {
               totalOrderAmountCents:
                 Number(report?.totals?.totalOrderAmountCents) || 0,
               netProfitCents: Number(report?.totals?.netProfitCents) || 0,
+              stripeFeeCents: Number(report?.totals?.stripeFeeCents) || 0,
               orderCount: Number(report?.totals?.totalOrderCount) || 0,
             };
           },
@@ -157,6 +165,10 @@ const ProfitGraphs = () => {
             netMargin:
               report.totalOrderAmountCents > 0
                 ? report.netProfitCents / report.totalOrderAmountCents
+                : 0,
+            stripeFeeRate:
+              report.totalOrderAmountCents > 0
+                ? report.stripeFeeCents / report.totalOrderAmountCents
                 : 0,
           };
         }),
@@ -184,15 +196,25 @@ const ProfitGraphs = () => {
         totalOrderAmountCents:
           summary.totalOrderAmountCents + item.totalOrderAmountCents,
         netProfitCents: summary.netProfitCents + item.netProfitCents,
+        stripeFeeCents: summary.stripeFeeCents + item.stripeFeeCents,
         orderCount: summary.orderCount + item.orderCount,
       }),
-      { totalOrderAmountCents: 0, netProfitCents: 0, orderCount: 0 },
+      {
+        totalOrderAmountCents: 0,
+        netProfitCents: 0,
+        stripeFeeCents: 0,
+        orderCount: 0,
+      },
     ),
     [data],
   );
   const netMargin =
     totals.totalOrderAmountCents > 0
       ? totals.netProfitCents / totals.totalOrderAmountCents
+      : 0;
+  const stripeFeeRate =
+    totals.totalOrderAmountCents > 0
+      ? totals.stripeFeeCents / totals.totalOrderAmountCents
       : 0;
 
   return (
@@ -232,6 +254,12 @@ const ProfitGraphs = () => {
               <strong>{(netMargin * 100).toFixed(1)}%</strong>
               <span className={styles.cardHint}>Net profit ÷ finished order amount</span>
             </article>
+            <article className={styles.summaryCard}>
+              <span className={`${styles.cardIcon} ${styles.orangeIcon}`}><CreditCard size={19} /></span>
+              <span className={styles.cardLabel}>Stripe fee percentage</span>
+              <strong>{(stripeFeeRate * 100).toFixed(1)}%</strong>
+              <span className={styles.cardHint}>Stripe fees ÷ finished order amount</span>
+            </article>
           </section>
 
           <section className={styles.chartGrid}>
@@ -246,6 +274,10 @@ const ProfitGraphs = () => {
             <article className={`${styles.chartCard} ${styles.fullChart}`}>
               <div className={styles.chartHeader}><div><h2>Net profit percentage</h2><p>Monthly net profit as a share of finished order amount</p></div><span className={styles.purpleDot} /></div>
               <BarChart data={data} metric={(item) => item.netMargin * 100} color="purple" formatValue={(value) => `${value.toFixed(0)}%`} gridStep={1} formatBarValue={(value) => `${value.toFixed(2)}%`} />
+            </article>
+            <article className={`${styles.chartCard} ${styles.fullChart}`}>
+              <div className={styles.chartHeader}><div><h2>Stripe fee percentage</h2><p>Monthly Stripe fees as a share of finished order amount</p></div><span className={styles.orangeDot} /></div>
+              <BarChart data={data} metric={(item) => item.stripeFeeRate * 100} color="orange" formatValue={(value) => `${value.toFixed(0)}%`} gridStep={1} gridLabelStep={5} formatBarValue={(value) => `${value.toFixed(2)}%`} />
             </article>
           </section>
         </>
