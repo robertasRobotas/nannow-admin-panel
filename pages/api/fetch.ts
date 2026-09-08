@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 
 import Cookies from "js-cookie";
 import { ADMIN_API_CONFIG, AdminApiMode } from "@/helpers/adminApiConfig";
@@ -366,9 +366,10 @@ export const verifyAdminTotpSetup = async (code: string) => {
   return response;
 };
 
-export const getAllUsers = async (url: string) => {
+export const getAllUsers = async (url: string, options?: Pick<AxiosRequestConfig, "signal" | "timeout">) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/${url}`, {
+    ...options,
     headers: {
       Authorization: jwt,
     },
@@ -401,9 +402,10 @@ export const rebuildAdminMapSnapshot = async () => {
   );
 };
 
-export const getClientById = async (id: string) => {
+export const getClientById = async (id: string, options?: Pick<AxiosRequestConfig, "signal" | "timeout">) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/clients/${id}`, {
+    ...options,
     headers: {
       Authorization: jwt,
     },
@@ -521,9 +523,10 @@ export const updateCompensationInfoEmailTemplate = async (payload: {
   });
 };
 
-export const getProviderById = async (id: string) => {
+export const getProviderById = async (id: string, options?: Pick<AxiosRequestConfig, "signal" | "timeout">) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/providers/${id}`, {
+    ...options,
     headers: {
       Authorization: jwt,
     },
