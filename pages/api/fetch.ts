@@ -2536,6 +2536,11 @@ export const getOnboardingStats = async () => {
   return response;
 };
 
+export const getPublicCatalogProviderCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/users/public-catalog/stats`, { headers: { Authorization: jwt } });
+};
+
 export const getUsersAppVersionStats = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
