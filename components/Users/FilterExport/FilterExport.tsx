@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   getAllUsers,
-  getClientById,
-  getProviderById,
   getUsersAppVersionStats,
 } from "@/pages/api/fetch";
-import { User, UserDetails } from "@/types/Client";
 import styles from "./filterExport.module.css";
 import { nunito } from "@/helpers/fonts";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
@@ -89,22 +86,6 @@ const FIELD_LABELS: Record<OnboardingField, string> = {
   KYC: "KYC",
 };
 
-type ExtendedProvider = NonNullable<UserDetails["provider"]> & {
-  intro?: string;
-  bankOnboardingStatus?: string;
-  kycStatus?: string;
-  rating?: number | { generalRating?: number };
-  videoUrl?: string;
-};
-
-type ExtendedClient = NonNullable<UserDetails["client"]> & {
-  videoUrl?: string;
-};
-
-type ExtendedUser = UserDetails["user"] & {
-  videoUrl?: string;
-};
-
 const modeOptions = [
   { title: "Clients", value: "CLIENT" },
   { title: "Providers", value: "PROVIDER" },
@@ -125,19 +106,6 @@ const platformFilterOptions = [
   { title: "No platform", value: "NO_PLATFORM" },
 ];
 
-const extractNumericRating = (rating: unknown): number | null => {
-  if (typeof rating === "number" && Number.isFinite(rating)) return rating;
-  if (
-    typeof rating === "object" &&
-    rating !== null &&
-    "generalRating" in rating &&
-    typeof rating.generalRating === "number"
-  ) {
-    return rating.generalRating;
-  }
-  return null;
-};
-
 const normalizePlatform = (platform: unknown): AppPlatform =>
   platform === "IOS" || platform === "ANDROID" ? platform : null;
 
@@ -149,109 +117,12 @@ const toggleAllFields = (
   setState(checked ? fields : []);
 };
 
-const extractProfileVideo = (detail: UserDetails): boolean => {
-  const user = detail.user as ExtendedUser;
-  const provider = detail.provider as ExtendedProvider | undefined;
-  const client = detail.client as ExtendedClient | undefined;
-  const candidates = [provider?.videoUrl, client?.videoUrl, user?.videoUrl];
-
-  return candidates.some(
-    (value) => typeof value === "string" && value.trim().length > 0,
-  );
-};
-
-const buildFinishedFields = (
-  detail: UserDetails,
-  mode: FilterMode,
-): OnboardingField[] => {
-  if (mode === "NO_ROLE") return [];
-
-  const provider = detail.provider as ExtendedProvider | undefined;
-  const currentCriminalStatus = String(
-    provider?.criminalRecord?.currentStatus ??
-      provider?.criminalRecordStatus ??
-      "",
-  ).toUpperCase();
-
-  const statusByField: Record<OnboardingField, boolean> = {
-    USER_VERIFIED: detail.user?.isUserVerified === true,
-    PROFILE_PICTURE: Boolean(detail.user?.imgUrl?.trim()),
-    ADDRESS: Array.isArray(detail.addresses) && detail.addresses.length > 0,
-    CHILD: Array.isArray(detail.children) && detail.children.length > 0,
-    ABOUT_ME: Boolean(provider?.intro?.trim()),
-    CRIMINAL_RECORD: currentCriminalStatus === "APPROVED",
-    BANK_ONBOARDING:
-      String(provider?.bankOnboardingStatus ?? "").toUpperCase() === "APPROVED",
-    KYC: String(provider?.kycStatus ?? "").toUpperCase() === "VERIFIED",
-  };
-
-  const fields = mode === "CLIENT" ? CLIENT_FIELDS : PROVIDER_FIELDS;
-  return fields.filter((field) => statusByField[field]);
-};
-
-const mapDetailedUser = (
-  baseUser: User,
-  detail: UserDetails,
-  mode: FilterMode,
-): EnrichedUser => {
-  const provider = detail.provider as ExtendedProvider | undefined;
-  const rating =
-    mode === "CLIENT"
-      ? extractNumericRating(detail.client?.rating)
-      : extractNumericRating(provider?.rating);
-  const reviewsCount = Array.isArray(detail.receivedReviews)
-    ? detail.receivedReviews.length
-    : typeof detail.client?.positiveReviewsCount === "number"
-      ? detail.client.positiveReviewsCount
-      : 0;
-  const finishedFields = buildFinishedFields(detail, mode);
-  const allFields = mode === "CLIENT" ? CLIENT_FIELDS : PROVIDER_FIELDS;
-
-  return {
-    id: baseUser.id,
-    userId: baseUser.userId,
-    firstName: detail.user?.firstName ?? baseUser.firstName,
-    lastName: detail.user?.lastName ?? baseUser.lastName,
-    email: detail.user?.email ?? baseUser.email,
-    imgUrl: detail.user?.imgUrl ?? baseUser.imgUrl,
-    mode,
-    rating,
-    reviewsCount,
-    hasProfileVideo: extractProfileVideo(detail),
-    appVersion: detail.user?.appVersion ?? baseUser.appVersion ?? null,
-    platform:
-      detail.user?.platform === "IOS" || detail.user?.platform === "ANDROID"
-        ? detail.user.platform
-        : baseUser.platform === "IOS" || baseUser.platform === "ANDROID"
-          ? baseUser.platform
-          : null,
-    finishedFields,
-    notFinishedFields: allFields.filter(
-      (field) => !finishedFields.includes(field),
-    ),
-  };
-};
-
-const extractRoles = (user?: { roles?: unknown }): string[] =>
-  Array.isArray(user?.roles)
-    ? user.roles.map((role) => String(role).toUpperCase())
-    : [];
-
-const hasRoleForMode = (roles: string[], mode: FilterMode) => {
-  if (mode === "NO_ROLE") {
-    return roles.length === 0;
-  }
-
-  return roles.includes(mode);
-};
-
-const fetchAllBaseUsers = async (
+const fetchAllExportUsers = async (
   mode: FilterMode,
   signal: AbortSignal,
   onProgress: (loaded: number, total: number) => void,
-  hasAppVersionFilter?: boolean,
-): Promise<User[]> => {
-  const collected: User[] = [];
+): Promise<EnrichedUser[]> => {
+  const collected: EnrichedUser[] = [];
   let startIndex = 0;
   let total = Number.MAX_SAFE_INTEGER;
   const modeQuery =
@@ -263,20 +134,15 @@ const fetchAllBaseUsers = async (
     const params = new URLSearchParams({
       type: modeQuery,
       startIndex: String(startIndex),
-      search: "",
+      pageSize: "200",
     });
-    if (typeof hasAppVersionFilter === "boolean") {
-      const normalized = hasAppVersionFilter ? "true" : "false";
-      params.set("user.hasAppVersion", normalized);
-      params.set("hasAppVersion", normalized);
-    }
-    const basePath = `admin/users?${params.toString()}`;
+    const basePath = `admin/users/filter-export?${params.toString()}`;
     const response = await getAllUsers(basePath, { signal, timeout: 30000 });
     const payload = response.data?.users;
     if (!Array.isArray(payload?.items)) {
       throw new Error("The users API returned an invalid list. Please try again.");
     }
-    const items = payload.items as User[];
+    const items = payload.items as EnrichedUser[];
     const pageSize = Number(payload.pageSize ?? items.length);
     total = Number(payload.total);
     if (!Number.isFinite(total) || total < 0 ||
@@ -303,26 +169,6 @@ const fetchAllBaseUsers = async (
 
   return collected;
 };
-
-const mapNoRoleUser = (baseUser: User): EnrichedUser => ({
-  id: baseUser.id,
-  userId: baseUser.userId,
-  firstName: baseUser.firstName,
-  lastName: baseUser.lastName,
-  email: baseUser.email,
-  imgUrl: baseUser.imgUrl,
-  mode: "NO_ROLE",
-  rating: null,
-  reviewsCount: 0,
-  hasProfileVideo: false,
-  appVersion: baseUser.appVersion ?? null,
-  platform:
-    baseUser.platform === "IOS" || baseUser.platform === "ANDROID"
-      ? baseUser.platform
-      : null,
-  finishedFields: [],
-  notFinishedFields: [],
-});
 
 const downloadCsv = (rows: EnrichedUser[]) => {
   const headers = [
@@ -533,7 +379,7 @@ const FilterExport = () => {
         setProgress(undefined);
         setLoadingText("Loading user list...");
         setUsers([]);
-        const baseUsers = await fetchAllBaseUsers(
+        const nextUsers = await fetchAllExportUsers(
           currentMode,
           signal,
           (loaded, total) => {
@@ -541,50 +387,8 @@ const FilterExport = () => {
             setLoadingText(`Loading user list: ${loaded} / ${total} users`);
             setProgress(total > 0 ? Math.min(100, loaded / total * 100) : 100);
           },
-          appliedFilters.selectedAppVersion === "NO_APP_VERSION" ? false : undefined,
         );
         signal.throwIfAborted();
-        const nextUsers: EnrichedUser[] = [];
-        setProgress(0);
-        setLoadingText(`Loading user details: 0 / ${baseUsers.length}`);
-        for (let index = 0; index < baseUsers.length; index += 8) {
-          signal.throwIfAborted();
-          const batch = baseUsers.slice(index, index + 8);
-          const details = await Promise.all(
-            batch.map(async (baseUser) => {
-              if (currentMode === "NO_ROLE") {
-                return mapNoRoleUser(baseUser);
-              }
-
-              const response =
-                currentMode === "CLIENT"
-                  ? await getClientById(baseUser.userId, { signal, timeout: 30000 })
-                  : await getProviderById(baseUser.userId, { signal, timeout: 30000 });
-              const detail =
-                currentMode === "CLIENT"
-                  ? (response.data?.clientDetails as UserDetails)
-                  : (response.data?.providerDetails as UserDetails);
-              if (!detail?.user) throw new Error("The users API returned invalid user details.");
-              const roles = extractRoles(detail.user);
-
-              if (!hasRoleForMode(roles, currentMode)) {
-                return null;
-              }
-
-              return mapDetailedUser(baseUser, detail, currentMode);
-            }),
-          );
-          signal.throwIfAborted();
-          const completed = Math.min(index + batch.length, baseUsers.length);
-          setLoadingText(`Loading user details: ${completed} / ${baseUsers.length}`);
-          setProgress(completed / baseUsers.length * 100);
-          nextUsers.push(
-            ...details.filter(
-              (detail): detail is EnrichedUser => detail !== null,
-            ),
-          );
-        }
-
         if (!signal.aborted) {
           setUsers(nextUsers);
         }
@@ -937,7 +741,7 @@ const FilterExport = () => {
           {isLoading && (
             <div className={styles.loadingProgress} role="status" aria-live="polite">
               <progress aria-label={loadingText} max={100} value={progress} />
-              <span>{progress === undefined ? "Waiting for the users API…" : `${Math.round(progress)}% of this stage`}</span>
+              <span>{progress === undefined ? "Waiting for the users API…" : `${Math.round(progress)}% loaded`}</span>
             </div>
           )}
           {loadError && <div className={styles.emptyState} role="alert">{loadError} Press Apply filters to retry.</div>}
