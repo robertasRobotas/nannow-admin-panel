@@ -1,0 +1,551 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 38px 48px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  color: #000;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.subtitle {
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.filtersPanel,
+.panelCard,
+.loadingState,
+.errorState {
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
+    0 2px 10px 0 rgba(0, 0, 0, 0.04);
+}
+
+.filtersPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.dateField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.dateField > span {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dateInput {
+  height: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  background: #fff;
+  padding: 0 12px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.4);
+}
+
+.filterButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.definition {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  max-width: 980px;
+}
+
+.definition strong {
+  color: #000;
+}
+
+.loadingState,
+.errorState {
+  padding: 22px 24px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.loadingState {
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.errorState {
+  color: #d14343;
+}
+
+.panelCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  transition: opacity 0.2s ease;
+}
+
+.panelRefreshing {
+  opacity: 0.55;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.panelTitle {
+  margin: 0;
+  color: #000;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.panelSubtle {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.panelActions {
+  display: flex;
+  gap: 8px;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.legendLine {
+  display: inline-block;
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legendGradient {
+  display: inline-block;
+  width: 44px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.legendHint {
+  margin-left: auto;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Chart */
+
+.chartWrap {
+  position: relative;
+}
+
+.chartSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+.chartSvg text,
+.chartSvg line {
+  vector-effect: non-scaling-stroke;
+}
+
+.chartGridLine {
+  stroke: rgba(0, 0, 0, 0.08);
+  stroke-width: 1;
+}
+
+.chartAxisLabel {
+  fill: rgba(0, 0, 0, 0.52);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chartAxisTitle {
+  fill: rgba(0, 0, 0, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.chartEmpty {
+  padding: 18px 0 10px;
+  color: rgba(0, 0, 0, 0.52);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cohortLineGroup {
+  cursor: pointer;
+}
+
+.cohortLine,
+.cohortLineHighlighted,
+.cohortLinePartial,
+.cohortLinePartialHighlighted,
+.averageLine {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.cohortLine {
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+
+.cohortLineGroup:hover .cohortLine {
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+.cohortLineHighlighted {
+  stroke-width: 2.5;
+}
+
+.cohortLinePartial {
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+  opacity: 0.85;
+}
+
+.cohortLinePartialHighlighted {
+  stroke-width: 2.5;
+  stroke-dasharray: 3 4;
+}
+
+.averageLine {
+  stroke-width: 3;
+}
+
+.marker {
+  stroke: #fff;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.directLabel {
+  fill: rgba(0, 0, 0, 0.78);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.crosshair {
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(14px, 0);
+  min-width: 250px;
+  max-width: 340px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+}
+
+.tooltipLeft {
+  transform: translate(calc(-100% - 14px), 0);
+}
+
+.tooltipTitle {
+  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tooltipRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipRow {
+  display: grid;
+  grid-template-columns: 16px 52px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.tooltipRowEmphasis .tooltipValue,
+.tooltipRowEmphasis .tooltipLabel {
+  color: #000;
+}
+
+.tooltipKey {
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.tooltipValue {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipLabel {
+  color: rgba(0, 0, 0, 0.62);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tooltipDetail {
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tooltipFootnote {
+  margin-top: 8px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Cohort chips */
+
+.cohortChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 128px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.cohortChip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.02);
+  color: rgba(0, 0, 0, 0.82);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cohortChip:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.cohortChip:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.5);
+  outline-offset: 1px;
+}
+
+.cohortChipActive {
+  border-color: #000;
+  background: #000;
+  color: #fff;
+}
+
+.cohortChipClear {
+  border-style: dashed;
+}
+
+.cohortChipDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.cohortChipSize {
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Table */
+
+.tableWrap {
+  overflow-x: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: 12px;
+}
+
+.tableHeaderRow,
+.tableRow {
+  display: grid;
+  align-items: center;
+  gap: 4px;
+  min-width: max-content;
+}
+
+.tableRow {
+  padding: 3px 0;
+}
+
+.tableSticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  padding-right: 8px;
+}
+
+.tableHeaderRow .tableSticky,
+.tableHeadCell {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding-bottom: 6px;
+}
+
+.tableHeaderRow .tableSticky {
+  text-align: left;
+}
+
+.tableCohortLabel {
+  color: #000;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tableCohortRange {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tableSizeCell {
+  text-align: center;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableCell,
+.tableCellEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 10px;
+}
+
+
+.tableCellPartial {
+  outline: 2px dashed rgba(0, 0, 0, 0.25);
+  outline-offset: -2px;
+}
+
+.tableCellEmpty {
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tableCellRate {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableCellCount {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+@media (max-width: 936px) {
+  .main {
+    padding: 24px 16px;
+  }
+
+  .title {
+    font-size: 32px;
+  }
+
+  .legendHint {
+    margin-left: 0;
+  }
+
+  .tooltip {
+    min-width: 200px;
+  }
+}

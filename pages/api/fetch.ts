@@ -3,6 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { ADMIN_API_CONFIG, AdminApiMode } from "@/helpers/adminApiConfig";
 import { CompensationRequestStatus } from "@/types/Client";
+import type { RetentionInterval } from "@/types/ParentActivityRetention";
 
 export type { AdminApiMode } from "@/helpers/adminApiConfig";
 
@@ -3571,6 +3572,32 @@ export const expireDiscountCode = async (id: string) => {
     `${BASE_URL}/admin/discount-codes/${id}/expire`,
     {},
     {
+      headers: {
+        Authorization: jwt,
+      },
+    },
+  );
+  return response;
+};
+
+export const getParentActivityRetention = async (params: {
+  interval: RetentionInterval;
+  timezone?: string;
+  cohortFrom?: string;
+  cohortTo?: string;
+  maxPeriods?: number;
+}) => {
+  const jwt = Cookies.get("@user_jwt");
+  const response = await axios.get(
+    `${BASE_URL}/admin/analytics/parent-activity-retention`,
+    {
+      params: {
+        interval: params.interval,
+        timezone: params.timezone ?? "Europe/Vilnius",
+        cohortFrom: params.cohortFrom,
+        cohortTo: params.cohortTo,
+        maxPeriods: params.maxPeriods,
+      },
       headers: {
         Authorization: jwt,
       },
