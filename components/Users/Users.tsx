@@ -339,8 +339,8 @@ const Users = () => {
   >({});
   const [isCompactView, setIsCompactView] = useState(false);
   const [connectedUsersFilter, setConnectedUsersFilter] = useState<
-    "CLIENT" | "PROVIDER"
-  >("CLIENT");
+    "ALL" | "CLIENT" | "PROVIDER"
+  >("ALL");
   const [connectedUsersCounts, setConnectedUsersCounts] = useState({
     CLIENT: 0,
     PROVIDER: 0,
@@ -1186,7 +1186,9 @@ const Users = () => {
     if (!isActiveUsersSelected) return;
 
     const filteredCount = connectedUsers.filter(
-      (user) => user.currentRole === connectedUsersFilter,
+      (user) =>
+        connectedUsersFilter === "ALL" ||
+        user.currentRole === connectedUsersFilter,
     ).length;
 
     setPageCount(Math.ceil(filteredCount / itemsPerPage) || 0);
@@ -1350,7 +1352,9 @@ const Users = () => {
   };
 
   const filteredConnectedUsers = connectedUsers.filter(
-    (user) => user.currentRole === connectedUsersFilter,
+    (user) =>
+      connectedUsersFilter === "ALL" ||
+      user.currentRole === connectedUsersFilter,
   );
   const paginatedConnectedUsers = filteredConnectedUsers.slice(
     itemOffset,
@@ -1474,6 +1478,15 @@ const Users = () => {
                 )}
                 {isActiveUsersSelected && (
                   <>
+                    <Button
+                      title={`All (${connectedUsersCounts.total})`}
+                      type="OUTLINED"
+                      isSelected={connectedUsersFilter === "ALL"}
+                      onClick={() => {
+                        setItemOffset(0);
+                        setConnectedUsersFilter("ALL");
+                      }}
+                    />
                     <Button
                       title={`Clients (${connectedUsersCounts.CLIENT})`}
                       type="OUTLINED"
