@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import SearchBar from "../SearchBar/SearchBar";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import Cards from "./Cards/Cards";
@@ -286,6 +286,9 @@ const Users = () => {
   const [connectedUsers, setConnectedUsers] = useState<ConnectedUser[]>([]);
   const router = useRouter();
   const { lastEvent } = useAdminSocket();
+  const connectedUsersRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
@@ -1226,6 +1229,25 @@ const Users = () => {
       fetchUsers();
     }
   }, [clientCompensationFilter, fetchUsers, lastEvent]);
+
+  useEffect(() => {
+    if (lastEvent?.type !== "CONNECTED_USERS_CHANGED") return;
+    if (!isActiveUsersSelected) return;
+    if (connectedUsersRefreshTimer.current) {
+      clearTimeout(connectedUsersRefreshTimer.current);
+    }
+    connectedUsersRefreshTimer.current = setTimeout(() => {
+      fetchConnectedUsersList();
+    }, 500);
+  }, [lastEvent, isActiveUsersSelected, fetchConnectedUsersList]);
+
+  useEffect(() => {
+    return () => {
+      if (connectedUsersRefreshTimer.current) {
+        clearTimeout(connectedUsersRefreshTimer.current);
+      }
+    };
+  }, []);
 
   const openOnboardingUserProfile = (user: OnboardingNotFinishedUser) => {
     const selectedText = window.getSelection?.()?.toString().trim() ?? "";

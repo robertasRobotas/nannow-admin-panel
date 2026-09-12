@@ -95,6 +95,12 @@ export type AdminEvent =
       intervalSeconds: number;
       expiresAt: string;
       requestImmediateLocation: boolean;
+    }
+  | {
+      type: "CONNECTED_USERS_CHANGED";
+      changedUserId: string;
+      isConnect: boolean;
+      timestamp: string;
     };
 
 export type AdminSocketEvent = AdminEvent & {
