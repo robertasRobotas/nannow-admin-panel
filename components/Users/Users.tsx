@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import SearchBar from "../SearchBar/SearchBar";
 import DropDownButton from "../DropDownButton/DropDownButton";
 import Cards from "./Cards/Cards";
@@ -18,6 +18,7 @@ import {
   getConnectedUsers,
   getNotFinishedOnboardingUsers,
   getOnboardingStats,
+  getPublicCatalogProviderCount,
   getPendingProviderSpecialSkillsCount,
   getProviderLocationPermissionsStats,
   getProviderById,
@@ -285,12 +286,16 @@ const Users = () => {
   const [connectedUsers, setConnectedUsers] = useState<ConnectedUser[]>([]);
   const router = useRouter();
   const { lastEvent } = useAdminSocket();
+  const connectedUsersRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const [itemOffset, setItemOffset] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [pageCount, setPageCount] = useState(0);
   const [clientOnboardingCount, setClientOnboardingCount] = useState(0);
   const [providerOnboardingCount, setProviderOnboardingCount] = useState(0);
+  const [publicCatalogProviderCount, setPublicCatalogProviderCount] = useState(0);
   const [onboardingStats, setOnboardingStats] = useState({
     totalUsers: 0,
     finishedClientOnboarding: 0,
@@ -337,8 +342,8 @@ const Users = () => {
   >({});
   const [isCompactView, setIsCompactView] = useState(false);
   const [connectedUsersFilter, setConnectedUsersFilter] = useState<
-    "CLIENT" | "PROVIDER"
-  >("CLIENT");
+    "ALL" | "CLIENT" | "PROVIDER"
+  >("ALL");
   const [connectedUsersCounts, setConnectedUsersCounts] = useState({
     CLIENT: 0,
     PROVIDER: 0,
@@ -694,12 +699,14 @@ const Users = () => {
         statsResponse,
         appVersionStatsResponse,
         locationPermissionsStatsResponse,
+        publicCatalogResponse,
       ] = await Promise.allSettled([
         getNotFinishedOnboardingUsers({ mode: "CLIENT", pageSize: 1 }),
         getNotFinishedOnboardingUsers({ mode: "PROVIDER", pageSize: 1 }),
         getOnboardingStats(),
         getUsersAppVersionStats(),
         getProviderLocationPermissionsStats(),
+        getPublicCatalogProviderCount(),
       ]);
 
       if (clientResponse.status === "fulfilled") {
@@ -737,6 +744,7 @@ const Users = () => {
             Number(statsResult.finishedProviderOnboarding ?? 0) || 0,
         });
       }
+      if (publicCatalogResponse.status === "fulfilled") setPublicCatalogProviderCount(Number(publicCatalogResponse.value.data?.count ?? 0));
 
       if (appVersionStatsResponse.status === "fulfilled") {
         const appVersionStatsResult =
@@ -1181,7 +1189,9 @@ const Users = () => {
     if (!isActiveUsersSelected) return;
 
     const filteredCount = connectedUsers.filter(
-      (user) => user.currentRole === connectedUsersFilter,
+      (user) =>
+        connectedUsersFilter === "ALL" ||
+        user.currentRole === connectedUsersFilter,
     ).length;
 
     setPageCount(Math.ceil(filteredCount / itemsPerPage) || 0);
@@ -1219,6 +1229,25 @@ const Users = () => {
       fetchUsers();
     }
   }, [clientCompensationFilter, fetchUsers, lastEvent]);
+
+  useEffect(() => {
+    if (lastEvent?.type !== "CONNECTED_USERS_CHANGED") return;
+    if (!isActiveUsersSelected) return;
+    if (connectedUsersRefreshTimer.current) {
+      clearTimeout(connectedUsersRefreshTimer.current);
+    }
+    connectedUsersRefreshTimer.current = setTimeout(() => {
+      fetchConnectedUsersList();
+    }, 500);
+  }, [lastEvent, isActiveUsersSelected, fetchConnectedUsersList]);
+
+  useEffect(() => {
+    return () => {
+      if (connectedUsersRefreshTimer.current) {
+        clearTimeout(connectedUsersRefreshTimer.current);
+      }
+    };
+  }, []);
 
   const openOnboardingUserProfile = (user: OnboardingNotFinishedUser) => {
     const selectedText = window.getSelection?.()?.toString().trim() ?? "";
@@ -1345,7 +1374,9 @@ const Users = () => {
   };
 
   const filteredConnectedUsers = connectedUsers.filter(
-    (user) => user.currentRole === connectedUsersFilter,
+    (user) =>
+      connectedUsersFilter === "ALL" ||
+      user.currentRole === connectedUsersFilter,
   );
   const paginatedConnectedUsers = filteredConnectedUsers.slice(
     itemOffset,
@@ -1469,6 +1500,15 @@ const Users = () => {
                 )}
                 {isActiveUsersSelected && (
                   <>
+                    <Button
+                      title={`All (${connectedUsersCounts.total})`}
+                      type="OUTLINED"
+                      isSelected={connectedUsersFilter === "ALL"}
+                      onClick={() => {
+                        setItemOffset(0);
+                        setConnectedUsersFilter("ALL");
+                      }}
+                    />
                     <Button
                       title={`Clients (${connectedUsersCounts.CLIENT})`}
                       type="OUTLINED"
@@ -1942,6 +1982,10 @@ const Users = () => {
                   <span className={styles.statTileValue}>
                     {appVersionStats.totalUsers || onboardingStats.totalUsers}
                   </span>
+                </div>
+                <div className={styles.statTile}>
+                  <span className={styles.statTileLabel}>Public catalog providers</span>
+                  <span className={styles.statTileValue}>{publicCatalogProviderCount}</span>
                 </div>
                 <div className={styles.statTile}>
                   <span className={styles.statTileLabel}>Client done</span>

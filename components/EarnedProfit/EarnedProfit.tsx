@@ -27,6 +27,9 @@ const EMPTY_TOTALS: EarnedProfitTotals = {
   profitCents: 0,
   stripeFeeCents: 0,
   netProfitCents: 0,
+  totalOrderAmountCents: 0,
+  totalOrderCount: 0,
+  totalProviderPayoutCents: 0,
 };
 
 const formatLedgerReportMonth = (year: number, month: number) =>
@@ -134,7 +137,9 @@ const BreakdownTable = ({
               <th>Timestamp</th>
               <th>Client</th>
               <th>Provider</th>
-              <th>Total amount</th>
+              <th>Order amount</th>
+              <th>Provider payout</th>
+              <th>Platform fee</th>
               <th>Profit</th>
               <th>Stripe fee</th>
               <th>Net profit</th>
@@ -170,6 +175,8 @@ const BreakdownTable = ({
                 <td>{formatDateTime(row.dateTime)}</td>
                 <td>{row.client}</td>
                 <td>{row.provider}</td>
+                <td>{formatMoneyFromDecimal(row.orderAmount, currency)}</td>
+                <td>{formatMoneyFromDecimal(row.providerPayout, currency)}</td>
                 <td>{formatMoneyFromDecimal(row.totalAmount, currency)}</td>
                 <td>{formatMoneyFromDecimal(row.profit, currency)}</td>
                 <td>{formatMoneyFromDecimal(row.stripeFee, currency)}</td>
@@ -398,6 +405,20 @@ const EarnedProfit = () => {
                   <MetricCard label="Rows" value={totals.rowCount} />
                   <MetricCard label="Invoices" value={totals.invoiceCount} />
                   <MetricCard label="Refunds" value={totals.refundCount} />
+                  <MetricCard
+                    label="Finished order amount"
+                    value={formatMoneyFromCents(
+                      totals.totalOrderAmountCents,
+                      currency,
+                    )}
+                  />
+                  <MetricCard
+                    label="Provider payout"
+                    value={formatMoneyFromCents(
+                      totals.totalProviderPayoutCents,
+                      currency,
+                    )}
+                  />
                   <MetricCard
                     label="Profit"
                     value={formatMoneyFromCents(totals.profitCents, currency)}

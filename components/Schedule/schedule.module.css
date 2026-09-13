@@ -224,6 +224,62 @@
   font-weight: 600;
 }
 
+.statusLegend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #4a4f54;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.legendIcon,
+.eventStatusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  background: var(--event-color);
+  color: #fff;
+}
+
+.legendIcon {
+  width: 19px;
+  height: 19px;
+}
+
+.legendIcon svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.8;
+}
+
+.statusIconRunning svg {
+  animation: scheduleStatusSpin 1.1s linear infinite;
+}
+
+@keyframes scheduleStatusSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusIconRunning svg {
+    animation: none;
+  }
+}
+
 .empty {
   margin: 12px;
   border-radius: 8px;
@@ -324,11 +380,14 @@
 }
 
 .calendarEvent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   min-height: 21px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--event-color) 18%, white);
-  border-left: 4px solid var(--event-color);
-  padding: 3px 6px;
+  border: 1px solid color-mix(in srgb, var(--event-color) 22%, transparent);
+  border-radius: 5px;
+  background: var(--event-background);
+  padding: 2px 5px 2px 3px;
   color: #202124;
 }
 
@@ -337,6 +396,8 @@
 }
 
 .calendarEventText {
+  min-width: 0;
+  flex: 1;
   display: block;
   overflow: hidden;
   color: #202124;
@@ -345,6 +406,17 @@
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.eventStatusIcon {
+  width: 17px;
+  height: 17px;
+}
+
+.eventStatusIcon svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
 }
 
 .moreEvents {
@@ -447,28 +519,41 @@
   z-index: 2;
   min-height: 30px;
   border-radius: 6px;
-  background: var(--event-color);
-  color: #fff;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb, var(--event-color) 26%, transparent);
+  background: var(--event-background);
+  color: #202124;
   cursor: pointer;
   padding: 6px 8px;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(60, 64, 67, 0.24);
 }
 
-.timedEvent strong,
-.timedEvent span {
+.timedEvent .eventStatusIcon {
+  margin-top: 1px;
+}
+
+.timedEventContent {
+  min-width: 0;
+  flex: 1;
+}
+
+.timedEventContent strong,
+.timedEventContent > span {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.timedEvent strong {
+.timedEventContent strong {
   font-size: 12px;
   font-weight: 800;
 }
 
-.timedEvent span {
+.timedEventContent > span {
   margin-top: 2px;
   font-size: 11px;
   font-weight: 600;
@@ -521,8 +606,10 @@
 }
 
 .yearDayHasEvents {
-  background: #e8f0fe;
-  color: #174ea6;
+  outline: 2px solid var(--event-color);
+  outline-offset: -2px;
+  background: var(--event-background);
+  color: var(--event-color);
   cursor: pointer;
 }
 
@@ -714,6 +801,15 @@
 
   .compactFilters {
     flex-direction: column;
+  }
+
+  .paneHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .statusLegend {
+    justify-content: flex-start;
   }
 
   .rangeControls {

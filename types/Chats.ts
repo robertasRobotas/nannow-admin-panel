@@ -3,10 +3,24 @@ export type ChatUserType = {
   firstName: string;
   lastName?: string;
   imgUrl: string;
+  currentMode?: "CLIENT" | "PROVIDER" | string;
+  userMode?: "CLIENT" | "PROVIDER" | string;
   isVerified?: boolean;
   badgesIds?: string[];
   rating?: number;
   positiveReviewsCount?: number;
+};
+
+export type ChatWarningType = {
+  id: string;
+  userId: string;
+  sourceChatId: string;
+  sourceMessageId: string;
+  reason?: string;
+  systemChatId: string;
+  systemMessageId: string;
+  sentAt: string;
+  sentByAdminName?: string | null;
 };
 
 export type ChatMessageType = {
@@ -72,6 +86,7 @@ export type ChatType = {
   unreadMessagesCount?: number;
   suspiciousMessagesCount?: number;
   isSuspicious?: boolean;
+  cashPaymentWarningConfirmedAt?: string | null;
   user1: ChatUserType;
   user2: ChatUserType;
   participants?: ChatUserType[];

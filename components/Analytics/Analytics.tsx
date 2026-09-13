@@ -754,6 +754,9 @@ const RevenueChart = ({
 };
 
 const NetIncomeChart = ({ data }: { data: NetIncomeDailyItem[] }) => {
+  const [tooltipItem, setTooltipItem] = useState<NetIncomeDailyItem | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+
   if (data.length === 0) {
     return (
       <div className={styles.chartEmpty}>
@@ -774,6 +777,21 @@ const NetIncomeChart = ({ data }: { data: NetIncomeDailyItem[] }) => {
   const barWidth = Math.max(3, Math.min(18, slotWidth * 0.7));
   const zeroY = padding.top + ((maxValue - 0) / range) * chartHeight;
   const labelDensity = data.length > 90 ? "wide" : "tight";
+
+  const handleBarMouseMove = (item: NetIncomeDailyItem, event: React.MouseEvent<SVGRectElement>) => {
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const svgX = ((event.clientX - rect.left) / rect.width) * width;
+    const svgY = ((event.clientY - rect.top) / rect.height) * height;
+    setTooltipItem(item);
+    setTooltipPos({ x: svgX, y: svgY });
+  };
+
+  const handleBarMouseLeave = () => {
+    setTooltipItem(null);
+    setTooltipPos(null);
+  };
 
   return (
     <svg
@@ -842,6 +860,9 @@ const NetIncomeChart = ({ data }: { data: NetIncomeDailyItem[] }) => {
                   ? styles.netIncomeBarPositive
                   : styles.netIncomeBarNegative
               }
+              onMouseMove={(e) => handleBarMouseMove(item, e)}
+              onMouseLeave={handleBarMouseLeave}
+              style={{ cursor: "pointer" }}
             />
             {shouldShowLabel && (
               <text
@@ -864,6 +885,46 @@ const NetIncomeChart = ({ data }: { data: NetIncomeDailyItem[] }) => {
           </g>
         );
       })}
+
+      {tooltipItem && tooltipPos && (
+        <g pointerEvents="none">
+          <rect
+            x={tooltipPos.x - 40}
+            y={tooltipPos.y - 46}
+            width={80}
+            height={40}
+            rx={6}
+            fill="#fff"
+            stroke="rgba(0,0,0,0.08)"
+            strokeWidth={1}
+            filter="drop-shadow(0 2px 6px rgba(0,0,0,0.15))"
+          />
+          <text
+            x={tooltipPos.x}
+            y={tooltipPos.y - 30}
+            textAnchor="middle"
+            fontSize={11}
+            fill="rgba(0,0,0,0.52)"
+            fontWeight={500}
+          >
+            {new Date(tooltipItem.day).toLocaleDateString("en-IE", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </text>
+          <text
+            x={tooltipPos.x}
+            y={tooltipPos.y - 14}
+            textAnchor="middle"
+            fontSize={11}
+            fill="#000"
+            fontWeight={800}
+          >
+            {formatMoneyFromCents(tooltipItem.netIncomeCents)}
+          </text>
+        </g>
+      )}
     </svg>
   );
 };

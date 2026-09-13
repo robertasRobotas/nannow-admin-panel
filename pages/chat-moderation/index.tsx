@@ -46,6 +46,9 @@ export default function ChatModerationPage() {
     weight: 1,
   });
   const [threshold, setThreshold] = useState(1);
+  const [warningTemplateLt, setWarningTemplateLt] = useState("");
+  const [warningTemplateEn, setWarningTemplateEn] = useState("");
+  const [isSavingWarningTemplate, setIsSavingWarningTemplate] = useState(false);
   const [error, setError] = useState("");
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [deletingRule, setDeletingRule] = useState<Rule | null>(null);
@@ -63,6 +66,8 @@ export default function ChatModerationPage() {
       ]);
       setRules(rulesResponse.data?.items ?? []);
       setThreshold(settingsResponse.data?.item?.detectorThreshold ?? 1);
+      setWarningTemplateLt(settingsResponse.data?.item?.warningTemplateLt ?? "");
+      setWarningTemplateEn(settingsResponse.data?.item?.warningTemplateEn ?? "");
     } catch {
       setError("Failed to load moderation settings.");
     }
@@ -282,6 +287,65 @@ export default function ChatModerationPage() {
           </div>
         </div>
         {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
+        <section
+          style={{
+            marginBottom: 28,
+            padding: 20,
+            border: "1px solid #e7b46b",
+            borderRadius: 12,
+            background: "#fffaf2",
+          }}
+        >
+          <h2 style={{ margin: "0 0 8px" }}>Manual warning template — Lithuanian</h2>
+          <p style={{ margin: "0 0 12px", color: "#5b4630" }}>
+            Use <code>{"{name}"}</code> for the recipient. Nannow automatically changes a Lithuanian name to the vocative form, for example Arturas → Arturai.
+          </p>
+          <textarea
+            rows={8}
+            style={{ width: "100%", resize: "vertical", padding: 12 }}
+            value={warningTemplateLt}
+            onChange={(event) => setWarningTemplateLt(event.target.value)}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+            <Button
+              title={isSavingWarningTemplate ? "Saving..." : "Save warning templates"}
+              type="BLACK"
+              isDisabled={
+                isSavingWarningTemplate ||
+                !warningTemplateLt.trim() ||
+                !warningTemplateLt.includes("{name}") ||
+                !warningTemplateEn.trim() ||
+                !warningTemplateEn.includes("{name}")
+              }
+              onClick={async () => {
+                try {
+                  setIsSavingWarningTemplate(true);
+                  const response = await updateChatModerationSettings(
+                    undefined,
+                    warningTemplateLt,
+                    warningTemplateEn,
+                  );
+                  setWarningTemplateLt(response.data?.item?.warningTemplateLt ?? warningTemplateLt);
+                  setWarningTemplateEn(response.data?.item?.warningTemplateEn ?? warningTemplateEn);
+                } catch {
+                  setError("Failed to save warning template.");
+                } finally {
+                  setIsSavingWarningTemplate(false);
+                }
+              }}
+            />
+          </div>
+          <h2 style={{ margin: "24px 0 8px" }}>Manual warning template — English</h2>
+          <p style={{ margin: "0 0 12px", color: "#5b4630" }}>
+            Use <code>{"{name}"}</code> for the recipient name.
+          </p>
+          <textarea
+            rows={8}
+            style={{ width: "100%", resize: "vertical", padding: 12 }}
+            value={warningTemplateEn}
+            onChange={(event) => setWarningTemplateEn(event.target.value)}
+          />
+        </section>
         <div style={{ overflowX: "auto" }}>
           <div style={{ minWidth: 1100 }}>
             <div

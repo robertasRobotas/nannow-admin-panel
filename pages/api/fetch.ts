@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 
 import Cookies from "js-cookie";
 import { ADMIN_API_CONFIG, AdminApiMode } from "@/helpers/adminApiConfig";
@@ -370,9 +370,10 @@ export const verifyAdminTotpSetup = async (code: string) => {
   return response;
 };
 
-export const getAllUsers = async (url: string) => {
+export const getAllUsers = async (url: string, options?: Pick<AxiosRequestConfig, "signal" | "timeout">) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/${url}`, {
+    ...options,
     headers: {
       Authorization: jwt,
     },
@@ -380,9 +381,35 @@ export const getAllUsers = async (url: string) => {
   return response;
 };
 
-export const getClientById = async (id: string) => {
+export const rebuildNannyForecastSnapshot = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/nanny-forecast/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getAdminMap = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/map`, {
+    headers: { Authorization: jwt },
+  });
+};
+
+export const rebuildAdminMapSnapshot = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/map/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getClientById = async (id: string, options?: Pick<AxiosRequestConfig, "signal" | "timeout">) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/clients/${id}`, {
+    ...options,
     headers: {
       Authorization: jwt,
     },
@@ -456,32 +483,54 @@ export const sendCompensationInfoEmail = async (
 
 export const getCompensationInfoEmailTemplate = async () => {
   const jwt = Cookies.get("@user_jwt");
-  return axios.get(`${BASE_URL}/admin/compensation-info-email-template`, { headers: { Authorization: jwt } });
+  return axios.get(`${BASE_URL}/admin/compensation-info-email-template`, {
+    headers: { Authorization: jwt },
+  });
 };
 
 export const exportCompensationInfoEmailTemplate = async () => {
   const jwt = Cookies.get("@user_jwt");
-  return axios.get(`${BASE_URL}/admin/compensation-info-email-template/export`, { headers: { Authorization: jwt } });
+  return axios.get(
+    `${BASE_URL}/admin/compensation-info-email-template/export`,
+    { headers: { Authorization: jwt } },
+  );
 };
 
-export const getLatestCompensationInfoEmail = async (clientId: string, requestId: string) => {
+export const getLatestCompensationInfoEmail = async (
+  clientId: string,
+  requestId: string,
+) => {
   const jwt = Cookies.get("@user_jwt");
-  return axios.get(`${BASE_URL}/admin/clients/${clientId}/compensation-request/${requestId}/info-email`, { headers: { Authorization: jwt } });
+  return axios.get(
+    `${BASE_URL}/admin/clients/${clientId}/compensation-request/${requestId}/info-email`,
+    { headers: { Authorization: jwt } },
+  );
 };
 
-export const updateCompensationInfoEmailTemplate = async (payload: { subject: string; bodyHtml: string; attachments: File[]; removeAttachmentIds: string[] }) => {
+export const updateCompensationInfoEmailTemplate = async (payload: {
+  subject: string;
+  bodyHtml: string;
+  attachments: File[];
+  removeAttachmentIds: string[];
+}) => {
   const jwt = Cookies.get("@user_jwt");
   const form = new FormData();
   form.append("subject", payload.subject);
   form.append("bodyHtml", payload.bodyHtml);
-  form.append("removeAttachmentIds", JSON.stringify(payload.removeAttachmentIds));
+  form.append(
+    "removeAttachmentIds",
+    JSON.stringify(payload.removeAttachmentIds),
+  );
   payload.attachments.forEach((file) => form.append("attachments", file));
-  return axios.put(`${BASE_URL}/admin/compensation-info-email-template`, form, { headers: { Authorization: jwt } });
+  return axios.put(`${BASE_URL}/admin/compensation-info-email-template`, form, {
+    headers: { Authorization: jwt },
+  });
 };
 
-export const getProviderById = async (id: string) => {
+export const getProviderById = async (id: string, options?: Pick<AxiosRequestConfig, "signal" | "timeout">) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(`${BASE_URL}/admin/providers/${id}`, {
+    ...options,
     headers: {
       Authorization: jwt,
     },
@@ -544,6 +593,32 @@ export type ProviderCompletionStatsRebuildJob = {
     providersProcessed: number;
     providersModified: number;
   };
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+export type ProviderPublicUrlGenerationJob = {
+  id: string;
+  requestedByAdminId: string;
+  status:
+    | "PENDING"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "COMPLETED_WITH_ERRORS"
+    | "FAILED";
+  error: string | null;
+  progress: {
+    providersTotal: number;
+    providersProcessed: number;
+    urlsCreated: number;
+    urlsRebuilt: number;
+    alreadyExisted: number;
+    unsupportedOrMissingRegion: number;
+    providersFailed: number;
+  };
+  errors: Array<{ providerId: string; message: string }>;
   createdAt: string;
   updatedAt: string;
   startedAt: string | null;
@@ -974,6 +1049,15 @@ export const setUserBanStatus = async (
   return response;
 };
 
+export const resetCashPaymentWarningConfirmation = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/users/${userId}/cash-payment-warning/reset`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getBannedUsers = async (params?: {
   search?: string;
   startIndex?: number;
@@ -1260,6 +1344,7 @@ export const updateProviderFields = async (
   providerId: string,
   updates: {
     baseProviderRate?: number;
+    providerCustomPrice?: number;
   },
 ) => {
   const jwt = Cookies.get("@user_jwt");
@@ -1304,6 +1389,32 @@ export const rebuildAllProvidersCompletionStats = async () => {
   return response;
 };
 
+export const rebuildProviderPublicUrl = async (providerId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/providers/${providerId}/public-url/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const rebuildAllProviderPublicUrls = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/super/providers/public-urls/rebuild-all`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getProviderPublicUrlGenerationJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/super/providers/public-urls/rebuild-all/jobs/${jobId}`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getProviderCompletionStatsRebuildJob = async (jobId: string) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
@@ -1341,6 +1452,15 @@ export const getChatById = async (id: string) => {
     },
   });
   return response;
+};
+
+export const resetChatCashPaymentWarningConfirmation = async (chatId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/chats/${chatId}/cash-payment-warning/reset`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
 };
 
 export const getUserChatsById = async (id: string) => {
@@ -1384,22 +1504,79 @@ export const getAdminChats = async ({
 
 export const getChatModerationRules = async () => {
   const jwt = Cookies.get("@user_jwt");
-  return axios.get(`${BASE_URL}/admin/chat-moderation/rules`, { headers: { Authorization: jwt } });
+  return axios.get(`${BASE_URL}/admin/chat-moderation/rules`, {
+    headers: { Authorization: jwt },
+  });
 };
-export const testChatModerationRegex = async (pattern: string, examples: string[]) => { const jwt = Cookies.get("@user_jwt"); return axios.post(`${BASE_URL}/admin/chat-moderation/rules/test-regex`, { pattern, examples }, { headers: { Authorization: jwt } }); };
+export const testChatModerationRegex = async (
+  pattern: string,
+  examples: string[],
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/chat-moderation/rules/test-regex`,
+    { pattern, examples },
+    { headers: { Authorization: jwt } },
+  );
+};
 
-export const updateChatModerationRule = async (ruleId: string, data: Record<string, unknown>) => {
+export const updateChatModerationRule = async (
+  ruleId: string,
+  data: Record<string, unknown>,
+) => {
   const jwt = Cookies.get("@user_jwt");
-  return axios.patch(`${BASE_URL}/admin/chat-moderation/rules/${ruleId}`, data, { headers: { Authorization: jwt } });
+  return axios.patch(
+    `${BASE_URL}/admin/chat-moderation/rules/${ruleId}`,
+    data,
+    { headers: { Authorization: jwt } },
+  );
 };
-export const deleteChatModerationLanguage = async (ruleId: string, language: string) => { const jwt = Cookies.get("@user_jwt"); return axios.delete(`${BASE_URL}/admin/chat-moderation/rules/${ruleId}/languages/${language}`, { headers: { Authorization: jwt } }); };
-export const deleteChatModerationRule = async (ruleId: string) => { const jwt = Cookies.get("@user_jwt"); return axios.delete(`${BASE_URL}/admin/chat-moderation/rules/${ruleId}`, { headers: { Authorization: jwt } }); };
-export const createChatModerationRule = async (data: Record<string, unknown>) => {
+export const deleteChatModerationLanguage = async (
+  ruleId: string,
+  language: string,
+) => {
   const jwt = Cookies.get("@user_jwt");
-  return axios.post(`${BASE_URL}/admin/chat-moderation/rules`, data, { headers: { Authorization: jwt } });
+  return axios.delete(
+    `${BASE_URL}/admin/chat-moderation/rules/${ruleId}/languages/${language}`,
+    { headers: { Authorization: jwt } },
+  );
 };
-export const getChatModerationSettings = async () => { const jwt = Cookies.get("@user_jwt"); return axios.get(`${BASE_URL}/admin/chat-moderation/settings`, { headers: { Authorization: jwt } }); };
-export const updateChatModerationSettings = async (detectorThreshold: number) => { const jwt = Cookies.get("@user_jwt"); return axios.patch(`${BASE_URL}/admin/chat-moderation/settings`, { detectorThreshold }, { headers: { Authorization: jwt } }); };
+export const deleteChatModerationRule = async (ruleId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.delete(`${BASE_URL}/admin/chat-moderation/rules/${ruleId}`, {
+    headers: { Authorization: jwt },
+  });
+};
+export const createChatModerationRule = async (
+  data: Record<string, unknown>,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(`${BASE_URL}/admin/chat-moderation/rules`, data, {
+    headers: { Authorization: jwt },
+  });
+};
+export const getChatModerationSettings = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/chat-moderation/settings`, {
+    headers: { Authorization: jwt },
+  });
+};
+export const updateChatModerationSettings = async (
+  detectorThreshold?: number,
+  warningTemplateLt?: string,
+  warningTemplateEn?: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.patch(
+    `${BASE_URL}/admin/chat-moderation/settings`,
+    {
+      ...(detectorThreshold !== undefined ? { detectorThreshold } : {}),
+      ...(warningTemplateLt !== undefined ? { warningTemplateLt } : {}),
+      ...(warningTemplateEn !== undefined ? { warningTemplateEn } : {}),
+    },
+    { headers: { Authorization: jwt } },
+  );
+};
 
 export const getSystemNannowChatsUnreadCount = async () => {
   const jwt = Cookies.get("@user_jwt");
@@ -1493,11 +1670,33 @@ export const updateChatMessageByAdmin = async (
   return response;
 };
 
-export const acknowledgeChatMessagePaymentRiskByAdmin = async (messageId: string) => {
+export const acknowledgeChatMessagePaymentRiskByAdmin = async (
+  messageId: string,
+) => {
   const jwt = Cookies.get("@user_jwt");
   return axios.post(
     `${BASE_URL}/admin/chats/messages/${messageId}/payment-risk/acknowledge`,
     {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getUserChatWarningsByAdmin = async (userId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/users/${userId}/chat-warnings`, {
+    headers: { Authorization: jwt },
+  });
+};
+
+export const sendChatWarningsByAdmin = async (
+  messageId: string,
+  recipientUserIds: string[],
+  language: "lt" | "en" = "lt",
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/chats/messages/${messageId}/warnings`,
+    { recipientUserIds, language },
     { headers: { Authorization: jwt } },
   );
 };
@@ -2204,6 +2403,32 @@ export const rebuildFinancialLedgerForOrder = async (orderId: string) => {
   return response;
 };
 
+export const rebuildOrderEventHistory = async (orderId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/super/orders/${encodeURIComponent(orderId)}/events/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const rebuildAllOrderEventHistory = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/super/orders/events/rebuild-all`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getOrderEventHistoryRebuildJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/super/orders/events/rebuild/jobs/${encodeURIComponent(jobId)}`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getPlatformFeeInvoiceReports = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
@@ -2249,6 +2474,25 @@ export const downloadPlatformFeeInvoiceReport = async (
     },
   );
   return response;
+};
+
+export const getProviderIncomeByMonth = async (year: number, month: number) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/financial/provider-income/${year}/${month}`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const downloadProviderIncomeReport = async (year: number, month: number) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/financial/provider-income/${year}/${month}/download`,
+    {
+      headers: { Authorization: jwt },
+      responseType: "blob",
+    },
+  );
 };
 
 export const deleteFinancialLedgerOrders = async (orderIds: string[]) => {
@@ -2299,6 +2543,11 @@ export const getOnboardingStats = async () => {
   return response;
 };
 
+export const getPublicCatalogProviderCount = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/users/public-catalog/stats`, { headers: { Authorization: jwt } });
+};
+
 export const getUsersAppVersionStats = async () => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(
@@ -2337,6 +2586,32 @@ export const refreshPayoutByOrderId = async (orderId: string) => {
     },
   );
   return response;
+};
+
+export const findDuplicatePayouts = async (params?: { orderId?: string; paidUserId?: string }) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/payouts/duplicates`, {
+    params: { ...(params ?? {}), _auditRequestId: `${Date.now()}-${Math.random().toString(36).slice(2)}` },
+    headers: { Authorization: jwt, "Cache-Control": "no-cache", Pragma: "no-cache" },
+  });
+};
+
+export const cancelDuplicatePayouts = async (payoutIds: string[], confirm = true) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/payouts/duplicates/cancel`,
+    { payoutIds, confirm },
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const reconcileUnrecordedStripeTransfer = async (transferId: string, orderId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/payouts/reconcile-transfer`,
+    { transferId, orderId },
+    { headers: { Authorization: jwt } },
+  );
 };
 
 export const getAdditionalPaymentsNotPayoutedOrders = async (
@@ -2400,10 +2675,48 @@ export const getOrderById = async (id: string) => {
   return response;
 };
 
-export const getClosedOrders = async (startIndex = 0) => {
+export const checkDailyOrderChildren = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/super/orders/${encodeURIComponent(id)}/daily-children/reconcile`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const repairDailyOrderChildren = async (id: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/super/orders/${encodeURIComponent(id)}/daily-children/reconcile`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getOrderEvents = async (id: string, before?: string | null, limit = 50) => {
+  const jwt = Cookies.get("@user_jwt");
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before) params.set("before", before);
+  return axios.get(`${BASE_URL}/admin/orders/${encodeURIComponent(id)}/events?${params.toString()}`, {
+    headers: { Authorization: jwt },
+  });
+};
+
+export const getOrderEventsList = async (params: { page?: number; pageSize?: number; sort?: string; orderPrettyId?: string; eventName?: string; dateFrom?: string; dateTo?: string } = {}) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/order-events`, { params, headers: { Authorization: jwt } });
+};
+
+export const getClosedOrders = async (
+  startIndex = 0,
+  filters?: { clientId?: string; approvedProviderId?: string },
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  const params = new URLSearchParams({ startIndex: String(startIndex) });
+  if (filters && Object.keys(filters).length > 0) {
+    params.set("filters", JSON.stringify(filters));
+  }
   const response = await axios.get(
-    `${BASE_URL}/admin/orders/closed?startIndex=${startIndex}`,
+    `${BASE_URL}/admin/orders/closed?${params.toString()}`,
     {
       headers: {
         Authorization: jwt,
@@ -3024,7 +3337,7 @@ export const getCredits = async (params?: CreditsListParams) => {
 };
 
 export const getAdminGiftCards = async (params?: {
-  filter?: "REDEEMED" | "NOT_REDEEMED" | "EXPIRED";
+  filter?: "REDEEMED" | "NOT_REDEEMED" | "EXPIRED" | "REFUNDED";
   startIndex?: number;
   pageSize?: number;
   q?: string;
@@ -3042,6 +3355,66 @@ export const getAdminGiftCards = async (params?: {
     },
   });
   return response;
+};
+
+export const correctAdminGiftCardRecipient = async (
+  giftCardId: string,
+  recipientEmail: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.patch(
+    `${BASE_URL}/admin/gift-cards/${encodeURIComponent(giftCardId)}/recipient`,
+    { recipientEmail },
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const refundAdminGiftCard = async (giftCardId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/gift-cards/${encodeURIComponent(giftCardId)}/refund`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export type GiftCardMigrationStats = {
+  scanned: number;
+  assigned: number;
+  alreadyAssigned: number;
+  emailsNormalized: number;
+  senderEmailsRecovered: number;
+  purchaseEventsCreated: number;
+  redemptionEventsCreated: number;
+  unmatchedRecipientEmails: number;
+  duplicateClientEmails: number;
+  missingRecipientEmails: number;
+  concurrentlyChanged: number;
+};
+
+export const previewGiftCardAssignmentMigration = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/gift-cards/assignment-migration`,
+    { mode: "DRY_RUN" },
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const runGiftCardAssignmentMigration = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/gift-cards/assignment-migration`,
+    { mode: "APPLY", confirm: true },
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getGiftCardAssignmentMigrationStatus = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/gift-cards/assignment-migration/status`, {
+    headers: { Authorization: jwt },
+  });
 };
 
 export const getUserCredits = async (
@@ -3276,6 +3649,27 @@ export const getSuperAccessList = async (
     },
   });
   return response;
+};
+
+export type CompanyDetails = {
+  name: string;
+  companyCode: string;
+  vatNumber: string;
+  address: string;
+  email: string | null;
+  phone: string;
+  vatRatePercent: number;
+  vatHistory?: Array<{ vatRatePercent: number; effectiveFrom: string; changedByAdminId?: string | null }>;
+};
+
+export const getCompanyDetails = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get<CompanyDetails>(`${BASE_URL}/admin/super/company-details`, { headers: { Authorization: jwt } });
+};
+
+export const updateCompanyDetails = async (payload: CompanyDetails) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.patch<CompanyDetails>(`${BASE_URL}/admin/super/company-details`, payload, { headers: { Authorization: jwt } });
 };
 
 export const getChatsNormalizationAnalysis = async () => {

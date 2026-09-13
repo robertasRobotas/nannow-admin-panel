@@ -2,8 +2,10 @@ import { HeaderLink } from "@/types/HeaderLink";
 
 export const links: HeaderLink[] = [
   { title: "Orders", link: "/orders" },
+  { title: "Order events", link: "/order-events" },
   { title: "Schedule", link: "/schedule" },
   { title: "Users", link: "/users" },
+  { title: "Nanny forecast", link: "/nanny-forecast" },
   {
     title: "Compensation",
     link: "/compensation?mode=clients&hasRequestedCompensationInfoAt=true&page=1",
@@ -16,6 +18,8 @@ export const links: HeaderLink[] = [
   { title: "Documents", link: "/documents" },
   { title: "Financial ledger", link: "/financial-ledger" },
   { title: "Earned profit", link: "/financial-profit-earned" },
+  { title: "Provider income", link: "/financial-provider-income" },
+  { title: "Profit graphs", link: "/financial-profit-graphs" },
   { title: "Analytics", link: "/analytics" },
   { title: "Retention", link: "/retention" },
   { title: "Map", link: "/map" },

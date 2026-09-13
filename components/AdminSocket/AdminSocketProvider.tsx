@@ -381,6 +381,19 @@ const parseAdminEventPayload = (payload: unknown): AdminEvent | null => {
     return { type: "SUSPICIOUS_CHAT_MESSAGE", messageId: parsed.messageId, chatId: parsed.chatId, senderId: String(parsed.senderId ?? ""), receiverId: String(parsed.receiverId ?? ""), score: parsed.score, detectedAt: String(parsed.detectedAt ?? "") };
   }
 
+  if (
+    parsed.type === "CONNECTED_USERS_CHANGED" &&
+    typeof parsed.changedUserId === "string" &&
+    typeof parsed.isConnect === "boolean"
+  ) {
+    return {
+      type: "CONNECTED_USERS_CHANGED",
+      changedUserId: parsed.changedUserId,
+      isConnect: parsed.isConnect,
+      timestamp: String(parsed.timestamp ?? ""),
+    };
+  }
+
   return null;
 };
 
@@ -397,6 +410,12 @@ const mapAdminEvent = (event: AdminEvent): AdminSocketEvent => {
         ...event,
         title: "Admin disconnected",
         description: event.fullName || event.email,
+      };
+    case "CONNECTED_USERS_CHANGED":
+      return {
+        ...event,
+        title: "Active users list updated",
+        description: event.isConnect ? "A user connected" : "A user disconnected",
       };
     case "ORDER_CREATED":
       return {
@@ -568,6 +587,8 @@ export const AdminSocketProvider = ({
       case "ADMIN_CONNECTED":
       case "ADMIN_DISCONNECTED":
         return `${event.type}:${event.adminId}`;
+      case "CONNECTED_USERS_CHANGED":
+        return `${event.type}:${event.changedUserId}:${event.timestamp}`;
       case "ORDER_CREATED":
       case "ORDER_CONFIRMED":
       case "ORDER_CANCELED":
@@ -676,7 +697,8 @@ export const AdminSocketProvider = ({
 
       if (
         normalizedEvent.type === "ADMIN_CONNECTED" ||
-        normalizedEvent.type === "ADMIN_DISCONNECTED"
+        normalizedEvent.type === "ADMIN_DISCONNECTED" ||
+        normalizedEvent.type === "CONNECTED_USERS_CHANGED"
       ) {
         return;
       }

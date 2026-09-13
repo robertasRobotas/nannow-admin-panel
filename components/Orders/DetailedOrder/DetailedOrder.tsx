@@ -21,6 +21,7 @@ import Button from "@/components/Button/Button";
 import ProcessCard from "./ProcessCard/ProcessCard";
 import {
   cancelOrderAuthorizationById,
+  checkDailyOrderChildren,
   cancelOrderByAdmin,
   captureOrderPaymentById,
   closeOrderByAdmin,
@@ -33,6 +34,7 @@ import {
   regenerateAdditionalPaymentInvoices,
   payoutAdditionalPaymentsByOrderId,
   payoutCancelFeeByOrderId,
+  repairDailyOrderChildren,
   refundOrderById,
   releaseFundsByOrderId,
   returnMoneyToParentById,
@@ -45,9 +47,23 @@ import Review from "@/components/Reviews/ReviewsList/Review/Review";
 import callImg from "../../../assets/images/call.svg";
 import closeImg from "../../../assets/images/close.svg";
 import crossRedImg from "../../../assets/images/cross-red.svg";
+import { copyTextToClipboard } from "@/helpers/clipboardWrites";
+import { Check, Copy } from "lucide-react";
 
 type DetailedOrderProps = {
   order: DetailedOrderType;
+};
+
+type DailyChildrenCheck = {
+  eligible: boolean;
+  repaired?: boolean;
+  reason?: string | null;
+  expectedChildCount?: number;
+  actualChildCount?: number;
+  scheduleMatches?: boolean;
+  amountsMatch?: boolean;
+  scheduleIssues?: string[];
+  amountIssues?: string[];
 };
 
 const DetailedOrder = ({ order }: DetailedOrderProps) => {
@@ -56,11 +72,19 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isReleaseFundsErrorModalOpen, setIsReleaseFundsErrorModalOpen] =
     useState(false);
   const [isCloseOrderModalOpen, setIsCloseOrderModalOpen] = useState(false);
+  const [isDailyChildrenModalOpen, setIsDailyChildrenModalOpen] = useState(false);
+  const [isDailyChildrenChecking, setIsDailyChildrenChecking] = useState(false);
+  const [isDailyChildrenRepairing, setIsDailyChildrenRepairing] = useState(false);
+  const [dailyChildrenCheck, setDailyChildrenCheck] = useState<DailyChildrenCheck | null>(null);
+  const [dailyChildrenError, setDailyChildrenError] = useState<string | null>(null);
+  const [isGroupIdCopied, setIsGroupIdCopied] = useState(false);
   const [isStatusSelectorOpen, setIsStatusSelectorOpen] = useState(false);
   const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] =
     useState(false);
   const [releaseFundsErrorMessage, setReleaseFundsErrorMessage] =
     useState<string>("");
+  const [releaseFundsErrorTitle, setReleaseFundsErrorTitle] =
+    useState("Payment failed");
   const [releaseFundsErrorDetails, setReleaseFundsErrorDetails] = useState<
     string | null
   >(null);
@@ -81,6 +105,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isProviderInvoiceLoading, setIsProviderInvoiceLoading] =
     useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const [isReturnMoneyModalOpen, setIsReturnMoneyModalOpen] = useState(false);
   const [isReturningMoney, setIsReturningMoney] = useState(false);
   const [returnMoneyError, setReturnMoneyError] = useState<string | null>(null);
@@ -150,14 +175,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const getUserName = (name?: string, lastName?: string) =>
     `${name ?? "Deleted"} ${lastName ?? "User"}`;
 
-  const requiredDirectProvider =
-    order?.isDirectOrderToProvider &&
-    !!order?.requiredProvider &&
-    !order?.approvedProvider &&
-    !order?.approvedProviderId
-      ? order.requiredProvider
-      : null;
-  const sitterUser = order?.approvedProvider ?? requiredDirectProvider;
+  const sitterUser =
+    order?.approvedProvider ??
+    (order?.isDirectOrderToProvider ? order?.requiredProvider : null);
   const parentUser = order?.clientUser;
 
   const parentLocation = `${order?.address?.street ?? "Unknown"} ${
@@ -261,6 +281,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
 
   const extractReleaseFundsError = (error: unknown) => {
     const fallback = {
+      title: "Payment failed",
       message: "Failed to release funds",
       details: null as string | null,
     };
@@ -277,17 +298,51 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       return fallback;
     }
 
-    const payload = maybeData as { error?: unknown; details?: unknown };
+    const payload = maybeData as {
+      error?: unknown;
+      details?: unknown;
+      code?: unknown;
+    };
+    const code = typeof payload.code === "string" ? payload.code : null;
+    const rawError = typeof payload.error === "string" ? payload.error : "";
+    const rawDetails =
+      typeof payload.details === "string" ? payload.details : "";
+    const combinedError = `${rawError} ${rawDetails}`;
+    const isAlreadyPaid = /already paid/i.test(combinedError);
+
+    if (isAlreadyPaid) {
+      return {
+        title: "Order already paid",
+        message:
+          "This order has already been paid. No further payment is needed.",
+        details: null,
+      };
+    }
+
     const message =
-      typeof payload.error === "string" && payload.error.trim().length > 0
-        ? payload.error
-        : fallback.message;
+      code === "PROVIDER_STRIPE_PAYOUTS_DISABLED"
+        ? "Provider payouts are disabled for this Stripe account. Ask the provider to resolve the Stripe account restriction, then try again."
+        : typeof payload.error === "string" && payload.error.trim().length > 0
+          ? payload.error
+          : fallback.message;
     const details =
       typeof payload.details === "string" && payload.details.trim().length > 0
         ? payload.details
         : null;
 
-    return { message, details };
+    return {
+      title: fallback.title,
+      message,
+      details: code === "PROVIDER_STRIPE_PAYOUTS_DISABLED" ? null : details,
+    };
+  };
+
+  const showPayoutError = (error: unknown) => {
+    const parsedError = extractReleaseFundsError(error);
+    setReleaseFundsErrorTitle(parsedError.title);
+    setReleaseFundsErrorMessage(parsedError.message);
+    setReleaseFundsErrorDetails(parsedError.details);
+    setIsReleaseFundsErrorModalOpen(true);
   };
 
   const confirmPayOrder = async () => {
@@ -299,10 +354,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     } catch (error) {
       console.warn("Failed to release funds");
-      const parsedError = extractReleaseFundsError(error);
-      setReleaseFundsErrorMessage(parsedError.message);
-      setReleaseFundsErrorDetails(parsedError.details);
-      setIsReleaseFundsErrorModalOpen(true);
+      showPayoutError(error);
     } finally {
       setIsReleasingFunds(false);
       setIsConfirmModalOpen(false);
@@ -313,12 +365,14 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     if (isRefunding) return;
     try {
       setIsRefunding(true);
+      setRefundError(null);
       const response = await refundOrderById(order.id);
       if (response.status === 200) {
         window.location.reload();
       }
     } catch (error) {
       console.error("Failed to refund order", error);
+      setRefundError(extractPaymentActionError(error));
     } finally {
       setIsRefunding(false);
     }
@@ -333,6 +387,44 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     }
     return "Payment action failed";
+  };
+
+  const checkDailyChildren = async () => {
+    if (isDailyChildrenChecking) return;
+    try {
+      setIsDailyChildrenChecking(true);
+      setDailyChildrenError(null);
+      const response = await checkDailyOrderChildren(order.id);
+      setDailyChildrenCheck(response.data?.result ?? null);
+      setIsDailyChildrenModalOpen(true);
+    } catch (error) {
+      setDailyChildrenError(extractPaymentActionError(error));
+      setIsDailyChildrenModalOpen(true);
+    } finally {
+      setIsDailyChildrenChecking(false);
+    }
+  };
+
+  const repairDailyChildren = async () => {
+    if (isDailyChildrenRepairing) return;
+    try {
+      setIsDailyChildrenRepairing(true);
+      setDailyChildrenError(null);
+      const response = await repairDailyOrderChildren(order.id);
+      setDailyChildrenCheck(response.data?.result ?? null);
+    } catch (error) {
+      setDailyChildrenError(extractPaymentActionError(error));
+    } finally {
+      setIsDailyChildrenRepairing(false);
+    }
+  };
+
+  const copyDailyOrderGroupId = async () => {
+    if (!order.orderGroupId) return;
+    const didCopy = await copyTextToClipboard(order.orderGroupId);
+    if (!didCopy) return;
+    setIsGroupIdCopied(true);
+    window.setTimeout(() => setIsGroupIdCopied(false), 1800);
   };
 
   const capturePayment = async () => {
@@ -396,6 +488,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     } catch (error) {
       console.error("Failed to payout cancel fee", error);
+      showPayoutError(error);
     } finally {
       setIsPayingCancelFee(false);
     }
@@ -411,6 +504,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       }
     } catch (error) {
       console.error("Failed to payout additional payments", error);
+      showPayoutError(error);
     } finally {
       setIsPayingAdditionalPayments(false);
     }
@@ -764,11 +858,27 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       (payment) =>
         String(payment?.payoutState ?? "").toUpperCase() === "PENDING",
     );
+  const paymentStatusUpper = String(order?.paymentStatus ?? "").toUpperCase();
+  const isOrderPaid = paymentStatusUpper === "PAID";
+  const isManualCapturePayment = order?.paymentCaptureMethod === "MANUAL";
+  const creditsAppliedCents = Math.max(0, Number(order?.creditsAppliedCents ?? 0));
+  const totalOrderCents = Math.round(Number(order?.totalPrice ?? 0) * 100);
+  const isFullyPaidWithCredits =
+    isOrderPaid && creditsAppliedCents > 0 && creditsAppliedCents >= totalOrderCents;
+  const isPaymentAuthorized = paymentStatusUpper === "AUTHORIZED";
+  const isAuthorizationReleased =
+    paymentStatusUpper === "AUTHORIZATION_CANCELED";
+  const isAuthorizationExpired =
+    paymentStatusUpper === "AUTHORIZATION_EXPIRED" ||
+    !!order?.paymentRecoveryRequired;
+  const hasRefundableOrderPayment = isOrderPaid || isPaymentAuthorized;
   const requiresRefund =
-    isCanceledByAdmin ||
-    isCanceledByProvider ||
-    (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h);
-  const requiresCancelFeePayout = isCanceledLate12h || isCanceledLate2h;
+    hasRefundableOrderPayment &&
+    (isCanceledByAdmin ||
+      isCanceledByProvider ||
+      (isCanceledByClient && !isCanceledLate12h && !isCanceledLate2h));
+  const requiresCancelFeePayout =
+    hasRefundableOrderPayment && (isCanceledLate12h || isCanceledLate2h);
   const providerCostAmount =
     typeof order?.totalProviderPrice === "number"
       ? order.totalProviderPrice
@@ -812,16 +922,6 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     requiresCancelFeePayout;
   const shouldShowProviderDocumentCard =
     shouldShowInvoiceCards && !!order?.approvedProviderId;
-  const isOrderPaid =
-    String(order?.paymentStatus ?? "").toUpperCase() === "PAID";
-  const paymentStatusUpper = String(order?.paymentStatus ?? "").toUpperCase();
-  const isManualCapturePayment = order?.paymentCaptureMethod === "MANUAL";
-  const isPaymentAuthorized = paymentStatusUpper === "AUTHORIZED";
-  const isAuthorizationReleased =
-    paymentStatusUpper === "AUTHORIZATION_CANCELED";
-  const isAuthorizationExpired =
-    paymentStatusUpper === "AUTHORIZATION_EXPIRED" ||
-    !!order?.paymentRecoveryRequired;
   const captureDeadlineDate = order?.captureDeadlineAt
     ? new Date(order.captureDeadlineAt)
     : null;
@@ -860,7 +960,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       : isAuthorizationExpired
         ? "Reservation expired - payment recovery needed"
         : isOrderPaid
-          ? "Paid (captured)"
+          ? isFullyPaidWithCredits
+            ? "Paid with credits"
+            : "Paid (captured)"
           : paymentStatusUpper || "-";
   const isRejectedDirectOffer =
     orderStatusUpper === "PROVIDER_REJECTED_DIRECT_OFFER";
@@ -946,24 +1048,28 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       })
     : "-";
   const finalPrimaryTitle = isCanceledOrder
-    ? requiresRefund || isCanceledLate12h
-      ? isRefundDone
-        ? "Refunded to parent"
-        : "Refund to parent"
-      : isCanceledByClient
-        ? "Cancel fee to sitter"
-        : "Canceled order payments"
+    ? !hasRefundableOrderPayment
+      ? "No payment on this order"
+      : requiresRefund || isCanceledLate12h
+        ? isRefundDone
+          ? "Refunded to parent"
+          : "Refund to parent"
+        : isCanceledByClient
+          ? "Cancel fee to sitter"
+          : "Canceled order payments"
     : "Final price to pay the sitter";
   const finalPrimaryValue = isCanceledOrder
-    ? requiresRefund || isCanceledLate12h
-      ? refundDisplayAmount != null
-        ? `€${refundDisplayAmount.toFixed(2)}`
-        : "-"
-      : isCanceledByClient
-        ? cancelFeeDisplayAmount != null
-          ? `€${cancelFeeDisplayAmount.toFixed(2)}`
+    ? !hasRefundableOrderPayment
+      ? "-"
+      : requiresRefund || isCanceledLate12h
+        ? refundDisplayAmount != null
+          ? `€${refundDisplayAmount.toFixed(2)}`
           : "-"
-        : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
+        : isCanceledByClient
+          ? cancelFeeDisplayAmount != null
+            ? `€${cancelFeeDisplayAmount.toFixed(2)}`
+            : "-"
+          : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`
     : `€${order?.totalProviderPrice?.toFixed(2) ?? "-"}`;
   const showCanceledFeeBreakdown =
     isCanceledByClient &&
@@ -1054,6 +1160,42 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               </>
             }
           />
+          {order.status === "SPLIT_INTO_DAILY" && (
+            <InfoCard
+              title="Daily child orders"
+              iconImgUrl={calendarImg.src}
+              type={isMobile ? "SPAN2" : "SPAN3"}
+              action={
+                <Button
+                  title={isDailyChildrenChecking ? "Checking..." : "Check"}
+                  type="OUTLINED"
+                  height={32}
+                  className={styles.statusChangeButton}
+                  isDisabled={isDailyChildrenChecking}
+                  onClick={checkDailyChildren}
+                />
+              }
+              info={
+                <div className={styles.stripeInfoList}>
+                  <div className={styles.dailyChildrenGroupId}>
+                    <span className={styles.stripeInfoLabel}>Group ID:</span>{" "}
+                    {order.orderGroupId ? `${order.orderGroupId.slice(0, 3)}...` : "Missing"}
+                    {order.orderGroupId && (
+                      <button
+                        type="button"
+                        className={styles.groupIdCopyButton}
+                        onClick={copyDailyOrderGroupId}
+                        title={isGroupIdCopied ? "Copied" : "Copy full group ID"}
+                        aria-label={isGroupIdCopied ? "Group ID copied" : "Copy full group ID"}
+                      >
+                        {isGroupIdCopied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              }
+            />
+          )}
           {order?.isUrgent && (
             <InfoCard
               title="Priority"
@@ -1757,7 +1899,8 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           </div>
         )}
       </div>
-      {(isManualCapturePayment ||
+      {(isFullyPaidWithCredits ||
+        isManualCapturePayment ||
         isPaymentAuthorized ||
         isAuthorizationReleased ||
         isAuthorizationExpired) && (
@@ -1765,7 +1908,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
           <div className={styles.paymentCaptureHeader}>
             <span className={styles.paymentCaptureTitle}>Payment</span>
             <span className={styles.paymentCaptureType}>
-              {isManualCapturePayment
+              {isFullyPaidWithCredits
+                ? "Paid with credits"
+                : isManualCapturePayment
                 ? "Reserved on card (manual capture)"
                 : "Charged immediately"}
             </span>
@@ -1777,24 +1922,35 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 {paymentStatusTitle}
               </span>
             </div>
-            <div className={styles.breakdownRow}>
-              <span className={styles.breakdownLabel}>Reserved amount</span>
-              <span className={styles.breakdownAmount}>
-                {formatCents(order?.authorizedAmountCents)}
-                {order?.authorizedAt
-                  ? ` (at ${formatPaymentDate(order.authorizedAt)})`
-                  : ""}
-              </span>
-            </div>
-            <div className={styles.breakdownRow}>
-              <span className={styles.breakdownLabel}>Captured amount</span>
-              <span className={styles.breakdownAmount}>
-                {formatCents(order?.capturedAmountCents)}
-                {order?.capturedAt
-                  ? ` (at ${formatPaymentDate(order.capturedAt)})`
-                  : ""}
-              </span>
-            </div>
+            {isFullyPaidWithCredits ? (
+              <div className={styles.breakdownRow}>
+                <span className={styles.breakdownLabel}>Credits used</span>
+                <span className={styles.breakdownAmount}>
+                  {formatCents(creditsAppliedCents)}
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className={styles.breakdownRow}>
+                  <span className={styles.breakdownLabel}>Reserved amount</span>
+                  <span className={styles.breakdownAmount}>
+                    {formatCents(order?.authorizedAmountCents)}
+                    {order?.authorizedAt
+                      ? ` (at ${formatPaymentDate(order.authorizedAt)})`
+                      : ""}
+                  </span>
+                </div>
+                <div className={styles.breakdownRow}>
+                  <span className={styles.breakdownLabel}>Captured amount</span>
+                  <span className={styles.breakdownAmount}>
+                    {formatCents(order?.capturedAmountCents)}
+                    {order?.capturedAt
+                      ? ` (at ${formatPaymentDate(order.capturedAt)})`
+                      : ""}
+                  </span>
+                </div>
+              </>
+            )}
             {captureDeadlineDate &&
               !isOrderPaid &&
               !isAuthorizationReleased && (
@@ -1964,6 +2120,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
               )}
             </div>
           )}
+        {refundError && (
+          <p className={styles.errorDetails}>{refundError}</p>
+        )}
       </div>
       <div className={styles.closeOrderRow}>
         {!isCanceledOrder &&
@@ -2005,7 +2164,7 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             <p className={styles.confirmationBody}>
               {isPaymentAuthorized
                 ? "The reserved money will be released back to the parent's card for free (no charge was made)."
-                : "The captured payment will be refunded to the parent via Stripe."}{" "}
+                : "The captured payment will be returned to the parent. Card payments are refunded through Stripe; credit-paid orders are returned as credits."}{" "}
               This action cannot be undone.
             </p>
             {order?.isReleasedFundsToProvider && (
@@ -2061,7 +2220,9 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
       {isReleaseFundsErrorModalOpen && (
         <div className={styles.confirmationBackdrop}>
           <div className={`${styles.confirmationModal} ${nunito.className}`}>
-            <h2 className={styles.confirmationTitle}>Payment failed</h2>
+            <h2 className={styles.confirmationTitle}>
+              {releaseFundsErrorTitle}
+            </h2>
             <p className={styles.confirmationBody}>
               {releaseFundsErrorMessage}
             </p>
@@ -2187,6 +2348,46 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 onClick={toggleClosedByAdmin}
                 isDisabled={isTogglingClosedByAdmin}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      {isDailyChildrenModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Daily child orders</h2>
+            {dailyChildrenError ? (
+              <p className={styles.errorDetails}>{dailyChildrenError}</p>
+            ) : !dailyChildrenCheck ? (
+              <p className={styles.confirmationBody}>No check result available.</p>
+            ) : (
+              <>
+                <p className={styles.confirmationBody}>
+                  {dailyChildrenCheck.reason || "Child-order reconciliation completed."}
+                </p>
+                {dailyChildrenCheck.eligible && (
+                  <div className={styles.dailyChildrenResult}>
+                    <div>Expected children: <b>{dailyChildrenCheck.expectedChildCount ?? 0}</b></div>
+                    <div>Existing children: <b>{dailyChildrenCheck.actualChildCount ?? 0}</b></div>
+                    <div>Schedule: <b>{dailyChildrenCheck.scheduleMatches ? "matches" : "needs review"}</b></div>
+                    <div>Amounts: <b>{dailyChildrenCheck.amountsMatch ? "match" : "need review"}</b></div>
+                  </div>
+                )}
+                {[...(dailyChildrenCheck.scheduleIssues ?? []), ...(dailyChildrenCheck.amountIssues ?? [])].length > 0 && (
+                  <ul className={styles.dailyChildrenIssues}>
+                    {[...(dailyChildrenCheck.scheduleIssues ?? []), ...(dailyChildrenCheck.amountIssues ?? [])].map((issue) => <li key={issue}>{issue}</li>)}
+                  </ul>
+                )}
+              </>
+            )}
+            <div className={styles.confirmationActions}>
+              <Button title="Close" type="OUTLINED" onClick={() => setIsDailyChildrenModalOpen(false)} isDisabled={isDailyChildrenRepairing} />
+              {dailyChildrenCheck?.eligible && dailyChildrenCheck.actualChildCount === 0 && !dailyChildrenCheck.repaired && (
+                <Button title={isDailyChildrenRepairing ? "Repairing..." : "Repair child orders"} type="BLACK" onClick={repairDailyChildren} isDisabled={isDailyChildrenRepairing} />
+              )}
+              {dailyChildrenCheck?.repaired && (
+                <Button title="Reload order" type="BLACK" onClick={() => window.location.reload()} />
+              )}
             </div>
           </div>
         </div>

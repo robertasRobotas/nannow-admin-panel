@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   getAllUsers,
-  getClientById,
-  getProviderById,
   getUsersAppVersionStats,
 } from "@/pages/api/fetch";
-import { User, UserDetails } from "@/types/Client";
 import styles from "./filterExport.module.css";
 import { nunito } from "@/helpers/fonts";
 import DropDownButton from "@/components/DropDownButton/DropDownButton";
@@ -59,6 +56,8 @@ type EnrichedUser = {
   notFinishedFields: OnboardingField[];
 };
 
+const NO_ROLE_FIELDS: OnboardingField[] = [];
+
 const CLIENT_FIELDS: OnboardingField[] = [
   "USER_VERIFIED",
   "PROFILE_PICTURE",
@@ -87,22 +86,6 @@ const FIELD_LABELS: Record<OnboardingField, string> = {
   KYC: "KYC",
 };
 
-type ExtendedProvider = NonNullable<UserDetails["provider"]> & {
-  intro?: string;
-  bankOnboardingStatus?: string;
-  kycStatus?: string;
-  rating?: number | { generalRating?: number };
-  videoUrl?: string;
-};
-
-type ExtendedClient = NonNullable<UserDetails["client"]> & {
-  videoUrl?: string;
-};
-
-type ExtendedUser = UserDetails["user"] & {
-  videoUrl?: string;
-};
-
 const modeOptions = [
   { title: "Clients", value: "CLIENT" },
   { title: "Providers", value: "PROVIDER" },
@@ -123,19 +106,6 @@ const platformFilterOptions = [
   { title: "No platform", value: "NO_PLATFORM" },
 ];
 
-const extractNumericRating = (rating: unknown): number | null => {
-  if (typeof rating === "number" && Number.isFinite(rating)) return rating;
-  if (
-    typeof rating === "object" &&
-    rating !== null &&
-    "generalRating" in rating &&
-    typeof rating.generalRating === "number"
-  ) {
-    return rating.generalRating;
-  }
-  return null;
-};
-
 const normalizePlatform = (platform: unknown): AppPlatform =>
   platform === "IOS" || platform === "ANDROID" ? platform : null;
 
@@ -147,159 +117,58 @@ const toggleAllFields = (
   setState(checked ? fields : []);
 };
 
-const extractProfileVideo = (detail: UserDetails): boolean => {
-  const user = detail.user as ExtendedUser;
-  const provider = detail.provider as ExtendedProvider | undefined;
-  const client = detail.client as ExtendedClient | undefined;
-  const candidates = [provider?.videoUrl, client?.videoUrl, user?.videoUrl];
-
-  return candidates.some(
-    (value) => typeof value === "string" && value.trim().length > 0,
-  );
-};
-
-const buildFinishedFields = (
-  detail: UserDetails,
+const fetchAllExportUsers = async (
   mode: FilterMode,
-): OnboardingField[] => {
-  if (mode === "NO_ROLE") return [];
-
-  const provider = detail.provider as ExtendedProvider | undefined;
-  const currentCriminalStatus = String(
-    provider?.criminalRecord?.currentStatus ??
-      provider?.criminalRecordStatus ??
-      "",
-  ).toUpperCase();
-
-  const statusByField: Record<OnboardingField, boolean> = {
-    USER_VERIFIED: detail.user?.isUserVerified === true,
-    PROFILE_PICTURE: Boolean(detail.user?.imgUrl?.trim()),
-    ADDRESS: Array.isArray(detail.addresses) && detail.addresses.length > 0,
-    CHILD: Array.isArray(detail.children) && detail.children.length > 0,
-    ABOUT_ME: Boolean(provider?.intro?.trim()),
-    CRIMINAL_RECORD: currentCriminalStatus === "APPROVED",
-    BANK_ONBOARDING:
-      String(provider?.bankOnboardingStatus ?? "").toUpperCase() === "APPROVED",
-    KYC: String(provider?.kycStatus ?? "").toUpperCase() === "VERIFIED",
-  };
-
-  const fields = mode === "CLIENT" ? CLIENT_FIELDS : PROVIDER_FIELDS;
-  return fields.filter((field) => statusByField[field]);
-};
-
-const mapDetailedUser = (
-  baseUser: User,
-  detail: UserDetails,
-  mode: FilterMode,
-): EnrichedUser => {
-  const provider = detail.provider as ExtendedProvider | undefined;
-  const rating =
-    mode === "CLIENT"
-      ? extractNumericRating(detail.client?.rating)
-      : extractNumericRating(provider?.rating);
-  const reviewsCount = Array.isArray(detail.receivedReviews)
-    ? detail.receivedReviews.length
-    : typeof detail.client?.positiveReviewsCount === "number"
-      ? detail.client.positiveReviewsCount
-      : 0;
-  const finishedFields = buildFinishedFields(detail, mode);
-  const allFields = mode === "CLIENT" ? CLIENT_FIELDS : PROVIDER_FIELDS;
-
-  return {
-    id: baseUser.id,
-    userId: baseUser.userId,
-    firstName: detail.user?.firstName ?? baseUser.firstName,
-    lastName: detail.user?.lastName ?? baseUser.lastName,
-    email: detail.user?.email ?? baseUser.email,
-    imgUrl: detail.user?.imgUrl ?? baseUser.imgUrl,
-    mode,
-    rating,
-    reviewsCount,
-    hasProfileVideo: extractProfileVideo(detail),
-    appVersion: detail.user?.appVersion ?? baseUser.appVersion ?? null,
-    platform:
-      detail.user?.platform === "IOS" || detail.user?.platform === "ANDROID"
-        ? detail.user.platform
-        : baseUser.platform === "IOS" || baseUser.platform === "ANDROID"
-          ? baseUser.platform
-          : null,
-    finishedFields,
-    notFinishedFields: allFields.filter(
-      (field) => !finishedFields.includes(field),
-    ),
-  };
-};
-
-const extractRoles = (user?: { roles?: unknown }): string[] =>
-  Array.isArray(user?.roles)
-    ? user.roles.map((role) => String(role).toUpperCase())
-    : [];
-
-const hasRoleForMode = (roles: string[], mode: FilterMode) => {
-  if (mode === "NO_ROLE") {
-    return roles.length === 0;
-  }
-
-  return roles.includes(mode);
-};
-
-const fetchAllBaseUsers = async (
-  mode: FilterMode,
-  hasAppVersionFilter?: boolean,
-): Promise<User[]> => {
-  const collected: User[] = [];
+  signal: AbortSignal,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<EnrichedUser[]> => {
+  const collected: EnrichedUser[] = [];
   let startIndex = 0;
   let total = Number.MAX_SAFE_INTEGER;
   const modeQuery =
     mode === "CLIENT" ? "client" : mode === "PROVIDER" ? "provider" : "norole";
 
+  const seen = new Set<string>();
   while (startIndex < total) {
+    signal.throwIfAborted();
     const params = new URLSearchParams({
       type: modeQuery,
       startIndex: String(startIndex),
-      search: "",
+      pageSize: "200",
     });
-    if (typeof hasAppVersionFilter === "boolean") {
-      const normalized = hasAppVersionFilter ? "true" : "false";
-      params.set("user.hasAppVersion", normalized);
-      params.set("hasAppVersion", normalized);
-    }
-    const basePath = `admin/users?${params.toString()}`;
-    const response = await getAllUsers(basePath);
+    const basePath = `admin/users/filter-export?${params.toString()}`;
+    const response = await getAllUsers(basePath, { signal, timeout: 30000 });
     const payload = response.data?.users;
-    const items = Array.isArray(payload?.items)
-      ? (payload.items as User[])
-      : [];
-    const pageSize = Number(payload?.pageSize ?? items.length ?? 0);
-    total = Number(payload?.total ?? collected.length + items.length);
-    collected.push(...items);
-
-    if (items.length === 0 || pageSize <= 0) break;
+    if (!Array.isArray(payload?.items)) {
+      throw new Error("The users API returned an invalid list. Please try again.");
+    }
+    const items = payload.items as EnrichedUser[];
+    const pageSize = Number(payload.pageSize ?? items.length);
+    total = Number(payload.total);
+    if (!Number.isFinite(total) || total < 0 ||
+        !Number.isInteger(pageSize) || pageSize <= 0 && items.length > 0) {
+      throw new Error("The users API returned invalid pagination. Please try again.");
+    }
+    const newItems = items.filter((user) => {
+      const key = user.userId || user.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (items.length > 0 && newItems.length === 0) {
+      throw new Error("The users API repeated a page. Loading stopped; please try again.");
+    }
+    collected.push(...newItems);
+    onProgress(collected.length, total);
+    if (items.length === 0) {
+      if (startIndex < total) throw new Error("The users API ended before all users loaded. Please try again.");
+      break;
+    }
     startIndex += pageSize;
   }
 
   return collected;
 };
-
-const mapNoRoleUser = (baseUser: User): EnrichedUser => ({
-  id: baseUser.id,
-  userId: baseUser.userId,
-  firstName: baseUser.firstName,
-  lastName: baseUser.lastName,
-  email: baseUser.email,
-  imgUrl: baseUser.imgUrl,
-  mode: "NO_ROLE",
-  rating: null,
-  reviewsCount: 0,
-  hasProfileVideo: false,
-  appVersion: baseUser.appVersion ?? null,
-  platform:
-    baseUser.platform === "IOS" || baseUser.platform === "ANDROID"
-      ? baseUser.platform
-      : null,
-  finishedFields: [],
-  notFinishedFields: [],
-});
 
 const downloadCsv = (rows: EnrichedUser[]) => {
   const headers = [
@@ -358,6 +227,8 @@ const FilterExport = () => {
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
+  const [progress, setProgress] = useState<number | undefined>();
+  const [loadError, setLoadError] = useState("");
   const [minimumReviews, setMinimumReviews] = useState("0");
   const [hasProfileVideoOnly, setHasProfileVideoOnly] = useState(false);
   const [selectedPlatformOption, setSelectedPlatformOption] = useState(0);
@@ -382,14 +253,19 @@ const FilterExport = () => {
   );
   const selectedAppVersion = appVersionOptions[selectedAppVersionOption]
     ?.value as AppVersionFilterValue;
-  const hasAppVersionServerFilter =
-    selectedAppVersion === "NO_APP_VERSION" ? false : undefined;
+  const draftFilters = {
+    selectedMode, selectedAppVersion, minimumReviews, hasProfileVideoOnly,
+    selectedPlatformOption, ratingFrom, ratingTo, finishedFields, notFinishedFields,
+  };
+  const [appliedFilters, setAppliedFilters] = useState<typeof draftFilters | null>(null);
+  const hasPendingChanges = appliedFilters !== null &&
+    JSON.stringify(draftFilters) !== JSON.stringify(appliedFilters);
   const availableFields =
     selectedMode === "CLIENT"
       ? CLIENT_FIELDS
       : selectedMode === "PROVIDER"
         ? PROVIDER_FIELDS
-        : [];
+        : NO_ROLE_FIELDS;
 
   useEffect(() => {
     setFinishedFields((prev) =>
@@ -398,8 +274,7 @@ const FilterExport = () => {
     setNotFinishedFields((prev) =>
       prev.filter((field) => availableFields.includes(field)),
     );
-    setCurrentPage(0);
-  }, [selectedMode]);
+  }, [availableFields]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -492,67 +367,41 @@ const FilterExport = () => {
   }, []);
 
   useEffect(() => {
-    let isCancelled = false;
-    const currentMode = modeOptions[selectedModeOption]?.value as FilterMode;
+    if (!appliedFilters) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const currentMode = appliedFilters.selectedMode;
 
     const run = async () => {
       try {
         setIsLoading(true);
+        setLoadError("");
+        setProgress(undefined);
         setLoadingText("Loading user list...");
         setUsers([]);
-        const baseUsers = await fetchAllBaseUsers(
+        const nextUsers = await fetchAllExportUsers(
           currentMode,
-          hasAppVersionServerFilter,
+          signal,
+          (loaded, total) => {
+            if (signal.aborted) return;
+            setLoadingText(`Loading user list: ${loaded} / ${total} users`);
+            setProgress(total > 0 ? Math.min(100, loaded / total * 100) : 100);
+          },
         );
-        const nextUsers: EnrichedUser[] = [];
-
-        for (let index = 0; index < baseUsers.length; index += 8) {
-          const batch = baseUsers.slice(index, index + 8);
-          setLoadingText(
-            `Loading user details ${Math.min(index + batch.length, baseUsers.length)}/${baseUsers.length}`,
-          );
-          const details = await Promise.all(
-            batch.map(async (baseUser) => {
-              if (currentMode === "NO_ROLE") {
-                return mapNoRoleUser(baseUser);
-              }
-
-              const response =
-                currentMode === "CLIENT"
-                  ? await getClientById(baseUser.userId)
-                  : await getProviderById(baseUser.userId);
-              const detail =
-                currentMode === "CLIENT"
-                  ? (response.data?.clientDetails as UserDetails)
-                  : (response.data?.providerDetails as UserDetails);
-              const roles = extractRoles(detail.user);
-
-              if (!hasRoleForMode(roles, currentMode)) {
-                return null;
-              }
-
-              return mapDetailedUser(baseUser, detail, currentMode);
-            }),
-          );
-          nextUsers.push(
-            ...details.filter(
-              (detail): detail is EnrichedUser => detail !== null,
-            ),
-          );
-        }
-
-        if (!isCancelled) {
+        signal.throwIfAborted();
+        if (!signal.aborted) {
           setUsers(nextUsers);
         }
       } catch (error) {
-        if (!isCancelled) {
+        if (!signal.aborted) {
           setUsers([]);
-          setLoadingText("Failed to load users.");
+          setLoadError(error instanceof Error ? error.message : "Failed to load users. Please try again.");
         }
         console.error(error);
       } finally {
-        if (!isCancelled) {
+        if (!signal.aborted) {
           setIsLoading(false);
+          controller.abort();
         }
       }
     };
@@ -560,14 +409,16 @@ const FilterExport = () => {
     run();
 
     return () => {
-      isCancelled = true;
+      controller.abort();
     };
-  }, [selectedModeOption, hasAppVersionServerFilter]);
+  }, [appliedFilters]);
 
-  const normalizedMinimumReviews = Number(minimumReviews);
-  const selectedPlatform = platformFilterOptions[selectedPlatformOption]
-    ?.value as "ALL" | "IOS" | "ANDROID" | "NO_PLATFORM";
   const filteredUsers = users.filter((user) => {
+    if (!appliedFilters) return false;
+    const { minimumReviews, hasProfileVideoOnly, selectedPlatformOption,
+      selectedAppVersion, ratingFrom, ratingTo, finishedFields, notFinishedFields } = appliedFilters;
+    const normalizedMinimumReviews = Number(minimumReviews);
+    const selectedPlatform = platformFilterOptions[selectedPlatformOption]?.value;
     if (
       Number.isFinite(normalizedMinimumReviews) &&
       normalizedMinimumReviews > 0 &&
@@ -629,17 +480,7 @@ const FilterExport = () => {
 
   useEffect(() => {
     setCurrentPage(0);
-  }, [
-    minimumReviews,
-    hasProfileVideoOnly,
-    selectedPlatformOption,
-    selectedAppVersionOption,
-    ratingFrom,
-    ratingTo,
-    finishedFields,
-    notFinishedFields,
-    selectedPageSizeOption,
-  ]);
+  }, [selectedPageSizeOption]);
 
   useEffect(() => {
     if (pageCount === 0) {
@@ -697,7 +538,19 @@ const FilterExport = () => {
 
       <div className={styles.layout}>
         <div className={styles.filtersCard}>
-          <div className={styles.sectionTitle}>Filters</div>
+          <div className={styles.filterHeader}>
+            <div className={styles.sectionTitle}>Filters</div>
+            <Button title="Apply filters" type="BLACK" onClick={() => {
+              setUsers([]);
+              setLoadError("");
+              setIsLoading(true);
+              setLoadingText("Loading user list...");
+              setProgress(undefined);
+              setCurrentPage(0);
+              setAppliedFilters({ ...draftFilters });
+            }} />
+          </div>
+          {hasPendingChanges && <div className={styles.resultsMeta}>Filters changed. Press Apply filters to update results.</div>}
 
           <div className={styles.filterBlock}>
             <div className={styles.label}>User type</div>
@@ -872,7 +725,7 @@ const FilterExport = () => {
               <div className={styles.resultsMeta}>
                 {isLoading
                   ? loadingText
-                  : `${filteredUsers.length} of ${users.length} users match filters`}
+                  : loadError ? "Loading failed" : !appliedFilters ? "Choose filters, then press Apply filters." : `${filteredUsers.length} of ${users.length} users match filters`}
               </div>
             </div>
             <div className={styles.pageSizeWrap}>
@@ -885,6 +738,13 @@ const FilterExport = () => {
             </div>
           </div>
 
+          {isLoading && (
+            <div className={styles.loadingProgress} role="status" aria-live="polite">
+              <progress aria-label={loadingText} max={100} value={progress} />
+              <span>{progress === undefined ? "Waiting for the users API…" : `${Math.round(progress)}% loaded`}</span>
+            </div>
+          )}
+          {loadError && <div className={styles.emptyState} role="alert">{loadError} Press Apply filters to retry.</div>}
           <div className={styles.resultsList}>
             {paginatedUsers.map((user) => (
               <div key={user.userId} className={styles.resultRow}>
@@ -944,7 +804,7 @@ const FilterExport = () => {
                 </div>
               </div>
             ))}
-            {!isLoading && filteredUsers.length === 0 && (
+            {!isLoading && !loadError && appliedFilters && filteredUsers.length === 0 && (
               <div className={styles.emptyState}>
                 No users match current filters.
               </div>

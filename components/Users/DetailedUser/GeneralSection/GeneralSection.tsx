@@ -9,13 +9,16 @@ import { useEffect, useState } from "react";
 import {
   deleteProviderStripeAccount,
   getProviderCompletionStatsRebuildJob,
+  rebuildProviderPublicUrl,
   rebuildProviderCompletionStats,
   type ProviderCompletionStatsRebuildJob,
   setUserBanStatus,
   setUserSuspendedStatus,
   updateClientRequestedCompensationInfoAt,
   updateProviderFields,
+  getUserChatWarningsByAdmin,
 } from "@/pages/api/fetch";
+import type { ChatWarningType } from "@/types/Chats";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -84,6 +87,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
+  const [chatWarnings, setChatWarnings] = useState<ChatWarningType[]>([]);
   const [isSuspendedLocal, setIsSuspendedLocal] = useState(
     user?.user?.isSuspendedByAdmin ?? false,
   );
@@ -105,6 +109,10 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
   );
   const [basePriceError, setBasePriceError] = useState<string | null>(null);
   const [isUpdatingBasePrice, setIsUpdatingBasePrice] = useState(false);
+  const [isFinalPriceModalOpen, setIsFinalPriceModalOpen] = useState(false);
+  const [finalPriceInput, setFinalPriceInput] = useState("");
+  const [finalPriceError, setFinalPriceError] = useState<string | null>(null);
+  const [isUpdatingFinalPrice, setIsUpdatingFinalPrice] = useState(false);
   const [openedVideoUrl, setOpenedVideoUrl] = useState<string | null>(null);
   const [
     requestedCompensationInfoAtLocal,
@@ -114,6 +122,17 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       user?.client?.requestedCompensationInfoAt,
     ),
   );
+
+  useEffect(() => {
+    const userId = user?.user?.id;
+    if (!userId) return;
+    getUserChatWarningsByAdmin(userId)
+      .then((response) => {
+        const items = response.data?.result?.items ?? response.data?.items ?? [];
+        setChatWarnings(Array.isArray(items) ? items : []);
+      })
+      .catch(() => setChatWarnings([]));
+  }, [user?.user?.id]);
   const [isCompensationModalOpen, setIsCompensationModalOpen] = useState(false);
   const [isCompensationSaving, setIsCompensationSaving] = useState(false);
   const [isRebuildingCompletionStats, setIsRebuildingCompletionStats] =
@@ -124,10 +143,20 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     useState<ProviderCompletionStatsRebuildJob | null>(null);
   const [isCompletionStatsModalOpen, setIsCompletionStatsModalOpen] =
     useState(false);
+  const [isRebuildingPublicUrl, setIsRebuildingPublicUrl] = useState(false);
+  const [isPublicUrlConfirmModalOpen, setIsPublicUrlConfirmModalOpen] = useState(false);
+  const [publicUrlLocal, setPublicUrlLocal] = useState<string | null>(
+    user?.provider?.publicUrl ?? null,
+  );
 
   console.log(user.provider);
   const [isSuspendedSaving, setIsSuspendedSaving] = useState(false);
-  const cards = getInfoCards(user, mode, {
+  const cards = getInfoCards(
+    mode === "provider" && user.provider
+      ? { ...user, provider: { ...user.provider, publicUrl: publicUrlLocal } }
+      : user,
+    mode,
+    {
     suspendedSwitch: {
       value: isSuspendedLocal,
       onChange: async () => {
@@ -158,7 +187,8 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
             disabled: isCompensationSaving,
           }
         : undefined,
-  });
+    },
+  );
   const isMobile = useMediaQuery({ query: "(max-width: 936px)" });
   const router = useRouter();
   console.log(user);
@@ -192,6 +222,27 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     }
   };
 
+  const handleRebuildPublicUrl = async () => {
+    if (!user?.provider?.id || isRebuildingPublicUrl) return;
+    try {
+      setIsPublicUrlConfirmModalOpen(false);
+      setIsRebuildingPublicUrl(true);
+      const response = await rebuildProviderPublicUrl(user.provider.id);
+      const nextUrl = response.data?.publicUrl as string | undefined;
+      if (nextUrl) {
+        setPublicUrlLocal(nextUrl);
+        toast.success("Provider public URL rebuilt");
+      }
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data as { error?: string })?.error
+        : undefined;
+      toast.error(message ?? "Failed to rebuild provider public URL");
+    } finally {
+      setIsRebuildingPublicUrl(false);
+    }
+  };
+
   const openBasePriceModal = () => {
     setBasePriceInput(
       typeof user?.provider?.baseProviderRate === "number"
@@ -200,6 +251,49 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     );
     setBasePriceError(null);
     setIsBasePriceModalOpen(true);
+  };
+
+  const getFinalPriceValue = () => {
+    return user?.provider?.providerCustomPrice ?? user?.provider?.finalPrice ?? 0;
+  };
+
+  const openFinalPriceModal = () => {
+    setFinalPriceInput(getFinalPriceValue().toFixed(2));
+    setFinalPriceError(null);
+    setIsFinalPriceModalOpen(true);
+  };
+
+  const closeFinalPriceModal = () => {
+    if (isUpdatingFinalPrice) return;
+    setIsFinalPriceModalOpen(false);
+    setFinalPriceError(null);
+  };
+
+  const parsedFinalPrice = parseBasePriceValue(finalPriceInput);
+  const finalPricePreview = parsedFinalPrice.ok
+    ? `€ ${parsedFinalPrice.value.toFixed(2)}`
+    : "-";
+
+  const confirmChangeFinalPrice = async () => {
+    if (!user?.provider?.id || isUpdatingFinalPrice) return;
+    if (!parsedFinalPrice.ok) {
+      setFinalPriceError(parsedFinalPrice.error);
+      return;
+    }
+    try {
+      setIsUpdatingFinalPrice(true);
+      await updateProviderFields(user.provider.id, {
+        providerCustomPrice: parsedFinalPrice.value,
+      });
+      toast.success("Final price updated");
+      setIsFinalPriceModalOpen(false);
+      router.reload();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update final price");
+    } finally {
+      setIsUpdatingFinalPrice(false);
+    }
   };
 
   const openBanModal = () => {
@@ -280,7 +374,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
     setBasePriceError(null);
   };
 
-  const parseBasePriceValue = (rawValue: string): BasePriceParseResult => {
+  function parseBasePriceValue(rawValue: string): BasePriceParseResult {
     const normalized = rawValue.trim().replace(",", ".");
     if (normalized.length === 0) {
       return { ok: false, error: "Price is required." };
@@ -296,7 +390,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
       return { ok: false, error: "Price cannot be negative." };
     }
     return { ok: true, value: parsed };
-  };
+  }
 
   const parsedBasePrice = parseBasePriceValue(basePriceInput);
   const basePricePreview = parsedBasePrice.ok
@@ -471,6 +565,44 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
           </div>
         )}
       </div>
+      {chatWarnings.length > 0 && (
+      <section className={styles.warningsCard} aria-label="Warnings">
+        <div className={styles.warningsCardHeader}>
+          <h4>Warnings</h4>
+          <strong>{chatWarnings.length} total</strong>
+        </div>
+        {chatWarnings.length > 0 ? (
+          <div className={styles.warningsTableWrap}>
+            <table className={styles.warningsTable}>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Reason</th>
+                  <th>Related message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chatWarnings.map((warning) => (
+                  <tr key={warning.id}>
+                    <td>{new Date(warning.sentAt).toLocaleDateString()}</td>
+                    <td>{warning.reason || "Suspicious chat message"}</td>
+                    <td>
+                      <a
+                        href={`/nannow-chats?id=${encodeURIComponent(warning.sourceChatId)}&messageId=${encodeURIComponent(warning.sourceMessageId)}`}
+                      >
+                        Open message ↗
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className={styles.warningsEmpty}>No warnings recorded.</p>
+        )}
+      </section>
+      )}
       <div className={styles.infoCardsWrapper}>
         {cards.map((c, i) => (
           <div
@@ -550,6 +682,7 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 />
               </button>
             )}
+            <div className={styles.cardActions}>
             {c.link && (
               <Button
                 title={c.linkButtonTitle ?? "Details"}
@@ -583,6 +716,14 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                   onClick={openBasePriceModal}
                 />
               )}
+            {c.actionButton?.action === "CHANGE_FINAL_PRICE" &&
+              mode === "provider" && (
+                <Button
+                  title={c.actionButton.title}
+                  type="OUTLINED"
+                  onClick={openFinalPriceModal}
+                />
+              )}
             {c.actionButton?.action === "BAN_USER" && (
               <Button
                 title={c.actionButton.title}
@@ -590,6 +731,16 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 onClick={openBanModal}
               />
             )}
+            {c.actionButton?.action === "REBUILD_PUBLIC_URL" && mode === "provider" && (
+              <Button
+                title={isRebuildingPublicUrl ? "Rebuilding..." : c.actionButton.title}
+                type="OUTLINED"
+                onClick={() => setIsPublicUrlConfirmModalOpen(true)}
+                isDisabled={isRebuildingPublicUrl}
+                isLoading={isRebuildingPublicUrl}
+              />
+            )}
+            </div>
           </div>
         ))}
       </div>
@@ -685,6 +836,52 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 type="BLACK"
                 onClick={confirmChangeBasePrice}
                 isDisabled={isUpdatingBasePrice}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isFinalPriceModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Change final price?</h2>
+            <div className={styles.inputBlock}>
+              <label className={styles.inputLabel} htmlFor="final-price-input">
+                Final price
+              </label>
+              <input
+                id="final-price-input"
+                type="text"
+                inputMode="decimal"
+                value={finalPriceInput}
+                onChange={(e) => {
+                  setFinalPriceInput(e.target.value);
+                  setFinalPriceError(null);
+                }}
+                className={styles.textInput}
+                placeholder="e.g. 8.00"
+                disabled={isUpdatingFinalPrice}
+              />
+              {finalPriceError && (
+                <span className={styles.inputError}>{finalPriceError}</span>
+              )}
+            </div>
+            <p className={styles.confirmationBody}>
+              Confirm setting provider final price to <b>{finalPricePreview}</b>.
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={closeFinalPriceModal}
+                isDisabled={isUpdatingFinalPrice}
+              />
+              <Button
+                title={isUpdatingFinalPrice ? "Updating..." : "Confirm"}
+                type="BLACK"
+                onClick={confirmChangeFinalPrice}
+                isDisabled={isUpdatingFinalPrice}
               />
             </div>
           </div>
@@ -863,6 +1060,31 @@ const GeneralSection = ({ user, mode, onBackClick }: GeneralSectionProps) => {
                 }
                 type="OUTLINED"
                 onClick={() => setIsCompletionStatsModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPublicUrlConfirmModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h3 className={styles.confirmationTitle}>Rebuild public URL?</h3>
+            <p className={styles.confirmationBody}>
+              The current public link will stop working. Continue?
+            </p>
+            <div className={styles.confirmationActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => setIsPublicUrlConfirmModalOpen(false)}
+              />
+              <Button
+                title="Rebuild URL"
+                type="BLACK"
+                onClick={() => void handleRebuildPublicUrl()}
+                isDisabled={isRebuildingPublicUrl}
+                isLoading={isRebuildingPublicUrl}
               />
             </div>
           </div>

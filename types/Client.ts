@@ -88,12 +88,15 @@ export type User = {
   locale?: string;
   requestedCompensationInfoAt?: string | null;
   contactedRegardingCompensationAt?: string | null;
+  cashPaymentWarningConfirmedAt?: string | null;
 };
 
 export type UserDetails = {
   provider?: {
     id: string;
     userId: string;
+    publicUrl?: string | null;
+    publicSlug?: string | null;
     createdAt?: string;
     updatedAt?: string;
     isOnboardingFinished?: boolean;
@@ -110,6 +113,7 @@ export type UserDetails = {
     languages?: string[];
     baseProviderRate: number;
     finalPrice?: number;
+    providerCustomPrice?: number | null;
     providerPriceCalculationMethod?: ProviderPriceCalculationMethod;
     isShownManageYourRate?: boolean;
     unavailablePeriods?: {
@@ -381,6 +385,7 @@ export type UserDetails = {
     imgUrlRemovedAt?: string | null;
     imgUrlRemovedByAdminId?: string | null;
     creditBalanceCents?: number;
+    cashPaymentWarningConfirmedAt?: string | null;
     userAppLanguage?: string;
     isSuspendedByAdmin: boolean;
     suspensionReason: string;

@@ -8,6 +8,13 @@ import {
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import {
+  CalendarClock,
+  CircleCheck,
+  CircleX,
+  LoaderCircle,
+  TriangleAlert,
+} from "lucide-react";
 import { useAdminSocket } from "@/components/AdminSocket/AdminSocketProvider";
 import {
   getOrderSchedule,
@@ -54,14 +61,68 @@ type CalendarDay = {
   items: OrderScheduleItem[];
 };
 
+type ScheduleVisualStatus =
+  | "future"
+  | "running"
+  | "finished"
+  | "overdue"
+  | "canceled";
+
 const TIMEZONE = "Europe/Vilnius";
-const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const SCHEDULE_VISIBILITY_STORAGE_KEY = "schedule-visibility-filters";
+const WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_START_HOUR = 6;
 const DAY_END_HOUR = 22;
 const HOUR_LABELS = Array.from(
   { length: DAY_END_HOUR - DAY_START_HOUR + 1 },
   (_, index) => DAY_START_HOUR + index,
 );
+
+const SCHEDULE_STATUS_META = {
+  future: {
+    label: "Future",
+    legendLabel: "Future",
+    color: "#2563eb",
+    background: "#eaf2ff",
+    Icon: CalendarClock,
+  },
+  running: {
+    label: "Running",
+    legendLabel: "Running now",
+    color: "#b45309",
+    background: "#fff4d6",
+    Icon: LoaderCircle,
+  },
+  finished: {
+    label: "Finished",
+    legendLabel: "Finished",
+    color: "#16803c",
+    background: "#e6f4ea",
+    Icon: CircleCheck,
+  },
+  overdue: {
+    label: "Overdue / unfinished",
+    legendLabel: "Overdue / unfinished",
+    color: "#c5221f",
+    background: "#fce8e6",
+    Icon: TriangleAlert,
+  },
+  canceled: {
+    label: "Canceled",
+    legendLabel: "Canceled",
+    color: "#5f6368",
+    background: "#eef0f2",
+    Icon: CircleX,
+  },
+} as const;
+
+const SCHEDULE_STATUS_LEGEND: ScheduleVisualStatus[] = [
+  "future",
+  "running",
+  "finished",
+  "overdue",
+  "canceled",
+];
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -76,7 +137,7 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
-const startOfWeek = (date: Date) => addDays(date, -date.getDay());
+const startOfWeek = (date: Date) => addDays(date, -(date.getDay() + 6) % 7);
 
 const getWeekRange = (dateInputValue: string) => {
   const selected = new Date(`${dateInputValue}T00:00:00`);
@@ -112,6 +173,39 @@ const getDefaultFilters = (): ScheduleFilterState => ({
   page: 1,
   pageSize: 500,
 });
+
+const getSavedVisibilityFilters = (): Pick<
+  ScheduleFilterState,
+  "showCanceled" | "showPast"
+> | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = JSON.parse(
+      window.localStorage.getItem(SCHEDULE_VISIBILITY_STORAGE_KEY) ?? "null",
+    ) as Partial<Pick<ScheduleFilterState, "showCanceled" | "showPast">> | null;
+    if (!saved || typeof saved !== "object") return null;
+    return {
+      showCanceled:
+        typeof saved.showCanceled === "boolean" ? saved.showCanceled : false,
+      showPast: typeof saved.showPast === "boolean" ? saved.showPast : true,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const saveVisibilityFilters = (
+  filters: Pick<ScheduleFilterState, "showCanceled" | "showPast">,
+) => {
+  try {
+    window.localStorage.setItem(
+      SCHEDULE_VISIBILITY_STORAGE_KEY,
+      JSON.stringify(filters),
+    );
+  } catch {
+    // The schedule remains usable when browser storage is unavailable.
+  }
+};
 
 const getFiltersForPeriod = (
   period: PeriodPreset,
@@ -203,18 +297,66 @@ const getScheduleDisplayText = (item: OrderScheduleItem, timeZone: string) =>
     item.provider,
   )} / ${getScheduleParticipantName(item.client)}`;
 
-const getStatusColor = (status?: string | null) => {
-  const normalized = String(status ?? "").toUpperCase();
-  if (normalized.includes("CANCEL")) return "#d93025";
-  if (normalized.includes("FINISH") || normalized.includes("COMPLETED"))
-    return "#188038";
-  if (normalized.includes("PAID") || normalized.includes("APPROVED"))
-    return "#1a73e8";
-  if (normalized.includes("PENDING") || normalized.includes("WAIT"))
-    return "#f9ab00";
-  if (normalized.includes("SPLIT")) return "#7e57c2";
-  if (normalized.includes("NOT_ENDED")) return "#5f6368";
-  return "#1a73e8";
+const getScheduleVisualStatus = (
+  item: OrderScheduleItem,
+  now = Date.now(),
+): ScheduleVisualStatus => {
+  const normalized = String(item.status ?? "").toUpperCase();
+
+  if (normalized.includes("CANCEL")) return "canceled";
+  if (
+    normalized.includes("NOT_STARTED_IN_TIME") ||
+    normalized.includes("NOT_ENDED_IN_TIME")
+  ) {
+    return "overdue";
+  }
+  if (
+    item.finishedAt ||
+    normalized.includes("SERVICE_ENDED") ||
+    normalized.includes("FINISH") ||
+    normalized.includes("COMPLETED")
+  ) {
+    return "finished";
+  }
+  if (normalized.includes("SERVICE_IN_PROGRESS")) return "running";
+
+  const startsAt = new Date(item.startsAt).getTime();
+  const endsAt = new Date(item.endsAt).getTime();
+  if (Number.isFinite(startsAt) && now < startsAt) return "future";
+  if (Number.isFinite(endsAt) && now > endsAt) return "overdue";
+  if (
+    Number.isFinite(startsAt) &&
+    Number.isFinite(endsAt) &&
+    now >= startsAt &&
+    now <= endsAt
+  ) {
+    return "running";
+  }
+  return "future";
+};
+
+const getScheduleVisualStyle = (item: OrderScheduleItem): CSSProperties => {
+  const meta = SCHEDULE_STATUS_META[getScheduleVisualStatus(item)];
+  return {
+    "--event-color": meta.color,
+    "--event-background": meta.background,
+  } as CSSProperties;
+};
+
+const ScheduleStatusIcon = ({ item }: { item: OrderScheduleItem }) => {
+  const status = getScheduleVisualStatus(item);
+  const { Icon, label } = SCHEDULE_STATUS_META[status];
+  return (
+    <span
+      className={`${styles.eventStatusIcon} ${
+        status === "running" ? styles.statusIconRunning : ""
+      }`}
+      aria-label={label}
+      title={label}
+    >
+      <Icon aria-hidden="true" />
+    </span>
+  );
 };
 
 const shouldShowScheduleItem = (
@@ -222,9 +364,23 @@ const shouldShowScheduleItem = (
   filters: Pick<ScheduleFilterState, "showCanceled" | "showPast">,
 ) => {
   const normalizedStatus = String(item.status ?? "").toUpperCase();
-  if (!filters.showCanceled && normalizedStatus.includes("CANCEL")) {
-    return false;
-  }
+
+  // The schedule is for actionable or completed bookings—not offers or orders
+  // canceled before approval. Other canceled bookings remain behind the
+  // dedicated visibility toggle.
+  if (normalizedStatus === "CANCELED_NOT_PAID_BY_CLIENT") return false;
+  if (normalizedStatus.includes("CANCEL")) return filters.showCanceled;
+
+  const isEligibleStatus =
+    normalizedStatus === "BOTH_APPROVED" ||
+    normalizedStatus === "PROVIDER_ACCEPTED_DIRECT_OFFER" ||
+    normalizedStatus === "PROVIDER_MARKED_AS_SERVICE_IN_PROGRESS" ||
+    normalizedStatus === "PROVIDER_MARKED_AS_SERVICE_ENDED" ||
+    normalizedStatus === "NOT_STARTED_IN_TIME" ||
+    normalizedStatus === "NOT_ENDED_IN_TIME" ||
+    Boolean(item.finishedAt);
+  if (!isEligibleStatus) return false;
+
   if (!filters.showPast && new Date(item.startsAt).getTime() < Date.now()) {
     return false;
   }
@@ -276,7 +432,7 @@ const buildCalendarWeeks = (
 ): CalendarDay[][] => {
   const firstDay = new Date(year, month - 1, 1);
   const firstGridDay = new Date(firstDay);
-  firstGridDay.setDate(firstDay.getDate() - firstDay.getDay());
+  firstGridDay.setDate(firstDay.getDate() - ((firstDay.getDay() + 6) % 7));
   const todayKey = getDateKey(new Date().toISOString(), timeZone);
 
   return Array.from({ length: 6 }, (_, weekIndex) =>
@@ -299,7 +455,7 @@ const buildCalendarWeeks = (
 const buildMonthWeeks = (year: number, month: number) => {
   const firstDay = new Date(year, month - 1, 1);
   const firstGridDay = new Date(firstDay);
-  firstGridDay.setDate(firstDay.getDate() - firstDay.getDay());
+  firstGridDay.setDate(firstDay.getDate() - ((firstDay.getDay() + 6) % 7));
   return Array.from({ length: 6 }, (_, weekIndex) =>
     Array.from({ length: 7 }, (_, dayIndex) => {
       const date = new Date(firstGridDay);
@@ -325,7 +481,7 @@ const getTimedEventStyle = (
   );
   const visibleMinutes = (DAY_END_HOUR - DAY_START_HOUR + 1) * 60;
   return {
-    "--event-color": getStatusColor(item.status),
+    ...getScheduleVisualStyle(item),
     top: `${(startMinutes / visibleMinutes) * 100}%`,
     height: `${Math.max(3, ((endMinutes - startMinutes) / visibleMinutes) * 100)}%`,
   } as CSSProperties;
@@ -378,6 +534,7 @@ const Schedule = () => {
   useEffect(() => {
     if (!router.isReady) return;
     const defaults = getDefaultFilters();
+    const savedVisibility = getSavedVisibilityFilters();
     const { query } = router;
     const period =
       typeof query.period === "string" &&
@@ -419,11 +576,11 @@ const Schedule = () => {
       showCanceled:
         typeof query.showCanceled === "string"
           ? query.showCanceled === "true"
-          : defaults.showCanceled,
+          : (savedVisibility?.showCanceled ?? defaults.showCanceled),
       showPast:
         typeof query.showPast === "string"
           ? query.showPast === "true"
-          : defaults.showPast,
+          : (savedVisibility?.showPast ?? defaults.showPast),
       page: derivedPage,
       pageSize,
     };
@@ -447,6 +604,18 @@ const Schedule = () => {
     router.query.status,
     router.query.timezone,
     router.query.year,
+  ]);
+
+  useEffect(() => {
+    if (!filtersReady) return;
+    saveVisibilityFilters({
+      showCanceled: appliedFilters.showCanceled,
+      showPast: appliedFilters.showPast,
+    });
+  }, [
+    appliedFilters.showCanceled,
+    appliedFilters.showPast,
+    filtersReady,
   ]);
 
   const fetchList = useCallback(async () => {
@@ -477,9 +646,12 @@ const Schedule = () => {
       const payload = (response.data?.result ??
         response.data) as OrderScheduleListResponse;
       const nextItems = Array.isArray(payload.items) ? payload.items : [];
-      setItems(nextItems);
-      setTotal(Number(payload.total ?? nextItems.length) || 0);
-      if (nextItems.length === 0) {
+      const visibleItems = nextItems.filter((item) =>
+        shouldShowScheduleItem(item, appliedFilters),
+      );
+      setItems(visibleItems);
+      setTotal(visibleItems.length);
+      if (visibleItems.length === 0) {
         setSelectedId("");
       }
     } catch (err) {
@@ -779,20 +951,28 @@ const Schedule = () => {
     setSelectedItem(null);
   };
 
-  const renderMonthEvent = (item: OrderScheduleItem) => (
-    <button
-      key={item.orderId}
-      type="button"
-      className={styles.calendarEvent}
-      style={{ "--event-color": getStatusColor(item.status) } as CSSProperties}
-      onClick={() => selectItem(item)}
-      title={getScheduleDisplayText(item, appliedFilters.timezone)}
-    >
-      <span className={styles.calendarEventText}>
-        {getScheduleDisplayText(item, appliedFilters.timezone)}
-      </span>
-    </button>
-  );
+  const renderMonthEvent = (item: OrderScheduleItem) => {
+    const visualStatus = getScheduleVisualStatus(item);
+    const statusLabel = SCHEDULE_STATUS_META[visualStatus].label;
+    const displayText = getScheduleDisplayText(
+      item,
+      appliedFilters.timezone,
+    );
+    return (
+      <button
+        key={item.orderId}
+        type="button"
+        className={styles.calendarEvent}
+        style={getScheduleVisualStyle(item)}
+        onClick={() => selectItem(item)}
+        title={`${statusLabel} · ${displayText}`}
+        aria-label={`${statusLabel}: ${displayText}`}
+      >
+        <ScheduleStatusIcon item={item} />
+        <span className={styles.calendarEventText}>{displayText}</span>
+      </button>
+    );
+  };
 
   const renderTimedGrid = (days: Date[]) => (
     <div
@@ -806,7 +986,7 @@ const Schedule = () => {
           const isToday = key === todayInput();
           return (
             <div key={key} className={styles.timedDayHeader}>
-              <span>{WEEKDAY_LABELS[day.getDay()]}</span>
+              <span>{WEEKDAY_LABELS[(day.getDay() + 6) % 7]}</span>
               <strong className={isToday ? styles.dayNumberToday : ""}>
                 {day.getDate()}
               </strong>
@@ -834,17 +1014,21 @@ const Schedule = () => {
                   className={styles.timedEvent}
                   style={getTimedEventStyle(item, appliedFilters.timezone)}
                   onClick={() => selectItem(item)}
+                  title={`${SCHEDULE_STATUS_META[getScheduleVisualStatus(item)].label} · ${getScheduleDisplayText(item, appliedFilters.timezone)}`}
                 >
-                  <strong>
-                    {getScheduleParticipantName(item.provider)} /{" "}
-                    {getScheduleParticipantName(item.client)}
-                  </strong>
-                  <span>
-                    {formatEventTimeRange(
-                      item.startsAt,
-                      item.endsAt,
-                      appliedFilters.timezone,
-                    )}
+                  <ScheduleStatusIcon item={item} />
+                  <span className={styles.timedEventContent}>
+                    <strong>
+                      {getScheduleParticipantName(item.provider)} /{" "}
+                      {getScheduleParticipantName(item.client)}
+                    </strong>
+                    <span>
+                      {formatEventTimeRange(
+                        item.startsAt,
+                        item.endsAt,
+                        appliedFilters.timezone,
+                      )}
+                    </span>
                   </span>
                 </button>
               ))}
@@ -1036,6 +1220,36 @@ const Schedule = () => {
               {summary.active} contact sharing · {summary.direct} direct orders
             </p>
           </div>
+          <div
+            className={styles.statusLegend}
+            aria-label="Schedule status legend"
+          >
+            {SCHEDULE_STATUS_LEGEND.map((status) => {
+              const { Icon, color, background, legendLabel } =
+                SCHEDULE_STATUS_META[status];
+              return (
+                <span
+                  key={status}
+                  className={styles.legendItem}
+                  style={
+                    {
+                      "--event-color": color,
+                      "--event-background": background,
+                    } as CSSProperties
+                  }
+                >
+                  <span
+                    className={`${styles.legendIcon} ${
+                      status === "running" ? styles.statusIconRunning : ""
+                    }`}
+                  >
+                    <Icon aria-hidden="true" />
+                  </span>
+                  {legendLabel}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         {loadingList && (
@@ -1114,6 +1328,11 @@ const Schedule = () => {
                         className={`${styles.yearDay} ${
                           isCurrentMonth ? "" : styles.yearDayMuted
                         } ${dayItems.length > 0 ? styles.yearDayHasEvents : ""}`}
+                        style={
+                          dayItems[0]
+                            ? getScheduleVisualStyle(dayItems[0])
+                            : undefined
+                        }
                         onClick={() => {
                           if (dayItems[0]) selectItem(dayItems[0]);
                         }}

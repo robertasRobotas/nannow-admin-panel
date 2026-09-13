@@ -17,6 +17,7 @@ import {
   ADMIN_ROLE_OPTIONS,
   AdminRole,
   createAdminUser,
+  correctAdminGiftCardRecipient,
   deleteFinancialLedgerOrders,
   getChatsNormalizationAnalysis,
   getChatsContactSharingRebuildJob,
@@ -29,9 +30,16 @@ import {
   regenerateUsersFullNameSearch,
   rebuildAllFinancialLedgerOrders,
   rebuildFinancialLedgerForOrder,
+  rebuildAllOrderEventHistory,
+  getOrderEventHistoryRebuildJob,
   rebuildAllProvidersCompletionStats,
+  rebuildAllProviderPublicUrls,
+  getProviderPublicUrlGenerationJob,
   rebuildChatsContactSharing,
   getProviderCompletionStatsRebuildJob,
+  findDuplicatePayouts,
+  cancelDuplicatePayouts,
+  reconcileUnrecordedStripeTransfer,
   runChatsNormalization,
   SuperAccessEntity,
   getCurrentAdminRolesFromJwt,
@@ -41,6 +49,12 @@ import {
   getSuperAccessList,
   reconcileStripeKyc,
   getCurrentAdminProfileFromJwt,
+  getAdminGiftCards,
+  getGiftCardAssignmentMigrationStatus,
+  previewGiftCardAssignmentMigration,
+  refundAdminGiftCard,
+  runGiftCardAssignmentMigration,
+  type GiftCardMigrationStats,
   sendStripeKycUpdateEmail,
   normalizeAdminRoles,
   regenerateOrderSchedule,
@@ -48,6 +62,7 @@ import {
   updateSuperAccessItem,
   getOrderScheduleRegenerationJob,
   type ProviderCompletionStatsRebuildJob,
+  type ProviderPublicUrlGenerationJob,
   type OrderScheduleItem,
   type OrderScheduleRegenerationJob,
 } from "@/pages/api/fetch";
@@ -59,6 +74,9 @@ import type {
   GetFinancialOrdersResponse,
 } from "@/types/FinancialOrder";
 import type { BroadcastNotificationSender } from "@/types/BroadcastNotifications";
+
+const buildCommitSha = process.env.NEXT_PUBLIC_BUILD_COMMIT_SHA ?? "unknown";
+const buildBranch = process.env.NEXT_PUBLIC_BUILD_BRANCH ?? "unknown";
 
 type EntityRecord = {
   [key: string]: unknown;
@@ -107,6 +125,13 @@ type ChatsContactSharingRebuildJob = {
   phase?: string | null;
   error?: string | null;
   warnings?: string[];
+  progress?: Record<string, unknown> | null;
+};
+
+type OrderEventRebuildJob = {
+  id: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  error?: string | null;
   progress?: Record<string, unknown> | null;
 };
 
@@ -193,7 +218,9 @@ type SuperAccessViewEntity =
   | "alerts"
   | "connected-admins"
   | "financial-ledger"
-  | "broadcast-sender";
+  | "broadcast-sender"
+  | "gift-cards"
+  | "company-details";
 
 type SuperMenuItem = {
   title: string;
@@ -201,6 +228,7 @@ type SuperMenuItem = {
 };
 
 const MENU_ITEMS: SuperMenuItem[] = [
+  { title: "Company details", key: "company-details" },
   { title: "Admins", key: "admins" },
   { title: "Users", key: "users" },
   { title: "Clients", key: "clients" },
@@ -211,6 +239,7 @@ const MENU_ITEMS: SuperMenuItem[] = [
   { title: "Chats", key: "chats" },
   { title: "Schedule", key: "schedule" },
   { title: "Financial ledger", key: "financial-ledger" },
+  { title: "Gift cards", key: "gift-cards" },
   { title: "Broadcast sender", key: "broadcast-sender" },
   { title: "WS connected Admins", key: "connected-admins" },
 ];
@@ -220,6 +249,22 @@ const PAGE_SIZE_OPTIONS = [
   { title: "50 / page", value: "50" },
   { title: "100 / page", value: "100" },
 ] as const;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type GiftCardStatusFilter =
+  | "ALL"
+  | "NOT_REDEEMED"
+  | "REDEEMED"
+  | "EXPIRED"
+  | "REFUNDED";
+
+type GiftCardMigrationRun = {
+  status: "RUNNING" | "COMPLETED" | "FAILED";
+  stats?: GiftCardMigrationStats;
+  error?: string | null;
+  completedAt?: string | null;
+};
 
 const ORDER_STATUSES = orderStatusOptions
   .map((item) => item.value)
@@ -821,6 +866,11 @@ const SuperAccess = () => {
     isOrderFinancialRebuildModalOpen,
     setIsOrderFinancialRebuildModalOpen,
   ] = useState(false);
+  const [isOrderEventRebuildConfirmModalOpen, setIsOrderEventRebuildConfirmModalOpen] = useState(false);
+  const [isOrderEventRebuildProgressModalOpen, setIsOrderEventRebuildProgressModalOpen] = useState(false);
+  const [isRebuildingOrderEvents, setIsRebuildingOrderEvents] = useState(false);
+  const [orderEventRebuildResult, setOrderEventRebuildResult] = useState<Record<string, unknown> | null>(null);
+  const [orderEventRebuildJob, setOrderEventRebuildJob] = useState<OrderEventRebuildJob | null>(null);
   const [
     isChatNormalizationConfirmModalOpen,
     setIsChatNormalizationConfirmModalOpen,
@@ -874,6 +924,39 @@ const SuperAccess = () => {
     isRebuildingAllProviderCompletionStats,
     setIsRebuildingAllProviderCompletionStats,
   ] = useState(false);
+  const [
+    providerPublicUrlGenerationJobId,
+    setProviderPublicUrlGenerationJobId,
+  ] = useState("");
+  const [providerPublicUrlGenerationJob, setProviderPublicUrlGenerationJob] =
+    useState<ProviderPublicUrlGenerationJob | null>(null);
+  const [
+    isProviderPublicUrlGenerationModalOpen,
+    setIsProviderPublicUrlGenerationModalOpen,
+  ] = useState(false);
+  const [
+    isProviderPublicUrlGenerationConfirmModalOpen,
+    setIsProviderPublicUrlGenerationConfirmModalOpen,
+  ] = useState(false);
+  const [isGeneratingProviderPublicUrls, setIsGeneratingProviderPublicUrls] =
+    useState(false);
+  const [isDuplicatePayoutModalOpen, setIsDuplicatePayoutModalOpen] =
+    useState(false);
+  const [isFindingDuplicatePayouts, setIsFindingDuplicatePayouts] =
+    useState(false);
+  const [isCancelingDuplicatePayouts, setIsCancelingDuplicatePayouts] =
+    useState(false);
+  const [reconcilingTransferId, setReconcilingTransferId] = useState<string | null>(null);
+  const [transferReconcileResults, setTransferReconcileResults] = useState<Record<string, { ok: boolean; message: string }>>({});
+  const [duplicatePayoutSearchMs, setDuplicatePayoutSearchMs] = useState<number | null>(null);
+  const [duplicatePayoutAudit, setDuplicatePayoutAudit] = useState<{
+    scannedPayoutCount?: number;
+    totalPayoutCount?: number;
+    groups: Array<{ key: string; payoutIds: string[]; duplicatePayoutIds: string[]; payouts: Array<Record<string, unknown>> }>;
+    stripeTransferGroups?: Array<{ key: string; transferIds: string[]; amount: number; currency: string; hasOrderMetadata: boolean; destinationAccountId: string | null; providerName: string | null }>;
+    unrecordedStripeTransfers?: Array<{ transferId: string; destinationAccountId: string; providerUserId: string; orderId: string; amount: number; currency: string }>;
+    cancelablePayoutIds: string[];
+  } | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<"ONE" | "ALL">(
     "ONE",
   );
@@ -904,6 +987,31 @@ const SuperAccess = () => {
   const [adminPassword, setAdminPassword] = useState("");
   const [removeAdminPassword, setRemoveAdminPassword] = useState(false);
   const [notice, setNotice] = useState("");
+  const [giftCardStatusFilter, setGiftCardStatusFilter] =
+    useState<GiftCardStatusFilter>("ALL");
+  const [giftCardMigrationRun, setGiftCardMigrationRun] =
+    useState<GiftCardMigrationRun | null>(null);
+  const [giftCardMigrationPreview, setGiftCardMigrationPreview] =
+    useState<GiftCardMigrationStats | null>(null);
+  const [
+    isGiftCardMigrationConfirmModalOpen,
+    setIsGiftCardMigrationConfirmModalOpen,
+  ] = useState(false);
+  const [
+    isLoadingGiftCardMigrationPreview,
+    setIsLoadingGiftCardMigrationPreview,
+  ] = useState(false);
+  const [isRunningGiftCardMigration, setIsRunningGiftCardMigration] =
+    useState(false);
+  const [
+    isGiftCardRecipientCorrectionModalOpen,
+    setIsGiftCardRecipientCorrectionModalOpen,
+  ] = useState(false);
+  const [isCorrectingGiftCardRecipient, setIsCorrectingGiftCardRecipient] =
+    useState(false);
+  const [isGiftCardRefundModalOpen, setIsGiftCardRefundModalOpen] =
+    useState(false);
+  const [isRefundingGiftCard, setIsRefundingGiftCard] = useState(false);
   const [newAdminFirstName, setNewAdminFirstName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
@@ -1037,7 +1145,7 @@ const SuperAccess = () => {
     setEntity(nextEntity);
     setIsCompactListView((currentCompactView) => {
       if (nextEntity !== entity) {
-        return nextEntity === "financial-ledger";
+        return nextEntity === "financial-ledger" || nextEntity === "gift-cards";
       }
       return currentCompactView;
     });
@@ -1104,6 +1212,42 @@ const SuperAccess = () => {
           return;
         }
         setError("Failed to load broadcast sender.");
+      } finally {
+        setLoadingList(false);
+      }
+      return;
+    }
+    if (entity === "gift-cards") {
+      try {
+        setLoadingList(true);
+        setError("");
+        const [cardsResponse, migrationResponse] = await Promise.all([
+          getAdminGiftCards({
+            filter:
+              giftCardStatusFilter === "ALL" ? undefined : giftCardStatusFilter,
+            startIndex,
+            pageSize,
+            q: appliedSearch.trim() || undefined,
+          }),
+          getGiftCardAssignmentMigrationStatus(),
+        ]);
+        const items = Array.isArray(cardsResponse.data?.items)
+          ? (cardsResponse.data.items as EntityRecord[])
+          : [];
+        setList(items);
+        setTotal(Number(cardsResponse.data?.total ?? 0));
+        setGiftCardMigrationRun(
+          (migrationResponse.data?.run as GiftCardMigrationRun | null) ?? null,
+        );
+        if (items.length > 0 && !selectedId) {
+          selectItem(pickId(items[0]), "replace");
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          router.push("/");
+          return;
+        }
+        setError("Failed to load gift cards.");
       } finally {
         setLoadingList(false);
       }
@@ -1200,6 +1344,7 @@ const SuperAccess = () => {
   }, [
     appliedSearch,
     entity,
+    giftCardStatusFilter,
     pageSize,
     router,
     selectItem,
@@ -1220,6 +1365,12 @@ const SuperAccess = () => {
       return;
     }
     if (entity === "financial-ledger") {
+      const listItem = list.find((item) => pickId(item) === selectedId) ?? null;
+      setSelectedItem(listItem);
+      setDraft(listItem ?? {});
+      return;
+    }
+    if (entity === "gift-cards") {
       const listItem = list.find((item) => pickId(item) === selectedId) ?? null;
       setSelectedItem(listItem);
       setDraft(listItem ?? {});
@@ -1904,8 +2055,7 @@ const SuperAccess = () => {
       const response = await getChatsNormalizationAnalysis();
       const payload =
         (response.data?.result?.analysis as
-          | ChatNormalizationAnalysis
-          | undefined) ??
+          ChatNormalizationAnalysis | undefined) ??
         (response.data?.analysis as ChatNormalizationAnalysis | undefined) ??
         (response.data?.result as ChatNormalizationAnalysis | undefined) ??
         (response.data as ChatNormalizationAnalysis);
@@ -1984,11 +2134,9 @@ const SuperAccess = () => {
         const job =
           (response.data?.job as ChatsContactSharingRebuildJob | undefined) ??
           (response.data?.result?.job as
-            | ChatsContactSharingRebuildJob
-            | undefined) ??
+            ChatsContactSharingRebuildJob | undefined) ??
           (response.data?.result as
-            | ChatsContactSharingRebuildJob
-            | undefined) ??
+            ChatsContactSharingRebuildJob | undefined) ??
           (response.data as ChatsContactSharingRebuildJob | undefined);
         if (!isCancelled && job) {
           setChatContactSharingRebuildJob(job);
@@ -2023,14 +2171,11 @@ const SuperAccess = () => {
         );
         const job =
           (response.data?.job as
-            | ProviderCompletionStatsRebuildJob
-            | undefined) ??
+            ProviderCompletionStatsRebuildJob | undefined) ??
           (response.data?.result?.job as
-            | ProviderCompletionStatsRebuildJob
-            | undefined) ??
+            ProviderCompletionStatsRebuildJob | undefined) ??
           (response.data?.result as
-            | ProviderCompletionStatsRebuildJob
-            | undefined) ??
+            ProviderCompletionStatsRebuildJob | undefined) ??
           (response.data as ProviderCompletionStatsRebuildJob | undefined);
         if (!isCancelled && job) {
           setProviderCompletionStatsRebuildJob(job);
@@ -2052,6 +2197,46 @@ const SuperAccess = () => {
   ]);
 
   useEffect(() => {
+    if (!providerPublicUrlGenerationJobId) return;
+    if (
+      providerPublicUrlGenerationJob?.status === "COMPLETED" ||
+      providerPublicUrlGenerationJob?.status === "COMPLETED_WITH_ERRORS" ||
+      providerPublicUrlGenerationJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getProviderPublicUrlGenerationJob(
+          providerPublicUrlGenerationJobId,
+        );
+        const job =
+          (response.data?.job as ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data?.result?.job as
+            ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data?.result as
+            ProviderPublicUrlGenerationJob | undefined) ??
+          (response.data as ProviderPublicUrlGenerationJob | undefined);
+        if (!isCancelled && job) setProviderPublicUrlGenerationJob(job);
+      } catch {
+        // Ignore transient polling failures.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 2500);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    providerPublicUrlGenerationJob?.status,
+    providerPublicUrlGenerationJobId,
+  ]);
+
+  useEffect(() => {
     if (!scheduleRegenerationJobId) return;
     if (
       scheduleRegenerationJob?.status === "COMPLETED" ||
@@ -2069,8 +2254,7 @@ const SuperAccess = () => {
         const job =
           (response.data?.job as OrderScheduleRegenerationJob | undefined) ??
           (response.data?.result?.job as
-            | OrderScheduleRegenerationJob
-            | undefined) ??
+            OrderScheduleRegenerationJob | undefined) ??
           (response.data?.result as OrderScheduleRegenerationJob | undefined) ??
           (response.data as OrderScheduleRegenerationJob | undefined);
         if (!isCancelled && job) {
@@ -2147,8 +2331,7 @@ const SuperAccess = () => {
       const job =
         (response.data?.job as ChatsContactSharingRebuildJob | undefined) ??
         (response.data?.result?.job as
-          | ChatsContactSharingRebuildJob
-          | undefined) ??
+          ChatsContactSharingRebuildJob | undefined) ??
         (response.data?.result as ChatsContactSharingRebuildJob | undefined) ??
         (response.data as ChatsContactSharingRebuildJob | undefined);
 
@@ -2185,11 +2368,9 @@ const SuperAccess = () => {
       const job =
         (response.data?.job as ProviderCompletionStatsRebuildJob | undefined) ??
         (response.data?.result?.job as
-          | ProviderCompletionStatsRebuildJob
-          | undefined) ??
+          ProviderCompletionStatsRebuildJob | undefined) ??
         (response.data?.result as
-          | ProviderCompletionStatsRebuildJob
-          | undefined) ??
+          ProviderCompletionStatsRebuildJob | undefined) ??
         (response.data as ProviderCompletionStatsRebuildJob | undefined);
       if (job?.id) {
         setProviderCompletionStatsRebuildJob(job);
@@ -2213,6 +2394,128 @@ const SuperAccess = () => {
     }
   };
 
+  const handleRebuildAllProviderPublicUrls = async () => {
+    if (isGeneratingProviderPublicUrls) return;
+    try {
+      setIsProviderPublicUrlGenerationConfirmModalOpen(false);
+      setIsGeneratingProviderPublicUrls(true);
+      setError("");
+      setNotice("");
+      const response = await rebuildAllProviderPublicUrls();
+      const job =
+        (response.data?.job as ProviderPublicUrlGenerationJob | undefined) ??
+        (response.data?.result?.job as
+          ProviderPublicUrlGenerationJob | undefined) ??
+        (response.data?.result as ProviderPublicUrlGenerationJob | undefined) ??
+        (response.data as ProviderPublicUrlGenerationJob | undefined);
+      if (job?.id) {
+        setProviderPublicUrlGenerationJob(job);
+        setProviderPublicUrlGenerationJobId(job.id);
+        setIsProviderPublicUrlGenerationModalOpen(true);
+        setNotice(`Started public URL rebuild job ${job.id}.`);
+      }
+    } catch (err) {
+      setError(
+        axios.isAxiosError(err)
+          ? ((err.response?.data as { error?: string })?.error ??
+              "Failed to generate public URLs.")
+          : "Failed to rebuild public URLs.",
+      );
+    } finally {
+      setIsGeneratingProviderPublicUrls(false);
+    }
+  };
+
+  const handleProviderAction = (action: string) => {
+    if (action === "PUBLIC_URLS") {
+      setIsProviderPublicUrlGenerationConfirmModalOpen(true);
+    } else if (action === "COMPLETION") {
+      void handleRebuildAllProvidersCompletionStats();
+    } else if (action === "STRIPE") {
+      void refreshStripeKycAudit(undefined, { openModal: true });
+    } else if (action === "DUPLICATE_PAYOUTS") {
+      void handleFindDuplicatePayouts();
+    }
+  };
+
+  const handleFindDuplicatePayouts = async () => {
+    try {
+      const startedAt = performance.now();
+      const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      console.info("[duplicate-payout-audit] start", { scope: "all-providers", requestId });
+      setIsFindingDuplicatePayouts(true);
+      setDuplicatePayoutAudit(null);
+      setDuplicatePayoutSearchMs(null);
+      setIsDuplicatePayoutModalOpen(true);
+      setError("");
+      const response = await findDuplicatePayouts();
+      const elapsedMs = Math.round(performance.now() - startedAt);
+      const audit = response.data as { scannedPayoutCount?: number; totalPayoutCount?: number; groups?: unknown[]; stripeTransferGroups?: unknown[]; unrecordedStripeTransfers?: unknown[] };
+      console.info("[duplicate-payout-audit] complete", {
+        scope: "all-providers",
+        requestId,
+        elapsedMs,
+        scannedPayoutCount: audit.scannedPayoutCount ?? 0,
+        totalPayoutCount: audit.totalPayoutCount ?? 0,
+        duplicateGroupCount: audit.groups?.length ?? 0,
+        stripeTransferDuplicateGroupCount: audit.stripeTransferGroups?.length ?? 0,
+        unrecordedStripeTransferCount: audit.unrecordedStripeTransfers?.length ?? 0,
+      });
+      setDuplicatePayoutSearchMs(elapsedMs);
+      setDuplicatePayoutAudit(response.data);
+    } catch (err) {
+      console.error("[duplicate-payout-audit] failed", { scope: "all-providers", err });
+      setError(
+        axios.isAxiosError(err)
+          ? ((err.response?.data as { error?: string })?.error ?? "Failed to find duplicate payouts.")
+          : "Failed to find duplicate payouts.",
+      );
+    } finally {
+      setIsFindingDuplicatePayouts(false);
+    }
+  };
+
+  const handleCancelDuplicatePayouts = async () => {
+    const payoutIds = duplicatePayoutAudit?.cancelablePayoutIds ?? [];
+    if (!payoutIds.length || isCancelingDuplicatePayouts) return;
+    if (!window.confirm(`Cancel ${payoutIds.length} pending duplicate payout(s) and reverse their transfers?`)) return;
+    try {
+      setIsCancelingDuplicatePayouts(true);
+      setError("");
+      const response = await cancelDuplicatePayouts(payoutIds, true);
+      const result = response.data as { canceled?: Array<unknown> };
+      setNotice(`Canceled ${result.canceled?.length ?? 0} duplicate payout(s).`);
+      await handleFindDuplicatePayouts();
+    } catch (err) {
+      setError(
+        axios.isAxiosError(err)
+          ? ((err.response?.data as { error?: string })?.error ?? "Failed to cancel duplicate payouts.")
+          : "Failed to cancel duplicate payouts.",
+      );
+    } finally {
+      setIsCancelingDuplicatePayouts(false);
+    }
+  };
+
+  const handleReconcileTransfer = async (transfer: { transferId: string; orderId: string }) => {
+    if (!window.confirm(`Record transfer ${transfer.transferId} as the provider payout and mark order ${transfer.orderId} paid?`)) return;
+    try {
+      setReconcilingTransferId(transfer.transferId);
+      setError("");
+      const response = await reconcileUnrecordedStripeTransfer(transfer.transferId, transfer.orderId);
+      console.info("[duplicate-payout-reconcile] success", { transferId: transfer.transferId, orderId: transfer.orderId, response: response.data });
+      setTransferReconcileResults((current) => ({ ...current, [transfer.transferId]: { ok: true, message: "Recorded and order marked paid" } }));
+      setNotice(`Recorded transfer ${transfer.transferId} and marked the order paid.`);
+      await handleFindDuplicatePayouts();
+    } catch (err) {
+      const message = axios.isAxiosError(err) ? ((err.response?.data as { error?: string })?.error ?? `Request failed (${err.response?.status ?? "unknown"})`) : "Failed to reconcile transfer.";
+      console.error("[duplicate-payout-reconcile] failed", { transferId: transfer.transferId, orderId: transfer.orderId, status: axios.isAxiosError(err) ? err.response?.status : undefined, message, error: err });
+      setTransferReconcileResults((current) => ({ ...current, [transfer.transferId]: { ok: false, message } }));
+    } finally {
+      setReconcilingTransferId(null);
+    }
+  };
+
   const handleRegenerateSchedule = async () => {
     if (isScheduleRegenerationRunning) return;
     try {
@@ -2223,8 +2526,7 @@ const SuperAccess = () => {
       const job =
         (response.data?.job as OrderScheduleRegenerationJob | undefined) ??
         (response.data?.result?.job as
-          | OrderScheduleRegenerationJob
-          | undefined) ??
+          OrderScheduleRegenerationJob | undefined) ??
         (response.data?.result as OrderScheduleRegenerationJob | undefined) ??
         (response.data as OrderScheduleRegenerationJob | undefined);
       const started = Boolean(
@@ -2491,6 +2793,166 @@ const SuperAccess = () => {
     );
   };
 
+  const handleRunGiftCardMigration = async () => {
+    if (
+      isLoadingGiftCardMigrationPreview ||
+      isRunningGiftCardMigration ||
+      giftCardMigrationRun?.status === "COMPLETED"
+    ) {
+      return;
+    }
+
+    try {
+      setIsLoadingGiftCardMigrationPreview(true);
+      setError("");
+      setNotice("Checking existing gift cards…");
+      const previewResponse = await previewGiftCardAssignmentMigration();
+      const stats = previewResponse.data?.stats as
+        GiftCardMigrationStats | undefined;
+      if (!stats)
+        throw new Error("Migration preview did not return statistics.");
+      setGiftCardMigrationPreview(stats);
+      setIsGiftCardMigrationConfirmModalOpen(true);
+      setNotice("");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as
+          | { error?: string; reason?: string; run?: GiftCardMigrationRun }
+          | undefined;
+        if (data?.run) setGiftCardMigrationRun(data.run);
+        setError(
+          data?.error ?? data?.reason ?? "Failed to run gift-card migration.",
+        );
+      } else {
+        setError(
+          (err as Error).message || "Failed to run gift-card migration.",
+        );
+      }
+      setNotice("");
+    } finally {
+      setIsLoadingGiftCardMigrationPreview(false);
+    }
+  };
+
+  const confirmGiftCardMigration = async () => {
+    if (isRunningGiftCardMigration || !giftCardMigrationPreview) return;
+
+    try {
+      setIsRunningGiftCardMigration(true);
+      setError("");
+      const response = await runGiftCardAssignmentMigration();
+      const run =
+        (response.data?.run as GiftCardMigrationRun | undefined) ?? null;
+      setGiftCardMigrationRun(run);
+      setIsGiftCardMigrationConfirmModalOpen(false);
+      setGiftCardMigrationPreview(null);
+      setNotice(
+        run?.status === "COMPLETED"
+          ? `Gift-card migration completed. ${run.stats?.assigned ?? 0} cards assigned.`
+          : "Gift-card migration request finished.",
+      );
+      await fetchList();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as
+          | { error?: string; reason?: string; run?: GiftCardMigrationRun }
+          | undefined;
+        if (data?.run) setGiftCardMigrationRun(data.run);
+        setError(
+          data?.error ?? data?.reason ?? "Failed to run gift-card migration.",
+        );
+      } else {
+        setError(
+          (err as Error).message || "Failed to run gift-card migration.",
+        );
+      }
+      setNotice("");
+    } finally {
+      setIsRunningGiftCardMigration(false);
+    }
+  };
+
+  const correctGiftCardRecipient = async () => {
+    const recipientEmail = String(draft.recipientEmail ?? "").trim();
+    if (!selectedId || !recipientEmail || isCorrectingGiftCardRecipient) return;
+
+    try {
+      setIsCorrectingGiftCardRecipient(true);
+      setError("");
+      const response = await correctAdminGiftCardRecipient(
+        selectedId,
+        recipientEmail,
+      );
+      const giftCard = response.data?.giftCard as EntityRecord | undefined;
+      if (giftCard) {
+        setSelectedItem(giftCard);
+        setDraft(giftCard);
+        setList((items) =>
+          items.map((item) => (pickId(item) === selectedId ? giftCard : item)),
+        );
+      }
+      setIsGiftCardRecipientCorrectionModalOpen(false);
+      const assignmentMessage = response.data?.assignedToExistingClient
+        ? " It was assigned to the matching client."
+        : " No matching client exists yet; the new code can still be redeemed by email.";
+      const emailMessage = response.data?.confirmationEmailsSent
+        ? " Confirmation emails were sent."
+        : " The correction was applied, but confirmation email delivery failed.";
+      setNotice(
+        `Gift-card recipient corrected.${assignmentMessage}${emailMessage}`,
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.error ??
+            err.response?.data?.message ??
+            "Failed to correct gift-card recipient.",
+        );
+      } else {
+        setError(
+          (err as Error).message || "Failed to correct gift-card recipient.",
+        );
+      }
+    } finally {
+      setIsCorrectingGiftCardRecipient(false);
+    }
+  };
+
+  const refundGiftCard = async () => {
+    if (!selectedId || isRefundingGiftCard) return;
+    try {
+      setIsRefundingGiftCard(true);
+      setError("");
+      const response = await refundAdminGiftCard(selectedId);
+      const giftCard = response.data?.giftCard as EntityRecord | undefined;
+      if (giftCard) {
+        setSelectedItem(giftCard);
+        setDraft(giftCard);
+        setList((items) =>
+          items.map((item) => (pickId(item) === selectedId ? giftCard : item)),
+        );
+      }
+      setIsGiftCardRefundModalOpen(false);
+      setNotice(
+        response.data?.action === "AUTHORIZATION_RELEASED"
+          ? "Gift-card payment hold canceled. The customer was not charged."
+          : "Captured gift-card payment refunded through Stripe.",
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.error ??
+            err.response?.data?.message ??
+            "Failed to refund gift card.",
+        );
+      } else {
+        setError((err as Error).message || "Failed to refund gift card.");
+      }
+    } finally {
+      setIsRefundingGiftCard(false);
+    }
+  };
+
   const invalidateEntityCaches = (targetEntity: SuperAccessEntity) => {
     if (targetEntity === "orders") {
       setOrdersById({});
@@ -2526,11 +2988,17 @@ const SuperAccess = () => {
   };
 
   const saveChanges = async () => {
-    if (entity === "alerts" || entity === "connected-admins") return;
+    if (
+      entity === "alerts" ||
+      entity === "connected-admins" ||
+      entity === "gift-cards"
+    )
+      return;
     if (!selectedId || isSaving) return;
     try {
       setIsSaving(true);
       setError("");
+      setNotice("");
       if (entity === "broadcast-sender") {
         await updateBroadcastNotificationSender({
           firstName:
@@ -2548,6 +3016,7 @@ const SuperAccess = () => {
         return;
       }
       if (entity === "admins") {
+        const isChangingPassword = Boolean(adminPassword.trim());
         const payload: Record<string, unknown> = {
           firstName:
             typeof draft.firstName === "string" && draft.firstName.trim()
@@ -2567,6 +3036,13 @@ const SuperAccess = () => {
           payload.password = adminPassword.trim();
         }
         await updateSuperAccessItem(entity, selectedId, payload);
+        if (removeAdminPassword) {
+          setNotice("Password login removed for this admin.");
+        } else if (isChangingPassword) {
+          setNotice("Admin password changed successfully.");
+        } else {
+          setNotice("Admin details saved.");
+        }
       } else {
         if (!isSuperAccessEntity(entity)) return;
         await updateSuperAccessItem(entity, selectedId, draft);
@@ -2683,6 +3159,45 @@ const SuperAccess = () => {
       setIsOrderFinancialRebuildModalOpen(false);
     }
   };
+
+  const handleRebuildOrderEventHistory = async () => {
+    if (isRebuildingOrderEvents) return;
+    setIsOrderEventRebuildConfirmModalOpen(false);
+    setIsOrderEventRebuildProgressModalOpen(true);
+    setIsRebuildingOrderEvents(true);
+    setOrderEventRebuildResult(null);
+    setError("");
+    setNotice("");
+    try {
+      const response = await rebuildAllOrderEventHistory();
+      const job = (response.data?.job ?? response.data?.result?.job ?? response.data?.result ?? response.data) as OrderEventRebuildJob;
+      if (!job?.id) throw new Error("Failed to start order event history rebuild.");
+      setOrderEventRebuildJob(job);
+      setOrderEventRebuildResult(job as unknown as Record<string, unknown>);
+      setNotice(`Started order event history rebuild job ${job.id}.`);
+    } catch (err) {
+      const message = axios.isAxiosError(err)
+        ? ((err.response?.data as { error?: string })?.error ?? "Failed to rebuild order event history.")
+        : "Failed to rebuild order event history.";
+      setError(message);
+      setOrderEventRebuildResult({ status: "FAILED", error: message });
+    } finally {
+      setIsRebuildingOrderEvents(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!orderEventRebuildJob?.id || !isOrderEventRebuildProgressModalOpen || ["COMPLETED", "FAILED"].includes(orderEventRebuildJob.status)) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await getOrderEventHistoryRebuildJob(orderEventRebuildJob.id);
+        const nextJob = (response.data?.job ?? response.data) as OrderEventRebuildJob;
+        setOrderEventRebuildJob(nextJob);
+        setOrderEventRebuildResult(nextJob as unknown as Record<string, unknown>);
+      } catch { /* modal retains the last known progress */ }
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [orderEventRebuildJob?.id, orderEventRebuildJob?.status, isOrderEventRebuildProgressModalOpen]);
 
   const formatPointValue = (value: unknown) => {
     if (!value || typeof value !== "object") return "-";
@@ -2988,6 +3503,29 @@ const SuperAccess = () => {
     setError("Client/Provider object for this user was not found.");
   };
 
+  const currentGiftCardRecipientEmail = String(
+    selectedItem?.recipientEmail ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  const nextGiftCardRecipientEmail = String(draft.recipientEmail ?? "")
+    .trim()
+    .toLowerCase();
+  const isSelectedGiftCardActive =
+    entity === "gift-cards" &&
+    selectedItem?.status === "CREATED" &&
+    (!selectedItem.expiresAt ||
+      new Date(String(selectedItem.expiresAt)).getTime() > Date.now());
+  const canCorrectGiftCardRecipient =
+    isSelectedGiftCardActive &&
+    EMAIL_PATTERN.test(nextGiftCardRecipientEmail) &&
+    nextGiftCardRecipientEmail !== currentGiftCardRecipientEmail;
+  const canRefundSelectedGiftCard =
+    entity === "gift-cards" && selectedItem?.isRefundable === true;
+  const selectedGiftCardRefundAction = String(
+    selectedItem?.refundAction ?? "REFUND_PAYMENT",
+  );
+
   return (
     <div className={styles.main}>
       {error && <p className={styles.error}>{error}</p>}
@@ -3002,6 +3540,10 @@ const SuperAccess = () => {
                 entity === menuItem.key ? styles.sideBtnActive : ""
               }`}
               onClick={() => {
+                if (menuItem.key === "company-details") {
+                  void router.push("/company-details");
+                  return;
+                }
                 setList([]);
                 setTotal(0);
                 updateSuperAccessQuery(
@@ -3045,7 +3587,14 @@ const SuperAccess = () => {
                 setStripeKycAuditFilterUserId("");
                 setIsChatNormalizationConfirmModalOpen(false);
                 setIsChatNormalizationProgressModalOpen(false);
-                setIsCompactListView(menuItem.key === "financial-ledger");
+                setIsGiftCardMigrationConfirmModalOpen(false);
+                setGiftCardMigrationPreview(null);
+                setIsGiftCardRecipientCorrectionModalOpen(false);
+                setIsGiftCardRefundModalOpen(false);
+                setIsCompactListView(
+                  menuItem.key === "financial-ledger" ||
+                    menuItem.key === "gift-cards",
+                );
                 setStartIndex(0);
                 setSearchText("");
                 setAppliedSearch("");
@@ -3054,6 +3603,11 @@ const SuperAccess = () => {
               {menuItem.title}
             </button>
           ))}
+          <div className={styles.buildInfo}>
+            <span>Deployed build</span>
+            <strong>{buildCommitSha}</strong>
+            <span>{buildBranch}</span>
+          </div>
         </aside>
 
         <section className={styles.listPane}>
@@ -3068,9 +3622,11 @@ const SuperAccess = () => {
                       ? "Order schedule"
                       : entity === "broadcast-sender"
                         ? "Broadcast sender"
-                        : entity === "connected-admins"
-                          ? "WS connected Admins"
-                          : prettyTitle(entity)}
+                        : entity === "gift-cards"
+                          ? "Gift cards"
+                          : entity === "connected-admins"
+                            ? "WS connected Admins"
+                            : prettyTitle(entity)}
               </h2>
               <span className={styles.listHeaderMeta}>
                 {entity === "alerts"
@@ -3079,19 +3635,81 @@ const SuperAccess = () => {
                     ? `${total} ledger orders, page ${currentPage}/${totalPages}`
                     : entity === "broadcast-sender"
                       ? "Manage the SYSTEM_NANNOW sender profile."
-                      : entity === "schedule"
-                        ? "Order schedule rows and snapshots."
-                        : entity === "connected-admins"
-                          ? `${total} admins connected right now.`
-                          : entity === "chats"
-                            ? `${total} chats total, page ${currentPage}/${totalPages}`
-                            : `${total} total, page ${currentPage}/${totalPages}`}
+                      : entity === "gift-cards"
+                        ? `${total} gift cards, page ${currentPage}/${totalPages}${
+                            giftCardMigrationRun?.status
+                              ? ` · migration ${giftCardMigrationRun.status.toLowerCase()}`
+                              : ""
+                          }`
+                        : entity === "schedule"
+                          ? "Order schedule rows and snapshots."
+                          : entity === "connected-admins"
+                            ? `${total} admins connected right now.`
+                            : entity === "chats"
+                              ? `${total} chats total, page ${currentPage}/${totalPages}`
+                              : `${total} total, page ${currentPage}/${totalPages}`}
               </span>
             </div>
             {entity !== "alerts" &&
               entity !== "connected-admins" &&
               entity !== "broadcast-sender" && (
                 <div className={styles.listHeaderActions}>
+                  {entity === "gift-cards" && (
+                    <>
+                      <select
+                        aria-label="Gift-card status"
+                        className={styles.providerActionsSelect}
+                        value={giftCardStatusFilter}
+                        onChange={(event) => {
+                          setGiftCardStatusFilter(
+                            event.target.value as GiftCardStatusFilter,
+                          );
+                          setStartIndex(0);
+                          setSelectedId("");
+                          setSelectedItem(null);
+                          updateSuperAccessQuery({ page: 1, id: "" });
+                        }}
+                      >
+                        <option value="ALL">All statuses</option>
+                        <option value="NOT_REDEEMED">Active</option>
+                        <option value="REDEEMED">Redeemed</option>
+                        <option value="EXPIRED">Expired</option>
+                        <option value="REFUNDED">Refunded</option>
+                      </select>
+                      <Button
+                        title={
+                          giftCardMigrationRun?.status === "COMPLETED"
+                            ? "Migration completed"
+                            : isLoadingGiftCardMigrationPreview
+                              ? "Checking gift cards…"
+                              : isRunningGiftCardMigration
+                                ? "Running migration…"
+                                : "Run migration"
+                        }
+                        type="BLACK"
+                        onClick={handleRunGiftCardMigration}
+                        isDisabled={
+                          isLoadingGiftCardMigrationPreview ||
+                          isRunningGiftCardMigration ||
+                          giftCardMigrationRun?.status === "RUNNING" ||
+                          giftCardMigrationRun?.status === "COMPLETED"
+                        }
+                        isLoading={
+                          isLoadingGiftCardMigrationPreview ||
+                          isRunningGiftCardMigration
+                        }
+                      />
+                    </>
+                  )}
+                  {entity === "orders" && (
+                    <Button
+                      title={isRebuildingOrderEvents ? "Rebuilding history..." : "Rebuild missing event history"}
+                      type="OUTLINED"
+                      onClick={() => setIsOrderEventRebuildConfirmModalOpen(true)}
+                      isDisabled={loadingList || isSaving || isRebuildingOrderEvents}
+                      isLoading={isRebuildingOrderEvents}
+                    />
+                  )}
                   {entity === "schedule" && (
                     <Button
                       title={
@@ -3105,7 +3723,7 @@ const SuperAccess = () => {
                       isLoading={isScheduleRegenerationRunning}
                     />
                   )}
-                  {entity !== "financial-ledger" && (
+                  {entity !== "financial-ledger" && entity !== "gift-cards" && (
                     <button
                       type="button"
                       className={styles.listViewSwitchButton}
@@ -3233,43 +3851,53 @@ const SuperAccess = () => {
                     </>
                   )}
                   {entity === "providers" && (
-                    <>
-                      <Button
-                        title={
-                          isRebuildingAllProviderCompletionStats
-                            ? "Rebuilding..."
-                            : "Rebuild completion rates"
-                        }
-                        type="OUTLINED"
-                        onClick={handleRebuildAllProvidersCompletionStats}
-                        isDisabled={isRebuildingAllProviderCompletionStats}
-                        isLoading={isRebuildingAllProviderCompletionStats}
-                      />
-                      <Button
-                        title={
-                          isStripeKycAuditLoading
-                            ? "Scanning..."
-                            : "Scan Stripe status"
-                        }
-                        type="OUTLINED"
-                        onClick={() =>
-                          refreshStripeKycAudit(undefined, { openModal: true })
-                        }
-                        isDisabled={
-                          isStripeKycAuditLoading || isStripeKycReconcileLoading
-                        }
-                        isLoading={isStripeKycAuditLoading}
-                      />
-                    </>
+                    <select
+                      aria-label="Provider actions"
+                      defaultValue=""
+                      className={styles.providerActionsSelect}
+                      onChange={(event) => {
+                        handleProviderAction(event.target.value);
+                        event.currentTarget.value = "";
+                      }}
+                      disabled={
+                        isGeneratingProviderPublicUrls ||
+                        isRebuildingAllProviderCompletionStats ||
+                        isFindingDuplicatePayouts
+                      }
+                    >
+                      <option value="">Actions</option>
+                      <option value="PUBLIC_URLS">
+                        Rebuild all public URLs
+                      </option>
+                      <option value="COMPLETION">
+                        Rebuild completion rates
+                      </option>
+                      <option value="STRIPE">Scan Stripe status</option>
+                      <option value="DUPLICATE_PAYOUTS">
+                        Find duplicate payouts
+                      </option>
+                    </select>
                   )}
                   <SearchBar
-                    placeholder="Type to search"
+                    placeholder={
+                      entity === "gift-cards"
+                        ? "Search email"
+                        : "Type to search"
+                    }
                     searchText={searchText}
                     setSearchText={setSearchText}
                     onButtonClick={() => {
                       setStartIndex(0);
+                      if (entity === "gift-cards") {
+                        setSelectedId("");
+                        setSelectedItem(null);
+                      }
                       setAppliedSearch(searchText);
-                      updateSuperAccessQuery({ page: 1, q: searchText });
+                      updateSuperAccessQuery({
+                        page: 1,
+                        q: searchText,
+                        ...(entity === "gift-cards" ? { id: "" } : {}),
+                      });
                     }}
                   />
                 </div>
@@ -3625,6 +4253,7 @@ const SuperAccess = () => {
                     defaultUserImg.src,
                   );
                   const isFinancialLedgerItem = entity === "financial-ledger";
+                  const isGiftCardItem = entity === "gift-cards";
                   const financialLedgerOrder = item as FinancialOrderRow;
                   const financialProviderName = isFinancialLedgerItem
                     ? getUserName(
@@ -3653,7 +4282,54 @@ const SuperAccess = () => {
                       onClick={() => selectItem(id)}
                       onKeyDown={(event) => handleItemCardKeyDown(event, id)}
                     >
-                      {isFinancialLedgerItem ? (
+                      {isGiftCardItem ? (
+                        <div className={styles.giftCardRow}>
+                          <div className={styles.giftCardPrimary}>
+                            <span className={styles.giftCardCode}>
+                              {String(item.code ?? "-")}
+                            </span>
+                            <span className={styles.giftCardAmount}>
+                              €
+                              {(Number(item.amountCents ?? 0) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className={styles.giftCardMeta}>
+                            <span>
+                              {item.status === "REFUNDED"
+                                ? "REFUNDED"
+                                : item.paymentStatus ===
+                                      "AUTHORIZATION_CANCELED" ||
+                                    item.paymentStatus ===
+                                      "AUTHORIZATION_EXPIRED"
+                                  ? "CANCELED"
+                                : item.status === "REDEEMED"
+                                ? "REDEEMED"
+                                : item.expiresAt &&
+                                    new Date(
+                                      String(item.expiresAt),
+                                    ).getTime() <= Date.now()
+                                  ? "EXPIRED"
+                                  : "ACTIVE"}
+                            </span>
+                            <span>
+                              {String(
+                                item.recipientEmail ?? "No recipient email",
+                              )}
+                            </span>
+                          </div>
+                          <div className={styles.giftCardMeta}>
+                            <span>
+                              From:{" "}
+                              {String(
+                                item.senderName ?? item.senderEmail ?? "-",
+                              )}
+                            </span>
+                            <span>
+                              Recipient: {String(item.recipientName ?? "-")}
+                            </span>
+                          </div>
+                        </div>
+                      ) : isFinancialLedgerItem ? (
                         <div className={styles.financialLedgerRow}>
                           <label
                             className={styles.financialLedgerCheckbox}
@@ -3840,11 +4516,13 @@ const SuperAccess = () => {
                 ? "Send message"
                 : entity === "broadcast-sender"
                   ? "Broadcast sender"
-                  : entity === "schedule"
-                    ? "Schedule detail"
-                    : entity === "connected-admins"
-                      ? "Connected admin"
-                      : "Detail"}
+                  : entity === "gift-cards"
+                    ? "Gift card detail"
+                    : entity === "schedule"
+                      ? "Schedule detail"
+                      : entity === "connected-admins"
+                        ? "Connected admin"
+                        : "Detail"}
             </h2>
             <div className={styles.detailHeaderActions}>
               {entity === "addresses" && selectedId && (
@@ -3894,6 +4572,26 @@ const SuperAccess = () => {
                     isDisabled={loadingItem || isSaving}
                   />
                 )}
+              {entity === "gift-cards" && selectedId && (
+                <Button
+                  title={
+                    isRefundingGiftCard
+                      ? "Processing..."
+                      : selectedGiftCardRefundAction ===
+                          "RELEASE_AUTHORIZATION"
+                        ? "Cancel payment hold"
+                        : "Refund gift card"
+                  }
+                  type="OUTLINED"
+                  onClick={() => setIsGiftCardRefundModalOpen(true)}
+                  isDisabled={
+                    loadingItem ||
+                    isRefundingGiftCard ||
+                    !canRefundSelectedGiftCard
+                  }
+                  isLoading={isRefundingGiftCard}
+                />
+              )}
               <Button
                 title={
                   entity === "alerts"
@@ -3904,39 +4602,54 @@ const SuperAccess = () => {
                       ? isSaving
                         ? "Saving..."
                         : "Save sender"
-                      : entity === "financial-ledger" ||
-                          entity === "chats" ||
-                          entity === "schedule"
-                        ? "Read only"
-                        : entity === "connected-admins"
+                      : entity === "gift-cards"
+                        ? isCorrectingGiftCardRecipient
+                          ? "Applying..."
+                          : "Change recipient"
+                        : entity === "financial-ledger" ||
+                            entity === "chats" ||
+                            entity === "schedule"
                           ? "Read only"
-                          : isSaving
-                            ? "Saving..."
-                            : "Save"
+                          : entity === "connected-admins"
+                            ? "Read only"
+                            : isSaving
+                              ? "Saving..."
+                              : "Save"
                 }
                 type="BLACK"
-                onClick={entity === "alerts" ? submitAdminAlert : saveChanges}
+                onClick={
+                  entity === "alerts"
+                    ? submitAdminAlert
+                    : entity === "gift-cards"
+                      ? () => setIsGiftCardRecipientCorrectionModalOpen(true)
+                      : saveChanges
+                }
                 isDisabled={
                   entity === "alerts"
                     ? !adminAlertText.trim() || isSendingAlert
                     : entity === "broadcast-sender"
                       ? loadingItem || isSaving
-                      : entity === "financial-ledger" ||
-                          entity === "chats" ||
-                          entity === "schedule"
-                        ? true
-                        : entity === "connected-admins"
+                      : entity === "gift-cards"
+                        ? !canCorrectGiftCardRecipient ||
+                          isCorrectingGiftCardRecipient
+                        : entity === "financial-ledger" ||
+                            entity === "chats" ||
+                            entity === "schedule"
                           ? true
-                          : !selectedId || loadingItem || isSaving
+                          : entity === "connected-admins"
+                            ? true
+                            : !selectedId || loadingItem || isSaving
                 }
                 isLoading={
                   entity === "alerts"
                     ? isSendingAlert
                     : isSaving &&
-                      entity !== "connected-admins" &&
-                      entity !== "financial-ledger" &&
-                      entity !== "chats" &&
-                      entity !== "schedule"
+                        entity !== "connected-admins" &&
+                        entity !== "financial-ledger" &&
+                        entity !== "chats" &&
+                        entity !== "schedule"
+                      ? true
+                      : entity === "gift-cards" && isCorrectingGiftCardRecipient
                 }
               />
             </div>
@@ -4055,7 +4768,8 @@ const SuperAccess = () => {
 
               {(entity === "financial-ledger" ||
                 entity === "chats" ||
-                entity === "schedule") &&
+                entity === "schedule" ||
+                entity === "gift-cards") &&
                 selectedId &&
                 !loadingItem &&
                 selectedItem && (
@@ -4112,10 +4826,45 @@ const SuperAccess = () => {
                             <span>{prettyTitle(key)}</span>
                             <input
                               id={fieldId}
-                              type="text"
-                              value={value == null ? "" : String(value)}
-                              disabled
+                              type={
+                                entity === "gift-cards" &&
+                                key === "recipientEmail"
+                                  ? "email"
+                                  : "text"
+                              }
+                              value={
+                                entity === "gift-cards" &&
+                                key === "recipientEmail"
+                                  ? String(draft.recipientEmail ?? "")
+                                  : value == null
+                                    ? ""
+                                    : String(value)
+                              }
+                              onChange={
+                                entity === "gift-cards" &&
+                                key === "recipientEmail"
+                                  ? (event) =>
+                                      handleFieldChange(
+                                        "recipientEmail",
+                                        event.target.value,
+                                      )
+                                  : undefined
+                              }
+                              disabled={
+                                entity !== "gift-cards" ||
+                                key !== "recipientEmail" ||
+                                !isSelectedGiftCardActive
+                              }
                             />
+                            {entity === "gift-cards" &&
+                              key === "recipientEmail" &&
+                              isSelectedGiftCardActive && (
+                                <small>
+                                  Applying a correction rotates the code,
+                                  updates account assignment, and emails the
+                                  sender and corrected recipient.
+                                </small>
+                              )}
                           </label>
                         );
                       })}
@@ -4124,7 +4873,8 @@ const SuperAccess = () => {
 
               {entity !== "financial-ledger" &&
                 entity !== "chats" &&
-                entity !== "schedule" && (
+                entity !== "schedule" &&
+                entity !== "gift-cards" && (
                   <>
                     {entity === "admins" && (
                       <div className={styles.adminCreateCard}>
@@ -4196,6 +4946,7 @@ const SuperAccess = () => {
                                 onChange={(e) =>
                                   setAdminPassword(e.target.value)
                                 }
+                                autoComplete="new-password"
                                 placeholder="Leave empty to keep current"
                                 disabled={removeAdminPassword}
                               />
@@ -4204,9 +4955,10 @@ const SuperAccess = () => {
                               <input
                                 type="checkbox"
                                 checked={removeAdminPassword}
-                                onChange={(e) =>
-                                  setRemoveAdminPassword(e.target.checked)
-                                }
+                                onChange={(e) => {
+                                  setRemoveAdminPassword(e.target.checked);
+                                  if (e.target.checked) setAdminPassword("");
+                                }}
                               />
                               <span>Remove password login</span>
                             </label>
@@ -5036,6 +5788,184 @@ const SuperAccess = () => {
           )}
         </section>
       </div>
+      {isGiftCardRefundModalOpen && selectedItem && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>
+              {selectedGiftCardRefundAction === "RELEASE_AUTHORIZATION"
+                ? "Cancel reserved payment?"
+                : "Refund gift card?"}
+            </h3>
+            <p className={styles.modalText}>
+              Gift card {String(selectedItem.code ?? selectedId)} for €
+              {(Number(selectedItem.amountCents ?? 0) / 100).toFixed(2)} will be
+              permanently disabled.
+            </p>
+            <p className={styles.modalText}>
+              {selectedGiftCardRefundAction === "RELEASE_AUTHORIZATION"
+                ? "The payment is only reserved. This cancels the hold—no money will be captured and the customer will not be charged."
+                : "The payment was captured. This creates a Stripe refund to the original payment method."}
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => {
+                  setIsGiftCardRefundModalOpen(false);
+                  setError("");
+                }}
+                isDisabled={isRefundingGiftCard}
+              />
+              <Button
+                title={
+                  isRefundingGiftCard
+                    ? "Processing..."
+                    : selectedGiftCardRefundAction ===
+                        "RELEASE_AUTHORIZATION"
+                      ? "Cancel payment hold"
+                      : "Refund payment"
+                }
+                type="BLACK"
+                onClick={refundGiftCard}
+                isDisabled={
+                  !canRefundSelectedGiftCard || isRefundingGiftCard
+                }
+                isLoading={isRefundingGiftCard}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isGiftCardRecipientCorrectionModalOpen && selectedItem && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Change gift-card recipient?</h3>
+            <p className={styles.modalText}>
+              Confirm the corrected email for gift card{" "}
+              {String(selectedItem.code ?? selectedId)}.
+            </p>
+            <div className={styles.chatProgressList}>
+              <div className={styles.chatProgressRow}>
+                <span>Current recipient</span>
+                <strong>{currentGiftCardRecipientEmail || "-"}</strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Corrected recipient</span>
+                <strong>{nextGiftCardRecipientEmail}</strong>
+              </div>
+            </div>
+            <p className={styles.modalText}>
+              The old code will stop working. A new code will be generated, the
+              card will be assigned to a matching verified client when
+              available, and confirmation emails will be sent to the sender and
+              corrected recipient.
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => {
+                  setIsGiftCardRecipientCorrectionModalOpen(false);
+                  setError("");
+                }}
+                isDisabled={isCorrectingGiftCardRecipient}
+              />
+              <Button
+                title={
+                  isCorrectingGiftCardRecipient
+                    ? "Applying..."
+                    : "Apply change"
+                }
+                type="BLACK"
+                onClick={correctGiftCardRecipient}
+                isDisabled={
+                  !canCorrectGiftCardRecipient || isCorrectingGiftCardRecipient
+                }
+                isLoading={isCorrectingGiftCardRecipient}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isGiftCardMigrationConfirmModalOpen && giftCardMigrationPreview && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Run gift-card migration?</h3>
+            <p className={styles.modalText}>
+              The dry run found the following changes. Review them before
+              starting the migration.
+            </p>
+            <div className={styles.chatProgressList}>
+              {[
+                ["Gift cards scanned", giftCardMigrationPreview.scanned],
+                ["Cards to assign", giftCardMigrationPreview.assigned],
+                ["Already assigned", giftCardMigrationPreview.alreadyAssigned],
+                [
+                  "Emails to normalize",
+                  giftCardMigrationPreview.emailsNormalized,
+                ],
+                [
+                  "Sender emails to recover",
+                  giftCardMigrationPreview.senderEmailsRecovered,
+                ],
+                [
+                  "Purchase events to create",
+                  giftCardMigrationPreview.purchaseEventsCreated,
+                ],
+                [
+                  "Redemption events to create",
+                  giftCardMigrationPreview.redemptionEventsCreated,
+                ],
+                [
+                  "Unmatched recipient emails",
+                  giftCardMigrationPreview.unmatchedRecipientEmails,
+                ],
+                [
+                  "Duplicate client emails",
+                  giftCardMigrationPreview.duplicateClientEmails,
+                ],
+                [
+                  "Missing recipient emails",
+                  giftCardMigrationPreview.missingRecipientEmails,
+                ],
+              ].map(([label, value]) => (
+                <div key={label} className={styles.chatProgressRow}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+            <p className={styles.modalText}>
+              This migration is protected against duplicate execution and can
+              only complete once.
+            </p>
+            {error && <div className={styles.modalError}>{error}</div>}
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() => {
+                  setIsGiftCardMigrationConfirmModalOpen(false);
+                  setGiftCardMigrationPreview(null);
+                  setError("");
+                }}
+                isDisabled={isRunningGiftCardMigration}
+              />
+              <Button
+                title={
+                  isRunningGiftCardMigration ? "Running…" : "Run migration"
+                }
+                type="BLACK"
+                onClick={confirmGiftCardMigration}
+                isDisabled={isRunningGiftCardMigration}
+                isLoading={isRunningGiftCardMigration}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {isChatNormalizationConfirmModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
@@ -5201,6 +6131,107 @@ const SuperAccess = () => {
                 }
                 type="OUTLINED"
                 onClick={() => setIsChatContactSharingRebuildModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isProviderPublicUrlGenerationModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>
+              Rebuild all provider public URLs
+            </h3>
+            <p className={styles.modalText}>
+              {`Job: ${providerPublicUrlGenerationJob?.id || providerPublicUrlGenerationJobId || "—"} • Status: ${
+                providerPublicUrlGenerationJob?.status ?? "PENDING"
+              }`}
+            </p>
+            <div className={styles.chatProgressList}>
+              <div className={styles.chatProgressRow}>
+                <span>Providers total</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress.providersTotal ??
+                    "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Processed</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress
+                    .providersProcessed ?? "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>URLs rebuilt</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress.urlsRebuilt ?? "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Unsupported region</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress
+                    .unsupportedOrMissingRegion ?? "—"}
+                </strong>
+              </div>
+              <div className={styles.chatProgressRow}>
+                <span>Failed</span>
+                <strong>
+                  {providerPublicUrlGenerationJob?.progress.providersFailed ??
+                    "—"}
+                </strong>
+              </div>
+            </div>
+            {(providerPublicUrlGenerationJob?.error ||
+              providerPublicUrlGenerationJob?.errors?.length) && (
+              <div className={styles.modalError}>
+                {providerPublicUrlGenerationJob.error ||
+                  providerPublicUrlGenerationJob.errors[0]?.message}
+              </div>
+            )}
+            <div className={styles.modalActions}>
+              <Button
+                title={
+                  providerPublicUrlGenerationJob?.status === "COMPLETED" ||
+                  providerPublicUrlGenerationJob?.status ===
+                    "COMPLETED_WITH_ERRORS" ||
+                  providerPublicUrlGenerationJob?.status === "FAILED"
+                    ? "Close"
+                    : "Hide"
+                }
+                type="OUTLINED"
+                onClick={() => setIsProviderPublicUrlGenerationModalOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isProviderPublicUrlGenerationConfirmModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>
+              Rebuild all provider public URLs?
+            </h3>
+            <p className={styles.modalText}>
+              This regenerates every public URL. Current public links will stop
+              working. Providers without a supported region will remain without
+              a public URL.
+            </p>
+            <div className={styles.modalActions}>
+              <Button
+                title="Cancel"
+                type="OUTLINED"
+                onClick={() =>
+                  setIsProviderPublicUrlGenerationConfirmModalOpen(false)
+                }
+              />
+              <Button
+                title="Rebuild all URLs"
+                type="BLACK"
+                onClick={() => void handleRebuildAllProviderPublicUrls()}
+                isDisabled={isGeneratingProviderPublicUrls}
+                isLoading={isGeneratingProviderPublicUrls}
               />
             </div>
           </div>
@@ -5682,6 +6713,49 @@ const SuperAccess = () => {
           </div>
         </div>
       )}
+      {isOrderEventRebuildConfirmModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Rebuild order event history?</h3>
+            <p className={styles.modalText}>
+              This reconstructs missing order history from the order, payment, refund, review, and financial records. Existing events are preserved.
+            </p>
+            <div className={styles.modalActions}>
+              <Button title="Cancel" type="OUTLINED" onClick={() => setIsOrderEventRebuildConfirmModalOpen(false)} isDisabled={isRebuildingOrderEvents} />
+              <Button title="Rebuild history" type="BLACK" onClick={() => void handleRebuildOrderEventHistory()} isDisabled={isRebuildingOrderEvents} isLoading={isRebuildingOrderEvents} />
+            </div>
+          </div>
+        </div>
+      )}
+      {isOrderEventRebuildProgressModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Order event history rebuild</h3>
+            <p className={styles.modalText}>{orderEventRebuildJob?.id ? `Job: ${orderEventRebuildJob.id} • ` : ""}{orderEventRebuildJob?.status ?? (isRebuildingOrderEvents ? "IN_PROGRESS" : "COMPLETED")}</p>
+            {isRebuildingOrderEvents && <p className={styles.modalText}>Reading historical order records and creating missing events...</p>}
+            {orderEventRebuildJob?.progress && (
+              <div className={styles.chatProgressList}>
+                <div className={styles.chatProgressRow}><span>Orders processed</span><strong>{String(orderEventRebuildJob.progress.ordersProcessed ?? 0)} / {String(orderEventRebuildJob.progress.ordersTotal ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Orders already with history</span><strong>{String(orderEventRebuildJob.progress.ordersWithHistory ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Orders rebuilt</span><strong>{String(orderEventRebuildJob.progress.ordersRebuilt ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Events created</span><strong>{String(orderEventRebuildJob.progress.eventsCreated ?? 0)}</strong></div>
+                <div className={styles.chatProgressRow}><span>Failed orders</span><strong>{String(orderEventRebuildJob.progress.failedCount ?? 0)}</strong></div>
+              </div>
+            )}
+            {orderEventRebuildResult?.error != null && <div className={styles.modalError}>{String(orderEventRebuildResult.error)}</div>}
+            {orderEventRebuildResult && !orderEventRebuildJob?.progress && (
+              <div className={styles.chatProgressList}>
+                {Object.entries(orderEventRebuildResult).map(([key, value]) => (
+                  <div key={key} className={styles.chatProgressRow}><span>{prettyTitle(key)}</span><strong>{typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "-")}</strong></div>
+                ))}
+              </div>
+            )}
+            <div className={styles.modalActions}>
+              <Button title={isRebuildingOrderEvents ? "Hide" : "Close"} type="OUTLINED" onClick={() => setIsOrderEventRebuildProgressModalOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
       {isRegenerateAddressModalOpen && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalCard}>
@@ -5746,6 +6820,84 @@ const SuperAccess = () => {
                 }
                 isDisabled={isRegeneratingAddress || isRegeneratingAllAddresses}
                 isLoading={isRegeneratingAddress || isRegeneratingAllAddresses}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {isDuplicatePayoutModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Duplicate provider payouts</h3>
+            {isFindingDuplicatePayouts ? (
+              <p className={styles.modalText}>Searching payout records for all providers…</p>
+            ) : (
+              <>
+                <p className={styles.modalText}>
+                  {duplicatePayoutAudit?.groups.length ?? 0} local duplicate payout group(s) found. Stripe transfer audit found {duplicatePayoutAudit?.stripeTransferGroups?.length ?? 0} possible duplicate group(s).
+                  {` Scanned ${duplicatePayoutAudit?.scannedPayoutCount ?? 0} payout record(s).`}
+                  {` Database contains ${duplicatePayoutAudit?.totalPayoutCount ?? 0} payout record(s) total.`}
+                  {` Search completed in ${duplicatePayoutSearchMs ?? 0} ms.`}
+                </p>
+                <div className={styles.duplicatePayoutResults}>
+                {(duplicatePayoutAudit?.groups ?? []).map((group) => (
+              <div className={styles.chatProgressRow} key={group.key}>
+                <span>{group.payoutIds.length} payouts · keeping the first</span>
+                <strong>{group.duplicatePayoutIds.length} duplicate(s)</strong>
+              </div>
+                ))}
+                {(duplicatePayoutAudit?.stripeTransferGroups ?? []).map((group) => (
+                  <div className={styles.chatProgressRow} key={`stripe-${group.key}`}>
+                    <span>
+                      <strong>{group.providerName ?? "Unknown provider"}</strong><br />
+                      Stripe transfers: {group.transferIds.length} × {(group.amount / 100).toFixed(2)} {group.currency.toUpperCase()}<br />
+                      Account: <code>{group.destinationAccountId ?? "unknown"}</code>
+                    </span>
+                    <strong>{group.hasOrderMetadata ? "same order" : "same order (local link)"}</strong>
+                  </div>
+                ))}
+                {(duplicatePayoutAudit?.unrecordedStripeTransfers ?? []).map((transfer) => (
+                  <div className={styles.chatProgressRow} key={`unrecorded-${transfer.transferId}`}>
+                    <span>
+                      <strong>Stripe transfer not recorded locally</strong><br />
+                      Order: <code>{transfer.orderId}</code><br />
+                      Provider user: <code>{transfer.providerUserId}</code><br />
+                      Account: <code>{transfer.destinationAccountId}</code><br />
+                      Transfer: <code>{transfer.transferId}</code>
+                    </span>
+                    <strong>{(transfer.amount / 100).toFixed(2)} {transfer.currency.toUpperCase()}</strong>
+                    <Button
+                      title={reconcilingTransferId === transfer.transferId ? "Recording..." : "Record payout"}
+                      type="OUTLINED"
+                      onClick={() => void handleReconcileTransfer(transfer)}
+                      isDisabled={Boolean(reconcilingTransferId)}
+                      isLoading={reconcilingTransferId === transfer.transferId}
+                    />
+                    {transferReconcileResults[transfer.transferId] && (
+                      <small className={transferReconcileResults[transfer.transferId].ok ? styles.reconcileSuccess : styles.reconcileError}>
+                        {transferReconcileResults[transfer.transferId].message}
+                      </small>
+                    )}
+                  </div>
+                ))}
+                </div>
+                {!duplicatePayoutAudit?.groups.length && (
+                  <p className={styles.modalText}>No locally recorded duplicate payouts were found across providers.</p>
+                )}
+              </>
+            )}
+            <div className={styles.modalActions}>
+              <Button
+                title="Close"
+                type="OUTLINED"
+                onClick={() => setIsDuplicatePayoutModalOpen(false)}
+              />
+              <Button
+                title={isCancelingDuplicatePayouts ? "Canceling..." : `Cancel ${duplicatePayoutAudit?.cancelablePayoutIds.length ?? 0} pending duplicate(s)`}
+                type="BLACK"
+                onClick={() => void handleCancelDuplicatePayouts()}
+                isDisabled={isFindingDuplicatePayouts || !duplicatePayoutAudit?.cancelablePayoutIds.length || isCancelingDuplicatePayouts}
+                isLoading={isCancelingDuplicatePayouts}
               />
             </div>
           </div>

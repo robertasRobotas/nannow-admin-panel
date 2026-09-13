@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import styles from "./messagesSection.module.css";
 import ChatMessages from "./ChatMessages/ChatMessages";
 import Button from "@/components/Button/Button";
-import { ChatMessageType, ChatType } from "@/types/Chats";
-import { getChatById, getCurrentAdminRolesFromJwt } from "@/pages/api/fetch";
+import { ChatMessageType, ChatType, ChatUserType } from "@/types/Chats";
+import { getChatById, getCurrentAdminRolesFromJwt, resetChatCashPaymentWarningConfirmation } from "@/pages/api/fetch";
+import { toast } from "react-toastify";
 import avatarImg from "../../../../assets/images/default-avatar.png";
 
 const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
@@ -19,6 +21,7 @@ type ChatDetails = {
   user1?: ChatType["user1"];
   user2?: ChatType["user2"];
   messages?: ChatMessageType[];
+  cashPaymentWarningConfirmedAt?: string | null;
 };
 
 const isChatUnread = (chat: ChatType) => {
@@ -38,6 +41,15 @@ const isSystemNannowChat = (chat: ChatType) => {
   const user2Id = getChatParticipantId(chat, "user2");
 
   return user1Id === SYSTEM_NANNOW_ID || user2Id === SYSTEM_NANNOW_ID;
+};
+
+const getCounterpart = (chat: ChatType, userId: string) =>
+  chat.user1?.id === userId ? chat.user2 : chat.user1;
+
+const getChatUserProfileHref = (user: ChatUserType) => {
+  const currentMode = String(user.currentMode ?? user.userMode ?? "CLIENT").toUpperCase();
+  const profileType = currentMode.includes("PROVIDER") ? "provider" : "client";
+  return `/${profileType}/${user.id}`;
 };
 
 const formatDateTime = (value?: string) => {
@@ -64,6 +76,8 @@ const MessagesSection = ({
   const [userImgUrl, setUserImgUrl] = useState("");
   const [otherUserImgUrl, setOtherUserImgUrl] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [cashPaymentWarningConfirmedAt, setCashPaymentWarningConfirmedAt] = useState<string | null>(null);
+  const [isResettingWarning, setIsResettingWarning] = useState(false);
   const filteredChats = useMemo(
     () => chats.filter((chat) => !isSystemNannowChat(chat)),
     [chats],
@@ -92,6 +106,7 @@ const MessagesSection = ({
         if (isCancelled) return;
 
         setMessages(Array.isArray(result.messages) ? result.messages : []);
+        setCashPaymentWarningConfirmedAt(result.cashPaymentWarningConfirmedAt ?? null);
         setUserImgUrl(
           result.user1?.id === userId
             ? (result.user1?.imgUrl ?? "")
@@ -121,12 +136,31 @@ const MessagesSection = ({
     };
   }, [selectedChatId, userId]);
 
+  const resetWarningConfirmation = async () => {
+    if (!selectedChatId || isResettingWarning) return;
+    try {
+      setIsResettingWarning(true);
+      await resetChatCashPaymentWarningConfirmation(selectedChatId);
+      setCashPaymentWarningConfirmedAt(null);
+      toast.success("Cash payment warning confirmation reset");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to reset cash payment warning confirmation");
+    } finally {
+      setIsResettingWarning(false);
+    }
+  };
+
   const selectedChat = useMemo(
     () =>
       filteredChats.find(
         (chat) => (chat.chatId ?? chat.id) === selectedChatId,
       ) ?? null,
     [filteredChats, selectedChatId],
+  );
+  const selectedCounterpart = useMemo(
+    () => (selectedChat ? getCounterpart(selectedChat, userId) : null),
+    [selectedChat, userId],
   );
 
   return (
@@ -138,8 +172,7 @@ const MessagesSection = ({
             {filteredChats.length > 0 ? (
               filteredChats.map((chat) => {
                 const chatId = chat.chatId ?? chat.id;
-                const counterpart =
-                  chat.user2?.id === userId ? chat.user1 : chat.user2;
+                const counterpart = getCounterpart(chat, userId);
                 const lastMessage = Array.isArray(chat.messages)
                   ? chat.messages[chat.messages.length - 1]
                   : null;
@@ -193,11 +226,24 @@ const MessagesSection = ({
           {selectedChat ? (
             <>
               <div className={styles.title}>
-                {`${
-                  (selectedChat.user2?.id === userId
-                    ? selectedChat.user1?.firstName
-                    : selectedChat.user2?.firstName) ?? "Chat"
-                }`}
+                {selectedCounterpart ? (
+                  <Link
+                    href={getChatUserProfileHref(selectedCounterpart)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.profileLink}
+                  >
+                    {selectedCounterpart.firstName}
+                  </Link>
+                ) : (
+                  <span>Chat</span>
+                )}
+                <div className={styles.warningStatus}>
+                  <span>{cashPaymentWarningConfirmedAt ? `Cash warning confirmed: ${formatDateTime(cashPaymentWarningConfirmedAt)}` : "Cash warning not confirmed"}</span>
+                  {cashPaymentWarningConfirmedAt && (
+                    <Button title={isResettingWarning ? "Resetting..." : "Reset confirmation"} type="OUTLINED" onClick={resetWarningConfirmation} isDisabled={isResettingWarning} />
+                  )}
+                </div>
               </div>
               {isLoadingChat ? (
                 <div className={styles.emptyState}>Loading messages...</div>
