@@ -6,6 +6,7 @@ import { nunito } from "@/helpers/fonts";
 import { getParentActivityRetention } from "@/pages/api/fetch";
 import {
   ParentActivityRetentionResponse,
+  RetentionCohortBasis,
   RetentionInterval,
 } from "@/types/ParentActivityRetention";
 import styles from "./retention.module.css";
@@ -25,6 +26,19 @@ import {
 
 const INTERVALS: RetentionInterval[] = ["week", "biweek", "month"];
 const TIMEZONE = "Europe/Vilnius";
+
+const COHORT_BASIS_OPTIONS: Array<{ value: RetentionCohortBasis; label: string; hint: string }> = [
+  {
+    value: "signup",
+    label: "Sign-up date",
+    hint: "Cohort = the period the parent account was created. Parents who never act stay in the denominator.",
+  },
+  {
+    value: "first_activity",
+    label: "First activity",
+    hint: "Cohort = the period of the parent's first qualifying action. Parents who never acted are left out, so period 0 is always 100%.",
+  },
+];
 
 type RetentionData = Partial<Record<RetentionInterval, ParentActivityRetentionResponse>>;
 
@@ -181,6 +195,7 @@ const Retention = () => {
   const [cohortFromInput, setCohortFromInput] = useState("");
   const [cohortToInput, setCohortToInput] = useState("");
   const [appliedRange, setAppliedRange] = useState<{ from?: string; to?: string }>({});
+  const [cohortBy, setCohortBy] = useState<RetentionCohortBasis>("signup");
 
   const fetchRetention = useCallback(async () => {
     try {
@@ -191,6 +206,7 @@ const Retention = () => {
           getParentActivityRetention({
             interval,
             timezone: TIMEZONE,
+            cohortBy,
             cohortFrom: appliedRange.from,
             cohortTo: appliedRange.to,
           }),
@@ -211,7 +227,7 @@ const Retention = () => {
     } finally {
       setLoading(false);
     }
-  }, [appliedRange, router]);
+  }, [appliedRange, cohortBy, router]);
 
   useEffect(() => {
     fetchRetention();
@@ -255,6 +271,23 @@ const Retention = () => {
 
       <div className={styles.filtersPanel}>
         <div className={styles.filtersRow}>
+          <div className={styles.dateField}>
+            <span>Cohort by</span>
+            <div className={styles.segmented} role="group" aria-label="Cohort basis">
+              {COHORT_BASIS_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`${styles.segmentedButton} ${cohortBy === option.value ? styles.segmentedButtonActive : ""}`}
+                  onClick={() => setCohortBy(option.value)}
+                  aria-pressed={cohortBy === option.value}
+                  title={option.hint}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <label className={styles.dateField}>
             <span>Cohorts from</span>
             <input
@@ -279,6 +312,8 @@ const Retention = () => {
           </div>
         </div>
         <div className={styles.definition}>
+          <strong>Cohort</strong>
+          {` = ${COHORT_BASIS_OPTIONS.find((option) => option.value === cohortBy)?.hint ?? ""} `}
           <strong>Active</strong>
           {` = ${activityList}. App opens, logins, push-notification opens and the automatic map load do not count. Each parent counts once per period. Babysitters, nannies and other providers are excluded.`}
           {launchDay ? ` First parent joined ${launchDay}.` : ""}

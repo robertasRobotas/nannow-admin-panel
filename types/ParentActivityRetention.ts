@@ -1,4 +1,6 @@
 export type RetentionInterval = "week" | "biweek" | "month";
+/** signup = cohort by account creation; first_activity = cohort by first qualifying action. */
+export type RetentionCohortBasis = "signup" | "first_activity";
 
 export type ParentActivityRetentionPeriod = {
   period: number;
@@ -27,6 +29,7 @@ export type ParentActivityRetentionAveragePoint = {
 export type ParentActivityRetentionResponse = {
   interval: RetentionInterval;
   timezone: string;
+  cohortBy: RetentionCohortBasis;
   generatedAt: string;
   launchDay: string | null;
   currentPeriodStart: string | null;

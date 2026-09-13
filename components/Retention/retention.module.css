@@ -90,6 +90,41 @@
   gap: 8px;
 }
 
+.segmented {
+  display: inline-flex;
+  height: 40px;
+  padding: 3px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+}
+
+.segmentedButton {
+  all: unset;
+  padding: 0 14px;
+  border-radius: 11px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.segmentedButton:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.segmentedButton:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.5);
+  outline-offset: 1px;
+}
+
+.segmentedButtonActive {
+  background: #000;
+  color: #fff;
+}
+
 .definition {
   color: rgba(0, 0, 0, 0.62);
   font-size: 13px;

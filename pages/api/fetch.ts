@@ -3,7 +3,10 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { ADMIN_API_CONFIG, AdminApiMode } from "@/helpers/adminApiConfig";
 import { CompensationRequestStatus } from "@/types/Client";
-import type { RetentionInterval } from "@/types/ParentActivityRetention";
+import type {
+  RetentionCohortBasis,
+  RetentionInterval,
+} from "@/types/ParentActivityRetention";
 
 export type { AdminApiMode } from "@/helpers/adminApiConfig";
 
@@ -3583,6 +3586,7 @@ export const expireDiscountCode = async (id: string) => {
 export const getParentActivityRetention = async (params: {
   interval: RetentionInterval;
   timezone?: string;
+  cohortBy?: RetentionCohortBasis;
   cohortFrom?: string;
   cohortTo?: string;
   maxPeriods?: number;
@@ -3594,6 +3598,7 @@ export const getParentActivityRetention = async (params: {
       params: {
         interval: params.interval,
         timezone: params.timezone ?? "Europe/Vilnius",
+        cohortBy: params.cohortBy ?? "signup",
         cohortFrom: params.cohortFrom,
         cohortTo: params.cohortTo,
         maxPeriods: params.maxPeriods,
