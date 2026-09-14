@@ -230,6 +230,44 @@
   font-weight: 700;
 }
 
+.sectionHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rebuildJobCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 4px -10px rgba(0, 0, 0, 0.06),
+    0 2px 10px 0 rgba(0, 0, 0, 0.04);
+}
+
+.rebuildJobRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.rebuildProgressBar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.rebuildProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #2367c8;
+  transition: width 0.4s ease;
+}
+
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

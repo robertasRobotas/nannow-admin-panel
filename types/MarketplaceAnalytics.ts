@@ -170,3 +170,25 @@ export type GetOnboardingRegistrationsByDayResponse = {
   dateTo: string;
   items: OnboardingRegistrationsByDayItem[];
 };
+
+export type OnboardingRegistrationsRebuildJobProgress = {
+  monthsTotal: number;
+  monthsProcessed: number;
+  currentMonthKey: string;
+};
+
+export type OnboardingRegistrationsRebuildJob = {
+  id: string;
+  requestedByAdminId: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  error: string | null;
+  progress: OnboardingRegistrationsRebuildJobProgress;
+  result: {
+    monthsRebuilt: number;
+    totalItems: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};

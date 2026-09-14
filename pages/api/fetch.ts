@@ -2223,6 +2223,23 @@ export const getOnboardingRegistrationsByDay = async (params?: {
   return response;
 };
 
+export const rebuildOnboardingRegistrations = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/users/onboarding/registrations-by-day/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getOnboardingRegistrationsRebuildJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/users/onboarding/registrations-by-day/rebuild/jobs/${encodeURIComponent(jobId)}`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const previewBroadcastNotifications = async (payload: {
   filters?: {
     country?: string;

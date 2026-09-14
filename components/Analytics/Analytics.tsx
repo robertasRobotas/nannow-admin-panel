@@ -12,7 +12,9 @@ import {
   getMarketplaceAnalyticsLocations,
   getNetIncomeDaily,
   getOnboardingRegistrationsByDay,
+  getOnboardingRegistrationsRebuildJob,
   rebuildMarketplaceAnalyticsDailySnapshots,
+  rebuildOnboardingRegistrations,
 } from "@/pages/api/fetch";
 import {
   getOrderStatusTitle,
@@ -32,6 +34,7 @@ import {
   MarketplaceAnalyticsSitterTopItem,
   MarketplaceAnalyticsTimeseriesItem,
   OnboardingRegistrationsByDayItem,
+  OnboardingRegistrationsRebuildJob,
 } from "@/types/MarketplaceAnalytics";
 import {
   NetIncomeDailyItem,
@@ -1411,6 +1414,10 @@ const Analytics = () => {
   const [selectedTopLimitOption, setSelectedTopLimitOption] = useState(1);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isRebuildLoading, setIsRebuildLoading] = useState(false);
+  const [onboardingRebuildJob, setOnboardingRebuildJob] =
+    useState<OnboardingRegistrationsRebuildJob | null>(null);
+  const [onboardingRebuildJobId, setOnboardingRebuildJobId] = useState("");
+  const [isRebuildingOnboarding, setIsRebuildingOnboarding] = useState(false);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -1887,6 +1894,100 @@ const Analytics = () => {
     }
   };
 
+  const onboardingRebuildRunning =
+    onboardingRebuildJob?.status === "PENDING" ||
+    onboardingRebuildJob?.status === "IN_PROGRESS";
+
+  const onboardingRebuildProgressPct = onboardingRebuildJob?.progress
+    ?.monthsTotal
+    ? Math.min(
+        100,
+        ((onboardingRebuildJob.progress.monthsProcessed ?? 0) /
+          onboardingRebuildJob.progress.monthsTotal) *
+          100,
+      )
+    : 0;
+
+  const rebuildOnboarding = async () => {
+    if (isRebuildingOnboarding || onboardingRebuildRunning) return;
+    try {
+      setIsRebuildingOnboarding(true);
+      const response = await rebuildOnboardingRegistrations();
+      const job = (
+        response.data?.result?.job ?? response.data?.job
+      ) as OnboardingRegistrationsRebuildJob | undefined;
+      if (job?.id) {
+        // `started: false` is not an error — the returned job is the active
+        // rebuild and is handled by the polling effect below.
+        setOnboardingRebuildJobId(job.id);
+        setOnboardingRebuildJob(job);
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      toast.error(
+        axios.isAxiosError(err)
+          ? ((err.response?.data as { error?: string })?.error ??
+            "Failed to start onboarding rebuild")
+          : "Failed to start onboarding rebuild",
+      );
+    } finally {
+      setIsRebuildingOnboarding(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!onboardingRebuildJobId) return;
+    if (
+      onboardingRebuildJob?.status === "COMPLETED" ||
+      onboardingRebuildJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getOnboardingRegistrationsRebuildJob(
+          onboardingRebuildJobId,
+        );
+        const job = (
+          response.data?.job ?? response.data?.result?.job
+        ) as OnboardingRegistrationsRebuildJob | undefined;
+        if (!isCancelled && job) {
+          setOnboardingRebuildJob(job);
+          if (job.status === "COMPLETED") {
+            toast.success(
+              `Onboarding rebuilt: ${Number(job.result?.monthsRebuilt ?? 0)} months, ${Number(
+                job.result?.totalItems ?? 0,
+              )} day snapshots`,
+            );
+            fetchOnboardingByDay();
+          } else if (job.status === "FAILED") {
+            toast.error(
+              job.error || "Failed to rebuild onboarding registrations",
+            );
+          }
+        }
+      } catch {
+        // Ignore transient polling errors.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 3000);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    onboardingRebuildJob?.status,
+    onboardingRebuildJobId,
+    fetchOnboardingByDay,
+  ]);
+
   const appliedStartLabel = toInputDate(new Date(appliedStartDate));
   const appliedEndLabel = toInputDate(
     new Date(new Date(appliedEndDate).getTime() - 24 * 60 * 60 * 1000),
@@ -2225,11 +2326,51 @@ const Analytics = () => {
 
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Onboarding by day</h3>
-              <div className={styles.sectionSubtle}>
-                Raw registrations vs finished onboarding
+              <div className={styles.sectionHeading}>
+                <h3 className={styles.sectionTitle}>Onboarding by day</h3>
+                <div className={styles.sectionSubtle}>
+                  Raw registrations vs finished onboarding
+                </div>
               </div>
+              <Button
+                title={
+                  onboardingRebuildRunning
+                    ? "Rebuilding…"
+                    : "Rebuild onboarding"
+                }
+                type="OUTLINED"
+                onClick={rebuildOnboarding}
+                isLoading={isRebuildingOnboarding}
+                isDisabled={isRebuildingOnboarding || onboardingRebuildRunning}
+              />
             </div>
+
+            {onboardingRebuildRunning && onboardingRebuildJob && (
+              <div className={styles.rebuildJobCard}>
+                <div className={styles.rebuildJobRow}>
+                  <span className={styles.sectionSubtle}>
+                    {onboardingRebuildJob.progress?.currentMonthKey
+                      ? `Rebuilding ${onboardingRebuildJob.progress.currentMonthKey}…`
+                      : "Queued — waiting for rebuild to start…"}
+                  </span>
+                  <span className={styles.sectionSubtle}>
+                    {`${onboardingRebuildJob.progress?.monthsProcessed ?? 0}/${onboardingRebuildJob.progress?.monthsTotal ?? 0} months`}
+                  </span>
+                </div>
+                <div
+                  className={styles.rebuildProgressBar}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(onboardingRebuildProgressPct)}
+                >
+                  <div
+                    className={styles.rebuildProgressFill}
+                    style={{ width: `${onboardingRebuildProgressPct}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             {onboardingLoading && (
               <div className={styles.loadingState}>
