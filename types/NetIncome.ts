@@ -26,3 +26,24 @@ export type NetIncomeDailyResponse = {
   summary: NetIncomeSummary;
   items: NetIncomeDailyItem[];
 };
+
+export type DailyNetIncomeRebuildJobProgress = {
+  monthsTotal: number;
+  monthsProcessed: number;
+  currentMonthKey: string;
+};
+
+export type DailyNetIncomeRebuildJob = {
+  id: string;
+  requestedByAdminId: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  error: string | null;
+  progress: DailyNetIncomeRebuildJobProgress;
+  result: {
+    daysRebuilt: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};

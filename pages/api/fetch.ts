@@ -2148,6 +2148,23 @@ export const getNetIncomeDaily = async (params: {
   return response;
 };
 
+export const rebuildDailyNetIncomeSnapshotsAll = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(
+    `${BASE_URL}/admin/financial/net-income/daily/rebuild`,
+    {},
+    { headers: { Authorization: jwt } },
+  );
+};
+
+export const getDailyNetIncomeRebuildJob = async (jobId: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(
+    `${BASE_URL}/admin/financial/net-income/daily/rebuild/jobs/${encodeURIComponent(jobId)}`,
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getMarketplaceAnalytics = async (params?: {
   dateFrom?: string;
   dateTo?: string;

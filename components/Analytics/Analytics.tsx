@@ -8,11 +8,13 @@ import DropDownButton from "@/components/DropDownButton/DropDownButton";
 import { nunito } from "@/helpers/fonts";
 import {
   getCurrentAdminRolesFromJwt,
+  getDailyNetIncomeRebuildJob,
   getMarketplaceAnalytics,
   getMarketplaceAnalyticsLocations,
   getNetIncomeDaily,
   getOnboardingRegistrationsByDay,
   getOnboardingRegistrationsRebuildJob,
+  rebuildDailyNetIncomeSnapshotsAll,
   rebuildMarketplaceAnalyticsDailySnapshots,
   rebuildOnboardingRegistrations,
 } from "@/pages/api/fetch";
@@ -37,6 +39,7 @@ import {
   OnboardingRegistrationsRebuildJob,
 } from "@/types/MarketplaceAnalytics";
 import {
+  DailyNetIncomeRebuildJob,
   NetIncomeDailyItem,
   NetIncomeDailyResponse,
   NetIncomePeriod,
@@ -1418,6 +1421,10 @@ const Analytics = () => {
     useState<OnboardingRegistrationsRebuildJob | null>(null);
   const [onboardingRebuildJobId, setOnboardingRebuildJobId] = useState("");
   const [isRebuildingOnboarding, setIsRebuildingOnboarding] = useState(false);
+  const [isRebuildingNetIncome, setIsRebuildingNetIncome] = useState(false);
+  const [netIncomeRebuildJobId, setNetIncomeRebuildJobId] = useState("");
+  const [netIncomeRebuildJob, setNetIncomeRebuildJob] =
+    useState<DailyNetIncomeRebuildJob | null>(null);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -1988,6 +1995,96 @@ const Analytics = () => {
     fetchOnboardingByDay,
   ]);
 
+  const netIncomeRebuildRunning =
+    netIncomeRebuildJob?.status === "PENDING" ||
+    netIncomeRebuildJob?.status === "IN_PROGRESS";
+
+  const netIncomeRebuildProgressPct = netIncomeRebuildJob?.progress
+    ?.monthsTotal
+    ? Math.min(
+        100,
+        ((netIncomeRebuildJob.progress.monthsProcessed ?? 0) /
+          netIncomeRebuildJob.progress.monthsTotal) *
+          100,
+      )
+    : 0;
+
+  const rebuildNetIncome = async () => {
+    if (isRebuildingNetIncome || netIncomeRebuildRunning) return;
+    try {
+      setIsRebuildingNetIncome(true);
+      const response = await rebuildDailyNetIncomeSnapshotsAll();
+      const job = (response.data?.result?.job ??
+        response.data?.job) as DailyNetIncomeRebuildJob | undefined;
+      if (job?.id) {
+        // `started: false` is not an error — the returned job is the active
+        // rebuild and is handled by the polling effect below.
+        setNetIncomeRebuildJobId(job.id);
+        setNetIncomeRebuildJob(job);
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/");
+        return;
+      }
+      toast.error(
+        axios.isAxiosError(err)
+          ? ((err.response?.data as { error?: string })?.error ??
+            "Failed to start net income rebuild")
+          : "Failed to start net income rebuild",
+      );
+    } finally {
+      setIsRebuildingNetIncome(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!netIncomeRebuildJobId) return;
+    if (
+      netIncomeRebuildJob?.status === "COMPLETED" ||
+      netIncomeRebuildJob?.status === "FAILED"
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const pollJob = async () => {
+      try {
+        const response = await getDailyNetIncomeRebuildJob(
+          netIncomeRebuildJobId,
+        );
+        const job = (response.data?.job ??
+          response.data?.result?.job) as DailyNetIncomeRebuildJob | undefined;
+        if (!isCancelled && job) {
+          setNetIncomeRebuildJob(job);
+          if (job.status === "COMPLETED") {
+            toast.success(
+              `Net income snapshots rebuilt: ${Number(job.result?.daysRebuilt ?? 0)} day rows`,
+            );
+            fetchNetIncome();
+          } else if (job.status === "FAILED") {
+            toast.error(
+              job.error || "Failed to rebuild net income snapshots",
+            );
+          }
+        }
+      } catch {
+        // Ignore transient polling errors.
+      }
+    };
+
+    pollJob();
+    const intervalId = window.setInterval(pollJob, 3000);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    netIncomeRebuildJob?.status,
+    netIncomeRebuildJobId,
+    fetchNetIncome,
+  ]);
+
   const appliedStartLabel = toInputDate(new Date(appliedStartDate));
   const appliedEndLabel = toInputDate(
     new Date(new Date(appliedEndDate).getTime() - 24 * 60 * 60 * 1000),
@@ -2259,11 +2356,47 @@ const Analytics = () => {
         <>
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Net income</h3>
-              <div className={styles.sectionSubtle}>
-                Order payments minus refunds, grouped by day
+              <div className={styles.sectionHeading}>
+                <h3 className={styles.sectionTitle}>Net income</h3>
+                <div className={styles.sectionSubtle}>
+                  Approved payments, including authorizations, minus refunds and released funds
+                </div>
               </div>
+              <Button
+                title={netIncomeRebuildRunning ? "Rebuilding…" : "Rebuild net income"}
+                type="OUTLINED"
+                onClick={rebuildNetIncome}
+                isLoading={isRebuildingNetIncome}
+                isDisabled={isRebuildingNetIncome || netIncomeRebuildRunning}
+              />
             </div>
+
+            {netIncomeRebuildRunning && netIncomeRebuildJob && (
+              <div className={styles.rebuildJobCard}>
+                <div className={styles.rebuildJobRow}>
+                  <span className={styles.sectionSubtle}>
+                    {netIncomeRebuildJob.progress?.currentMonthKey
+                      ? `Rebuilding ${netIncomeRebuildJob.progress.currentMonthKey}…`
+                      : "Queued — waiting for rebuild to start…"}
+                  </span>
+                  <span className={styles.sectionSubtle}>
+                    {`${netIncomeRebuildJob.progress?.monthsProcessed ?? 0}/${netIncomeRebuildJob.progress?.monthsTotal ?? 0} months`}
+                  </span>
+                </div>
+                <div
+                  className={styles.rebuildProgressBar}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(netIncomeRebuildProgressPct)}
+                >
+                  <div
+                    className={styles.rebuildProgressFill}
+                    style={{ width: `${netIncomeRebuildProgressPct}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             {netIncomeLoading && (
               <div className={styles.loadingState}>Loading net income...</div>
