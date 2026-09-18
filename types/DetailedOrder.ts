@@ -45,6 +45,7 @@ export type DetailedOrderType = {
   };
   startsAt: string;
   endsAt: string;
+  serviceTimeZone?: string;
   clientFirstName: string;
   clientImgUrl: string;
   isClientVerified: boolean;
@@ -222,6 +223,7 @@ export type DetailedOrderType = {
   orderType?: string | null;
   selectedDays?: string[] | null;
   orderGroupId?: string | null;
+  parentOrderId?: string | null;
   periods?:
     | {
         startsAt?: string | null;
