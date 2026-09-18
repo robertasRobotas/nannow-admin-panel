@@ -49,6 +49,7 @@ const detail = (event: OrderEvent) => {
   }
   if (event.type === "REMINDER_SENT" || event.type === "REMINDER_FAILED" || event.type === "REMINDER_ATTEMPTED") return `${String(data.reminderType ?? "Reminder")} · ${String(data.channel ?? "-")} · sequence ${String(data.sequence ?? "-")}`;
   if (event.type === "REVIEW_SUBMITTED") return `${String(data.reviewType ?? "Review")} · rating ${String(data.rating ?? "-")}`;
+  if (event.type === "ADMIN_CHANGED" && data.action === "ORDER_START_TIME_CHANGED") return `Schedule changed: ${formatDate(String(data.oldStartsAt))} → ${formatDate(String(data.newStartsAt))}`;
   if (event.type === "ADMIN_CHANGED") return Array.isArray(data.fields) ? `Fields: ${data.fields.join(", ")}` : String(data.action ?? "Order changed by admin");
   if (event.type === "PROVIDER_PAYOUT" && data.ledgerType) return amount(data);
   if (data.providerName) return `Provider: ${String(data.providerName)}`;

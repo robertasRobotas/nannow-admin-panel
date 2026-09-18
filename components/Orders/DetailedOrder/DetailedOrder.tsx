@@ -37,6 +37,7 @@ import {
   repairDailyOrderChildren,
   refundOrderById,
   releaseFundsByOrderId,
+  rescheduleOrderStartTime,
   returnMoneyToParentById,
   updateOrderStatusByAdmin,
 } from "@/pages/api/fetch";
@@ -48,6 +49,11 @@ import callImg from "../../../assets/images/call.svg";
 import closeImg from "../../../assets/images/close.svg";
 import crossRedImg from "../../../assets/images/cross-red.svg";
 import { copyTextToClipboard } from "@/helpers/clipboardWrites";
+import {
+  formatServiceDateTimeInput,
+  formatServiceTypedDateTime,
+  parseServiceDateTime,
+} from "@/helpers/serviceDateTime";
 import { Check, Copy } from "lucide-react";
 
 type DetailedOrderProps = {
@@ -81,6 +87,17 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const [isStatusSelectorOpen, setIsStatusSelectorOpen] = useState(false);
   const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] =
     useState(false);
+  const [isStartTimeModalOpen, setIsStartTimeModalOpen] = useState(false);
+  const [isStartTimeConfirmModalOpen, setIsStartTimeConfirmModalOpen] = useState(false);
+  const [isReschedulingStartTime, setIsReschedulingStartTime] = useState(false);
+  const [startTimeDraft, setStartTimeDraft] = useState("");
+  const [startTimeTypedDraft, setStartTimeTypedDraft] = useState("");
+  const [startTimeError, setStartTimeError] = useState<string | null>(null);
+  const [startTimeSavedResult, setStartTimeSavedResult] = useState<{
+    startsAt: string;
+    endsAt: string;
+    notificationFailures: string[];
+  } | null>(null);
   const [releaseFundsErrorMessage, setReleaseFundsErrorMessage] =
     useState<string>("");
   const [releaseFundsErrorTitle, setReleaseFundsErrorTitle] =
@@ -197,21 +214,31 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
         })
       : "-";
   const formatTimeOnly = (value?: string | null) =>
-    value
+    value && serviceTimeZone
       ? new Date(value).toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           hour12: false,
+          timeZone: serviceTimeZone,
         })
       : "-";
   const formatPeriodDate = (value?: string | null) =>
-    value
+    value && serviceTimeZone
       ? new Date(value).toLocaleDateString("en-CA", {
           year: "numeric",
           month: "2-digit",
           day: "2-digit",
+          timeZone: serviceTimeZone,
         })
       : "-";
+
+  const serviceTimeZone = order?.serviceTimeZone ?? "";
+  const serviceDateTimeToDate = (value: string) => parseServiceDateTime(value, serviceTimeZone).date;
+  const formatDateTimeInput = (value: string) => formatServiceDateTimeInput(value, serviceTimeZone);
+  const typedDateTimeToDate = (value: string) => {
+    const match = value.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})[ ,]+(\d{2})[.:](\d{2})$/);
+    return match ? serviceDateTimeToDate(`${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}`) : null;
+  };
 
   const orderCreatedAt = formatCompactDateTime(order?.createdAt);
   const orderUpdatedAt = formatCompactDateTime(order?.updatedAt);
@@ -549,6 +576,92 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
     }
   };
 
+  const formatTypedServiceDate = (value: string) => {
+    return formatServiceTypedDateTime(value, serviceTimeZone);
+  };
+
+  const openStartTimeModal = () => {
+    if (!canChangeStartTime) return;
+    setStartTimeError(null);
+    setStartTimeDraft(formatDateTimeInput(order.startsAt));
+    setStartTimeTypedDraft(formatTypedServiceDate(order.startsAt));
+    setIsStartTimeModalOpen(true);
+  };
+
+  const continueStartTimeChange = () => {
+    const source = startTimeTypedDraft.trim()
+      ? (() => {
+          const match = startTimeTypedDraft.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})[ ,]+(\d{2})[.:](\d{2})$/);
+          return match ? parseServiceDateTime(`${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}`, serviceTimeZone) : { date: null, error: "invalid" as const };
+        })()
+      : parseServiceDateTime(startTimeDraft, serviceTimeZone);
+    const nextStart = source.date;
+    if (source.error === "nonexistent") {
+      setStartTimeError(`That local time does not exist in ${serviceTimeZone}. Choose another time.`);
+      return;
+    }
+    if (source.error === "ambiguous") {
+      setStartTimeError(`That local time occurs twice in ${serviceTimeZone}. Choose a different time.`);
+      return;
+    }
+    if (!nextStart || nextStart.getTime() <= Date.now()) {
+      setStartTimeError(`Enter a future date and time in ${serviceTimeZone}.`);
+      return;
+    }
+    if (nextStart.getTime() === new Date(order.startsAt).getTime()) {
+      setStartTimeError("Choose a different start time.");
+      return;
+    }
+    setStartTimeError(null);
+    setIsStartTimeModalOpen(false);
+    setIsStartTimeConfirmModalOpen(true);
+  };
+
+  const getDraftStartTime = () => startTimeTypedDraft.trim()
+    ? typedDateTimeToDate(startTimeTypedDraft)
+    : serviceDateTimeToDate(startTimeDraft);
+
+  const confirmStartTimeChange = async () => {
+    if (isReschedulingStartTime) return;
+    const nextStart = getDraftStartTime();
+    if (!nextStart) {
+      setStartTimeError("Enter a valid date and time.");
+      return;
+    }
+    try {
+      setIsReschedulingStartTime(true);
+      const response = await rescheduleOrderStartTime(
+        order.id,
+        nextStart.toISOString(),
+        order.__v,
+        order.updatedAt,
+        order.endsAt,
+        order.serviceDurationHours,
+        order.approvedProviderId ?? "",
+      );
+      if (response.status === 200) {
+        const result = response.data?.result;
+        const savedStartsAt = result?.order?.startsAt ?? nextStart.toISOString();
+        const durationMs = new Date(order.endsAt).getTime() - new Date(order.startsAt).getTime();
+        const savedEndsAt = result?.order?.endsAt ?? new Date(nextStart.getTime() + durationMs).toISOString();
+        setStartTimeSavedResult({
+          startsAt: savedStartsAt,
+          endsAt: savedEndsAt,
+          notificationFailures: Array.isArray(result?.notificationFailures) ? result.notificationFailures : [],
+        });
+        setIsStartTimeConfirmModalOpen(false);
+        setStartTimeError(null);
+      }
+    } catch (error: unknown) {
+      const responseError = error && typeof error === "object" && "response" in error
+        ? (error as { response?: { data?: { error?: unknown } } }).response?.data?.error
+        : undefined;
+      setStartTimeError(typeof responseError === "string" ? responseError : "The order changed or could not be rescheduled. Refresh and try again.");
+    } finally {
+      setIsReschedulingStartTime(false);
+    }
+  };
+
   const toggleClosedByAdmin = async () => {
     if (isTogglingClosedByAdmin) return;
     try {
@@ -803,11 +916,23 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
   const shouldShowOrderTypeCard =
     normalizedOrderType === "CONTINUOUS" ||
     normalizedOrderType === "REPETITIVE";
-  const orderPeriods =
-    Array.isArray(order?.periods) && order.periods.length > 0
+  const displayedStartsAt = startTimeSavedResult?.startsAt ?? order?.startsAt;
+  const displayedEndsAt = startTimeSavedResult?.endsAt ?? order?.endsAt;
+  const orderPeriods = startTimeSavedResult
+    ? [{ startsAt: displayedStartsAt, endsAt: displayedEndsAt }]
+    : Array.isArray(order?.periods) && order.periods.length > 0
       ? order.periods
-      : [{ startsAt: order?.startsAt, endsAt: order?.endsAt }];
+      : [{ startsAt: displayedStartsAt, endsAt: displayedEndsAt }];
   const orderStatusUpper = normalizeOrderStatus(order?.status);
+  const canChangeStartTime =
+    orderStatusUpper === "BOTH_APPROVED" &&
+    new Date(order.startsAt).getTime() > Date.now() &&
+    !order.provider_markedAsServiceInProgressAt &&
+    !order.provider_markedAsServiceEndedAt &&
+    (order.periods?.length ?? 0) <= 1 &&
+    !(normalizedOrderType === "DAILY" && (order.selectedDays?.length ?? 0) > 1 && !order.parentOrderId) &&
+    Boolean(serviceTimeZone) &&
+    !startTimeSavedResult;
   const isCanceledOrder = orderStatusUpper.includes("CANCELED");
   const isCanceledByClient = orderStatusUpper === "CANCELED_BY_CLIENT";
   const isCanceledByProvider = orderStatusUpper === "CANCELED_BY_PROVIDER";
@@ -1231,6 +1356,15 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             iconImgUrl={arriveImg.src}
             type={isMobile ? "SPAN2" : "SPAN2"}
             isMultiline={true}
+            action={canChangeStartTime ? (
+              <Button
+                title="Change start time"
+                type="OUTLINED"
+                height={32}
+                className={styles.statusChangeButton}
+                onClick={openStartTimeModal}
+              />
+            ) : undefined}
             info={
               <div className={styles.stripeInfoList}>
                 {orderPeriods.map((period, index) => (
@@ -1240,6 +1374,18 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                     {formatTimeOnly(period?.endsAt)}
                   </div>
                 ))}
+                <div className={styles.scheduleTimezone}>Service timezone: {serviceTimeZone || "Unavailable"}</div>
+                {startTimeSavedResult && (
+                  <div className={styles.scheduleChangeSummary}>
+                    <div>Start time saved. The order details above reflect the new schedule.</div>
+                    {startTimeSavedResult.notificationFailures.length > 0 && (
+                      <div className={styles.errorDetails}>
+                        Saved, but some notifications failed: {startTimeSavedResult.notificationFailures.join("; ")}
+                      </div>
+                    )}
+                    <Button title="Refresh order" type="OUTLINED" height={30} onClick={() => window.location.reload()} />
+                  </div>
+                )}
               </div>
             }
           />
@@ -2312,6 +2458,72 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
                 onClick={confirmOrderStatusChange}
                 isDisabled={isUpdatingOrderStatus}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      {isStartTimeModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Change start time</h2>
+            <p className={styles.confirmationBody}>Enter the new start time in the service timezone: <b>{serviceTimeZone}</b>.</p>
+            <label className={styles.statusSelectorLabel}>
+              Date and time picker
+              <input
+                className={styles.statusSelector}
+                type="datetime-local"
+                value={startTimeDraft}
+                onChange={(event) => {
+                  const parsed = parseServiceDateTime(event.target.value, serviceTimeZone);
+                  setStartTimeDraft(event.target.value);
+                  if (parsed.date) setStartTimeTypedDraft(formatServiceTypedDateTime(parsed.date.toISOString(), serviceTimeZone));
+                  else setStartTimeTypedDraft("");
+                }}
+              />
+            </label>
+            <label className={styles.statusSelectorLabel}>
+              Or type dd.mm.yyyy hh.mm
+              <input
+                className={styles.statusSelector}
+                type="text"
+                inputMode="numeric"
+                placeholder="31.12.2026 18.30"
+                value={startTimeTypedDraft}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setStartTimeTypedDraft(value);
+                  const match = value.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})[ ,]+(\d{2})[.:](\d{2})$/);
+                  if (match) {
+                    const parsed = parseServiceDateTime(`${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}`, serviceTimeZone);
+                    if (parsed.date) setStartTimeDraft(formatServiceDateTimeInput(parsed.date.toISOString(), serviceTimeZone));
+                  }
+                }}
+              />
+            </label>
+            {startTimeError && <p className={styles.errorDetails}>{startTimeError}</p>}
+            <div className={styles.confirmationActions}>
+              <Button title="Cancel" type="OUTLINED" onClick={() => setIsStartTimeModalOpen(false)} />
+              <Button title="OK" type="BLACK" onClick={continueStartTimeChange} />
+            </div>
+          </div>
+        </div>
+      )}
+      {isStartTimeConfirmModalOpen && (
+        <div className={styles.confirmationBackdrop}>
+          <div className={`${styles.confirmationModal} ${nunito.className}`}>
+            <h2 className={styles.confirmationTitle}>Confirm schedule change</h2>
+            <div className={styles.scheduleChangeSummary}>
+              <div><b>Old start:</b> {new Date(order.startsAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: serviceTimeZone })}</div>
+              <div><b>Old end:</b> {new Date(order.endsAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: serviceTimeZone })}</div>
+              <div><b>New start:</b> {getDraftStartTime()?.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: serviceTimeZone }) ?? "-"}</div>
+              <div><b>New end:</b> {(() => { const next = getDraftStartTime(); const duration = new Date(order.endsAt).getTime() - new Date(order.startsAt).getTime(); return next ? new Date(next.getTime() + duration).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: serviceTimeZone }) : "-"; })()}</div>
+              <div><b>Paid duration:</b> {order.serviceDurationHours} hours (unchanged)</div>
+            </div>
+            <p className={styles.confirmationBody}>All times use the service timezone: <b>{serviceTimeZone}</b>. The client and provider will receive updated email, push, and calendar notifications.</p>
+            {startTimeError && <p className={styles.errorDetails}>{startTimeError}</p>}
+            <div className={styles.confirmationActions}>
+              <Button title="Back" type="OUTLINED" onClick={() => { setIsStartTimeConfirmModalOpen(false); setIsStartTimeModalOpen(true); }} isDisabled={isReschedulingStartTime} />
+              <Button title={isReschedulingStartTime ? "Saving..." : "Confirm and save"} type="BLACK" onClick={confirmStartTimeChange} isDisabled={isReschedulingStartTime} />
             </div>
           </div>
         </div>

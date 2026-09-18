@@ -2709,6 +2709,23 @@ export const getOrderById = async (id: string) => {
   return response;
 };
 
+export const rescheduleOrderStartTime = async (
+  id: string,
+  newStartsAt: string,
+  expectedRevision: number,
+  expectedUpdatedAt: string,
+  expectedEndsAt: string,
+  expectedDurationHours: number,
+  expectedProviderId: string,
+) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.put(
+    `${BASE_URL}/admin/orders/${id}/start-time`,
+    { newStartsAt, expectedRevision, expectedUpdatedAt, expectedEndsAt, expectedDurationHours, expectedProviderId },
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const checkDailyOrderChildren = async (id: string) => {
   const jwt = Cookies.get("@user_jwt");
   return axios.get(

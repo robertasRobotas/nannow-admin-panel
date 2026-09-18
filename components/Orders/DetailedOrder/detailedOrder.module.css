@@ -127,6 +127,22 @@
   cursor: pointer;
 }
 
+.scheduleTimezone {
+  color: rgba(27, 27, 31, 0.62);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.scheduleChangeSummary {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f6f6f6;
+  font-size: 13px;
+}
+
 .noReviews {
   padding-bottom: 40px;
 }
