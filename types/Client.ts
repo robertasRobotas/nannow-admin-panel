@@ -122,6 +122,8 @@ export type UserDetails = {
       orderId: string;
     }[];
     criminalRecordStatus?: string;
+    bankOnboardingStatus?: string | null;
+    isStripeOnboardingFinished?: boolean | null;
     criminalRecord?: {
       currentStatus?: string;
       applications?: {
@@ -133,8 +135,10 @@ export type UserDetails = {
       verifiedAt: string;
       verifiedType: string;
     };
+    addressesIds?: string[] | null;
     kycStatus?: string | null;
     stripeKycStatus?: string | null;
+    stripeKycStatusDetailed?: string | null;
     stripeKycMode?: string | null;
     stripeKycAction?: string | null;
     stripeKycBlockingRequirements?: string[] | null;
@@ -260,6 +264,8 @@ export type UserDetails = {
     requestedCompensationInfoAt?: string | null;
     contactedRegardingCompensationAt?: string | null;
     compensationRequests?: CompensationRequest[];
+    addressesIds?: string[] | null;
+    childIds?: string[] | null;
     languages: string[];
     badgesIds: string[];
     animals: string[];
@@ -375,6 +381,7 @@ export type UserDetails = {
     isUserVerified: boolean;
     phoneNumber: string;
     country: string;
+    currentRegion?: "LITHUANIA" | "LATVIA" | "ESTONIA" | "FRANCE" | null;
     roles: string[];
     createdAt: string;
     pushToken?: string;

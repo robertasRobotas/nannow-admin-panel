@@ -8,7 +8,9 @@ import BadgeIcon from "@/components/Icons/BadgeIcon";
 import DocWithCheckmarkIcon from "@/components/Icons/DocWithCheckmarkIcon";
 import ChildrenIcon from "@/components/Icons/ChildrenIcon";
 import EuroCircleIcon from "@/components/Icons/EuroCircleIcon";
+import IdIcon from "@/components/Icons/IdIcon";
 import { normalizeCompensationRequests } from "@/data/compensationRequests";
+import { getProfileCompletionIncompleteCount } from "@/data/profileCompletion";
 
 const SYSTEM_NANNOW_ID = "SYSTEM_NANNOW";
 
@@ -166,13 +168,13 @@ export const getButtonsData = (
       id: "nannow_chat",
       visibleFor: ["client", "provider"],
     },
-    // {
-    //   title: "Profile completion",
-    //   icon: IdIcon,
-    //   number: 0,
-    //   id: "profile_completion",
-    //   visibleFor: ["client", "provider"],
-    // },
+    {
+      title: "Profile completion",
+      icon: IdIcon,
+      number: getProfileCompletionIncompleteCount(user, mode) || undefined,
+      id: "profile_completion",
+      visibleFor: ["client", "provider"],
+    },
     // {
     //   title: "Completed orders",
     //   icon: DocWithCheckmarkIcon,

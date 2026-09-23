@@ -1,0 +1,236 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.card {
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fff;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.trustTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: #16181d;
+}
+
+.regionChip {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #757b87;
+  background: #f1f2f6;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.cardNote {
+  margin: 0 0 14px;
+  color: #757b87;
+  font-size: 13.5px;
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #e9eaee;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #ff667d;
+  transition: width 300ms ease;
+}
+
+.progressLabel {
+  margin: 0 0 12px;
+  color: #757b87;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.warningNote {
+  margin: 0 0 14px;
+  color: #757b87;
+  font-size: 13.5px;
+}
+
+.successBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #eef7f1;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.successIcon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #d6ecdf;
+  color: #1f9d61;
+}
+
+.successIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.successTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #16181d;
+}
+
+.successText {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  color: #757b87;
+}
+
+.reqList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.req {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e9eaee;
+}
+
+.req:last-child {
+  border-bottom: 0;
+}
+
+.reqIcon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+
+.reqIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.reqIconDone {
+  background: #eef7f1;
+  color: #1f9d61;
+}
+
+.reqIconWarn {
+  background: #fdf3e3;
+  color: #c77700;
+}
+
+.reqIconDanger {
+  background: #fdeeec;
+  color: #d64545;
+}
+
+.reqIconNeutral {
+  background: #f1f2f6;
+  color: #757b87;
+}
+
+.reqBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reqLabel {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #16181d;
+}
+
+.reqHint {
+  font-size: 12.5px;
+  color: #757b87;
+  margin-top: 1px;
+}
+
+.reqStatus {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.reqStatusDone {
+  color: #1f9d61;
+}
+
+.reqStatusWarn {
+  color: #c77700;
+}
+
+.reqStatusDanger {
+  color: #d64545;
+}
+
+.reqStatusNeutral {
+  color: #757b87;
+}
+
+.toggle {
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ff667d;
+}
+
+.empty {
+  color: #777;
+  font-size: 14px;
+  padding: 8px 0;
+}
+
+.backBtnWrapper {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}

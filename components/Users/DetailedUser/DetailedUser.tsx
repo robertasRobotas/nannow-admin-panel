@@ -2,6 +2,7 @@ import { UserDetails } from "@/types/Client";
 import styles from "./detailedUser.module.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import GeneralSection from "./GeneralSection/GeneralSection";
+import ProfileCompletionSection from "./ProfileCompletionSection/ProfileCompletionSection";
 import ProfileMenu from "./ProfileMenu/ProfileMenu";
 import MessagesSection from "./MessagesSection/MessagesSection";
 import ChildrenSection from "./ChildrenSection/ChildrenSection";
@@ -119,6 +120,18 @@ const DetailedClient = ({ user, mode, initialSection }: DetailedClientProps) => 
         return (
           <OrdersSection
             user={user}
+            onBackClick={() => {
+              setSelectedSection("");
+            }}
+          />
+        );
+      }
+
+      case "profile_completion": {
+        return (
+          <ProfileCompletionSection
+            user={user}
+            mode={mode}
             onBackClick={() => {
               setSelectedSection("");
             }}

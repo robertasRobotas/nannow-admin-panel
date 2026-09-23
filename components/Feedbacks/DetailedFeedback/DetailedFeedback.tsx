@@ -54,7 +54,16 @@ const DetailedFeedback = ({
     toast("Link to feedback copied!");
   };
 
-  console.log(feedback);
+  const userDetailUrl = (() => {
+    const userId = feedback?.user?.id || feedback?.userId || "";
+    if (!userId) return null;
+    const rawMode =
+      feedback?.user?.currentMode ??
+      (feedback?.user?.providerId ? "PROVIDER" : "CLIENT");
+    return rawMode.toUpperCase() === "PROVIDER"
+      ? `/provider/${userId}`
+      : `/client/${userId}`;
+  })();
 
   return (
     <div className={styles.main}>
@@ -75,7 +84,15 @@ const DetailedFeedback = ({
       </div>
       <div className={styles.heading}>
         <div className={styles.feedbackDetails}>
-          <div className={styles.profile}>
+          <a
+            className={styles.profile}
+            href={userDetailUrl ?? undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              if (!userDetailUrl) e.preventDefault();
+            }}
+          >
             <img src={feedback?.user?.imgUrl ?? avatarImg.src} alt="Profile" />
             <div>
               <span className={styles.title}>Feedback by</span>
@@ -85,7 +102,7 @@ const DetailedFeedback = ({
                 }`}
               </span>
             </div>
-          </div>
+          </a>
         </div>
         <div className={styles.btnsWrapper}>
           {!isSolved && (

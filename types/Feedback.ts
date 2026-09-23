@@ -18,5 +18,6 @@ export interface FeedbackType {
     providerId: string;
     imgUrl: string;
     clientId: string;
+    currentMode?: "CLIENT" | "PROVIDER" | string | null;
   };
 }

@@ -38,6 +38,12 @@
   display: flex;
   justify-content: center;
   gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.profile:hover .name {
+  text-decoration: underline;
 }
 
 .profile img {
