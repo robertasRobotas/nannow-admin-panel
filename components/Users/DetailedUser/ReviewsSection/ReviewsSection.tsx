@@ -7,6 +7,7 @@ import DetailedReview from "@/components/Reviews/DetailedReview/DetailedReview";
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { ReviewType } from "@/types/Reviews";
 import nannowImg from "../../../../assets/images/nannow.png";
+import { getReviewById, hideReview } from "@/pages/api/fetch";
 
 type ReviewsSectionProps = {
   title: string;
@@ -23,6 +24,7 @@ const ReviewsSection = ({
 
   const [selectedReviewId, setSelectedReviewId] = useState("");
   const [selectedReview, setSelectedReview] = useState<ReviewType | null>();
+  const [reviewOverrides, setReviewOverrides] = useState<Record<string, ReviewType>>({});
 
   // local state just to satisfy DetailedReview API; not mutated here
   const [reviewsState, setReviewsState]: [
@@ -30,7 +32,7 @@ const ReviewsSection = ({
     Dispatch<SetStateAction<ReviewType[]>>
   ] = useState<ReviewType[]>(reviews ?? []);
 
-  const mappedReviews = useMemo(() => {
+  const baseReviews = useMemo(() => {
     if (title !== "Received Reviews") return reviews ?? [];
     return (reviews ?? []).map((r) => {
       if (r?.reviewType === "ADDED_BY_ADMIN") {
@@ -45,6 +47,44 @@ const ReviewsSection = ({
     });
   }, [reviews, title]);
 
+  const mappedReviews = useMemo(
+    () => baseReviews.map((review) => reviewOverrides[review.id] ?? review),
+    [baseReviews, reviewOverrides],
+  );
+
+  // Some deployed profile-summary responses omit isHidden. Hydrate only those
+  // rows from the canonical review endpoint so hidden badges appear on load.
+  useEffect(() => {
+    let isCurrent = true;
+    const missingStatus = baseReviews.filter((review) => review.isHidden === undefined);
+    const hydrateMissingStatus = async () => {
+      for (let index = 0; index < missingStatus.length; index += 5) {
+        const batch = missingStatus.slice(index, index + 5);
+        const resolved = await Promise.all(
+          batch.map(async (review) => {
+            try {
+              const response = await getReviewById(review.id);
+              return response.data?.review as ReviewType | undefined;
+            } catch (error) {
+              console.error("Failed to load review visibility", error);
+              return undefined;
+            }
+          }),
+        );
+        if (!isCurrent) return;
+        setReviewOverrides((previous) => ({
+          ...previous,
+          ...Object.fromEntries(resolved.filter(Boolean).map((review) => [review!.id, review!])),
+        }));
+      }
+    };
+
+    void hydrateMissingStatus();
+    return () => {
+      isCurrent = false;
+    };
+  }, [baseReviews]);
+
   const itemsPerPage = useMemo(
     () => (mappedReviews?.length ?? 0) || 1,
     [mappedReviews]
@@ -58,9 +98,49 @@ const ReviewsSection = ({
       setSelectedReview(null);
       return;
     }
-    const found = mappedReviews?.find((r) => r.id === selectedReviewId) ?? null;
+    const found = baseReviews?.find((r) => r.id === selectedReviewId) ?? null;
     setSelectedReview(found);
-  }, [selectedReviewId, mappedReviews]);
+    if (!found) return;
+
+    let isCurrent = true;
+    void getReviewById(found.id)
+      .then((response) => {
+        if (isCurrent && response.data?.review) {
+          setSelectedReview(response.data.review);
+          setReviewOverrides((previous) => ({
+            ...previous,
+            [found.id]: response.data.review,
+          }));
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load full review details", error);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedReviewId, baseReviews]);
+
+  const handleHideReview = async (reason: string) => {
+    if (!selectedReview) return;
+    const response = await hideReview(selectedReview.id, reason);
+    const hiddenReview = response.data?.review as ReviewType | undefined;
+    if (hiddenReview) {
+      setSelectedReview(hiddenReview);
+      setReviewOverrides((previous) => ({ ...previous, [hiddenReview.id]: hiddenReview }));
+    }
+    try {
+      const detailResponse = await getReviewById(selectedReview.id);
+      const fullReview = detailResponse.data?.review as ReviewType | undefined;
+      if (fullReview) {
+        setSelectedReview(fullReview);
+        setReviewOverrides((previous) => ({ ...previous, [fullReview.id]: fullReview }));
+      }
+    } catch (error) {
+      console.error("Failed to refresh hidden review details", error);
+    }
+  };
 
   const renderMobile = () => {
     if (selectedReviewId !== "" && selectedReview) {
@@ -70,6 +150,7 @@ const ReviewsSection = ({
           onBackClick={() => setSelectedReviewId("")}
           setReviews={setReviewsState}
           reviews={reviewsState}
+          onHideReview={handleHideReview}
         />
       );
     }
@@ -111,6 +192,7 @@ const ReviewsSection = ({
           onBackClick={() => setSelectedReviewId("")}
           setReviews={setReviewsState}
           reviews={reviewsState}
+          onHideReview={handleHideReview}
         />
       )}
     </div>
