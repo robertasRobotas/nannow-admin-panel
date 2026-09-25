@@ -349,6 +349,14 @@
   font-weight: 800;
 }
 
+.clientNote {
+  /* width calibrated to ~36 chars per line ("Sloguoja. Reikėtų laiko apsiprasti. ") */
+  display: block;
+  max-width: 300px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
 .additionalPaymentsSection {
   padding-top: 40px;
 }

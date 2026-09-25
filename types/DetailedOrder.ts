@@ -53,6 +53,7 @@ export type DetailedOrderType = {
   childrenIds: string[];
   isDropOff: boolean;
   isUrgent: boolean;
+  clientNote?: string | null;
   currentSelectedAlergiesIds: string[];
   currentSelectedDisabilitiesIds: string[];
   selectedSpokenLanguageIds: string[];

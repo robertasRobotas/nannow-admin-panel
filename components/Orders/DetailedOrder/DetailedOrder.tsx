@@ -60,6 +60,26 @@ type DetailedOrderProps = {
   order: DetailedOrderType;
 };
 
+const CLIENT_NOTE_MAX_LINE_LENGTH = "Sloguoja. Reikėtų laiko apsiprasti. ".length;
+const CLIENT_NOTE_MAX_LINES = 5;
+
+const formatClientNoteLines = (note: string) => {
+  const words = note.trim().split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (!current || candidate.length <= CLIENT_NOTE_MAX_LINE_LENGTH) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+
 type DailyChildrenCheck = {
   eligible: boolean;
   repaired?: boolean;
@@ -1395,6 +1415,15 @@ const DetailedOrder = ({ order }: DetailedOrderProps) => {
             type={isMobile ? "SPAN2" : "SPAN2"}
             info={childrenNames}
           />
+          {order?.clientNote && (
+            <InfoCard
+              title="Client note"
+              iconImgUrl={documentImg.src}
+              type={isMobile ? "SPAN2" : "SPAN3"}
+              isMultiline={true}
+              info={<span className={styles.clientNote}>{order.clientNote}</span>}
+            />
+          )}
           {hasProviderSelectionReminderInfo && (
             <InfoCard
               title="Provider selection reminders"
