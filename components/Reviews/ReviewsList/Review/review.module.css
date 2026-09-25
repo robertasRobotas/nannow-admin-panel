@@ -85,3 +85,13 @@
 .selected {
   background: #f3f3f3;
 }
+
+.hiddenLabel {
+  align-self: flex-start;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #fff0f0;
+  color: #9b3333;
+  font-size: 10px;
+  font-weight: 700;
+}

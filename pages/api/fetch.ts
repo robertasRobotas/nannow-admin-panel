@@ -1796,6 +1796,15 @@ export const getReviewById = async (id: string) => {
   return response;
 };
 
+export const hideReview = async (id: string, reason: string) => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.patch(
+    `${BASE_URL}/admin/reviews/${id}/hide`,
+    { reason },
+    { headers: { Authorization: jwt } },
+  );
+};
+
 export const getAllFeedback = async (startIndex: number) => {
   const jwt = Cookies.get("@user_jwt");
   const response = await axios.get(

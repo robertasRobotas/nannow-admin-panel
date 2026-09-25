@@ -6,7 +6,7 @@ import DetailedReview from "./DetailedReview/DetailedReview";
 import { ReviewType } from "@/types/Reviews";
 import axios from "axios";
 import { useRouter } from "next/router";
-import { getAllReviews, getReviewById } from "@/pages/api/fetch";
+import { getAllReviews, getReviewById, hideReview } from "@/pages/api/fetch";
 import { options as reviewRatingOptions } from "../../data/reviewRatingOptions";
 
 type ReviewsProps = {
@@ -89,6 +89,12 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
     }
   };
 
+  const handleHideReview = async (reason: string) => {
+    if (!selectedReview) return;
+    await hideReview(selectedReview.id, reason);
+    await Promise.all([fetchReviewById(selectedReview.id), fetchReviews()]);
+  };
+
   useEffect(() => {
     if (!router.isReady) return;
     fetchReviews();
@@ -165,6 +171,7 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
           onBackClick={clearSelectedReview}
           setReviews={setReviews}
           reviews={reviews}
+          onHideReview={handleHideReview}
         />
       );
     }
@@ -247,6 +254,7 @@ const Reviews = ({ detailedPageId }: ReviewsProps) => {
           onBackClick={clearSelectedReview}
           setReviews={setReviews}
           reviews={reviews}
+          onHideReview={handleHideReview}
         />
       )}
     </>

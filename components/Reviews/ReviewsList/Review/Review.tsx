@@ -10,6 +10,7 @@ type ReviewProps = {
   reviewedImg: string;
   date: string;
   isSelected: boolean;
+  isHidden?: boolean;
   onClick: () => void;
 };
 
@@ -21,6 +22,7 @@ const Review = ({
   reviewedImg,
   date,
   isSelected,
+  isHidden = false,
   onClick,
 }: ReviewProps) => {
   const dateFormatted = date
@@ -45,6 +47,7 @@ const Review = ({
         <span>{rating.toFixed(1)}</span>
       </div>
       <div className={styles.top}>
+        {isHidden && <span className={styles.hiddenLabel}>Hidden</span>}
         <div className={styles.reviewDetails}>
           <div className={styles.profile}>
             <img src={reviewedByImg} alt="Profile" />

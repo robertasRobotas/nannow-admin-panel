@@ -36,4 +36,9 @@ export type ReviewType = {
   text: string;
   providerUserId: string;
   clientUserId: string;
+  isHidden?: boolean;
+  hiddenAt?: string | null;
+  hiddenBy?: string | { id?: string; firstName?: string; lastName?: string } | null;
+  hiddenByName?: string | null;
+  hiddenReason?: string | null;
 };

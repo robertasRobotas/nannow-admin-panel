@@ -75,6 +75,7 @@ const ReviewsList = ({
               reviewedName={`${r?.revieweeFirstName}\n${r?.revieweeSurname}`}
               date={r.createdAt}
               isSelected={selectedReviewId === r.id}
+              isHidden={r.isHidden}
               onClick={() => {
                 setSelectedReviewId(r.id);
               }}
