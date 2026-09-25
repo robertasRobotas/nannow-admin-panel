@@ -21,3 +21,25 @@
 .pagination { display: flex; justify-content: center; align-items: center; gap: 16px; padding-bottom: 20px; }
 @media (max-width: 1200px) { .eventCell { flex-direction: column; align-items: flex-start; gap: 2px; } .eventDetail { white-space: normal; } }
 @media (max-width: 900px) { .row { grid-template-columns: 1fr; gap: 6px; } .row time { justify-self: start; } }
+.regenerateButton { white-space: nowrap; }
+.filters .eventFilterClear { padding: 9px 11px; border: 1px solid #f4c1c5; background: #fff2f4; color: #b91c1c; font-size: 13px; cursor: pointer; }
+.eventFilter { position: relative; }
+.eventFilter .eventFilterButton { display: flex; align-items: center; gap: 6px; padding: 9px 11px; border: 1px solid #ddd; background: #fff; font-size: 14px; color: #111; cursor: pointer; min-width: 220px; }
+.eventFilter .eventFilterButton > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eventFilter .eventFilterChevron { margin-left: auto; color: #777; }
+.eventFilterPanel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 300px; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 12px 30px rgba(15, 23, 42, .16); }
+.eventFilterList { max-height: 380px; overflow-y: auto; }
+.eventFilterItem { border-bottom: 1px solid #f1f5f9; }
+.eventFilterItem:last-child { border-bottom: 0; }
+.eventFilter .eventFilterRow { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 8px 10px; font-size: 14px; font-weight: 400; color: #111; cursor: pointer; }
+.eventFilter .eventFilterRow input { width: 15px; height: 15px; margin: 0; padding: 0; border: 0; background: transparent; accent-color: #111; flex-shrink: 0; }
+.eventFilter .eventFilterName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eventFilter .eventFilterSubmenuToggle { border: 0; background: transparent; padding: 4px; color: #777; font-size: 14px; cursor: pointer; }
+.statusSubmenu { position: absolute; inset: 0; z-index: 1; background: #fff; border-radius: 7px; padding: 8px; display: flex; flex-direction: column; }
+.statusSubmenuHeader { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid #f1f5f9; }
+.statusSubmenuBack { border: 0; background: transparent; padding: 4px 8px; border-radius: 6px; color: #111; font-size: 13px; font-weight: 600; cursor: pointer; }
+.statusSubmenuBack:hover { background: #f1f5f9; }
+.statusSubmenuTitle { font-size: 13px; font-weight: 800; }
+.statusSubmenuList { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0; }
+.statusSubmenuList li + li { border-top: 1px solid #f1f5f9; }
+.statusSubmenuList .eventFilterRow { padding: 7px 10px; font-size: 13px; }

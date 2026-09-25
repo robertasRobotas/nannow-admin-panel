@@ -2752,9 +2752,28 @@ export const getOrderEvents = async (id: string, before?: string | null, limit =
   });
 };
 
-export const getOrderEventsList = async (params: { page?: number; pageSize?: number; sort?: string; orderPrettyId?: string; eventName?: string; dateFrom?: string; dateTo?: string } = {}) => {
+export const getOrderEventsList = async (params: { page?: number; pageSize?: number; sort?: string; orderPrettyId?: string; eventNames?: string[]; statuses?: string[]; dateFrom?: string; dateTo?: string } = {}) => {
   const jwt = Cookies.get("@user_jwt");
-  return axios.get(`${BASE_URL}/admin/order-events`, { params, headers: { Authorization: jwt } });
+  const query = new URLSearchParams();
+  if (params.page !== undefined) query.set("page", String(params.page));
+  if (params.pageSize !== undefined) query.set("pageSize", String(params.pageSize));
+  if (params.sort) query.set("sort", params.sort);
+  if (params.orderPrettyId) query.set("orderPrettyId", params.orderPrettyId);
+  (params.eventNames ?? []).forEach((value) => query.append("eventName", value));
+  (params.statuses ?? []).forEach((value) => query.append("status", value));
+  if (params.dateFrom) query.set("dateFrom", params.dateFrom);
+  if (params.dateTo) query.set("dateTo", params.dateTo);
+  return axios.get(`${BASE_URL}/admin/order-events?${query.toString()}`, { headers: { Authorization: jwt } });
+};
+
+export const getOrderEventTypes = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.get(`${BASE_URL}/admin/order-events/event-types`, { headers: { Authorization: jwt } });
+};
+
+export const regenerateOrderEventTypes = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(`${BASE_URL}/admin/order-events/event-types/regenerate`, {}, { headers: { Authorization: jwt } });
 };
 
 export const getClosedOrders = async (
