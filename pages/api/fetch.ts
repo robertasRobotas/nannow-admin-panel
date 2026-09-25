@@ -2776,6 +2776,11 @@ export const regenerateOrderEventTypes = async () => {
   return axios.post(`${BASE_URL}/admin/order-events/event-types/regenerate`, {}, { headers: { Authorization: jwt } });
 };
 
+export const backfillMissingCancellationEvents = async () => {
+  const jwt = Cookies.get("@user_jwt");
+  return axios.post(`${BASE_URL}/admin/super/orders/events/backfill-cancellations`, {}, { headers: { Authorization: jwt } });
+};
+
 export const getClosedOrders = async (
   startIndex = 0,
   filters?: { clientId?: string; approvedProviderId?: string },
